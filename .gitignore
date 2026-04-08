@@ -1,0 +1,9 @@
+# IDE
+.idea/
+.claude
+.opencode/
+.flow/
+.cursor
+
+# Logs
+logs/
