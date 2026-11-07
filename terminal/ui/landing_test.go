@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension/demo"
 	"github.com/unaquatic/fluid/buffer"
 	"github.com/unaquatic/fluid/testutil"
@@ -15,6 +16,33 @@ import (
 // page, cmd/landing in aquatic next to this repository, replays the demo turn
 // in.
 const LandingWidth = 62
+
+// LandingSettings are the terminal settings the landing page's frames are
+// drawn with, as /settings saves them in the config file: flow as it is used,
+// with tool markers and prompts marked by a bar.
+var LandingSettings = config.Terminal{
+	CacheUsage:      "off",
+	ExpandedTools:   "plain",
+	ToolMarker:      true,
+	ToolMarkerShape: "square",
+	ToolNameColor:   "gray",
+	KeyHints:        "title",
+	ListCount:       "below",
+	PromptStyle:     "bar",
+	InputStyle:      "bar",
+	Selection:       "full_width",
+}
+
+// NewLandingUI returns a test UI with LandingSettings applied, as the
+// terminal applies the config file's settings before it shows anything.
+func NewLandingUI(t *testing.T) *UI {
+	t.Helper()
+	ui := newInputTestUI(t)
+	ui.service.state.ApplyConfig(LandingSettings, false)
+	ui.SetInputStyle(ui.service.state.InputStyle)
+	ui.ShowStatusMarker()
+	return ui
+}
 
 // LandingPrompt is the prompt of the landing page's turn.
 const LandingPrompt = "Add a Divide method that rejects a zero divisor"
@@ -96,24 +124,24 @@ func CropRows(buf *buffer.Buffer, h int) *buffer.Buffer {
 func TestLandingDemoFrames(t *testing.T) {
 	seq := testutil.NewGoldenSequence()
 
-	ui := newInputTestUI(t)
+	ui := NewLandingUI(t)
 	ui.inline = true
 	ui.LoadTranscript(LandingTurn())
 	tall := renderFrames(LandingWidth, 400, detachTranscript(ui)...)
 	seq.AddFrames("transcript", CropRows(tall, LastInkRow(tall)+1), surfaceNames(ui))
 
-	ui = newInputTestUI(t)
+	ui = NewLandingUI(t)
 	ui.SetInputText(LandingPrompt)
 	seq.AddFrames("typed", renderFrames(LandingWidth, 5, ui.inputWrapper), surfaceNames(ui))
 
-	ui = newInputTestUI(t)
+	ui = NewLandingUI(t)
 	ui.inline = true
 	ui.SetInputText("")
 	ui.service.state.Working = true
 	ui.ShowIndicator(WorkingIndicator(12*time.Second, false))
 	seq.AddFrames("running", renderFrames(LandingWidth, 7, detachFromRoot(ui, ui.indicatorBox), ui.inputWrapper), surfaceNames(ui))
 
-	ui = newInputTestUI(t)
+	ui = NewLandingUI(t)
 	ui.SetInputText("")
 	seq.AddFrames("idle", renderFrames(LandingWidth, 5, ui.inputWrapper), surfaceNames(ui))
 
