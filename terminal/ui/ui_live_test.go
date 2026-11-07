@@ -387,8 +387,8 @@ func TestLiveTop(t *testing.T) {
 
 // TestTallMenuKeepsTheLiveRowsOnScreen opens a banner taller than the
 // terminal while a call runs, which the input box bounds so that the call's
-// row stays on screen with a row free above it. It sweeps the shimmer across
-// the call's row, ends the call, and closes the banner, and checks that no
+// row stays on screen with a row free above it. It blinks the call's marker,
+// ends the call, and closes the banner, and checks that no
 // change rewrites a row in the scrollback, and that the call shows whole,
 // expanded, once it ends.
 func TestTallMenuKeepsTheLiveRowsOnScreen(t *testing.T) {
@@ -412,11 +412,11 @@ func TestTallMenuKeepsTheLiveRowsOnScreen(t *testing.T) {
 		t.Fatalf("live area takes %d rows, want all but a row of the terminal, %d", live, room)
 	}
 
-	ui.shimmer.On.Store(true)
-	for _, phase := range []float64{0.2, 0.5, 0.8} {
-		ui.shimmer.Phase = phase
-		ui.shimmer.SyncRows()
-		s.Frame(t, ui, fmt.Sprintf("the shimmer at %.1f", phase))
+	ui.blink.On.Store(true)
+	for _, off := range []bool{true, false, true} {
+		ui.blink.Off = off
+		ui.blink.SyncRows()
+		s.Frame(t, ui, fmt.Sprintf("the marker blinks, off %v", off))
 	}
 	applyEvents(ui, call[2:]...)
 	s.Frame(t, ui, "the call ends")

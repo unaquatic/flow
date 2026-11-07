@@ -29,8 +29,8 @@ func (ui *UI) DropTranscript() {
 	ui.ClearTranscriptRows()
 	ui.messageWidgets = make(map[message.ID]*ChatMessageBox)
 	ui.noticeMarkers = nil
-	// The rows the shimmer tracks went with the transcript.
-	clear(ui.shimmer.Rows)
+	// The rows the blink tracks went with the transcript.
+	clear(ui.blink.Rows)
 	ui.committed = false
 	ui.trimmed = false
 }
@@ -60,10 +60,10 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 		}
 	}
 
-	// The transcript's calls shimmer while they execute, its views fetch
-	// what they show, and inline it holds back what may still change.
+	// The transcript's markers blink while its calls execute, its views
+	// fetch what they show, and inline it holds back what may still change.
 	cm := NewChatMessageBox(msg, append(ui.ChatMessageOptions(msg.Role),
-		ChatMessageWithShimmer(&ui.shimmer), ChatMessageWithEnqueue(ui.renderer.Enqueue),
+		ChatMessageWithBlink(&ui.blink), ChatMessageWithEnqueue(ui.renderer.Enqueue),
 		ChatMessageWithHolds(ui.inline))...)
 	for row := range cm.Rows() {
 		ui.AddTranscriptRow(row)

@@ -177,10 +177,10 @@ func (ui *UI) PrepareInlineQuit() {
 	ui.input.Blur()
 	ui.inputWrapper.SetGone(true)
 	ui.indicatorBox.SetGone(true)
-	// A shimmer caught mid-sweep would stay in the terminal, over the time
-	// and over the tool call rows alike.
-	ui.shimmer.On.Store(false)
-	ui.shimmer.SyncRows()
+	// A marker caught blinked off would stay off in the terminal, before
+	// the time and on the tool call rows alike.
+	ui.blink.On.Store(false)
+	ui.blink.SyncRows()
 }
 
 // OnInputClear empties the input box.

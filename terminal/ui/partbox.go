@@ -1,9 +1,6 @@
 package ui
 
 import (
-	"time"
-
-	"github.com/unaquatic/fluid/buffer"
 	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/layout"
 	"github.com/unaquatic/fluid/render"
@@ -29,7 +26,7 @@ const (
 // a step's changes. The content writes the box's Header line and status, and
 // adds the widgets of its details to Details, which may be any widgets. The
 // box decides how they show: as a row or a block, expanded or not, with a
-// marker, and shimmering while the content is busy.
+// marker, which blinks while the content is busy.
 type BoxContent interface {
 	// ShowHeader writes the box's Header line as the box now stands. The box
 	// calls it whenever that may change what the line shows: as the box
@@ -55,8 +52,7 @@ type Framed interface {
 // is Expandable, unless it is Held. Its header row holds Marker, while
 // /settings shows it and the box is Marked, then Header, which is cut off
 // with an ellipsis when the row is full, and then Status, which stays whole.
-// While its content is Busy and it shows as a row, the shimmer sweeps across
-// Header.
+// While its content is Busy, Marker blinks.
 type PartBox struct {
 	*widget.Box
 	// Content writes Header and fills Details, as BoxContent describes.
@@ -111,19 +107,14 @@ type PartBox struct {
 	// neither does a block in ExpandedPlain.
 	Surface style.Color
 	// Busy reports that the content is at work, as an executing tool call
-	// is, which the shimmer shows while the box is a row.
+	// is, which Marker shows by blinking.
 	Busy bool
-	// Shimmer, when set, is the shimmer whose band sweeps across Header
-	// while Shimmers reports it, in step with the band across the
-	// indicator's time. SyncShimmer keeps the box among its Rows meanwhile.
-	Shimmer *Shimmer
-	// Shimmering reports that Header was last drawn with the band across
-	// it, at ShimmerPhase.
-	Shimmering bool
-	// ShimmerPhase is where the band was when Header was last drawn with it.
-	ShimmerPhase float64
+	// Blink, when set, is the clock Marker blinks by while Blinks reports
+	// it, in step with the marker before the indicator's time. SyncBlink
+	// keeps the box among its Rows meanwhile.
+	Blink *Blink
 	// MarkerHidden reports that Marker was last drawn hidden, as Blinks and
-	// the shimmer's MarkerOff hid it.
+	// the blink's Off hid it.
 	MarkerHidden bool
 	// OnShapeChange, when set, is called each time ShowShape lays the box
 	// out, as when it expands or its Style changes, so that the bubble that
@@ -178,7 +169,6 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 	}
 	// Header shrinks, and Status does not, when the two do not fit.
 	b.Header.SetTruncate(true)
-	b.Header.RenderAfterHook = b.DrawShimmer
 	b.Marker.RenderBeforeHook, b.Marker.RenderAfterHook = BlinkHooks(b.Marker, b.HideMarker)
 	b.Header.OnMouseDownHandler = b.OnHeaderClick
 	b.HeaderRow.OnMouseDownHandler = b.OnHeaderClick
@@ -312,8 +302,8 @@ func (b *PartBox) ShowShape() {
 	}
 	SetEdge(b, &b.LayoutNode().PaddingTop, pad)
 	SetEdge(b, &b.LayoutNode().PaddingBottom, pad)
-	// Only a row shimmers.
-	b.SyncShimmer()
+	// The marker shows or hides with the shape, and blinks only while shown.
+	b.SyncBlink()
 	if b.OnShapeChange != nil {
 		b.OnShapeChange()
 	}
@@ -382,78 +372,40 @@ func (b *PartBox) SetStatus(status string) {
 	b.Status.SetGone(status == "")
 }
 
-// SetBusy records whether the content is at work, which the shimmer shows
-// while the box is a row.
+// SetBusy records whether the content is at work, which Marker shows by
+// blinking.
 func (b *PartBox) SetBusy(busy bool) {
 	b.Busy = busy
-	b.SyncShimmer()
-}
-
-// Shimmers reports whether the shimmer's band sweeps across the box: while
-// it shows as a row, as Row tells, its content is Busy, and the band sweeps
-// across the indicator's time. A block never shimmers.
-func (b *PartBox) Shimmers() bool {
-	return b.Shimmer != nil && b.Shimmer.On.Load() && b.Row() && b.Busy
+	b.SyncBlink()
 }
 
 // Blinks reports whether Marker blinks: while it shows, the content is
-// Busy, and the shimmer runs, as the indicator's marker blinks beside the
+// Busy, and the blink runs, as the indicator's marker blinks beside the
 // run's time.
 func (b *PartBox) Blinks() bool {
-	return b.Shimmer != nil && b.Shimmer.On.Load() && b.Busy && b.Marker.Visible()
+	return b.Blink != nil && b.Blink.On.Load() && b.Busy && b.Marker.Visible()
 }
 
 // HideMarker reports whether Marker is hidden now, while it Blinks and the
-// shimmer's MarkerOff hides it, and records that in MarkerHidden. It runs
-// as Marker draws itself.
+// blink's Off hides it, and records that in MarkerHidden. It runs as Marker
+// draws itself.
 func (b *PartBox) HideMarker() bool {
-	b.MarkerHidden = b.Blinks() && b.Shimmer.MarkerOff
+	b.MarkerHidden = b.Blinks() && b.Blink.Off
 	return b.MarkerHidden
 }
 
-// SyncShimmer repaints the header when the band it was last drawn with is
-// not the one it shows now, as Shimmers tells: when the band has moved, or
-// has started or stopped sweeping across it, as when the content stops
-// being busy or the box expands, so that the header rests in its own colors
-// once the band leaves it. It repaints Marker in the same way when the blink
-// hides it otherwise than when it was drawn. Only colors and the marker
-// change, so the layout stays as it is. It keeps the box among the
-// shimmer's Rows while the band may sweep across it or its marker may
-// blink, or either was drawn so, so that the shimmer repaints it as the
-// band moves and the marker blinks.
-func (b *PartBox) SyncShimmer() {
-	if b.Shimmer == nil {
+// SyncBlink repaints Marker when the blink hides it otherwise than when it
+// was drawn: as the blink turns, starts, or stops, or as the content stops
+// being busy. Only the marker changes, so the layout stays as it is. It
+// keeps the box among the blink's Rows while its marker may blink, or was
+// drawn hidden, so that the blink repaints it as it turns.
+func (b *PartBox) SyncBlink() {
+	if b.Blink == nil {
 		return
 	}
-	on := b.Shimmers()
-	b.Shimmer.Track(b, b.Busy && (b.Row() || b.Marker.Visible()) || b.Shimmering || b.MarkerHidden)
-	if hide := b.Blinks() && b.Shimmer.MarkerOff; hide != b.MarkerHidden {
+	b.Blink.Track(b, b.Busy && b.Marker.Visible() || b.MarkerHidden)
+	if hide := b.Blinks() && b.Blink.Off; hide != b.MarkerHidden {
 		b.Marker.RequestRender()
-	}
-	if on == b.Shimmering && (!on || b.ShimmerPhase == b.Shimmer.Phase) {
-		return
-	}
-	b.Header.RequestRender()
-}
-
-// DrawShimmer lightens the cells of Header where the shimmer's band is while
-// Shimmers reports it sweeps, as ShimmerFg lightens them, and records the
-// band it drew in Shimmering and ShimmerPhase. Status stays as it is, as the
-// keys after the indicator's time do. It runs after Header draws itself.
-func (b *PartBox) DrawShimmer(buf *buffer.Buffer, _ time.Duration) {
-	if b.Shimmering = b.Shimmers(); !b.Shimmering {
-		return
-	}
-	b.ShimmerPhase = b.Shimmer.Phase
-	h := b.Header
-	x0, y, cols := h.X(), h.Y(), h.Width()
-	for x := range cols {
-		cell := buf.Cell(x0+x, y)
-		if cell.IsContinuation() {
-			continue
-		}
-		cell.Fg = ShimmerFg(cell.Fg, x, cols, b.ShimmerPhase)
-		buf.SetCellDirect(x0+x, y, cell)
 	}
 }
 

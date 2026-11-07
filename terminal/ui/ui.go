@@ -132,10 +132,9 @@ type UI struct {
 	// the transcript, as ReserveLiveRows keeps them.
 	liveReserve int
 
-	// shimmer is where the band that sweeps across the time of a run in
-	// progress is, as DrawShimmer draws it, which the rows of the tool calls
-	// the run executes share.
-	shimmer Shimmer
+	// blink is the clock of the markers that blink while a run is in
+	// progress, which the rows of the tool calls the run executes share.
+	blink Blink
 
 	// resumeShown reports that the final frame ends with the notice that
 	// tells how to resume the session. Run reads it once the event loop may
@@ -309,7 +308,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	ui.appEvents = NewAppEvents(a.Subscribe(ctx), func(ev app.Event) { ui.Apply(ui.service.ApplyAgentEvent(ev)) }, r.Enqueue, ctx.Done())
 	go ui.appEvents.Run()
 	go ui.TickIndicator(r.Enqueue, ctx.Done())
-	go ui.AnimateShimmer(r.Enqueue, ctx.Done())
+	go ui.AnimateBlink(r.Enqueue, ctx.Done())
 
 	// Route parsed keyboard events through the UI before the focused textarea.
 	r.EventBus().On(input.EventKeyboard, func(evt input.TerminalEvent) {
@@ -677,7 +676,6 @@ func (ui *UI) BuildUI() {
 		widget.TextWithWrapMode(textbuf.WrapWord),
 		widget.TextWithLayout(layout.WithFlexGrow(1), layout.WithFlexShrink(1)),
 	)
-	ui.indicatorLabel.RenderAfterHook = ui.DrawShimmer
 	// While a turn is in progress, a marker starts the line in its left
 	// padding, as a tool call's does, and blinks while the time shows.
 	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, indicatorHintFg)

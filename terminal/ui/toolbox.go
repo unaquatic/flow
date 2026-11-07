@@ -15,8 +15,8 @@ import (
 // status, and shows in its details the call's params, a body, such as an
 // edit's diff or the file a read reads, and its output, as the View that its
 // Formats give the call says, as ShowTool describes. The PartBox decides how
-// the call shows: as a row or a block, expanded or not, with a marker, and
-// shimmering while the call executes.
+// the call shows: as a row or a block, expanded or not, with a marker, which
+// blinks while the call executes.
 type ToolBox struct {
 	*PartBox
 	// Tool contains the latest call state and input.
@@ -156,7 +156,7 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 	b.Output.SetContent(ToolFence("text", output))
 	b.Output.SetGone(output == "")
 	b.SetStatus(status)
-	// Only an executing call shimmers.
+	// Only an executing call's marker blinks.
 	_, executing := tool.State.(message.ToolStateRunning)
 	b.SetBusy(executing)
 }

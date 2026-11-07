@@ -92,9 +92,10 @@ type ChatMessageBox struct {
 	// Debug reports that the bubble shows what helps debug flow, such as
 	// the snapshot each message ends with.
 	Debug bool
-	// Shimmer, when set, is the shimmer whose band sweeps across the rows of
-	// the bubble's tool calls while they execute.
-	Shimmer *Shimmer
+	// Blink, when set, is the clock the markers of the bubble's tool calls
+	// blink by while they execute, and the marker of the text its reply is
+	// writing.
+	Blink *Blink
 	// CacheMode is where the bubble's replies show the cache use of their
 	// requests.
 	CacheMode CacheMode
@@ -185,11 +186,11 @@ func ChatMessageWithToolMarkers(show bool) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.ToolMarkers = show }
 }
 
-// ChatMessageWithShimmer sets the shimmer whose band sweeps across the rows
-// of the bubble's tool calls while they execute. Without one they never
-// shimmer.
-func ChatMessageWithShimmer(s *Shimmer) ChatMessageOption {
-	return func(cm *ChatMessageBox) { cm.Shimmer = s }
+// ChatMessageWithBlink sets the clock the bubble's markers blink by while
+// its tool calls execute and its reply writes. Without one they never
+// blink.
+func ChatMessageWithBlink(b *Blink) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.Blink = b }
 }
 
 // ChatMessageWithCacheMode sets where the bubble's replies show the cache use
@@ -853,7 +854,7 @@ func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMa
 	if !cm.ToolMarkers || sm.Height() == 0 || strings.TrimSpace(sm.Content()) == "" {
 		return
 	}
-	if cm.TextMarkerBlinks(sm) && cm.Shimmer.MarkerOff {
+	if cm.TextMarkerBlinks(sm) && cm.Blink.Off {
 		return
 	}
 	fg, bg := cm.fg, buf.Cell(x, y).Bg
@@ -895,13 +896,13 @@ func (cm *ChatMessageBox) Writing(sm *widget.StreamMarkdown) bool {
 }
 
 // TextMarkerBlinks reports whether the marker DrawTextMarker draws before
-// sm blinks: while the shimmer runs and the reply is Writing sm. A bubble
+// sm blinks: while the blink runs and the reply is Writing sm. A bubble
 // that Holds, as in inline mode, blinks it only while the first row of sm
 // is the row that stands for the block it holds back, which stays in the
 // live area: a row that scrolls into the terminal's scrollback cannot be
 // redrawn, and would keep the marker hidden there.
 func (cm *ChatMessageBox) TextMarkerBlinks(sm *widget.StreamMarkdown) bool {
-	if cm.Shimmer == nil || !cm.Shimmer.On.Load() || !cm.Writing(sm) {
+	if cm.Blink == nil || !cm.Blink.On.Load() || !cm.Writing(sm) {
 		return false
 	}
 	return !cm.Holds || PendingTop(sm) <= sm.Y()
@@ -1024,11 +1025,11 @@ func (cm *ChatMessageBox) Boxes() iter.Seq[*PartBox] {
 }
 
 // AdoptBox shows box, the PartBox of one of the bubble's parts or views, as
-// the bubble shows the others: with its shimmer, as its tool call style,
+// the bubble shows the others: with its blink, as its tool call style,
 // markers, and name color say, expanded as they are, and spaced from the
 // rows around it each time its shape changes.
 func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
-	box.Shimmer = cm.Shimmer
+	box.Blink = cm.Blink
 	box.SetStyle(cm.ExpandStyle)
 	box.SetMarker(cm.ToolMarkers)
 	box.SetNameFg(cm.ToolColor.Fg())

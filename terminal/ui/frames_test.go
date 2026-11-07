@@ -407,8 +407,8 @@ func TestTranscriptFrames(t *testing.T) {
 		// blinks, here hidden, and the call that has ended keeps its own.
 		{name: "agent_tool_marker_blink_off", h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.SetToolMarkers(true))
-			ui.shimmer.On.Store(true)
-			ui.shimmer.MarkerOff = true
+			ui.blink.On.Store(true)
+			ui.blink.Off = true
 			msg := agentParts("a1",
 				message.ToolPart{ID: "a1-test", CallID: "c1", Name: "bash", State: message.ToolStateRunning{
 					Input: json.RawMessage(`{"command":"go test ./..."}`)}},
@@ -423,8 +423,8 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_text_marker_blink_off", h: 4, add: func(ui *UI) {
 			ui.inline = true
 			ui.Apply(ui.service.SetToolMarkers(true))
-			ui.shimmer.On.Store(true)
-			ui.shimmer.MarkerOff = true
+			ui.blink.On.Store(true)
+			ui.blink.Off = true
 			msg := agentText("a1", "Running the tests")
 			msg.Live = []message.PartID{"a1-text"}
 			ui.AddMessage(msg)
@@ -959,59 +959,27 @@ func TestIndicatorFrames(t *testing.T) {
 	}
 }
 
-// TestShimmerFrames draws the indicator of a run in progress with the
-// shimmer's band across its time: the columns near the band's center are
-// lighter, the most at its center. The hint after the time stays dim
-// wherever the band is. The marker before the time blinks, and while it is
-// hidden the time stays where it is.
-func TestShimmerFrames(t *testing.T) {
-	// The time "Working [12s]" is 13 columns wide.
-	const cols = 13
+// TestIndicatorBlinkFrames draws the indicator of a run in progress, whose
+// marker before the time blinks: shown, and hidden, while the time stays
+// where it is. The time and the hint after it stay in their own colors.
+func TestIndicatorBlinkFrames(t *testing.T) {
 	for _, tt := range []struct {
-		name  string
-		phase float64
-		off   bool
+		name string
+		off  bool
 	}{
-		{name: "indicator_shimmer", phase: 0.5},
-		// The band's center is on the time's last column, within reach of
-		// the hint.
-		{name: "indicator_shimmer_end", phase: float64(cols-1+shimmerReach) / float64(cols+2*shimmerReach)},
-		{name: "indicator_blink_off", phase: 0.5, off: true},
+		{name: "indicator_blink_on"},
+		{name: "indicator_blink_off", off: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.inline = true
 			ui.service.state.Working = true
 			ui.ShowIndicator(WorkingIndicator(12*time.Second, false))
-			ui.shimmer.Phase = tt.phase
-			ui.shimmer.MarkerOff = tt.off
+			ui.blink.Off = tt.off
 			buf := renderFrames(56, 2, detachFromRoot(ui, ui.indicatorBox))
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
 		})
 	}
-}
-
-// TestToolRowShimmerFrames draws a reply whose calls run at once, with the
-// shimmer's band halfway across: it lightens the columns near its center of
-// the header of each row whose call executes, its name and input, and leaves
-// the status after the header, and the call that has ended, as they are.
-func TestToolRowShimmerFrames(t *testing.T) {
-	ui := newInlineTestUI(t)
-	ui.shimmer.On.Store(true)
-	ui.shimmer.Phase = 0.5
-	call := func(id message.PartID, name, input string, state func(json.RawMessage) message.ToolState) message.ToolPart {
-		return message.ToolPart{ID: id, CallID: string(id), Name: name, State: state(json.RawMessage(input))}
-	}
-	running := func(in json.RawMessage) message.ToolState { return message.ToolStateRunning{Input: in} }
-	ended := func(in json.RawMessage) message.ToolState { return message.ToolStateCompleted{Input: in, Output: "ok"} }
-	ui.AddMessage(agentParts("a1",
-		message.TextPart{ID: "a1-text", Text: "Running the checks."},
-		call("a1-test", "bash", `{"command":"go test ./..."}`, running),
-		call("a1-vet", "bash", `{"command":"go vet ./..."}`, ended),
-		call("a1-grep", "grep", `{"pattern":"TODO"}`, running),
-	))
-	buf := renderFrames(40, 7, detachTranscript(ui)...)
-	testutil.AssertGoldenFrames(t, "tool_row_shimmer", buf, surfaceNames(ui))
 }
 
 // TestWorkedFrames draws the footer under a turn's last reply, inset like its
