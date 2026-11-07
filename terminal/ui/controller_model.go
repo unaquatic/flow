@@ -1,0 +1,194 @@
+package ui
+
+import (
+	"slices"
+	"strings"
+
+	"github.com/unaquatic/catalog/gateway"
+	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/app"
+)
+
+// SetModelLabel replaces the model the slash menu's status row names.
+func (s *Service) SetModelLabel(label string) []UIEvent {
+	s.state.ModelLabel = label
+	return []UIEvent{EventModelLabelChanged{Label: label}}
+}
+
+// SessionUsage returns the token use of the transcript, priced from the
+// catalog as it is now, each reply at the price of the variant its model
+// ran as, with the prompt window of the terminal's model.
+func (s *Service) SessionUsage() SessionUsage {
+	cat := s.app.Models().Catalog()
+	u := SumUsage(s.state.Messages, func(msg ChatMessage) (gateway.Price, bool) {
+		v := agent.ParseVariant(msg.Model, cat)
+		r, ok := cat.Resolve(v.Provider, v.ID())
+		if !ok || r.Price == nil {
+			return gateway.Price{}, false
+		}
+		return *r.Price, true
+	})
+	if off, ok := agent.Lookup(cat, s.Variant()); ok {
+		u.Window = off.Limit.PromptWindow()
+	}
+	return u
+}
+
+// ContextWindow returns the most tokens a prompt of the model that produced
+// msg holds, as the catalog lists it, or zero when it does not list it.
+func (s *Service) ContextWindow(msg ChatMessage) int {
+	cat := s.app.Models().Catalog()
+	off, ok := agent.Lookup(cat, agent.ParseVariant(msg.Model, cat))
+	if !ok {
+		return 0
+	}
+	return off.Limit.PromptWindow()
+}
+
+// AssignWindows records on each reply in msgs that has usage the window of
+// its model, which its footer shows its context as a share of.
+func (s *Service) AssignWindows(msgs []ChatMessage) {
+	for i := range msgs {
+		if m := &msgs[i]; m.Role == message.RoleAgent && !m.Usage.IsZero() {
+			m.Window = s.ContextWindow(*m)
+		}
+	}
+}
+
+// Variant returns the model variant this terminal sends its prompts to.
+func (s *Service) Variant() agent.Variant {
+	return s.app.Models().ParseVariant(s.state.Model)
+}
+
+// UpdateUsage recounts the token use that the slash menu's status row
+// shows.
+func (s *Service) UpdateUsage() []UIEvent {
+	s.state.Usage = s.SessionUsage()
+	return []UIEvent{EventUsageChanged{Usage: s.state.Usage}}
+}
+
+// modelsTitle heads the model menu, and the banner that shows it loading.
+const modelsTitle = "Models"
+
+// ShowModelMenu requests the model list and shows that it is loading.
+func (s *Service) ShowModelMenu() []UIEvent {
+	s.OpenBanner(ModelBanner)
+	s.app.Models().StartListings(s.ctx)
+	return []UIEvent{EventBannerShow{Title: modelsTitle, Text: "Loading models..."}}
+}
+
+// ModelsListed replaces the loading banner with the listed models, searched
+// from the input, selecting the active one, or reports that none were
+// returned. Each row names a model and mode, and then its provider, dim, such
+// as "gpt-5.6-fast [openai]", and the search finds it by its whole ID too,
+// such as "openai/gpt-5.6-fast". It does nothing once the loading banner has
+// closed. Choosing a model that takes reasoning efforts shows them next, as
+// ShowEffortMenu does; choosing one that takes none switches to it.
+func (s *Service) ModelsListed(listings []app.ModelListing) []UIEvent {
+	if s.state.Banner != ModelBanner {
+		return nil
+	}
+
+	// Rows name models without levels, which the next page sets.
+	current := s.Variant().WithEffort("")
+	var items []MenuItem
+	for _, listing := range listings {
+		for _, m := range listing.Models {
+			for _, v := range app.ModelVariants(listing.Provider, m) {
+				choose := s.Closing(func() []UIEvent { return s.SelectModel(v.String()) })
+				if len(s.app.Models().Efforts(v)) > 0 {
+					choose = func() []UIEvent { return s.ShowEffortMenu(v) }
+				}
+				items = append(items, MenuItem{
+					Name:     v.ModelName(),
+					Hint:     Tag(string(v.Provider)),
+					Aliases:  []string{v.String()},
+					Selected: v == current,
+					Choose:   choose,
+				})
+			}
+		}
+	}
+	if len(items) == 0 {
+		return slices.Concat(s.CancelBanner(), s.ShowToast("No models available. Run /login first."))
+	}
+	return s.ShowSearchMenu(&SearchMenu{
+		Title:  modelsTitle,
+		Items:  func() []MenuItem { return items },
+		Custom: s.AskCustomModel,
+	})
+}
+
+// CustomModelPlaceholder shows in the empty input while it asks for a model
+// typed in, as AskCustomModel does.
+const CustomModelPlaceholder = "[provider]/[model]"
+
+// AskCustomModel closes the model menu and asks for a model typed in, which
+// the menu need not list, in "provider/model" form, as SelectModel takes it,
+// with CustomModelPlaceholder in the empty input. The input starts with
+// query, the menu's search, so that a model searched for and not found need
+// not be typed again. Enter switches to the model; an empty answer leaves
+// the model as it is.
+func (s *Service) AskCustomModel(query string) []UIEvent {
+	events := slices.Concat(s.CancelBanner(), s.Ask("", &TextPrompt{
+		Hint:        PromptHintStyled("use model"),
+		Placeholder: CustomModelPlaceholder,
+		Submit: func(model string) []UIEvent {
+			if model == "" {
+				return nil
+			}
+			return s.SelectModel(model)
+		},
+	}))
+	if query = strings.TrimSpace(query); query != "" {
+		events = append(events, EventInputSet{Text: query})
+	}
+	return events
+}
+
+// ModelsListFailed closes the loading banner and reports why the models
+// could not be listed. It does nothing once the loading banner has closed.
+func (s *Service) ModelsListFailed(reason string) []UIEvent {
+	if s.state.Banner != ModelBanner {
+		return nil
+	}
+	return slices.Concat(s.CancelBanner(), s.ShowToast("Listing models failed: "+reason))
+}
+
+// SelectModel makes model, a variant as Models.ParseVariant reads it, the
+// model this terminal sends its prompts to. A level model names becomes the
+// terminal's chosen level; a model that names none runs at the chosen level,
+// as SetVariant fits it.
+func (s *Service) SelectModel(model string) []UIEvent {
+	v := s.app.Models().ParseVariant(model)
+	if v.Effort != "" {
+		s.state.ReasoningEffort = v.Effort
+	}
+	events := s.SetVariant(v)
+	return slices.Concat(events, s.ShowKeywordToast("Switched to ", s.state.Model, ""))
+}
+
+// SetVariant makes v, at the terminal's chosen reasoning effort fitted to its
+// model as Models.FitEffort fits it, the model this terminal sends its
+// prompts to, and updates the label and usage that depend on it.
+func (s *Service) SetVariant(v agent.Variant) []UIEvent {
+	s.state.Model = s.app.Models().FitEffort(v.WithEffort(s.state.ReasoningEffort)).String()
+	return slices.Concat(s.SetModelLabel(s.state.Model), s.UpdateUsage())
+}
+
+// RestoreSessionModel makes the model variant the active session's
+// transcript last ran, as its newest message that names a model records it,
+// the terminal's model, with its level as the chosen one. It does nothing
+// for a transcript that names no model.
+func (s *Service) RestoreSessionModel() []UIEvent {
+	for _, m := range slices.Backward(s.state.Messages) {
+		if m.Model == "" {
+			continue
+		}
+		v := s.app.Models().ParseVariant(m.Model)
+		s.state.ReasoningEffort = v.Effort
+		return s.SetVariant(v)
+	}
+	return nil
+}

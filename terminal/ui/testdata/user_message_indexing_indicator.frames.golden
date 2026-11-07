@@ -1,0 +1,40 @@
+=== text ===
+|                                                |
+|  explore the repo                              |
+|                                                |
+|                                                |
+|  Snapshot [indexing]                           |
+|                                                |
+|  Worked for 2s [esc cancel] [ctrl+o expand]    |
+|                                                |
+=== fg ===
+|                                                |
+|  AAAAAAA AAA AAAA                              |
+|                                                |
+|                                                |
+|  BBBBBBBB BBBBBBBBBB                           |
+|                                                |
+|  BBBBBB BBB BB BBBB BBBBBBB BBBBBBB BBBBBBB    |
+|                                                |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+=== attrs ===
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|  BBBBBBBB                                      |
+|                                                |
+|                                                |
+|                                                |
+=== legend ===
+A #e6e6e6
+B #707070
+░ #232323 BoxBg

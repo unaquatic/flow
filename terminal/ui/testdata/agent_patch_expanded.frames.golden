@@ -1,0 +1,72 @@
+=== text ===
+|  Updated the calculator.               |
+|                                        |
+|                                        |
+|  changes 1 file  +2 -0                 |
+|                                        |
+|  diff --git a/calc.go b/calc.go        |
+|  --- a/calc.go                         |
+|  +++ b/calc.go                         |
+|  @@ -1,2 +1,3 @@                       |
+|   package calc                         |
+|  +                                     |
+|  +import "errors"                      |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|  AAAAAAA AAA AAAAAAAAAAA               |
+|                                        |
+|                                        |
+|  AAAAAAA A AAAA  BB CC                 |
+|                                        |
+|  DDDD DDDDD DDDDDDDDD DDDDDDDDD        |
+|  EEE EEEEEEEEE                         |
+|  FFF FFFFFFFFF                         |
+|  AA AAAA AAAA AA                       |
+|   AAAAAAA AAAA                         |
+|  F                                     |
+|  FFFFFFF FFFFFFFF                      |
+|                                        |
+|                                        |
+|                                        |
+=== bg ===
+|                                        |
+|                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|  BBBBBBB                               |
+|                                        |
+|  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #5fc882
+C #dc646e
+D #eb7513
+E #ff5b56
+F #5af78d
+░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -1,0 +1,43 @@
+=== text ===
+|  ## Plan                               |
+|                                        |
+|  1. Read calc.go.                      |
+|  2. Add Divide with a zero check.      |
+|  - Keep Add as it is.                  |
+|  - Run the tests.                      |
+|                                        |
+|                                        |
+=== fg ===
+|  AA AAAA                               |
+|                                        |
+|  BB CCCC DDDDDDDC                      |
+|  BB CCC EEEEEE CCCC C CCCC CCCCCC      |
+|  E CCCC DDD CC CC CCC                  |
+|  E CCC CCC CCCCCC                      |
+|                                        |
+|                                        |
+=== bg ===
+|                                        |
+|                                        |
+|          ░░░░░░░                       |
+|                                        |
+|         ░░░                            |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|  BBBBBBB                               |
+|                                        |
+|                                        |
+|         BBBBBB                         |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #d18616
+B #8a8a8a
+C #e6e6e6
+D #91b557
+E #eb7513
+░ #1a1a1a Bg

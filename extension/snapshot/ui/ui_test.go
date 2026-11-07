@@ -1,0 +1,146 @@
+package ui
+
+import (
+	"testing"
+
+	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/extension/snapshot"
+	"github.com/unaquatic/flow/extension/snapshot/internal/engine"
+	"github.com/unaquatic/flow/terminal/ui"
+	"github.com/unaquatic/fluid/style"
+)
+
+// The trees a turn starts from and ends with.
+var (
+	base = mustHash("7a36b04ce429eb3326713c5689665b792179b206")
+	tree = mustHash("c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0")
+)
+
+// mustHash parses s, a valid tree hash.
+func mustHash(s string) snapshot.Hash {
+	h, err := engine.ParseHash(s)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+// TestNewPartView checks that the extension shows step parts, and leaves
+// other parts to the transcript.
+func TestNewPartView(t *testing.T) {
+	e := New(t.Context(), nil)
+	host := ui.ViewHost{Style: ui.ViewStyle{Debug: true, NameFg: ui.PanelDimFg}}
+	box, ok := e.NewPartView(snapshot.StepPart{ID: "s", Snapshot: tree}, host).(*StepBox)
+	if !ok || !box.Visible() {
+		t.Fatalf("view of a step part = %T, want a StepBox shown, as debug is on", box)
+	}
+	if view := e.NewPartView(message.TextPart{Text: "hi"}, host); view != nil {
+		t.Errorf("view of a text part = %T, want none", view)
+	}
+}
+
+// TestStepBox_ShownWhilePending checks that a step part shows as a row while
+// the snapshot is being taken, and is gone before and once it holds its tree.
+func TestStepBox_ShownWhilePending(t *testing.T) {
+	box := NewStepBox(snapshot.StepPart{ID: "s"})
+	if box.Visible() {
+		t.Fatal("a step part with its tree is visible, want it gone")
+	}
+	for _, step := range []struct {
+		part snapshot.StepPart
+		want bool
+	}{
+		{snapshot.StepPart{ID: "s", Pending: true}, true},
+		{snapshot.StepPart{ID: "s", Snapshot: tree}, false},
+	} {
+		ui.UpdateContentPart(box, step.part)
+		if box.Visible() != step.want {
+			t.Errorf("after %+v visible = %v, want %v", step.part, box.Visible(), step.want)
+		}
+	}
+	if !ui.IsToolRow(box) {
+		t.Error("a step row does not stack as a tool call row")
+	}
+}
+
+// TestStepBox_ShowDone checks that a step part kept once taken stays a row,
+// reads as being indexed while pending, and then shows its tree's short hash,
+// or that recording it failed.
+func TestStepBox_ShowDone(t *testing.T) {
+	box := NewStepBox(snapshot.StepPart{ID: "s", Pending: true})
+	box.SetShowDone(true)
+	for _, step := range []struct {
+		part snapshot.StepPart
+		want string
+	}{
+		{snapshot.StepPart{ID: "s", Pending: true}, "Snapshot " + IndexingStatus},
+		{snapshot.StepPart{ID: "s", Snapshot: tree}, "Snapshot " + tree.String()[:engine.ShortHashLen]},
+		{snapshot.StepPart{ID: "s"}, "Snapshot " + FailedStatus},
+	} {
+		ui.UpdateContentPart(box, step.part)
+		if !box.Visible() || box.Header.PlainText() != step.want {
+			t.Errorf("after %+v visible %v with %q, want visible with %q", step.part, box.Visible(), box.Header.PlainText(), step.want)
+		}
+	}
+	box.SetShowDone(false)
+	if box.Visible() {
+		t.Error("a step part taken is visible once not kept, want it gone")
+	}
+}
+
+// TestPatchBox_LoadsOnceBothTreesAreKnown checks that a reply's changes are
+// fetched once, between the tree the message before it ended with and the
+// tree of its own step part, once that arrives, and that a prompt's are not.
+func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
+	var loads [][2]snapshot.Hash
+	box := NewPatchBox(nil, style.Color{})
+	box.Load = func(from, to snapshot.Hash) { loads = append(loads, [2]snapshot.Hash{from, to}) }
+	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
+		Prev: []message.ContentPart{snapshot.StepPart{Snapshot: base}}}
+	box.SetMessage(reply)
+	if len(loads) != 0 {
+		t.Fatalf("loaded %v before the reply's tree arrived", loads)
+	}
+	reply.Parts = []message.ContentPart{snapshot.StepPart{Snapshot: tree}}
+	box.SetMessage(reply)
+	box.SetMessage(reply)
+	if want := [][2]snapshot.Hash{{base, tree}}; len(loads) != 1 || loads[0] != want[0] {
+		t.Errorf("loads = %v, want %v once", loads, want)
+	}
+
+	prompt := NewPatchBox(nil, style.Color{})
+	prompt.Load = func(from, to snapshot.Hash) { t.Errorf("a prompt loaded %s..%s", from, to) }
+	prompt.SetMessage(ui.ChatMessage{ID: "u2", Role: message.RoleUser,
+		Prev:  []message.ContentPart{snapshot.StepPart{Snapshot: base}},
+		Parts: []message.ContentPart{snapshot.StepPart{Snapshot: tree}}})
+}
+
+// TestPatchHeader checks that a step's changes are headed like a tool call,
+// by "changes" in bold and the color of a panel's title, without brackets,
+// and counted as the notice of a history move counts them, in the same
+// colors.
+func TestPatchHeader(t *testing.T) {
+	header := PatchHeader(DiffStat{Files: 1, Additions: 0, Deletions: 205})
+	if got, want := header.PlainText(), "changes 1 file  +0 -205"; got != want {
+		t.Fatalf("header = %q, want %q", got, want)
+	}
+	name := header.Chunks[0]
+	if title := ui.TitleChunk("changes"); name.Text != "changes" || name.Attributes&style.AttrBold == 0 || name.Fg != title.Fg {
+		t.Errorf("name = %+v, want \"changes\" in bold and the title color", name)
+	}
+	notice := ui.BuildDiffToastLines([]app.FileDiff{{File: "/abs/x.go", Deletions: 205}})[0]
+	fgs := func(chunks []style.TextChunk) []style.Color {
+		var out []style.Color
+		for _, c := range chunks {
+			if !c.Fg.IsTransparent() {
+				out = append(out, c.Fg)
+			}
+		}
+		return out
+	}
+	got, want := fgs(header.Chunks[1:]), fgs(notice.Chunks)
+	if len(got) != 2 || len(want) != 2 || got[0] != ui.DiffAddFg || got[1] != ui.DiffDelFg || want[0] != ui.DiffAddFg || want[1] != ui.DiffDelFg {
+		t.Errorf("count colors: header %v, notice %v; want both %v then %v", got, want, ui.DiffAddFg, ui.DiffDelFg)
+	}
+}

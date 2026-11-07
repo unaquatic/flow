@@ -1,0 +1,43 @@
+=== text ===
+|    ▄▄▄ ▄▄▄                                                 |
+|   ██▀▀ ▀██                                                 |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄                              |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██                              |
+|   ██    ██  ██    ██ ██    ██                              |
+|   ██    ██  ██    ██ ██ ▄▄ ██                              |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████                              |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀                               |
+|                                                            |
+|Resume this session with:                                   |
+|  flow --session 01a12e38-2689-73a1-a799-5db6b6a8bc44       |
+|                                                            |
+=== fg ===
+|    AAA BBB                                                 |
+|   AAAA BBB                                                 |
+| AAAAAA  BB   BBBBBB  BB    BB                              |
+| AAAAAA  BB  BBBBBBBB BB    BB                              |
+|   AA    BB  BB    BB BB    BB                              |
+|   AA    BB  BB    BB BB BB BB                              |
+|AA AA   BBBB BBBBBBBB BBBBBBBB                              |
+|AAAAA   BBBB  BBBBBB   BB  BB                               |
+|                                                            |
+|CCCCCC CCCC CCCCCCC CCCCC                                   |
+|  AAAA CCCCCCCCC CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC       |
+|                                                            |
+=== attrs ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|BBBBBBBBBBBBBBBBBBBBBBBBB                                   |
+|  BBBB                                                      |
+|                                                            |
+=== legend ===
+A #ff5f00
+B #e4e4e4
+C #e6e6e6

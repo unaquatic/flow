@@ -1,0 +1,117 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/internal/cmdline"
+)
+
+// loginOptions are the flags of the login command.
+type loginOptions struct {
+	method   loginMethod
+	provider agent.ProviderID
+	account  agent.AccountID
+}
+
+// loginMethod is how the login command authenticates: an
+// [agent.LoginMethod], or keyMethod to enter an API key.
+type loginMethod string
+
+// keyMethod reads an API key from standard input instead of logging in.
+const keyMethod loginMethod = "key"
+
+// MarshalText returns m as text.
+func (m *loginMethod) MarshalText() ([]byte, error) {
+	return []byte(*m), nil
+}
+
+// UnmarshalText sets m to keyMethod or to the agent.LoginMethod that text
+// names.
+func (m *loginMethod) UnmarshalText(text []byte) error {
+	if loginMethod(text) == keyMethod {
+		*m = keyMethod
+		return nil
+	}
+	method, err := agent.ParseLoginMethod(string(text))
+	if err != nil {
+		return err
+	}
+	*m = loginMethod(method)
+	return nil
+}
+
+var loginCmd = &cmdline.Command[loginOptions]{
+	Name:  "login",
+	Short: "Authenticate with a provider account",
+	Flags: func(fs *flag.FlagSet, o *loginOptions) {
+		const usage = "Login `method`: browser, device, or key"
+		fs.TextVar(&o.method, "method", new(loginMethod(agent.LoginBrowser)), usage)
+		fs.TextVar(&o.method, "m", new(loginMethod(agent.LoginBrowser)), usage)
+		providerFlag(fs, &o.provider, "Provider `name` to authenticate with (required)")
+		accountFlag(fs, &o.account, "Account `ID` to log in to again; omit to add a new account")
+	},
+	Run: func(ctx context.Context, o loginOptions, args []string) error {
+		if o.provider == "" {
+			return errProviderRequired
+		}
+		return withApp(runLogin)(ctx, o, args)
+	},
+}
+
+// runLogin logs in to the account that o names in a, or saves an API key for
+// it, and makes the account active. It writes the login instructions and
+// the outcome to w.
+func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []string) error {
+	if o.method == keyMethod {
+		return saveKey(ctx, w, a, o.provider, o.account)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go printPrompts(ctx, w, a.Subscribe(ctx))
+	id, err := a.Accounts().Login(ctx, o.provider, o.account, agent.LoginMethod(o.method))
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "Logged in to %s account %s; it is now active.\n", o.provider, id)
+	return nil
+}
+
+// saveKey asks on w for an API key, reads it from standard input and saves
+// it as account id of provider t, or as a new account when id is empty. The
+// key is echoed as typed.
+func saveKey(ctx context.Context, w io.Writer, a *app.App, t agent.ProviderID, id agent.AccountID) error {
+	fmt.Fprintf(w, "Enter the %s API key: ", t)
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("read API key: %w", err)
+	}
+	if id, err = a.Accounts().SetKey(ctx, t, id, agent.APIKey(line)); err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "Saved the API key as %s account %s; it is now active.\n", t, id)
+	return nil
+}
+
+// printPrompts writes the login instructions among events to w until ctx is
+// done.
+func printPrompts(ctx context.Context, w io.Writer, events <-chan app.Event) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ev := <-events:
+			if p, ok := ev.(app.EventLoginPrompt); ok {
+				fmt.Fprintln(w, p.Prompt())
+			}
+		}
+	}
+}

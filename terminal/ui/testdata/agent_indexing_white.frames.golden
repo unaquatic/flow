@@ -1,0 +1,21 @@
+=== text ===
+|  All tests pass.                       |
+|                                        |
+|  Snapshot [indexing]                   |
+|                                        |
+|                                        |
+=== fg ===
+|  AAA AAAAA AAAAA                       |
+|                                        |
+|  AAAAAAAA BBBBBBBBBB                   |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|  BBBBBBBB                              |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #707070
