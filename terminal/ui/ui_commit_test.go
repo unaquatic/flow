@@ -470,20 +470,22 @@ func TestBubbleStart(t *testing.T) {
 	}
 }
 
-// TestDropCommittedRows_StopsTheShimmer checks that the tool calls of a
-// bubble dropped once all its rows are committed no longer shimmer.
-func TestDropCommittedRows_StopsTheShimmer(t *testing.T) {
+// TestDropCommittedRows_StopsTheBlink checks that the markers of the tool
+// calls of a bubble dropped once all its rows are committed no longer blink.
+func TestDropCommittedRows_StopsTheBlink(t *testing.T) {
 	ui := newInlineTestUI(t)
 	ui.inline = true
+	// Only a marker that shows blinks.
+	ui.Apply(ui.service.SetToolMarkers(true))
 	running := func(in json.RawMessage) message.ToolState { return message.ToolStateRunning{Input: in} }
 	ui.AddMessage(agentParts("a1", bashCall("a1-bash", "sleep 1", running)))
-	if len(ui.shimmer.Rows) == 0 {
-		t.Fatal("the running call does not shimmer")
+	if len(ui.blink.Rows) == 0 {
+		t.Fatal("the running call's marker does not blink")
 	}
 
 	commitRows(ui, -1)
 
-	if len(ui.shimmer.Rows) != 0 {
-		t.Errorf("%d calls of the dropped bubble still shimmer, want none", len(ui.shimmer.Rows))
+	if len(ui.blink.Rows) != 0 {
+		t.Errorf("%d calls of the dropped bubble still blink, want none", len(ui.blink.Rows))
 	}
 }

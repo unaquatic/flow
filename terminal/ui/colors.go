@@ -65,7 +65,7 @@ func textChoices(t *style.Theme) []ColorChoice {
 	gray := func(v uint8) style.Color { return style.ColorFromInts(v, v, v, 255) }
 	return []ColorChoice{
 		// Text.
-		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, the shimmer, code attributes, objects, numbers, types, constants, and properties
+		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, code attributes, objects, numbers, types, constants, and properties
 		{logoFg, style.ANSIBrightWhite, 254},           // the logo after its "f"
 		{gray(220), style.ANSIBrightWhite, 253},        // paths in the diff toast
 		{style.ColorWhite, style.ANSIBrightWhite, 231}, // OnAccent, OnInteractive and the other On roles

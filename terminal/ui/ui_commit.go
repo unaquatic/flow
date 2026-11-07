@@ -59,8 +59,8 @@ func (ui *UI) DropCommittedRows(n int) {
 
 // DropLeadingRows drops the first n rows of the transcript, taking them out of
 // their parent if the terminal did not, and the bubbles none of whose rows
-// stays: they no longer show their messages, and their tool calls no longer
-// shimmer. A bubble with a row that stays keeps its widgets, which space the
+// stays: they no longer show their messages, and the markers of their tool
+// calls no longer blink. A bubble with a row that stays keeps its widgets, which space the
 // rows that stay.
 func (ui *UI) DropLeadingRows(n int) {
 	for _, row := range ui.transcriptRows[:n] {
@@ -79,7 +79,7 @@ func (ui *UI) DropLeadingRows(n int) {
 			kept[cm] = shown
 			if !shown {
 				for box := range cm.Boxes() {
-					ui.shimmer.Track(box, false)
+					ui.blink.Track(box, false)
 				}
 			}
 		}
