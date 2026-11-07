@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
-	"github.com/unaquatic/flow/extension/protocol/login/claude"
 )
 
 // bannerShown returns the banner that out shows.
@@ -33,7 +31,7 @@ func bannerNames(show EventBannerShow) []string {
 }
 
 // bannerRows returns the banner's items as their rows read: the name and
-// then the hint, such as "gpt-5 [openai]" in the model menu.
+// then the hint, such as "model-c [provider-a]" in the model menu.
 func bannerRows(show EventBannerShow) []string {
 	var rows []string
 	for _, item := range show.Items {
@@ -48,8 +46,8 @@ func listModels(t *testing.T, s *Service) EventBannerShow {
 	t.Helper()
 	s.OpenBanner(ModelBanner)
 	return bannerShown(t, s.ModelsListed([]app.ModelListing{
-		listing(s.app.Models().Catalog(), chatgpt.ProviderID, "gpt-5", "model", "o4-mini"),
-		listing(s.app.Models().Catalog(), claude.ProviderID, "claude-3-7-sonnet", "claude-sonnet-4-5"),
+		listing(s.app.Models().Catalog(), providerA, "model-c", "model", "model-a4-mini"),
+		listing(s.app.Models().Catalog(), providerB, "model-3-7-small", "model-small-4-6"),
 	}))
 }
 
@@ -57,7 +55,7 @@ func TestModelMenuListsAll(t *testing.T) {
 	s, _ := newTestService(t)
 	show := listModels(t, s)
 
-	want := []string{"gpt-5 [openai]", "model [openai]", "o4-mini [openai]", "claude-3-7-sonnet [anthropic]", "claude-sonnet-4-5 [anthropic]"}
+	want := []string{"model-c [provider-a]", "model [provider-a]", "model-a4-mini [provider-a]", "model-3-7-small [provider-b]", "model-small-4-6 [provider-b]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
@@ -65,7 +63,7 @@ func TestModelMenuListsAll(t *testing.T) {
 		t.Error("menu has no search field")
 	}
 	if show.SelectedIdx != 1 {
-		t.Errorf("menu selects %d, want the active openai/model at 1", show.SelectedIdx)
+		t.Errorf("menu selects %d, want the active provider-a/model at 1", show.SelectedIdx)
 	}
 }
 
@@ -76,10 +74,10 @@ func TestModelMenuSearch(t *testing.T) {
 		wantIdx     int
 		wantText    string
 	}{
-		{name: "later word", query: "sonnet", want: []string{"claude-sonnet-4-5 [anthropic]", "claude-3-7-sonnet [anthropic]"}},
-		{name: "case ignored", query: "GPT5", want: []string{"gpt-5 [openai]"}},
-		{name: "typo ties keep listing order", query: "sonnte", want: []string{"claude-3-7-sonnet [anthropic]", "claude-sonnet-4-5 [anthropic]"}},
-		{name: "cleared", query: " ", want: []string{"gpt-5 [openai]", "model [openai]", "o4-mini [openai]", "claude-3-7-sonnet [anthropic]", "claude-sonnet-4-5 [anthropic]"}, wantIdx: 1},
+		{name: "later word", query: "small", want: []string{"model-small-4-6 [provider-b]", "model-3-7-small [provider-b]"}},
+		{name: "case ignored", query: "MC", want: []string{"model-c [provider-a]"}},
+		{name: "typo ties keep listing order", query: "smlal", want: []string{"model-3-7-small [provider-b]", "model-small-4-6 [provider-b]"}},
+		{name: "cleared", query: " ", want: []string{"model-c [provider-a]", "model [provider-a]", "model-a4-mini [provider-a]", "model-3-7-small [provider-b]", "model-small-4-6 [provider-b]"}, wantIdx: 1},
 		{name: "no match", query: "zzz", wantText: NoMatchesText},
 	}
 	for _, tt := range tests {
@@ -109,17 +107,17 @@ func TestModelMenuRows(t *testing.T) {
 	s, _ := newTestService(t)
 	s.OpenBanner(ModelBanner)
 	show := bannerShown(t, s.ModelsListed([]app.ModelListing{
-		listing(s.app.Models().Catalog(), chatgpt.ProviderID, "gpt-5.6-luna"),
-		listing(s.app.Models().Catalog(), claude.ProviderID, "claude-opus-5-5"),
+		listing(s.app.Models().Catalog(), providerA, "model-b"),
+		listing(s.app.Models().Catalog(), providerB, "model-g"),
 	}))
-	want := []string{"gpt-5.6-luna [openai]", "gpt-5.6-luna:fast [openai]", "claude-opus-5-5 [anthropic]"}
+	want := []string{"model-b [provider-a]", "model-b:fast [provider-a]", "model-g [provider-b]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
 	for query, want := range map[string]string{
-		"luna:fast":                "gpt-5.6-luna:fast [openai]",
-		"openai/gpt-5.6-luna:fast": "gpt-5.6-luna:fast [openai]",
-		"anthropic/":               "claude-opus-5-5 [anthropic]",
+		"b:fast":                  "model-b:fast [provider-a]",
+		"provider-a/model-b:fast": "model-b:fast [provider-a]",
+		"provider-b/":             "model-g [provider-b]",
 	} {
 		show := bannerShown(t, s.HandleBannerSearch(query))
 		if got := bannerRows(show); len(got) == 0 || got[0] != want {
@@ -138,22 +136,22 @@ func TestModelMenuCustomModel(t *testing.T) {
 	if show := listModels(t, s); !slices.Contains(show.Hints(), HintCustom) {
 		t.Errorf("model menu keys %v lack %v", show.Hints(), HintCustom)
 	}
-	bannerShown(t, s.HandleBannerSearch("anthropic/claude-x"))
+	bannerShown(t, s.HandleBannerSearch("provider-b/model-y"))
 
 	custom, out := s.HandleBannerCustom()
 	if !custom || s.state.Banner != NoBanner || s.state.Prompt == nil {
 		t.Fatalf("custom = %v, banner %v, prompt %v; want the menu closed and a question open", custom, s.state.Banner, s.state.Prompt)
 	}
-	if !slices.Contains(out, UIEvent(EventInputSet{Text: "anthropic/claude-x"})) {
+	if !slices.Contains(out, UIEvent(EventInputSet{Text: "provider-b/model-y"})) {
 		t.Errorf("events %v do not keep the search in the input", out)
 	}
 	if got := s.InputHint(time.Now()); got != CustomModelPlaceholder {
 		t.Errorf("input hint = %q, want %q", got, CustomModelPlaceholder)
 	}
 
-	s.HandleSubmit("anthropic/claude-x")
-	if s.state.Model != "anthropic/claude-x" || s.state.Prompt != nil {
-		t.Errorf("after the answer: model %q, prompt %v; want anthropic/claude-x and none", s.state.Model, s.state.Prompt)
+	s.HandleSubmit("provider-b/model-y")
+	if s.state.Model != "provider-b/model-y" || s.state.Prompt != nil {
+		t.Errorf("after the answer: model %q, prompt %v; want provider-b/model-y and none", s.state.Model, s.state.Prompt)
 	}
 	if got := s.InputHint(time.Now()); got != "" {
 		t.Errorf("input hint after the answer = %q, want none", got)
@@ -173,7 +171,7 @@ func TestModelMenuSearchAfterClose(t *testing.T) {
 	listModels(t, s)
 	s.CancelBanner()
 
-	if out := s.HandleBannerSearch("gpt"); out != nil {
+	if out := s.HandleBannerSearch("model"); out != nil {
 		t.Errorf("search after close = %v, want nothing", out)
 	}
 }
@@ -183,21 +181,21 @@ func TestModelMenuSearchAfterClose(t *testing.T) {
 // default model as it was.
 func TestSelectModelIsTheTerminals(t *testing.T) {
 	q := newQueueTest(t)
-	q.s.SelectModel("anthropic/claude-x")
+	q.s.SelectModel("provider-b/model-y")
 
-	if q.s.state.Model != "anthropic/claude-x" || q.s.state.ModelLabel != "anthropic/claude-x" {
-		t.Errorf("terminal model, label = %q, %q, want anthropic/claude-x", q.s.state.Model, q.s.state.ModelLabel)
+	if q.s.state.Model != "provider-b/model-y" || q.s.state.ModelLabel != "provider-b/model-y" {
+		t.Errorf("terminal model, label = %q, %q, want provider-b/model-y", q.s.state.Model, q.s.state.ModelLabel)
 	}
-	if got, err := q.a.Models().Default(); got != "openai/model" || err != nil {
-		t.Errorf("app default model = %q, %v, want openai/model as it was", got, err)
+	if got, err := q.a.Models().Default(); got != "provider-a/model" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-a/model as it was", got, err)
 	}
 
 	if err := q.s.SendPrompt("hi"); err != nil {
 		t.Fatalf("SendPrompt: %v", err)
 	}
 	started := q.until(app.TypeMessageStarted).(app.EventMessageStarted)
-	if m := started.Message; m.Model != "anthropic/claude-x" {
-		t.Errorf("prompt sent to %s, want anthropic/claude-x", m.Model)
+	if m := started.Message; m.Model != "provider-b/model-y" {
+		t.Errorf("prompt sent to %s, want provider-b/model-y", m.Model)
 	}
 	q.until(app.TypeAgentEnded)
 }

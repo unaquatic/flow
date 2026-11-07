@@ -7,7 +7,7 @@ import (
 )
 
 // ProviderID identifies a provider by its ID in the catalog, such as
-// "openai" or "openrouter"; it is the catalog's own gateway.ProviderID. The
+// "provider-a" or "provider-b"; it is the catalog's own gateway.ProviderID. The
 // agent knows no provider by name: the extensions that make providers, such
 // as extension/protocol, name theirs.
 type ProviderID = gateway.ProviderID
@@ -28,7 +28,7 @@ func FormatModel(t ProviderID, model string) string {
 }
 
 // Provider supplies the models of one provider at one endpoint, such as
-// OpenRouter's at its API. The clients of extension/protocol implement it,
+// a gateway's at its API. The clients of extension/protocol implement it,
 // one for each request format, such as completions.Client for Chat
 // Completions.
 type Provider interface {
@@ -40,8 +40,8 @@ type Provider interface {
 }
 
 // AmbientProvider is a Provider whose requests credentials of the
-// environment may authorize without an account, such as AWS credentials or
-// Google's application default credentials.
+// environment may authorize without an account, such as a cloud's
+// application default credentials.
 type AmbientProvider interface {
 	Provider
 	// AmbientCredentials reports whether the environment holds such

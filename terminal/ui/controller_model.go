@@ -81,8 +81,8 @@ func (s *Service) ShowModelMenu() []UIEvent {
 // ModelsListed replaces the loading banner with the listed models, searched
 // from the input, selecting the active one, or reports that none were
 // returned. Each row names a model and mode, and then its provider, dim, such
-// as "gpt-5.6-fast [openai]", and the search finds it by its whole ID too,
-// such as "openai/gpt-5.6-fast". It does nothing once the loading banner has
+// as "model-a:fast [provider-a]", and the search finds it by its whole ID too,
+// such as "provider-a/model-a:fast". It does nothing once the loading banner has
 // closed. Choosing a model that takes reasoning efforts shows them next, as
 // ShowEffortMenu does; choosing one that takes none switches to it.
 func (s *Service) ModelsListed(listings []app.ModelListing) []UIEvent {

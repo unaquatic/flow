@@ -49,7 +49,7 @@ func (l LogLevel) Level() slog.Level {
 // Config contains resolved application configuration.
 type Config struct {
 	// Model is the default model in "provider/model:option:effort" form, as
-	// agent.Variant.String writes it, such as "openai/gpt-5.6:fast:high",
+	// agent.Variant.String writes it, such as "provider-a/model-a:fast:high",
 	// leaving out the option and the effort it does not set.
 	Model string `json:"model,omitempty"`
 
@@ -95,7 +95,7 @@ type Provider struct {
 
 	// BaseURL moves the provider's endpoints: a host alone, such as
 	// https://proxy.example, takes each there with its own path, as
-	// https://proxy.example/v1 for Anthropic's API; a base URL with a path
+	// https://proxy.example/v1 for https://api.provider-a.example/v1; a base URL with a path
 	// replaces the provider's own.
 	BaseURL string `json:"base_url,omitempty"`
 

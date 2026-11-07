@@ -26,12 +26,12 @@ func TestMatch(t *testing.T) {
 		{name: "too short for a typo", query: "gl", s: "login"},
 		{name: "too many typos", query: "lxgx", s: "login"},
 		{name: "case-sensitive", query: "S", s: "status"},
-		{name: "first word prefix", query: "open", s: "openai/gpt-5", want: Result{Tier: Prefix}, wantOK: true},
-		{name: "later word prefix", query: "sonnet", s: "anthropic/claude-sonnet-4-5", want: Result{Tier: Prefix, Cost: 2}, wantOK: true},
+		{name: "first word prefix", query: "prov", s: "provider-a/model-a-5", want: Result{Tier: Prefix}, wantOK: true},
+		{name: "later word prefix", query: "small", s: "provider-b/model-small-4-6", want: Result{Tier: Prefix, Cost: 3}, wantOK: true},
 		{name: "run of separators", query: "b", s: "a--b", want: Result{Tier: Prefix, Cost: 1}, wantOK: true},
-		{name: "subsequence from word start", query: "gpt5", s: "openai/gpt-5", want: Result{Tier: Subsequence, Cost: 1}, wantOK: true},
-		{name: "subsequence across words", query: "o4m", s: "openai/o4-mini", want: Result{Tier: Subsequence, Cost: 1}, wantOK: true},
-		{name: "typo in later word", query: "sonnte", s: "anthropic/claude-sonnet-4-5", want: Result{Tier: Typo, Cost: editCost}, wantOK: true},
+		{name: "subsequence from word start", query: "a5", s: "provider-a/model-a-5", want: Result{Tier: Subsequence, Cost: 1}, wantOK: true},
+		{name: "subsequence across words", query: "a4m", s: "provider-a/model-a4-mini", want: Result{Tier: Subsequence, Cost: 1}, wantOK: true},
+		{name: "typo in later word", query: "smlal", s: "provider-b/model-small-4-6", want: Result{Tier: Typo, Cost: editCost}, wantOK: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -66,14 +66,14 @@ func TestRank(t *testing.T) {
 }
 
 func TestRankWords(t *testing.T) {
-	items := []string{"openai/gpt-5", "openai/o4-mini", "anthropic/claude-3-7-sonnet", "anthropic/claude-sonnet-4-5"}
+	items := []string{"provider-a/model-a-5", "provider-a/model-a4-mini", "provider-b/model-3-7-small", "provider-b/model-small-4-6"}
 	tests := []struct {
 		name, query string
 		want        []string
 	}{
-		{name: "provider", query: "anthropic", want: []string{"anthropic/claude-3-7-sonnet", "anthropic/claude-sonnet-4-5"}},
-		{name: "earlier word first", query: "sonnet", want: []string{"anthropic/claude-sonnet-4-5", "anthropic/claude-3-7-sonnet"}},
-		{name: "subsequence", query: "gpt5", want: []string{"openai/gpt-5"}},
+		{name: "provider before its near misses", query: "provider-b", want: []string{"provider-b/model-3-7-small", "provider-b/model-small-4-6", "provider-a/model-a-5", "provider-a/model-a4-mini"}},
+		{name: "earlier word first", query: "small", want: []string{"provider-b/model-small-4-6", "provider-b/model-3-7-small"}},
+		{name: "subsequence", query: "a5", want: []string{"provider-a/model-a-5"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

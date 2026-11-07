@@ -1,57 +1,101 @@
 package ui
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/catalog/gateway/gatewaytest"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/extension"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
+)
+
+// The providers of testCatalog: provider-a speaks the Responses format, and
+// provider-b the Messages format.
+const (
+	providerA agent.ProviderID = "provider-a"
+	providerB agent.ProviderID = "provider-b"
 )
 
 // testCatalog is the api.json of the catalog the tests run on,
-// which gatewaytest.FromAPI makes the catalog of: gpt-5.6 takes none
-// through max and has a fast tier and a pro mode, gpt-5 takes minimal
-// through high, gpt-5-pro takes high alone, and gpt-5.6-luna has a fast
-// tier; and the Claude models, Opus taking low through max.
+// which protocoltest.FromAPI makes the catalog of: model-a takes none
+// through max and has a fast tier and a pro mode, model-c takes minimal
+// through high, model-c-pro takes high alone, and model-b has a fast
+// tier; and the models of provider-b, model-f taking none through max and
+// model-g low through max.
 const testCatalog = `{
-"openai":{"id":"openai","models":{
-  "gpt-5":{"id":"gpt-5","name":"GPT-5","reasoning":true,"release_date":"2025-08-07",
+"provider-a":{"id":"provider-a","format":"responses","models":{
+  "model-c":{"id":"model-c","name":"Model C","reasoning":true,"release_date":"2025-08-07",
     "limit":{"context":400000,"input":272000,"output":128000},
     "cost":{"input":1.25,"output":10,"cache_read":0.125},
     "reasoning_options":[{"type":"effort","values":["minimal","low","medium","high"]}]},
-  "gpt-5-pro":{"id":"gpt-5-pro","name":"GPT-5 Pro","reasoning":true,"release_date":"2025-10-06",
+  "model-c-pro":{"id":"model-c-pro","name":"Model C Pro","reasoning":true,"release_date":"2025-10-06",
     "limit":{"context":400000,"output":272000},
     "reasoning_options":[{"type":"effort","values":["high"]}]},
-  "gpt-5.6":{"id":"gpt-5.6","name":"GPT-5.6","reasoning":true,"release_date":"2026-07-09",
+  "model-a":{"id":"model-a","name":"Model A","reasoning":true,"release_date":"2026-07-09",
     "limit":{"context":1050000,"input":922000,"output":128000},
     "cost":{"input":2,"output":10,"cache_read":0.2},
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh","max"]}],
     "experimental":{"modes":{
       "fast":{"cost":{"input":4,"output":20,"cache_read":0.4},"provider":{"body":{"service_tier":"priority"}}},
       "pro":{"provider":{"body":{"reasoning":{"mode":"pro"}}}}}}},
-  "gpt-5.6-luna":{"id":"gpt-5.6-luna","name":"GPT-5.6 Luna","reasoning":true,"release_date":"2026-07-09",
+  "model-b":{"id":"model-b","name":"Model B","reasoning":true,"release_date":"2026-07-09",
     "limit":{"context":400000,"output":128000},
     "cost":{"input":0.2,"output":1.2},
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh"]}],
     "experimental":{"modes":{"fast":{"cost":{"input":0.4,"output":2.4},"provider":{"body":{"service_tier":"priority"}}}}}}
 }},
-"anthropic":{"id":"anthropic","models":{
-  "claude-sonnet-4":{"id":"claude-sonnet-4","name":"Claude Sonnet 4","limit":{"context":200000,"output":64000},
+"provider-b":{"id":"provider-b","format":"messages","models":{
+  "model-d":{"id":"model-d","name":"Model D","limit":{"context":200000,"output":64000},
     "cost":{"input":3,"output":15}},
-  "claude-haiku-4-5":{"id":"claude-haiku-4-5","name":"Claude Haiku 4.5","reasoning":true,"limit":{"context":200000,"output":64000},
+  "model-e":{"id":"model-e","name":"Model E","reasoning":true,"limit":{"context":200000,"output":64000},
     "reasoning_options":[{"type":"budget_tokens","min":1024}]},
-  "claude-opus-4-8":{"id":"claude-opus-4-8","name":"Claude Opus 4.8","reasoning":true,"limit":{"context":1000000,"output":128000},
-    "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]},
-  "claude-opus-5-5":{"id":"claude-opus-5-5","name":"Claude Opus 5.5","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "model-f":{"id":"model-f","name":"Model F","reasoning":true,"limit":{"context":1000000,"output":128000},
+    "reasoning_options":[{"type":"toggle"},{"type":"effort","values":["low","medium","high","xhigh","max"]}]},
+  "model-g":{"id":"model-g","name":"Model G","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]}
 }}}`
 
 // writeTestCatalog caches the catalog of testCatalog in home, as the
-// app's catalog store keeps a download there.
+// app's catalog store keeps a download there, with high the default effort
+// of model-f, as the catalog's rules give one to the models whose labs
+// document it, which an api.json cannot.
 func writeTestCatalog(t *testing.T, home string) {
 	t.Helper()
-	gatewaytest.WriteCache(t, home, gatewaytest.FromAPI(t, testCatalog))
+	cat := protocoltest.FromAPI(t, testCatalog)
+	cat.Providers[providerB].Models["provider-b/model-f"].Reasoning.DefaultEffort = "high"
+	gatewaytest.WriteCache(t, home, cat)
+}
+
+// loginTestFlows is the extension that logs in to the providers of
+// testCatalog, with flows that never sign in.
+type loginTestFlows struct{}
+
+// Name identifies the extension.
+func (loginTestFlows) Name() string { return "test_login_flows" }
+
+// LoginFlows returns a flow of provider-a and one of provider-b.
+func (loginTestFlows) LoginFlows() map[agent.ProviderID]agent.LoginFlow {
+	return map[agent.ProviderID]agent.LoginFlow{providerA: noLogin{}, providerB: noLogin{}}
+}
+
+// loadLoginTestFlows loads loginTestFlows.
+func loadLoginTestFlows(context.Context, extension.Host) (extension.Extension, error) {
+	return loginTestFlows{}, nil
+}
+
+// noLogin is a LoginFlow that never signs in.
+type noLogin struct{}
+
+func (noLogin) Device(context.Context, func(agent.LoginPrompt)) (agent.OAuthToken, error) {
+	return agent.OAuthToken{}, errors.ErrUnsupported
+}
+
+func (noLogin) Refresh(context.Context, agent.OAuthToken) (agent.OAuthToken, error) {
+	return agent.OAuthToken{}, errors.ErrUnsupported
 }
 
 // offeringOf returns the catalog's offering of model, a variant's model in

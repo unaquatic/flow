@@ -16,16 +16,16 @@ type Model interface {
 type Request struct {
 	// Messages is the conversation so far. System messages hold the
 	// instructions; APIs that take instructions apart from the conversation,
-	// as Anthropic and the ChatGPT Responses API do, gather them from
+	// as the Messages and Responses formats do, gather them from
 	// wherever they are.
 	Messages []Message
 	// Tools are the tools the model may call.
 	Tools []ToolDefinition
 	// MaxTokens limits the output tokens of the response. Zero sends no
-	// limit, which Anthropic rejects.
+	// limit, which the Messages format rejects.
 	MaxTokens int
 	// CacheKey names the requests that share a prompt prefix, such as the
-	// turns of one session. Providers that route by key, as OpenAI does,
+	// turns of one session. Providers that route by key, as some do,
 	// send them to the same prompt cache. Empty sends no key.
 	CacheKey string
 	// Reasoning sets how much the model reasons. Nil sends no reasoning
@@ -39,7 +39,7 @@ type Request struct {
 	Body map[string]any
 	// Headers holds headers to add to the request, as a catalog variant
 	// sets them. A header the provider sets already takes the value after
-	// its own, comma-separated, as list headers such as anthropic-beta take
-	// them.
+	// its own, comma-separated, as list headers such as a provider's beta
+	// header take them.
 	Headers map[string]string
 }

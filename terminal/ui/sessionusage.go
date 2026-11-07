@@ -103,7 +103,7 @@ var labelEfforts = []agent.ReasoningEffort{
 // ModelName returns model, a variant in "provider/model:option:effort"
 // format, as the slash menu's status row shows it before the context:
 // without its provider, and with a space in place of the colon before its
-// reasoning effort, such as "gpt-5.6-luna:fast medium". A colon before
+// reasoning effort, such as "model-a:fast medium". A colon before
 // anything else is part of the model ID, as in a fine-tuned model's, and
 // stays.
 func ModelName(model string) string {
@@ -139,7 +139,7 @@ func ContextChunk(u SessionUsage, fg style.Color, th *style.Theme) style.TextChu
 const statusGap = " "
 
 // StatusLine returns the status line the slash menu shows above the input
-// box, such as "gpt-6-luna medium context 64K 7% in 120K out 8.4K cache 310K
+// box, such as "model-a medium context 64K 7% in 120K out 8.4K cache 310K
 // $0.42 worked 3m 12s": model as ModelName names it, the context as
 // ContextChunk gives it, the session's prompt tokens processed anew, its
 // output tokens, and its prompt tokens read from a cache, which u totals,

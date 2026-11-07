@@ -53,7 +53,7 @@ func TestExtension(t *testing.T) {
 		{name: "section", file: `{"extensions":{"snapshot":{"enabled":false}}}`, want: `{"enabled":false}`},
 		{name: "legacy key", file: `{"snapshot":false}`, want: `false`},
 		{name: "section over legacy key", file: `{"snapshot":true,"extensions":{"snapshot":{"enabled":false}}}`, want: `{"enabled":false}`},
-		{name: "none", file: `{"model":"openai/gpt-x"}`, want: ""},
+		{name: "none", file: `{"model":"provider-a/model-a"}`, want: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

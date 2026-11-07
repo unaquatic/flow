@@ -65,7 +65,7 @@ type ReasoningSignature struct {
 	// encrypted, when Redacted is set.
 	Signature string
 	// Redacted reports that the provider withheld the block's reasoning,
-	// which streams no text, as Anthropic's redacted_thinking blocks do.
+	// which streams no text, as the Messages format's redacted_thinking blocks do.
 	Redacted bool
 }
 

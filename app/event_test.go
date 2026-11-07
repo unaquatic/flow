@@ -45,7 +45,7 @@ func testEvents() []eventCase {
 	at := session.Position{Index: 2, Of: 3}
 	failed := NewUnknownError("boom")
 	change := PartChange{EventBase: base, MessageID: "msg_1", Part: parts[1]}
-	listing := NewModelListing("openai", []agent.Listing{{Model: "gpt-x"}, {Model: "gpt-y", Unlisted: true}})
+	listing := NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
 	return []eventCase{
 		{EventMessageStarted{EventBase: base, Message: Message{ID: "msg_1", Role: message.RoleAgent, Model: "test/model"}}, TypeMessageStarted},
 		{EventPartStarted{change}, TypePartStarted},
@@ -57,18 +57,18 @@ func testEvents() []eventCase {
 		{EventAgentEnded{EventBase: base}, TypeAgentEnded},
 		{EventAgentEnded{EventBase: base, Error: &failed}, TypeAgentEnded},
 		{EventAgentRetrying{EventBase: base, MessageID: "msg_1", Attempt: 1, MaxAttempts: 5, RetryAt: base.Timestamp.Add(3 * time.Second),
-			Reason: "rate limited", Error: NewUnknownError("openai: 429 Too Many Requests")}, TypeAgentRetrying},
+			Reason: "rate limited", Error: NewUnknownError("provider-a: 429 Too Many Requests")}, TypeAgentRetrying},
 		{EventSessionLoaded{EventBase: base, Messages: []Message{{Content: root}, {Content: full, Branch: at}}}, TypeSessionLoaded},
 		{EventSessionLoaded{EventBase: base}, TypeSessionLoaded},
 		{EventSessionUpdated{EventBase: base, Title: "fix the tests", CreatedAt: root.CreatedAt, UpdatedAt: full.CreatedAt}, TypeSessionUpdated},
 		{EventSessionUpdated{EventBase: base, CreatedAt: root.CreatedAt, UpdatedAt: root.CreatedAt}, TypeSessionUpdated},
 		{EventSessionDeleted{EventBase: base}, TypeSessionDeleted},
-		{EventLoginStarted{EventBase: base, Provider: "openai", Account: "acc_1", Method: "browser"}, TypeLoginStarted},
-		{EventLoginPrompt{EventBase: base, Provider: "openai", Account: "acc_1", URL: "https://login.example/x", Code: "ABCD"}, TypeLoginPrompt},
-		{EventLoginPrompt{EventBase: base, Provider: "openai", Account: "acc_1", URL: "https://login.example/x"}, TypeLoginPrompt},
-		{EventLoginSucceeded{EventBase: base, Provider: "openai", Account: "acc_1"}, TypeLoginSucceeded},
-		{EventLoginFailed{EventBase: base, Provider: "openai", Account: "acc_1", Error: failed}, TypeLoginFailed},
-		{EventAccountsChanged{EventBase: base, Provider: "openai", Active: "acc_1"}, TypeAccountsChanged},
+		{EventLoginStarted{EventBase: base, Provider: "provider-a", Account: "acc_1", Method: "browser"}, TypeLoginStarted},
+		{EventLoginPrompt{EventBase: base, Provider: "provider-a", Account: "acc_1", URL: "https://login.example/x", Code: "ABCD"}, TypeLoginPrompt},
+		{EventLoginPrompt{EventBase: base, Provider: "provider-a", Account: "acc_1", URL: "https://login.example/x"}, TypeLoginPrompt},
+		{EventLoginSucceeded{EventBase: base, Provider: "provider-a", Account: "acc_1"}, TypeLoginSucceeded},
+		{EventLoginFailed{EventBase: base, Provider: "provider-a", Account: "acc_1", Error: failed}, TypeLoginFailed},
+		{EventAccountsChanged{EventBase: base, Provider: "provider-a", Active: "acc_1"}, TypeAccountsChanged},
 		{EventModelsListed{EventBase: base, Listings: []ModelListing{listing}}, TypeModelsListed},
 		{EventModelsListed{EventBase: base, Error: &failed}, TypeModelsListed},
 		{EventModelsRefreshed{EventBase: base}, TypeModelsRefreshed},

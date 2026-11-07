@@ -265,5 +265,5 @@ func (s *Service) ResetError() []UIEvent {
 
 // SimulateError displays a representative request failure.
 func (s *Service) SimulateError() []UIEvent {
-	return s.ShowIndicator("Request Failed: Post \"https://chatgpt.com/backend-api/codex/responses\": EOF")
+	return s.ShowIndicator("Request Failed: Post \"https://api.example.com/v1/responses\": EOF")
 }

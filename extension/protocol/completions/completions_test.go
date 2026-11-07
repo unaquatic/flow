@@ -201,7 +201,7 @@ func TestStream_Request(t *testing.T) {
 			limited := req
 			limited.MaxTokens = tt.maxTokens
 			p := New(Init{Auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "token"}, BaseURL: srv.URL + "/v1"})
-			stream, err := p.Model("gpt-x").Stream(t.Context(), limited)
+			stream, err := p.Model("model-x").Stream(t.Context(), limited)
 			if err != nil {
 				t.Fatalf("Stream: %v", err)
 			}
@@ -227,7 +227,7 @@ func TestStream_Request(t *testing.T) {
 }
 
 // TestUsage checks that the usage reports the input that a prompt cache
-// gets apart from it: OpenAI counts the tokens written to the cache in the
+// gets apart from it: the API counts the tokens written to the cache in the
 // input, and Usage does not.
 func TestUsage(t *testing.T) {
 	want := agent.Usage{
@@ -274,7 +274,7 @@ func TestStream_NoCacheKey(t *testing.T) {
 		}
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("")), Header: http.Header{}}, nil
 	})
-	stream, err := p.Model("gpt-x").Stream(t.Context(), agent.Request{
+	stream, err := p.Model("model-x").Stream(t.Context(), agent.Request{
 		Messages: []agent.Message{agent.NewUserMessage("hi")},
 		CacheKey: "sess-1",
 	})
@@ -311,7 +311,7 @@ func TestStream_Reasoning(t *testing.T) {
 
 	p := New(Init{Auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "token"}, BaseURL: srv.URL})
 	controls := gateway.Reasoning{Efforts: []gateway.Effort{"none", "low", "medium", "high", "xhigh", "max"}}
-	stream, err := p.Model("gpt-5.6").Stream(t.Context(), agent.Request{
+	stream, err := p.Model("model-a").Stream(t.Context(), agent.Request{
 		Messages:  []agent.Message{agent.NewUserMessage("hi")},
 		Reasoning: &agent.Reasoning{Effort: "none", Controls: controls},
 		Body:      map[string]any{"service_tier": "priority", "reasoning": map[string]any{"mode": "pro"}},
@@ -330,7 +330,7 @@ func TestStream_Reasoning(t *testing.T) {
 }
 
 // TestStream_OtherOAuth checks that another provider's OAuth token, such as
-// a Google token at Vertex AI's OpenAI-compatible endpoint, goes to the
+// a cloud's access token at its compatible endpoint, goes to the
 // provider's API as a bearer token.
 func TestStream_OtherOAuth(t *testing.T) {
 	var path, auth string
@@ -339,9 +339,9 @@ func TestStream_OtherOAuth(t *testing.T) {
 		io.WriteString(w, "data: [DONE]\n\n")
 	}))
 	defer srv.Close()
-	p := New(Init{Name: "google-vertex", Auth: staticAuth{Kind: agent.CredentialOAuth, Token: "ya29"},
-		Key: gateway.Auth{Scheme: gateway.AuthGoogle}, BaseURL: srv.URL + "/v1/endpoints/openapi"})
-	resp, err := p.Model("google/gemma").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}})
+	p := New(Init{Name: "provider-c", Auth: staticAuth{Kind: agent.CredentialOAuth, Token: "ya29"},
+		BaseURL: srv.URL + "/v1/endpoints/openapi"})
+	resp, err := p.Model("lab-c/model-c").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}})
 	if err != nil {
 		t.Fatal(err)
 	}

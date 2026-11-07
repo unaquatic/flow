@@ -432,7 +432,7 @@ func TestNameWords(t *testing.T) {
 		"webSearch":        {"web", "Search"},
 		"HTTPRequest":      {"HTTP", "Request"},
 		"readS3File":       {"read", "S3", "File"},
-		"gpt5Mini":         {"gpt5", "Mini"},
+		"model5Mini":       {"model5", "Mini"},
 		"github__x__do_it": {"github", "x", "do", "it"},
 		"ALLCAPS":          {"ALLCAPS"},
 		"_leading_":        {"leading"},

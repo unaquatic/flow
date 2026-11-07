@@ -60,7 +60,7 @@ func (m Models) SaveDefault(model string) error {
 }
 
 // Resolve returns the model variant that model names, in the form
-// agent.Variant.String writes, such as "openai/gpt-5.6:fast:high", or the
+// agent.Variant.String writes, such as "provider-a/model-a:fast:high", or the
 // default model when model is empty, which fails when the config file
 // cannot be read. ParseVariant reads it, and FitEffort fits its
 // effort to the model, or sets the default effort when it names none, so the
@@ -137,7 +137,7 @@ func (m Models) ParseVariant(model string) agent.Variant {
 // ModelChoice is a model that a pattern can name.
 type ModelChoice struct {
 	// Name is the variant in the form agent.Variant.String writes, as in
-	// "openai/gpt-6.1-sol:fast".
+	// "provider-a/model-a:fast".
 	Name string
 	// Released is the model's release date, as YYYY-MM-DD, or "" when the
 	// catalog has none.
@@ -148,7 +148,8 @@ type ModelChoice struct {
 // variant that pattern names among the models of provider t, or of every
 // registered provider when t is empty, as MatchModel picks it. A ":effort"
 // suffix naming a level the catalog lists for the model found is kept, so
-// "opus:fast:high" finds the fast tier of the newest Opus at the high level.
+// "large:fast:high" finds the fast tier of the newest model whose ID names
+// large, such as model-b-large-5, at the high level.
 // When none matches, it downloads the catalog and looks again, as the model
 // may be newer than the cached catalog. The error wraps
 // [ErrNoModel] when none matches still, and the download's error too when
@@ -275,8 +276,8 @@ func (m Models) StartRefresh() {
 }
 
 // Listings returns the catalog models of each provider that is signed
-// in, or that credentials of the environment authorize, as Google's
-// application default credentials do Vertex AI, or of provider t alone when
+// in, or that credentials of the environment authorize, as a cloud's
+// application default credentials do its AI platform, or of provider t alone when
 // t is set, ordered by
 // provider. It fails when the accounts or the models of one cannot be read.
 // Like List, it starts a refresh of the catalog when one is due.

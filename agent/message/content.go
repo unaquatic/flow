@@ -66,7 +66,7 @@ type ReasoningPart struct {
 	// itself, encrypted, when Redacted is set.
 	Signature string `json:"signature,omitempty"`
 	// Redacted reports that the provider withheld the reasoning, as
-	// Anthropic does in a redacted_thinking block, so it has no text and
+	// the Messages format does in a redacted_thinking block, so it has no text and
 	// Signature holds the reasoning to send back unchanged.
 	Redacted bool `json:"redacted,omitempty"`
 	// CacheControl contains provider prompt-cache hints.

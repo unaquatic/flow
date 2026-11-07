@@ -112,8 +112,6 @@ func loadOf(e extension.Extension) extension.Load {
 // of the same name that an extension loaded before added.
 func TestNew_OffersTheToolsOfExtensions(t *testing.T) {
 	t.Chdir(t.TempDir())
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("ANTHROPIC_API_KEY", "")
 	home := t.TempDir()
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"catalog_source":"http://127.0.0.1:1"}`), 0o644); err != nil {
 		t.Fatal(err)

@@ -2,14 +2,14 @@
 
 ## Environment Variables
 
-- `ANTHROPIC_API_KEY` — API key for Claude
-- `OPENAI_API_KEY` — API key for OpenAI
+- Provider API keys — the variables the model catalog names for each provider, such as `<PROVIDER>_API_KEY`
 - flow's own variables are declared and listed in `config/env.go` (`config.EnvVars`), which `flow --help` shows.
 
 ## Testing
 
 ```sh
-go test ./...                         # all tests
+go generate ./internal/catalog         # write the catalog snapshot flow compiles in (git ignores it); run before release builds
+go test ./... # all tests
 go test ./terminal/ui/ -v    # chat UI tests
 go test ./extension/snapshot/...     # workspace snapshot extension tests
 go test ./terminal/ui/ -run Frames -update   # regenerate UI golden frames

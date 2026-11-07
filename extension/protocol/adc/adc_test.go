@@ -1,4 +1,4 @@
-package google
+package adc
 
 import (
 	"crypto"
@@ -22,7 +22,7 @@ import (
 	"github.com/unaquatic/flow/agent"
 )
 
-// tokenServer is a Google token endpoint that answers every request with a
+// tokenServer is a cloud's token endpoint that answers every request with a
 // new token, numbered, after check approves the request's form.
 func tokenServer(t *testing.T, check func(t *testing.T, form map[string]string)) (*httptest.Server, *atomic.Int32) {
 	t.Helper()
@@ -42,7 +42,7 @@ func tokenServer(t *testing.T, check func(t *testing.T, form map[string]string))
 	return srv, &n
 }
 
-// writeFile writes f as the credentials file GOOGLE_APPLICATION_CREDENTIALS
+// writeFile writes f as the credentials file CredentialsEnv
 // names, and returns the environment.
 func writeFile(t *testing.T, f File) func(string) string {
 	t.Helper()
@@ -52,7 +52,7 @@ func writeFile(t *testing.T, f File) func(string) string {
 		t.Fatal(err)
 	}
 	return func(k string) string {
-		if k == "GOOGLE_APPLICATION_CREDENTIALS" {
+		if k == CredentialsEnv {
 			return path
 		}
 		return ""
@@ -106,7 +106,7 @@ func TestServiceAccount(t *testing.T) {
 	}
 }
 
-// TestAuthorizedUser checks a gcloud login's refresh, that a token about to
+// TestAuthorizedUser checks a user login's refresh, that a token about to
 // expire is replaced, and the quota project header.
 func TestAuthorizedUser(t *testing.T) {
 	srv, minted := tokenServer(t, func(t *testing.T, form map[string]string) {
@@ -126,7 +126,7 @@ func TestAuthorizedUser(t *testing.T) {
 	}
 
 	var header string
-	api := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { header = r.Header.Get("X-Goog-User-Project") }))
+	api := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { header = r.Header.Get(QuotaHeader) }))
 	defer api.Close()
 	resp, err := (&http.Client{Transport: c.Transport(nil)}).Get(api.URL)
 	if err != nil {
@@ -134,7 +134,7 @@ func TestAuthorizedUser(t *testing.T) {
 	}
 	resp.Body.Close()
 	if header != "quota-p" {
-		t.Errorf("x-goog-user-project = %q, want quota-p", header)
+		t.Errorf("%s = %q, want quota-p", QuotaHeader, header)
 	}
 }
 
@@ -152,12 +152,12 @@ func TestNoCredentials(t *testing.T) {
 	if _, err := c.Authorize(t.Context(), nil); !errors.Is(err, agent.ErrNotAuthenticated) {
 		t.Errorf("err = %v, want ErrNotAuthenticated", err)
 	}
-	// gcloud's file is found in the home directory.
-	dir := filepath.Join(home, ".config", "gcloud")
+	// The cloud CLI's file is found in the home directory.
+	dir := filepath.Join(home, ".config", ConfigDir)
 	os.MkdirAll(dir, 0o700)
 	os.WriteFile(filepath.Join(dir, "application_default_credentials.json"), []byte(`{"type":"external_account"}`), 0o600)
 	if !c.Available() {
-		t.Error("gcloud's credentials file not found")
+		t.Error("the cloud CLI's credentials file not found")
 	}
 	if _, err := c.Authorize(t.Context(), nil); !errors.Is(err, agent.ErrNotAuthenticated) || !strings.Contains(err.Error(), "external_account") {
 		t.Errorf("unsupported type: err = %v", err)

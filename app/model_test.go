@@ -19,37 +19,43 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/agenttest"
 	"github.com/unaquatic/flow/config"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
-	"github.com/unaquatic/flow/extension/protocol/login/claude"
 	"github.com/unaquatic/flow/extension/protocol/messages"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/flow/internal/catalog"
 	"github.com/unaquatic/flow/internal/pubsub"
 )
 
+// The providers of the tests' catalogs, which speak the formats their
+// api.json entries name.
+const (
+	providerA agent.ProviderID = "provider-a"
+	providerB agent.ProviderID = "provider-b"
+)
+
 func TestMatchModel(t *testing.T) {
 	choices := []ModelChoice{
-		{Name: "anthropic/claude-opus-5", Released: "2026-07-24"},
-		{Name: "anthropic/claude-sonnet-4-5", Released: "2025-09-29"},
-		{Name: "anthropic/claude-sonnet-5", Released: "2026-06-29"},
-		{Name: "openai/gpt-5", Released: "2025-08-07"},
-		{Name: "openai/gpt-5-mini", Released: "2025-08-07"},
-		{Name: "openai/gpt-6-astra", Released: "2026-09-04"},
+		{Name: "provider-b/model-b-large-5", Released: "2026-07-24"},
+		{Name: "provider-b/model-b-small-4-5", Released: "2025-09-29"},
+		{Name: "provider-b/model-b-small-5", Released: "2026-06-29"},
+		{Name: "provider-a/model-a-5", Released: "2025-08-07"},
+		{Name: "provider-a/model-a-5-mini", Released: "2025-08-07"},
+		{Name: "provider-a/model-a-6-nova", Released: "2026-09-04"},
 	}
 	tests := []struct {
 		pattern string
 		want    string // "" means no match
 	}{
-		{pattern: "openai/gpt-5", want: "openai/gpt-5"},
-		{pattern: "gpt-5", want: "openai/gpt-5"},
-		{pattern: "GPT-5", want: "openai/gpt-5"},
-		{pattern: "  claude-opus-5 ", want: "anthropic/claude-opus-5"},
-		// Every sonnet matches as well; the newest wins.
-		{pattern: "sonnet", want: "anthropic/claude-sonnet-5"},
-		{pattern: "opus", want: "anthropic/claude-opus-5"},
-		{pattern: "astra", want: "openai/gpt-6-astra"},
-		{pattern: "gpt-5-m", want: "openai/gpt-5-mini"},
+		{pattern: "provider-a/model-a-5", want: "provider-a/model-a-5"},
+		{pattern: "model-a-5", want: "provider-a/model-a-5"},
+		{pattern: "MODEL-A-5", want: "provider-a/model-a-5"},
+		{pattern: "  model-b-large-5 ", want: "provider-b/model-b-large-5"},
+		// Every small model matches as well; the newest wins.
+		{pattern: "small", want: "provider-b/model-b-small-5"},
+		{pattern: "large", want: "provider-b/model-b-large-5"},
+		{pattern: "nova", want: "provider-a/model-a-6-nova"},
+		{pattern: "model-a-5-m", want: "provider-a/model-a-5-mini"},
 		// A pattern can name the provider too.
-		{pattern: "anthropic/sonnet", want: "anthropic/claude-sonnet-5"},
+		{pattern: "provider-b/small", want: "provider-b/model-b-small-5"},
 		{pattern: "zzzz"},
 		{pattern: ""},
 	}
@@ -68,7 +74,7 @@ func TestModelsFindRefreshesOnlyWhenNothingMatches(t *testing.T) {
 	var hits atomic.Int32
 	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hits.Add(1)
-		w.Write(openaiDoc(t, "gpt-old", "gpt-new"))
+		w.Write(providerDoc(t, "model-old", "model-new"))
 	}))
 	defer src.Close()
 
@@ -79,15 +85,15 @@ func TestModelsFindRefreshesOnlyWhenNothingMatches(t *testing.T) {
 		wantErr  error
 		wantHits int32
 	}{
-		{name: "in the cached catalog", pattern: "gpt-old", want: "openai/gpt-old"},
-		{name: "newer than the cached catalog", pattern: "gpt-new", want: "openai/gpt-new", wantHits: 1},
-		{name: "nowhere", pattern: "claude", wantErr: ErrNoModel, wantHits: 1},
+		{name: "in the cached catalog", pattern: "model-old", want: "provider-a/model-old"},
+		{name: "newer than the cached catalog", pattern: "model-new", want: "provider-a/model-new", wantHits: 1},
+		{name: "nowhere", pattern: "zzzz", wantErr: ErrNoModel, wantHits: 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hits.Store(0)
 			dir := t.TempDir()
-			gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: openaiDoc(t, "gpt-old")})
+			gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: providerDoc(t, "model-old")})
 			a := newCatalogApp(t, dir, src.URL)
 
 			got, err := a.Models().Find(t.Context(), "", tt.pattern)
@@ -101,22 +107,22 @@ func TestModelsFindRefreshesOnlyWhenNothingMatches(t *testing.T) {
 	}
 }
 
-// openaiDoc returns a catalog document, as a catalog server serves it,
-// listing the models named for OpenAI.
-func openaiDoc(t *testing.T, models ...string) []byte {
+// providerDoc returns a catalog document, as a catalog server serves it,
+// listing the models named for provider-a.
+func providerDoc(t *testing.T, models ...string) []byte {
 	ms := map[string]any{}
 	for _, m := range models {
 		ms[m] = map[string]any{"id": m}
 	}
-	b, _ := json.Marshal(map[string]any{"openai": map[string]any{"id": "openai", "models": ms}})
+	b, _ := json.Marshal(map[string]any{string(providerA): map[string]any{"id": providerA, "format": "responses", "models": ms}})
 	return catalogDoc(t, string(b))
 }
 
 // catalogDoc returns the catalog document of api, an api.json, as
-// gatewaytest.FromAPI builds it.
+// protocoltest.FromAPI builds it.
 func catalogDoc(t *testing.T, api string) []byte {
 	t.Helper()
-	b, err := json.Marshal(gatewaytest.FromAPI(t, api))
+	b, err := json.Marshal(protocoltest.FromAPI(t, api))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +130,7 @@ func catalogDoc(t *testing.T, api string) []byte {
 }
 
 // newCatalogApp returns an app over the catalog cached in dir, downloaded
-// from src, or from no server when src is empty, with OpenAI registered.
+// from src, or from no server when src is empty, with provider-a registered.
 // The test ends by closing it.
 func newCatalogApp(t *testing.T, dir, src string) *App {
 	t.Helper()
@@ -136,7 +142,7 @@ func newCatalogApp(t *testing.T, dir, src string) *App {
 	ctx, cancel := context.WithCancel(context.Background())
 	a := &App{
 		accounts:  accounts,
-		providers: agent.NewProviders(agent.ProviderOptions{Catalog: store}, agenttest.Provider{ID: chatgpt.ProviderID, Gateway: &agenttest.Gateway{}}),
+		providers: agent.NewProviders(agent.ProviderOptions{Catalog: store}, agenttest.Provider{ID: providerA, Gateway: &agenttest.Gateway{}}),
 		broker:    pubsub.NewBroker[Event](),
 		workerCtx: ctx,
 		cancel:    cancel,
@@ -145,12 +151,12 @@ func newCatalogApp(t *testing.T, dir, src string) *App {
 	return a
 }
 
-// staleCatalog caches a catalog of gpt-old in a new directory, fetched two
+// staleCatalog caches a catalog of model-old in a new directory, fetched two
 // days ago, past the default TTL, and returns the directory.
 func staleCatalog(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now().Add(-48 * time.Hour), Data: openaiDoc(t, "gpt-old")})
+	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now().Add(-48 * time.Hour), Data: providerDoc(t, "model-old")})
 	return dir
 }
 
@@ -173,16 +179,16 @@ func TestModelsListRefreshesInBackground(t *testing.T) {
 	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hits.Add(1)
 		<-release
-		w.Write(openaiDoc(t, "gpt-old", "gpt-new"))
+		w.Write(providerDoc(t, "model-old", "model-new"))
 	}))
 	defer src.Close()
 	a := newCatalogApp(t, staleCatalog(t), src.URL)
 	events := a.Subscribe(t.Context())
 
 	for range 2 {
-		models, err := a.Models().List(t.Context(), chatgpt.ProviderID)
-		if err != nil || !slices.Equal(listedIDs(models), []string{"openai/gpt-old"}) {
-			t.Fatalf("ListModels while downloading = %v, %v, want [openai/gpt-old]", listedIDs(models), err)
+		models, err := a.Models().List(t.Context(), providerA)
+		if err != nil || !slices.Equal(listedIDs(models), []string{"provider-a/model-old"}) {
+			t.Fatalf("ListModels while downloading = %v, %v, want [provider-a/model-old]", listedIDs(models), err)
 		}
 	}
 	close(release)
@@ -195,8 +201,8 @@ func TestModelsListRefreshesInBackground(t *testing.T) {
 		t.Fatal("no EventModelsRefreshed after the download")
 	}
 
-	models, err := a.Models().List(t.Context(), chatgpt.ProviderID)
-	if want := []string{"openai/gpt-new", "openai/gpt-old"}; err != nil || !slices.Equal(listedIDs(models), want) {
+	models, err := a.Models().List(t.Context(), providerA)
+	if want := []string{"provider-a/model-new", "provider-a/model-old"}; err != nil || !slices.Equal(listedIDs(models), want) {
 		t.Errorf("ListModels after the download = %v, %v, want %v", listedIDs(models), err, want)
 	}
 	if n := hits.Load(); n != 1 {
@@ -217,7 +223,7 @@ func TestCloseStopsModelRefresh(t *testing.T) {
 	a := newCatalogApp(t, staleCatalog(t), src.URL)
 	events := a.Subscribe(t.Context())
 
-	if _, err := a.Models().List(t.Context(), chatgpt.ProviderID); err != nil {
+	if _, err := a.Models().List(t.Context(), providerA); err != nil {
 		t.Fatal(err)
 	}
 	<-asked
@@ -240,7 +246,7 @@ func TestCloseStopsModelRefresh(t *testing.T) {
 func TestModelsDefaultReadsTheConfigFile(t *testing.T) {
 	home := t.TempDir()
 	a := &App{config: config.NewService(home)}
-	for _, model := range []string{"openai/gpt-x", "anthropic/claude-x"} {
+	for _, model := range []string{"provider-a/model-x", "provider-b/model-y"} {
 		data := []byte(`{"model":"` + model + `"}`)
 		if err := os.WriteFile(filepath.Join(home, config.FileName), data, 0o644); err != nil {
 			t.Fatal(err)
@@ -268,10 +274,10 @@ func TestModelsFindReportsFailedRefresh(t *testing.T) {
 	}))
 	defer src.Close()
 	dir := t.TempDir()
-	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: openaiDoc(t, "gpt-old")})
+	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: providerDoc(t, "model-old")})
 	a := newCatalogApp(t, dir, src.URL)
 
-	_, err := a.Models().Find(t.Context(), "", "gpt-new")
+	_, err := a.Models().Find(t.Context(), "", "model-new")
 	if !errors.Is(err, ErrNoModel) || !strings.Contains(err.Error(), "could not be refreshed") {
 		t.Errorf("Models.Find = %v, want ErrNoModel and the failed refresh", err)
 	}
@@ -307,13 +313,13 @@ func TestModelsFindDownloadsOnce(t *testing.T) {
 	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hits.Add(1)
 		time.Sleep(20 * time.Millisecond)
-		w.Write(openaiDoc(t, "gpt-old", "gpt-new"))
+		w.Write(providerDoc(t, "model-old", "model-new"))
 	}))
 	defer src.Close()
 	a := newCatalogApp(t, staleCatalog(t), src.URL)
 
-	if got, err := a.Models().Find(t.Context(), "", "gpt-new"); got != "openai/gpt-new" || err != nil {
-		t.Fatalf("Models.Find = %q, %v, want openai/gpt-new", got, err)
+	if got, err := a.Models().Find(t.Context(), "", "model-new"); got != "provider-a/model-new" || err != nil {
+		t.Fatalf("Models.Find = %q, %v, want provider-a/model-new", got, err)
 	}
 	time.Sleep(100 * time.Millisecond) // time for a stray background download
 	if n := hits.Load(); n != 1 {
@@ -329,7 +335,7 @@ func TestModelsRefreshPublishesEveryRefresh(t *testing.T) {
 	}))
 	defer src.Close()
 	dir := t.TempDir()
-	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{ETag: `"v1"`, Fetched: time.Now(), Data: openaiDoc(t, "gpt-old")})
+	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{ETag: `"v1"`, Fetched: time.Now(), Data: providerDoc(t, "model-old")})
 	a := newCatalogApp(t, dir, src.URL)
 	events := a.Subscribe(t.Context())
 
@@ -346,15 +352,15 @@ func TestModelsRefreshPublishesEveryRefresh(t *testing.T) {
 	}
 }
 
-// variantDoc is an api.json of an OpenAI model with fast and pro
+// variantDoc is an api.json of a model of provider-a with fast and pro
 // modes and effort levels, its pro mode a model of its own, of a model whose ID ends in a mode's name, and of
-// a gpt-7 whose effort list ends in xxxhigh, a level flow does not know.
-const variantDoc = `{"openai":{"id":"openai","models":{
-  "gpt-5.6":{"id":"gpt-5.6","release_date":"2026-08-01","reasoning":true,
+// a model-c whose effort list ends in xxxhigh, a level flow does not know.
+const variantDoc = `{"provider-a":{"id":"provider-a","format":"responses","models":{
+  "model-a":{"id":"model-a","release_date":"2026-08-01","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh"]}],
     "experimental":{"modes":{"fast":{},"pro":{"provider":{"body":{"reasoning":{"mode":"pro"}}}}}}},
-  "gpt-5.5-pro":{"id":"gpt-5.5-pro","release_date":"2026-04-01"},
-  "gpt-7":{"id":"gpt-7","release_date":"2026-12-01","reasoning":true,
+  "model-b-pro":{"id":"model-b-pro","release_date":"2026-04-01"},
+  "model-c":{"id":"model-c","release_date":"2026-12-01","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max","xxxhigh"]}]}
 }}}`
 
@@ -371,11 +377,11 @@ func TestModelsFindVariants(t *testing.T) {
 		want    string
 		variant agent.Variant
 	}{
-		{"gpt-5.6", "openai/gpt-5.6", agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Effort: "medium"}},
-		{"gpt-5.6:fast", "openai/gpt-5.6:fast", agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Option: "fast", Effort: "medium"}},
-		{"5.6-pro:xhigh", "openai/gpt-5.6-pro:xhigh", agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6-pro", Effort: "xhigh"}},
-		{"gpt-5.6:none", "openai/gpt-5.6:none", agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Effort: "none"}},
-		{"gpt-5.5-pro", "openai/gpt-5.5-pro", agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.5-pro"}},
+		{"model-a", "provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "medium"}},
+		{"model-a:fast", "provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "medium"}},
+		{"a-pro:xhigh", "provider-a/model-a-pro:xhigh", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "xhigh"}},
+		{"model-a:none", "provider-a/model-a:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "none"}},
+		{"model-b-pro", "provider-a/model-b-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-b-pro"}},
 	}
 	for _, tt := range tests {
 		got, err := a.Models().Find(t.Context(), "", tt.pattern)
@@ -388,10 +394,10 @@ func TestModelsFindVariants(t *testing.T) {
 		}
 	}
 	want := []agent.ReasoningEffort{"none", "low", "medium", "high", "xhigh"}
-	if got := a.Models().Efforts(a.Models().ParseVariant("openai/gpt-5.6:fast")); !slices.Equal(got, want) {
+	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/model-a:fast")); !slices.Equal(got, want) {
 		t.Errorf("Models.Efforts = %v, want %v", got, want)
 	}
-	if got := a.Models().Efforts(a.Models().ParseVariant("openai/gpt-unknown")); got != nil {
+	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/model-unknown")); got != nil {
 		t.Errorf("Models.Efforts of an unlisted model = %v, want none", got)
 	}
 }
@@ -404,11 +410,11 @@ func TestUnknownEffort(t *testing.T) {
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
 	a := newCatalogApp(t, dir, "")
 
-	got, err := a.Models().Find(t.Context(), "", "gpt-7:XXXHIGH")
-	if got != "openai/gpt-7:xxxhigh" || err != nil {
-		t.Fatalf("Models.Find = %q, %v, want openai/gpt-7:xxxhigh", got, err)
+	got, err := a.Models().Find(t.Context(), "", "model-c:XXXHIGH")
+	if got != "provider-a/model-c:xxxhigh" || err != nil {
+		t.Fatalf("Models.Find = %q, %v, want provider-a/model-c:xxxhigh", got, err)
 	}
-	want := agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-7", Effort: "xxxhigh"}
+	want := agent.Variant{Provider: providerA, Model: "provider-a/model-c", Effort: "xxxhigh"}
 	if v, err := a.Models().Resolve(got); v != want || err != nil {
 		t.Errorf("Models.Resolve = %+v, %v, want %+v", v, err, want)
 	}
@@ -416,13 +422,13 @@ func TestUnknownEffort(t *testing.T) {
 	if got := a.Models().Efforts(want); !slices.Equal(got, levels) {
 		t.Errorf("Models.Efforts = %q, want %q", got, levels)
 	}
-	// gpt-5.6 does not list xxxhigh: the pattern does not name a level of
+	// model-a does not list xxxhigh: the pattern does not name a level of
 	// it, and the variant runs at the provider's default.
-	if got, err := a.Models().Find(t.Context(), "", "gpt-5.6:xxxhigh"); err == nil && got == "openai/gpt-5.6:xxxhigh" {
-		t.Errorf("Models.Find(gpt-5.6:xxxhigh) = %q, want no level kept", got)
+	if got, err := a.Models().Find(t.Context(), "", "model-a:xxxhigh"); err == nil && got == "provider-a/model-a:xxxhigh" {
+		t.Errorf("Models.Find(model-a:xxxhigh) = %q, want no level kept", got)
 	}
-	if v := a.Models().FitEffort(agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Effort: "xxxhigh"}); v.Effort != "medium" {
-		t.Errorf("gpt-5.6 at xxxhigh runs at %q, want medium", v.Effort)
+	if v := a.Models().FitEffort(agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "xxxhigh"}); v.Effort != "medium" {
+		t.Errorf("model-a at xxxhigh runs at %q, want medium", v.Effort)
 	}
 }
 
@@ -436,13 +442,13 @@ func TestModelsSelect(t *testing.T) {
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
 	a := newCatalogApp(t, dir, "")
 	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"model":"openai/gpt-5.6:fast:low"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"model":"provider-a/model-a:fast:low"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	a.config = config.NewService(home)
 
-	gpt := func(option string, effort agent.ReasoningEffort) agent.Variant {
-		return agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Option: option, Effort: effort}
+	modelA := func(option string, effort agent.ReasoningEffort) agent.Variant {
+		return agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: option, Effort: effort}
 	}
 	tests := []struct {
 		name     string
@@ -452,15 +458,15 @@ func TestModelsSelect(t *testing.T) {
 		want     agent.Variant
 		wantErr  string
 	}{
-		{name: "pattern", pattern: "gpt-5.6", want: gpt("", "medium")},
-		{name: "pattern of a provider", provider: chatgpt.ProviderID, pattern: "gpt-5.6:fast", want: gpt("fast", "medium")},
-		{name: "effort over the pattern's", pattern: "gpt-5.6:low", effort: "xhigh", want: gpt("", "xhigh")},
-		{name: "default model", want: gpt("fast", "low")},
-		{name: "effort over the default's", effort: "high", want: gpt("fast", "high")},
-		{name: "effort the model does not list", pattern: "gpt-5.6", effort: "max",
-			wantErr: `openai/gpt-5.6 has no reasoning effort "max"; the catalog lists ["none" "low" "medium" "high" "xhigh"]`},
-		{name: "model without efforts", pattern: "gpt-5.5-pro", effort: "high",
-			wantErr: `openai/gpt-5.5-pro has no reasoning effort "high"; the catalog lists []`},
+		{name: "pattern", pattern: "model-a", want: modelA("", "medium")},
+		{name: "pattern of a provider", provider: providerA, pattern: "model-a:fast", want: modelA("fast", "medium")},
+		{name: "effort over the pattern's", pattern: "model-a:low", effort: "xhigh", want: modelA("", "xhigh")},
+		{name: "default model", want: modelA("fast", "low")},
+		{name: "effort over the default's", effort: "high", want: modelA("fast", "high")},
+		{name: "effort the model does not list", pattern: "model-a", effort: "max",
+			wantErr: `provider-a/model-a has no reasoning effort "max"; the catalog lists ["none" "low" "medium" "high" "xhigh"]`},
+		{name: "model without efforts", pattern: "model-b-pro", effort: "high",
+			wantErr: `provider-a/model-b-pro has no reasoning effort "high"; the catalog lists []`},
 		{name: "no model", pattern: "zzzz", wantErr: ErrNoModel.Error()},
 	}
 	for _, tt := range tests {
@@ -486,42 +492,46 @@ func TestModelsFitEffortTakesTheDefault(t *testing.T) {
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
 	a := newCatalogApp(t, dir, "")
 	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})},
-		agenttest.Provider{ID: chatgpt.ProviderID, Gateway: &agenttest.Gateway{}})
+		agenttest.Provider{ID: providerA, Gateway: &agenttest.Gateway{}})
 
-	if d := a.Models().DefaultEffort(agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6"}); d != "medium" {
+	if d := a.Models().DefaultEffort(agent.Variant{Provider: providerA, Model: "provider-a/model-a"}); d != "medium" {
 		t.Errorf("Models.DefaultEffort = %q, want medium", d)
 	}
-	if v, _ := a.Models().Resolve("openai/gpt-5.6"); v.Effort != "medium" {
-		t.Errorf("gpt-5.6 runs at %q, want medium", v.Effort)
+	if v, _ := a.Models().Resolve("provider-a/model-a"); v.Effort != "medium" {
+		t.Errorf("model-a runs at %q, want medium", v.Effort)
 	}
 	// A chosen level wins over the default.
-	if v, _ := a.Models().Resolve("openai/gpt-5.6:low"); v.Effort != "low" {
-		t.Errorf("gpt-5.6:low runs at %q, want low", v.Effort)
+	if v, _ := a.Models().Resolve("provider-a/model-a:low"); v.Effort != "low" {
+		t.Errorf("model-a:low runs at %q, want low", v.Effort)
 	}
 	// A model must name its provider: flow defaults to none.
-	if _, err := a.Models().Resolve("gpt-5.6"); !errors.Is(err, ErrModelFormat) {
+	if _, err := a.Models().Resolve("model-a"); !errors.Is(err, ErrModelFormat) {
 		t.Errorf("Resolve of a model without a provider = %v, want ErrModelFormat", err)
 	}
 }
 
-// TestAnthropicDefaultEffortPerModel checks that a Claude model that names
-// no effort runs at the catalog's default effort for it, high for Opus 4.8,
-// or else at medium, as Opus 5.5, which the catalog gives none.
-func TestAnthropicDefaultEffortPerModel(t *testing.T) {
-	const doc = `{"anthropic":{"id":"anthropic","models":{
-  "claude-opus-4-8":{"id":"claude-opus-4-8","reasoning":true,
+// TestDefaultEffortPerModel checks that a model that names no effort runs at
+// the catalog's default effort for it, high for model-d, or else at medium,
+// as model-e, which the catalog gives none.
+func TestDefaultEffortPerModel(t *testing.T) {
+	const doc = `{"provider-b":{"id":"provider-b","format":"messages","models":{
+  "model-d":{"id":"model-d","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]},
-  "claude-opus-5-5":{"id":"claude-opus-5-5","reasoning":true,
+  "model-e":{"id":"model-e","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]}
 }}}`
+	cat := protocoltest.FromAPI(t, doc)
+	// An api.json names no default effort; the catalog's rules give one to
+	// the models whose labs document it.
+	cat.Providers[providerB].Models["provider-b/model-d"].Reasoning.DefaultEffort = "high"
 	dir := t.TempDir()
-	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, doc)})
+	gatewaytest.WriteCache(t, dir, cat)
 	a := newCatalogApp(t, dir, "")
-	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, messages.New(messages.Init{Name: string(claude.ProviderID)}))
+	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, messages.New(messages.Init{Name: string(providerB)}))
 
 	for model, want := range map[string]agent.ReasoningEffort{
-		"anthropic/claude-opus-5-5": "medium",
-		"anthropic/claude-opus-4-8": "high",
+		"provider-b/model-e": "medium",
+		"provider-b/model-d": "high",
 	} {
 		if v, err := a.Models().Resolve(model); v.Effort != want || err != nil {
 			t.Errorf("Models.Resolve(%s) runs at %q, %v, want %q", model, v.Effort, err, want)

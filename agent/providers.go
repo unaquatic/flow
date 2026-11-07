@@ -21,7 +21,7 @@ type Settings struct {
 	Disabled bool
 	// BaseURL moves the provider's endpoints: a host alone, such as
 	// https://proxy.example, takes every endpoint there with its own path;
-	// a base URL with a path, such as https://proxy.example/anthropic/v1,
+	// a base URL with a path, such as https://proxy.example/provider-a/v1,
 	// replaces the provider's own.
 	BaseURL string
 }
@@ -30,7 +30,7 @@ type Settings struct {
 // ep, whose base URL is set, authorized by az, and reports whether flow
 // speaks ep's request format and authentication. az is nil when nothing
 // authorizes t's requests, and an endpoint may authorize them otherwise, as
-// with Google's application default credentials.
+// with a cloud's application default credentials.
 type Dialer func(t ProviderID, ep gateway.Endpoint, az Authorizer) (Provider, bool)
 
 // ProviderOptions configures a Providers.
@@ -373,9 +373,10 @@ func (s *Providers) Endpoint(t ProviderID, ep gateway.Endpoint) (gateway.Endpoin
 // it is when base is empty:
 //
 //   - base names a host alone, such as "https://proxy": base's scheme and
-//     host with api's path, so that "https://api.anthropic.com/v1" becomes
-//     "https://proxy/v1" and each endpoint of a provider with several, such
-//     as OpenCode's Claude and GPT ones, keeps its own path;
+//     host with api's path, so that "https://api.provider-a.example/v1"
+//     becomes "https://proxy/v1" and each endpoint of a provider with
+//     several, such as a gateway's for lab-a's and lab-b's models, keeps
+//     its own path;
 //   - base names a path too: base itself for the provider's own endpoint,
 //     when own is set, and base's scheme and host with api's path for an
 //     entry's endpoint of its own.

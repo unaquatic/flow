@@ -84,7 +84,7 @@ func TestStream_ToolCalls(t *testing.T) {
 		blockStop(2),
 		event("message_delta", map[string]any{"delta": map[string]any{"stop_reason": "tool_use"}, "usage": map[string]int{}}),
 		event("message_stop", map[string]any{}),
-	), "anthropic")
+	), "provider-b")
 
 	var calls []Call
 	find := func(id string) *Call {
@@ -140,7 +140,7 @@ func TestStream_CollectsEveryBlock(t *testing.T) {
 		blockStop(2),
 		event("message_delta", map[string]any{"delta": map[string]any{"stop_reason": "tool_use"}, "usage": map[string]int{"output_tokens": 30}}),
 		event("message_stop", map[string]any{}),
-	), "anthropic").Collect()
+	), "provider-b").Collect()
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestStream_Request(t *testing.T) {
 			defer srv.Close()
 
 			p := New(Init{Auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "key"}, BaseURL: srv.URL})
-			stream, err := p.Model("claude-x").Stream(t.Context(), agent.Request{
+			stream, err := p.Model("model-x").Stream(t.Context(), agent.Request{
 				Messages:  append(tt.system, agent.NewUserMessage("hi"), agent.NewAgentMessage("hello")),
 				MaxTokens: tt.maxTokens,
 			})
@@ -232,15 +232,19 @@ func controls(lo int, levels ...string) gateway.Reasoning {
 	return c
 }
 
-// The reasoning controls of real models, as the catalog lists them.
+// The reasoning controls that models have, as the catalog lists them.
 var (
-	haiku45 = controls(1024)
-	opus45  = controls(1024, "low", "medium", "high")
-	opus46  = controls(1024, "low", "medium", "high", "max")
-	opus48  = controls(0, "low", "medium", "high", "xhigh", "max")
-	// opus48Off is Opus 4.8's as the catalog lists them: its reasoning can
-	// be turned off, by the effort none.
-	opus48Off = func() gateway.Reasoning {
+	// budgetOnly takes a token budget alone.
+	budgetOnly = controls(1024)
+	// budgetEffort takes a budget and efforts up to high.
+	budgetEffort = controls(1024, "low", "medium", "high")
+	// budgetMax takes a budget and efforts up to max.
+	budgetMax = controls(1024, "low", "medium", "high", "max")
+	// effortMax takes efforts up to max alone.
+	effortMax = controls(0, "low", "medium", "high", "xhigh", "max")
+	// effortMaxOff is effortMax whose reasoning can be turned off, by the
+	// effort none.
+	effortMaxOff = func() gateway.Reasoning {
 		c := controls(0, "none", "low", "medium", "high", "xhigh", "max")
 		c.Mandatory = new(false)
 		return c
@@ -256,10 +260,10 @@ func TestAdaptiveThinking(t *testing.T) {
 		options gateway.Reasoning
 		want    bool
 	}{
-		{"haiku 4.5", haiku45, false},
-		{"opus 4.5", opus45, false},
-		{"opus 4.6", opus46, true},
-		{"opus 4.8", opus48, true},
+		{"budget alone", budgetOnly, false},
+		{"budget and effort", budgetEffort, false},
+		{"budget and effort max", budgetMax, true},
+		{"effort max", effortMax, true},
 	}
 	for _, tt := range tests {
 		if got := AdaptiveThinking(tt.options); got != tt.want {
@@ -276,7 +280,7 @@ func TestAdaptiveThinking(t *testing.T) {
 // model that lists no effort levels.
 func TestSetReasoning(t *testing.T) {
 	summarized := func(m map[string]any) map[string]any { m["display"] = "summarized"; return m }
-	interleaved := map[string]string{"anthropic-beta": "interleaved-thinking-2025-05-14"}
+	interleaved := map[string]string{BetaHeader: "interleaved-thinking-2025-05-14"}
 	// at returns the reasoning of a model with options at level, as Stream
 	// sets it.
 	at := func(level agent.ReasoningEffort, options gateway.Reasoning) *agent.Reasoning {
@@ -291,39 +295,39 @@ func TestSetReasoning(t *testing.T) {
 		wantHeaders  map[string]string
 	}{
 		{name: "nil"},
-		{name: "no level", reasoning: at("", opus48)},
-		{name: "budget alone lists no levels", reasoning: at("high", haiku45)},
+		{name: "no level", reasoning: at("", effortMax)},
+		{name: "budget alone lists no levels", reasoning: at("high", budgetOnly)},
 		{
-			name: "budget", reasoning: at("medium", opus45), maxTokens: 64000,
+			name: "budget", reasoning: at("medium", budgetEffort), maxTokens: 64000,
 			wantThinking: summarized(map[string]any{"type": "enabled", "budget_tokens": 8192}),
 			wantEffort:   map[string]any{"effort": "medium"},
 			wantHeaders:  interleaved,
 		},
 		{
-			name: "budget cut to leave room", reasoning: at("high", opus45), maxTokens: 4096,
+			name: "budget cut to leave room", reasoning: at("high", budgetEffort), maxTokens: 4096,
 			wantThinking: summarized(map[string]any{"type": "enabled", "budget_tokens": 3072}),
 			wantEffort:   map[string]any{"effort": "high"},
 			wantHeaders:  interleaved,
 		},
 		{
-			name: "no room for a budget", reasoning: at("low", opus45), maxTokens: 1500,
+			name: "no room for a budget", reasoning: at("low", budgetEffort), maxTokens: 1500,
 			wantEffort: map[string]any{"effort": "low"},
 		},
 		{
-			name: "adaptive though it takes a budget", reasoning: at("max", opus46), maxTokens: 128000,
+			name: "adaptive though it takes a budget", reasoning: at("max", budgetMax), maxTokens: 128000,
 			wantThinking: summarized(map[string]any{"type": "adaptive"}),
 			wantEffort:   map[string]any{"effort": "max"},
 		},
 		{
-			name: "effort", reasoning: at("xhigh", opus48),
+			name: "effort", reasoning: at("xhigh", effortMax),
 			wantThinking: summarized(map[string]any{"type": "adaptive"}),
 			wantEffort:   map[string]any{"effort": "xhigh"},
 		},
 		{
-			name: "off", reasoning: at("none", opus48Off),
+			name: "off", reasoning: at("none", effortMaxOff),
 			wantThinking: map[string]any{"type": "disabled"},
 		},
-		{name: "off where reasoning cannot be turned off", reasoning: at("none", opus48)},
+		{name: "off where reasoning cannot be turned off", reasoning: at("none", effortMax)},
 		{
 			name: "effort flow does not know", reasoning: at("xxxhigh", controls(0, "low", "high", "max", "xxxhigh")),
 			wantThinking: summarized(map[string]any{"type": "adaptive"}),
@@ -358,23 +362,23 @@ func TestStream_Mode(t *testing.T) {
 	defer srv.Close()
 
 	p := New(Init{Auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "key"}, BaseURL: srv.URL})
-	stream, err := p.Model("claude-opus-4-8").Stream(t.Context(), agent.Request{
+	stream, err := p.Model("model-a").Stream(t.Context(), agent.Request{
 		Messages:  []agent.Message{agent.NewUserMessage("hi")},
 		MaxTokens: 64000,
-		Reasoning: &agent.Reasoning{Effort: "high", Controls: opus48},
+		Reasoning: &agent.Reasoning{Effort: "high", Controls: effortMax},
 		Body:      map[string]any{"speed": "fast"},
-		Headers:   map[string]string{"anthropic-beta": "fast-mode-2026-02-01"},
+		Headers:   map[string]string{BetaHeader: "fast-mode-2026-02-01"},
 	})
 	if err != nil {
 		t.Fatalf("Stream: %v", err)
 	}
 	for range stream {
 	}
-	if body["speed"] != "fast" || body["model"] != "claude-opus-4-8" || body["output_config"] == nil {
+	if body["speed"] != "fast" || body["model"] != "model-a" || body["output_config"] == nil {
 		t.Errorf("body = %v, want speed fast beside the model and effort", body)
 	}
-	if got := header.Get("anthropic-beta"); got != "fast-mode-2026-02-01" {
-		t.Errorf("anthropic-beta = %q", got)
+	if got := header.Get(BetaHeader); got != "fast-mode-2026-02-01" {
+		t.Errorf("%s = %q", BetaHeader, got)
 	}
 	if got := header.Get("x-api-key"); got != "key" {
 		t.Errorf("x-api-key = %q, want key", got)
@@ -397,7 +401,7 @@ func TestStream_RedactedThinking(t *testing.T) {
 		blockStop(2),
 		event("message_delta", map[string]any{"delta": map[string]any{"stop_reason": "tool_use"}, "usage": map[string]int{}}),
 		event("message_stop", map[string]any{}),
-	), "anthropic").Collect()
+	), "provider-b").Collect()
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}
@@ -473,8 +477,8 @@ func TestStream_InterleavedThinking(t *testing.T) {
 		reasoning *agent.Reasoning
 		want      string
 	}{
-		{name: "budget", reasoning: &agent.Reasoning{Effort: "medium", Controls: opus45}, want: "interleaved-thinking-2025-05-14,fast-mode-2026-02-01"},
-		{name: "adaptive", reasoning: &agent.Reasoning{Effort: "high", Controls: opus48}, want: "fast-mode-2026-02-01"},
+		{name: "budget", reasoning: &agent.Reasoning{Effort: "medium", Controls: budgetEffort}, want: "interleaved-thinking-2025-05-14,fast-mode-2026-02-01"},
+		{name: "adaptive", reasoning: &agent.Reasoning{Effort: "high", Controls: effortMax}, want: "fast-mode-2026-02-01"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -485,48 +489,49 @@ func TestStream_InterleavedThinking(t *testing.T) {
 			defer srv.Close()
 
 			p := New(Init{Auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "key"}, BaseURL: srv.URL})
-			stream, err := p.Model("claude-x").Stream(t.Context(), agent.Request{
+			stream, err := p.Model("model-x").Stream(t.Context(), agent.Request{
 				Messages:  []agent.Message{agent.NewUserMessage("hi")},
 				MaxTokens: 64000,
 				Reasoning: tt.reasoning,
-				Headers:   map[string]string{"anthropic-beta": "fast-mode-2026-02-01"},
+				Headers:   map[string]string{BetaHeader: "fast-mode-2026-02-01"},
 			})
 			if err != nil {
 				t.Fatalf("Stream: %v", err)
 			}
 			for range stream {
 			}
-			if got := header.Get("anthropic-beta"); got != tt.want {
-				t.Errorf("anthropic-beta = %q, want %q", got, tt.want)
+			if got := header.Get(BetaHeader); got != tt.want {
+				t.Errorf("%s = %q, want %q", BetaHeader, got, tt.want)
 			}
 		})
 	}
 }
 
-// TestStream_Vertex checks a request as Vertex AI takes it: to the model's
-// streamRawPredict URL with a Google token as a bearer token, and a body
-// that names Vertex's API version and not the model.
-func TestStream_Vertex(t *testing.T) {
+// TestStream_RawPredict checks a request as a cloud's raw predict endpoint
+// takes it: to the model's streamRawPredict URL with the cloud's access
+// token as a bearer token, and a body that names RawPredictVersion and not
+// the model.
+func TestStream_RawPredict(t *testing.T) {
 	var path, auth, version string
 	var body map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path, auth, version = r.URL.Path, r.Header.Get("Authorization"), r.Header.Get("Anthropic-Version")
+		path, auth, version = r.URL.Path, r.Header.Get("Authorization"), r.Header.Get(VersionHeader)
 		json.NewDecoder(r.Body).Decode(&body)
 		io.WriteString(w, "event: message_stop\ndata: {}\n\n")
 	}))
 	defer srv.Close()
-	p := New(Init{Name: "google-vertex-anthropic", Auth: staticAuth{Kind: agent.CredentialOAuth, Token: "ya29"},
-		Key: gateway.Auth{Scheme: gateway.AuthGoogle}, BaseURL: srv.URL + "/v1/projects/p/locations/global/publishers/anthropic/models", Vertex: true})
-	resp, err := p.Model("claude-sonnet-4-5@20250929").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}, MaxTokens: 1000})
+	p := New(Init{Name: "provider-c", Auth: staticAuth{Kind: agent.CredentialOAuth, Token: "ya29"},
+		BaseURL: srv.URL + "/v1/projects/p/locations/global/publishers/lab-b/models", RawPredict: true})
+	resp, err := p.Model("model-b@20250929").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}, MaxTokens: 1000})
 	if err != nil {
 		t.Fatal(err)
 	}
 	resp.Collect()
-	if path != "/v1/projects/p/locations/global/publishers/anthropic/models/claude-sonnet-4-5@20250929:streamRawPredict" || auth != "Bearer ya29" || version != "" {
-		t.Errorf("request to %s, Authorization %q, anthropic-version %q", path, auth, version)
+	if path != "/v1/projects/p/locations/global/publishers/lab-b/models/model-b@20250929:streamRawPredict" || auth != "Bearer ya29" || version != "" {
+		t.Errorf("request to %s, Authorization %q, %s %q", path, auth, VersionHeader, version)
 	}
-	if _, ok := body["model"]; ok || body["anthropic_version"] != VertexVersion || body["max_tokens"] != float64(1000) {
-		t.Errorf("body = %v, want Vertex's version and no model", body)
+	if _, ok := body["model"]; ok || body[VersionField] != RawPredictVersion || body["max_tokens"] != float64(1000) {
+		t.Errorf("body = %v, want RawPredictVersion and no model", body)
 	}
 }
 
@@ -537,15 +542,15 @@ func TestStream_RateLimited(t *testing.T) {
 	const limited = `{"type":"error","error":{"type":"rate_limit_error","message":"This request would exceed your rate limit"}}`
 	oauth := staticAuth{Kind: agent.CredentialOAuth, Token: "sk-ant-oat"}
 	for _, tt := range []struct {
-		name   string
-		auth   staticAuth
-		vertex bool
-		reply  string
+		name       string
+		auth       staticAuth
+		rawPredict bool
+		reply      string
 	}{
 		{name: "oauth generic error", auth: oauth, reply: generic},
 		{name: "oauth rate limited", auth: oauth, reply: limited},
 		{name: "api key", auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "key"}, reply: generic},
-		{name: "vertex", auth: oauth, vertex: true, reply: generic},
+		{name: "raw predict", auth: oauth, rawPredict: true, reply: generic},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -553,13 +558,13 @@ func TestStream_RateLimited(t *testing.T) {
 				io.WriteString(w, tt.reply)
 			}))
 			defer srv.Close()
-			p := New(Init{Name: "anthropic", Auth: tt.auth, BaseURL: srv.URL, Vertex: tt.vertex})
-			_, err := p.Model("claude-opus-5-5").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}, MaxTokens: 1000})
+			p := New(Init{Name: "provider-b", Auth: tt.auth, BaseURL: srv.URL, RawPredict: tt.rawPredict})
+			_, err := p.Model("model-c").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}, MaxTokens: 1000})
 			respErr, ok := errors.AsType[*agent.ResponseError](err)
 			if !ok || respErr.StatusCode != http.StatusTooManyRequests {
 				t.Fatalf("error = %#v, want a 429 response error", err)
 			}
-			if want := "anthropic response error (429): " + tt.reply; err.Error() != want {
+			if want := "provider-b response error (429): " + tt.reply; err.Error() != want {
 				t.Errorf("error text = %q, want %q", err.Error(), want)
 			}
 			if !agent.Classify(err).Retryable {

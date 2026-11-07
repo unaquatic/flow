@@ -145,10 +145,10 @@ func TestTurnWorkedSessionSet(t *testing.T) {
 // catalog lacks, carries none.
 func TestReplyWindow(t *testing.T) {
 	s, a := newTestService(t)
-	want := offeringOf(t, a, "openai/gpt-5").Limit.PromptWindow()
+	want := offeringOf(t, a, "provider-a/model-c").Limit.PromptWindow()
 	usage := message.Usage{InputTokens: 1_000, OutputTokens: 100}
 
-	reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "openai/gpt-5"}
+	reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "provider-a/model-c"}
 	s.ApplyAgentEvent(app.EventMessageStarted{Message: app.Message{Content: reply}})
 	reply.Parts = []message.ContentPart{message.UsagePart{ID: "a1-usage", Usage: usage}}
 	var shown []int
@@ -162,8 +162,8 @@ func TestReplyWindow(t *testing.T) {
 	}
 
 	loaded := []ChatMessage{
-		{ID: "a1", Role: message.RoleAgent, Model: "openai/gpt-5", Usage: usage},
-		{ID: "a2", Role: message.RoleAgent, Model: "openai/gpt-5"},
+		{ID: "a1", Role: message.RoleAgent, Model: "provider-a/model-c", Usage: usage},
+		{ID: "a2", Role: message.RoleAgent, Model: "provider-a/model-c"},
 		{ID: "a3", Role: message.RoleAgent, Model: "provider/model", Usage: usage},
 	}
 	s.AssignWindows(loaded)

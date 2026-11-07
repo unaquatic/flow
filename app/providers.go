@@ -89,7 +89,7 @@ func providerSettings(conf *config.Service) func(agent.ProviderID) agent.Setting
 // every call: the configuration's, from conf, or else the first of the
 // environment variables the catalog in store names for the provider that
 // holds a key and is set, as gateway.Endpoint.KeyEnv lists them, leaving
-// out Azure's resource and the cloud credentials that requests are signed
+// out a cloud resource's name and the cloud credentials that requests are signed
 // or authorized with.
 func configKeys(conf *config.Service, store *gateway.Store) agent.APIKeyFunc {
 	return func(t agent.ProviderID) (agent.APIKey, error) {

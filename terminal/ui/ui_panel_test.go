@@ -43,7 +43,7 @@ func TestPanelTitlesNameKeys(t *testing.T) {
 			header: func(ui *UI) *PanelHeader { return ui.bannerHeader },
 			want:   "Settings [↑/↓ move] [←/→ change] [esc cancel]"},
 		{name: "banner without a title", open: func(ui *UI) {
-			ui.ShowBanner(EventBannerShow{Items: []widget.SelectItem{{Name: "openai"}}})
+			ui.ShowBanner(EventBannerShow{Items: []widget.SelectItem{{Name: "provider-a"}}})
 		}, header: func(ui *UI) *PanelHeader { return ui.bannerHeader },
 			want: "[↑/↓ move] [esc cancel]"},
 		{name: "session tree", open: func(ui *UI) { ui.Apply(ui.service.OpenTree(forkedTree("a2"))) },
@@ -419,8 +419,8 @@ func TestPanelHeaderSubtitle(t *testing.T) {
 	if h.SubtitleRow.Visible() {
 		t.Error("empty subtitle row is shown")
 	}
-	h.Set("Models", "openai account 01a0e1b4")
-	if !h.SubtitleRow.Visible() || h.Subtitle.PlainText() != "openai account 01a0e1b4" {
+	h.Set("Models", "provider-a account 01a0e1b4")
+	if !h.SubtitleRow.Visible() || h.Subtitle.PlainText() != "provider-a account 01a0e1b4" {
 		t.Errorf("subtitle = %q, shown %v; want it shown", h.Subtitle.PlainText(), h.SubtitleRow.Visible())
 	}
 	h.Set("", "")

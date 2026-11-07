@@ -1,6 +1,6 @@
-// Package messages speaks Anthropic Messages, the request format of
-// Anthropic's API, for every provider whose API takes it: Anthropic's,
-// Vertex AI's, as Vertex AI takes it, and gateways at their own base URLs.
+// Package messages speaks the Messages request format, for every provider
+// whose API takes it: the format's own API at DefaultBaseURL, a cloud's, in
+// the raw predict shape it takes, and gateways at their own base URLs.
 package messages
 
 import (
@@ -20,28 +20,43 @@ import (
 	"github.com/unaquatic/flow/sse"
 )
 
-// DefaultBaseURL is the base URL of Anthropic's API.
+// DefaultBaseURL is the base URL of the format's own API.
 const DefaultBaseURL = "https://api.anthropic.com/v1"
 
-// VertexVersion is the API version that Vertex AI's Claude requests name in
-// their body.
-const VertexVersion = "vertex-2023-10-16"
+// The headers and body field that name the API version and its betas.
+const (
+	// VersionHeader names the API version of a request.
+	VersionHeader = "Anthropic-Version"
+	// BetaHeader names the beta features a request turns on, a
+	// comma-separated list.
+	BetaHeader = "anthropic-beta"
+	// VersionField names the API version in the body of a raw predict
+	// request, in place of VersionHeader.
+	VersionField = "anthropic_version"
+)
 
-// Client implements agent.Provider for an API that takes Anthropic
-// Messages: Anthropic's, or another provider's at its base URL, such as
-// OpenCode's or MiniMax's.
+// APIVersion is the API version that requests name in VersionHeader.
+const APIVersion = "2023-06-01"
+
+// RawPredictVersion is the API version that raw predict requests name in
+// VersionField.
+const RawPredictVersion = "vertex-2023-10-16"
+
+// Client implements agent.Provider for an API that takes Messages
+// requests: the format's own, or another provider's at its base URL, such
+// as a gateway's.
 type Client struct {
 	name       string
 	auth       agent.Authorizer
 	key        gateway.Auth
 	baseURL    string
-	vertex     bool
+	rawPredict bool
 	httpClient *http.Client
 }
 
 // Init configures a Client.
 type Init struct {
-	// Name is the provider's catalog ID, such as "anthropic".
+	// Name is the provider's catalog ID, such as "provider-a".
 	Name string
 	// Auth resolves the credential of every request.
 	Auth agent.Authorizer
@@ -52,10 +67,10 @@ type Init struct {
 	// BaseURL is the base URL that "/messages" follows. Empty is
 	// DefaultBaseURL.
 	BaseURL string
-	// Vertex sends requests as Vertex AI takes them: to
-	// "{BaseURL}/{model}:streamRawPredict", the model in the URL and not
-	// the body, which names VertexVersion instead.
-	Vertex bool
+	// RawPredict sends requests as a cloud's raw predict endpoint takes
+	// them: to "{BaseURL}/{model}:streamRawPredict", the model in the URL
+	// and not the body, which names RawPredictVersion instead.
+	RawPredict bool
 	// HTTPClient sends the requests. Nil is a new HTTP client.
 	HTTPClient *http.Client
 }
@@ -67,7 +82,7 @@ func New(init Init) *Client {
 		auth:       init.Auth,
 		key:        init.Key,
 		baseURL:    strings.TrimSuffix(cmp.Or(init.BaseURL, DefaultBaseURL), "/"),
-		vertex:     init.Vertex,
+		rawPredict: init.RawPredict,
 		httpClient: cmp.Or(init.HTTPClient, &http.Client{}),
 	}
 }
@@ -101,22 +116,22 @@ func (m *model) Stream(ctx context.Context, req agent.Request) (agent.StreamResp
 	if len(system) > 0 {
 		body["system"] = system
 	}
-	if t := toAnthropicTools(req.Tools); t != nil {
+	if t := toToolDefs(req.Tools); t != nil {
 		body["tools"] = t
 	}
 	thinkingHeaders := SetReasoning(body, req.Reasoning, req.MaxTokens)
 	body = request.MergeBody(body, req.Body)
 	url := m.c.baseURL + "/messages"
-	if m.c.vertex {
+	if m.c.rawPredict {
 		delete(body, "model")
-		body["anthropic_version"] = VertexVersion
+		body[VersionField] = RawPredictVersion
 		url = m.c.baseURL + "/" + m.name + ":streamRawPredict"
 	}
 
 	return agent.Authorized(ctx, m.c.auth, func(a agent.Authorization) (agent.StreamResponse, error) {
 		h := headers(a, m.c.key)
-		if m.c.vertex {
-			h.Del("Anthropic-Version")
+		if m.c.rawPredict {
+			h.Del(VersionHeader)
 		}
 		request.AddHeaders(h, thinkingHeaders)
 		request.AddHeaders(h, req.Headers)
@@ -134,8 +149,8 @@ const minThinkingBudget = 1024
 
 // interleavedThinkingBeta lets extended thinking continue between tool
 // calls, rather than only at the start of the reply. Adaptive thinking does
-// so without it, and models that cannot interleave, such as Haiku 4.5,
-// ignore it.
+// so without it, and models that cannot interleave, which take a budget
+// alone, ignore it.
 const interleavedThinkingBeta = "interleaved-thinking-2025-05-14"
 
 // ThinkingBudgets maps effort levels to the thinking budget extended
@@ -150,9 +165,9 @@ var ThinkingBudgets = map[agent.ReasoningEffort]int{
 
 // AdaptiveThinking reports whether a model with the reasoning controls c
 // thinks adaptively, though it may take a token budget too: whether its
-// effort levels include max. Anthropic offers effort max on exactly the
-// models that think adaptively, and not on Opus 4.5, the one model that
-// takes an effort and a budget but not adaptive thinking.
+// effort levels include max. The format's API offers effort max on exactly
+// the models that think adaptively, and not on the models that take an
+// effort and a budget but not adaptive thinking.
 func AdaptiveThinking(c gateway.Reasoning) bool {
 	return slices.Contains(c.Efforts, gateway.Effort(agent.EffortMax))
 }
@@ -187,7 +202,7 @@ func SetReasoning(body map[string]any, r *agent.Reasoning, maxTokens int) map[st
 		}
 		if budget >= minThinkingBudget {
 			body["thinking"] = map[string]any{"type": "enabled", "budget_tokens": budget, "display": "summarized"}
-			extra = map[string]string{"anthropic-beta": interleavedThinkingBeta}
+			extra = map[string]string{BetaHeader: interleavedThinkingBeta}
 		}
 	} else {
 		body["thinking"] = map[string]any{"type": "adaptive", "display": "summarized"}
@@ -202,7 +217,7 @@ func SetReasoning(body map[string]any, r *agent.Reasoning, maxTokens int) map[st
 func headers(a agent.Authorization, key gateway.Auth) http.Header {
 	h := http.Header{}
 	h.Set("Accept", sse.ContentType)
-	h.Set("Anthropic-Version", "2023-06-01")
+	h.Set(VersionHeader, APIVersion)
 	switch {
 	case a.Kind == agent.CredentialOAuth || key.Scheme == gateway.AuthBearer:
 		h.Set("Authorization", "Bearer "+a.Token)
@@ -212,7 +227,7 @@ func headers(a agent.Authorization, key gateway.Auth) http.Header {
 	return h
 }
 
-// Message is an Anthropic request message.
+// Message is a request message.
 type Message struct {
 	// Role identifies the message sender.
 	Role string `json:"role"`
@@ -231,7 +246,7 @@ func Role(r message.Role) string {
 	}
 }
 
-// ContentBlock is one Anthropic message content block.
+// ContentBlock is one content block of a message.
 type ContentBlock struct {
 	// Type selects the block representation.
 	Type string `json:"type"`
@@ -263,7 +278,7 @@ type ContentBlock struct {
 	// IsError marks failed tool output.
 	IsError bool `json:"is_error,omitempty"`
 
-	// CacheControl contains Anthropic prompt-cache hints.
+	// CacheControl contains prompt-cache hints.
 	CacheControl *message.CacheControl `json:"cache_control,omitempty"`
 }
 
@@ -279,7 +294,7 @@ type Source struct {
 	URL string `json:"url,omitempty"`
 }
 
-// ToMessages converts provider messages to Anthropic messages, and the text
+// ToMessages converts provider messages to request messages, and the text
 // of the system messages to the system blocks, which the API takes apart from
 // the conversation. Each block keeps its part's cache control.
 //
@@ -377,9 +392,9 @@ func ToMessages(msgs []agent.Message) (system []ContentBlock, out []Message) {
 	return system, out
 }
 
-// buildAnthropicUsage adds cache reads to input while retaining cache creation
+// buildUsage adds cache reads to input while retaining cache creation
 // as a separate count.
-func buildAnthropicUsage(input, cacheRead, cacheCreation, output int) agent.Usage {
+func buildUsage(input, cacheRead, cacheCreation, output int) agent.Usage {
 	in := input + cacheRead
 	return agent.Usage{
 		InputTokens:              in,
@@ -390,14 +405,14 @@ func buildAnthropicUsage(input, cacheRead, cacheCreation, output int) agent.Usag
 	}
 }
 
-// eventStream returns the stream of the Anthropic Messages events of body,
+// eventStream returns the stream of the Messages events of body,
 // which provider name sent, and closes body once the stream ends.
 func eventStream(body io.ReadCloser, name string) agent.StreamResponse {
 	st := &streamState{name: name, blocks: map[int]*blockState{}}
 	return agent.StreamEvents(body, st.Handle)
 }
 
-// streamState tracks one Anthropic Messages response stream.
+// streamState tracks one Messages response stream.
 type streamState struct {
 	// name is the catalog ID of the provider that sends the stream, which
 	// the errors it reports name.
@@ -428,7 +443,7 @@ func (bs *blockState) ToolInput() json.RawMessage {
 	return json.RawMessage(cmp.Or(bs.toolInput.String(), "{}"))
 }
 
-// Handle folds one Anthropic event into the stream, yields the parts it
+// Handle folds one Messages event into the stream, yields the parts it
 // makes, and reports whether streaming should continue.
 func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, error) bool) bool {
 	data := []byte(event.Data)
@@ -595,7 +610,7 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 		}
 
 	case "message_stop":
-		if !yield(buildAnthropicUsage(st.inputTokens, st.cacheRead, st.cacheCreate, st.outputTokens), nil) {
+		if !yield(buildUsage(st.inputTokens, st.cacheRead, st.cacheCreate, st.outputTokens), nil) {
 			return false
 		}
 
@@ -636,25 +651,25 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 	return true
 }
 
-// anthropicTool is an Anthropic tool definition.
-type anthropicTool struct {
+// toolDef is a tool definition of a request.
+type toolDef struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description,omitempty"`
 	InputSchema agent.InputSchema `json:"input_schema"`
 }
 
-// toAnthropicTools converts tools to Anthropic request definitions.
-func toAnthropicTools(tools []agent.ToolDefinition) []anthropicTool {
+// toToolDefs converts tools to the definitions of a request.
+func toToolDefs(tools []agent.ToolDefinition) []toolDef {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]anthropicTool, 0, len(tools))
+	out := make([]toolDef, 0, len(tools))
 	for _, t := range tools {
 		schema := t.InputSchema
 		if schema.Type == "" {
 			schema.Type = "object"
 		}
-		out = append(out, anthropicTool{
+		out = append(out, toolDef{
 			Name:        t.Name,
 			Description: t.Description,
 			InputSchema: schema,

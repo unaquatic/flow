@@ -15,8 +15,8 @@ import (
 // The providers the tests keep accounts of, by their catalog IDs. Package
 // agent names no provider of its own.
 const (
-	testAnthropic ProviderID = "anthropic"
-	testOpenAI    ProviderID = "openai"
+	testProviderA ProviderID = "provider-a"
+	testProviderB ProviderID = "provider-b"
 )
 
 // fakeFlow is a LoginFlow whose steps each test sets.
@@ -53,21 +53,21 @@ func TestCompleteLogin(t *testing.T) {
 	flow := &CodeTestFlow{}
 	s := newAccounts(t, "", flow)
 	var prompt LoginPrompt
-	if err := s.Login(t.Context(), testOpenAI, idWork, LoginBrowser, func(p LoginPrompt) { prompt = p }); err != nil {
+	if err := s.Login(t.Context(), testProviderA, idWork, LoginBrowser, func(p LoginPrompt) { prompt = p }); err != nil {
 		t.Fatal(err)
 	}
 	if prompt.State == nil || len(s.logins) != 0 || len(saved(t, s).Accounts) != 0 {
 		t.Fatal("manual login did not return state or registered a pending login/account")
 	}
 	// A fresh Accounts can complete the login: it does not depend on the starter.
-	s = NewAccounts(AccountsConfig{Store: s.store, Flows: map[ProviderID]LoginFlow{testOpenAI: &CodeTestFlow{}}})
-	if err := s.CompleteLogin(t.Context(), testOpenAI, idWork, *prompt.State, ""); !errors.Is(err, ErrInvalidLoginCode) {
+	s = NewAccounts(AccountsConfig{Store: s.store, Flows: map[ProviderID]LoginFlow{testProviderA: &CodeTestFlow{}}})
+	if err := s.CompleteLogin(t.Context(), testProviderA, idWork, *prompt.State, ""); !errors.Is(err, ErrInvalidLoginCode) {
 		t.Fatalf("empty input error = %v", err)
 	}
-	if err := s.CompleteLogin(t.Context(), testOpenAI, idWork, *prompt.State, "pasted-code"); err != nil {
+	if err := s.CompleteLogin(t.Context(), testProviderA, idWork, *prompt.State, "pasted-code"); err != nil {
 		t.Fatal(err)
 	}
-	auth, err := s.Authorize(t.Context(), testOpenAI, nil)
+	auth, err := s.Authorize(t.Context(), testProviderA, nil)
 	if err != nil || auth.Token != "pasted-code" {
 		t.Fatalf("saved authorization = %+v, %v", auth, err)
 	}
@@ -91,25 +91,25 @@ func noRefresh(t *testing.T) *fakeFlow {
 }
 
 // newAccounts returns an Accounts over a fresh store, with key as the
-// configured OpenAI key and flow as the OpenAI login.
+// configured key of provider-a and flow as its login.
 func newAccounts(t *testing.T, key APIKey, flow LoginFlow) *Accounts {
 	t.Helper()
 	return NewAccounts(AccountsConfig{
 		Store: AuthFile{Dir: t.TempDir()},
 		Keys: func(p ProviderID) (APIKey, error) {
-			if p == testOpenAI {
+			if p == testProviderA {
 				return key, nil
 			}
 			return "", nil
 		},
-		Flows: map[ProviderID]LoginFlow{testOpenAI: flow},
+		Flows: map[ProviderID]LoginFlow{testProviderA: flow},
 	})
 }
 
-// store saves e as the OpenAI entry of s.
+// store saves e as the provider-a entry of s.
 func store(t *testing.T, s *Accounts, e AuthEntry) {
 	t.Helper()
-	err := s.store.Update(t.Context(), testOpenAI, func(stored *AuthEntry) error {
+	err := s.store.Update(t.Context(), testProviderA, func(stored *AuthEntry) error {
 		*stored = e
 		return nil
 	})
@@ -118,10 +118,10 @@ func store(t *testing.T, s *Accounts, e AuthEntry) {
 	}
 }
 
-// saved returns the OpenAI entry of s.
+// saved returns the provider-a entry of s.
 func saved(t *testing.T, s *Accounts) AuthEntry {
 	t.Helper()
-	e, err := s.store.Load(testOpenAI)
+	e, err := s.store.Load(testProviderA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestAuthorize(t *testing.T) {
 			if tt.entry.Accounts != nil || tt.entry.Active != "" {
 				store(t, s, tt.entry)
 			}
-			got, err := s.For(testOpenAI).Authorize(t.Context(), nil)
+			got, err := s.For(testProviderA).Authorize(t.Context(), nil)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Authorize error = %v, want %v", err, tt.wantErr)
 			}
@@ -186,7 +186,7 @@ func TestAuthorizeKeyError(t *testing.T) {
 		Store: AuthFile{Dir: t.TempDir()},
 		Keys:  func(ProviderID) (APIKey, error) { return "", errConfig },
 	})
-	if _, err := s.Authorize(t.Context(), testOpenAI, nil); !errors.Is(err, errConfig) {
+	if _, err := s.Authorize(t.Context(), testProviderA, nil); !errors.Is(err, errConfig) {
 		t.Errorf("Authorize error = %v, want %v", err, errConfig)
 	}
 }
@@ -205,7 +205,7 @@ func TestAuthorizeRefresh(t *testing.T) {
 		idHome: other,
 	}})
 
-	a, err := s.Authorize(t.Context(), testOpenAI, nil)
+	a, err := s.Authorize(t.Context(), testProviderA, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestAuthorizeRefreshOnce(t *testing.T) {
 	}})
 
 	tokens := concurrently(10, func() (Authorization, error) {
-		return s.Authorize(t.Context(), testOpenAI, nil)
+		return s.Authorize(t.Context(), testProviderA, nil)
 	}, t)
 	if n := refreshes.Load(); n != 1 {
 		t.Errorf("refreshed %d times, want 1", n)
@@ -286,7 +286,7 @@ func TestAuthorizeRefreshFailure(t *testing.T) {
 			store(t, s, AuthEntry{Active: idWork, Accounts: map[AccountID]Credential{
 				idWork: OAuthToken{Access: "old", Refresh: tt.refresh, Expiry: time.Now().Add(-time.Minute)},
 			}})
-			if _, err := s.Authorize(t.Context(), testOpenAI, nil); !errors.Is(err, tt.wantErr) {
+			if _, err := s.Authorize(t.Context(), testProviderA, nil); !errors.Is(err, tt.wantErr) {
 				t.Errorf("Authorize error = %v, want %v", err, tt.wantErr)
 			}
 		})
@@ -342,7 +342,7 @@ func TestAuthorizeRejected(t *testing.T) {
 			s := newAccounts(t, "", flow)
 			store(t, s, tt.entry)
 
-			got, err := s.For(testOpenAI).Authorize(t.Context(), &tt.rejected)
+			got, err := s.For(testProviderA).Authorize(t.Context(), &tt.rejected)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Authorize error = %v, want %v", err, tt.wantErr)
 			}
@@ -372,7 +372,7 @@ func TestAuthorizeRejectedOnce(t *testing.T) {
 
 	tokens := concurrently(10, func() (Authorization, error) {
 		rejected := oauthAuth("old")
-		return s.Authorize(t.Context(), testOpenAI, &rejected)
+		return s.Authorize(t.Context(), testProviderA, &rejected)
 	}, t)
 	if n := refreshes.Load(); n != 1 {
 		t.Errorf("refreshed %d times, want 1", n)
@@ -393,22 +393,22 @@ func TestStatus(t *testing.T) {
 		entry AuthEntry
 		want  AuthStatus
 	}{
-		{name: "none", want: AuthStatus{Provider: testOpenAI}},
+		{name: "none", want: AuthStatus{Provider: testProviderA}},
 		{
 			name: "config key only",
 			key:  "sk",
-			want: AuthStatus{Provider: testOpenAI, Active: ConfigAccount, Accounts: []AccountStatus{config}},
+			want: AuthStatus{Provider: testProviderA, Active: ConfigAccount, Accounts: []AccountStatus{config}},
 		},
 		{
 			name:  "saved accounts and config key",
 			key:   "sk",
 			entry: AuthEntry{Active: idWork, Accounts: accounts},
-			want:  AuthStatus{Provider: testOpenAI, Active: idWork, Accounts: []AccountStatus{config, home, work}},
+			want:  AuthStatus{Provider: testProviderA, Active: idWork, Accounts: []AccountStatus{config, home, work}},
 		},
 		{
 			name:  "none active",
 			entry: AuthEntry{Accounts: accounts},
-			want:  AuthStatus{Provider: testOpenAI, Active: idHome, Accounts: []AccountStatus{home, work}},
+			want:  AuthStatus{Provider: testProviderA, Active: idHome, Accounts: []AccountStatus{home, work}},
 		},
 	}
 	for _, tt := range tests {
@@ -417,7 +417,7 @@ func TestStatus(t *testing.T) {
 			if tt.entry.Accounts != nil {
 				store(t, s, tt.entry)
 			}
-			got, err := s.Status(t.Context(), testOpenAI)
+			got, err := s.Status(t.Context(), testProviderA)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -442,11 +442,11 @@ func TestLogin(t *testing.T) {
 		wantErr    error
 		wantPrompt LoginPrompt
 	}{
-		{name: "browser", provider: testOpenAI, account: idWork, method: LoginBrowser, wantPrompt: LoginPrompt{URL: "https://login.test/authorize"}},
-		{name: "device", provider: testOpenAI, account: idWork, method: LoginDevice, wantPrompt: LoginPrompt{URL: "https://login.test/device", Code: "ABCD-1234"}},
-		{name: "flow fails", provider: testOpenAI, account: idWork, method: LoginBrowser, result: errDenied, wantErr: errDenied, wantPrompt: LoginPrompt{URL: "https://login.test/authorize"}},
-		{name: "no flow", provider: testAnthropic, account: idWork, method: LoginBrowser, wantErr: errors.ErrUnsupported},
-		{name: "config account", provider: testOpenAI, account: ConfigAccount, method: LoginBrowser, wantErr: ErrReadOnlyAccount},
+		{name: "browser", provider: testProviderA, account: idWork, method: LoginBrowser, wantPrompt: LoginPrompt{URL: "https://login.test/authorize"}},
+		{name: "device", provider: testProviderA, account: idWork, method: LoginDevice, wantPrompt: LoginPrompt{URL: "https://login.test/device", Code: "ABCD-1234"}},
+		{name: "flow fails", provider: testProviderA, account: idWork, method: LoginBrowser, result: errDenied, wantErr: errDenied, wantPrompt: LoginPrompt{URL: "https://login.test/authorize"}},
+		{name: "no flow", provider: testProviderB, account: idWork, method: LoginBrowser, wantErr: errors.ErrUnsupported},
+		{name: "config account", provider: testProviderA, account: ConfigAccount, method: LoginBrowser, wantErr: ErrReadOnlyAccount},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -472,7 +472,7 @@ func TestLogin(t *testing.T) {
 			switch {
 			case tt.wantErr == nil:
 				wantActive = tt.account
-			case tt.provider == testOpenAI:
+			case tt.provider == testProviderA:
 				wantActive = idHome
 			}
 			if st.Active != wantActive {
@@ -484,7 +484,7 @@ func TestLogin(t *testing.T) {
 
 func TestLoginRejectsUnknownMethod(t *testing.T) {
 	s := newAccounts(t, "", &fakeFlow{})
-	if err := s.Login(t.Context(), testOpenAI, idWork, "carrier-pigeon", func(LoginPrompt) {}); err == nil {
+	if err := s.Login(t.Context(), testProviderA, idWork, "carrier-pigeon", func(LoginPrompt) {}); err == nil {
 		t.Error("Login accepted an unknown method")
 	}
 }
@@ -505,10 +505,10 @@ func TestLoginCancelsPrevious(t *testing.T) {
 	s := newAccounts(t, "", flow)
 
 	first := make(chan error, 1)
-	go func() { first <- s.Login(t.Context(), testOpenAI, idWork, LoginBrowser, func(LoginPrompt) {}) }()
+	go func() { first <- s.Login(t.Context(), testProviderA, idWork, LoginBrowser, func(LoginPrompt) {}) }()
 	<-started
 
-	if err := s.Login(t.Context(), testOpenAI, idHome, LoginDevice, func(LoginPrompt) {}); err != nil {
+	if err := s.Login(t.Context(), testProviderA, idHome, LoginDevice, func(LoginPrompt) {}); err != nil {
 		t.Fatalf("second login: %v", err)
 	}
 	if err := <-first; !errors.Is(err, context.Canceled) {
@@ -533,7 +533,7 @@ func TestSetKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newAccounts(t, "", &fakeFlow{})
 			store(t, s, AuthEntry{Active: idHome, Accounts: map[AccountID]Credential{idHome: APIKey("k")}})
-			err := s.SetKey(t.Context(), testOpenAI, tt.account, tt.key)
+			err := s.SetKey(t.Context(), testProviderA, tt.account, tt.key)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("SetKey error = %v, want %v", err, tt.wantErr)
 			}
@@ -569,10 +569,10 @@ func TestUse(t *testing.T) {
 			s := newAccounts(t, tt.key, noRefresh(t))
 			store(t, s, AuthEntry{Active: idWork, Accounts: map[AccountID]Credential{idWork: APIKey("w"), idHome: APIKey("h")}})
 
-			if err := s.Use(t.Context(), testOpenAI, tt.account); !errors.Is(err, tt.wantErr) {
+			if err := s.Use(t.Context(), testProviderA, tt.account); !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Use error = %v, want %v", err, tt.wantErr)
 			}
-			st, err := s.Status(t.Context(), testOpenAI)
+			st, err := s.Status(t.Context(), testProviderA)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -608,10 +608,10 @@ func TestLogout(t *testing.T) {
 			s := newAccounts(t, tt.key, noRefresh(t))
 			store(t, s, AuthEntry{Active: idWork, Accounts: maps.Clone(tt.accounts)})
 
-			if err := s.Logout(t.Context(), testOpenAI, tt.account); !errors.Is(err, tt.wantErr) {
+			if err := s.Logout(t.Context(), testProviderA, tt.account); !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Logout error = %v, want %v", err, tt.wantErr)
 			}
-			st, err := s.Status(t.Context(), testOpenAI)
+			st, err := s.Status(t.Context(), testProviderA)
 			if err != nil {
 				t.Fatal(err)
 			}

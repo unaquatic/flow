@@ -135,7 +135,7 @@ func TestHandler_ToolCalls(t *testing.T) {
 			want: []Call{{ID: "call_1", Name: "bash", Deltas: pwd, End: pwd, Ends: 1}},
 		},
 		{
-			// The ChatGPT backend sent parallel calls like these with no
+			// A provider's backend sent parallel calls like these with no
 			// argument deltas, so only the done items carry the arguments.
 			name: "arguments only in done items",
 			events: [][2]string{
@@ -318,12 +318,12 @@ func (a staticAuth) Authorize(context.Context, *agent.Authorization) (agent.Auth
 	return agent.Authorization(a), nil
 }
 
-// chatGPT is the ChatGPT backend of the tests' providers.
-const chatGPT = "https://chatgpt.test/backend-api/codex"
+// backend is the backend of the tests' providers.
+const backend = "https://backend.test/api"
 
 // TestStream_Request checks where the Responses API takes a request's
 // system messages, output limit and message roles: as instructions, the
-// system texts joined, and as max_output_tokens, which the ChatGPT backend,
+// system texts joined, and as max_output_tokens, which the backend,
 // which an OAuth token reaches, does not take.
 func TestStream_Request(t *testing.T) {
 	req := agent.Request{Messages: []agent.Message{
@@ -338,7 +338,7 @@ func TestStream_Request(t *testing.T) {
 		wantPath string
 		wantMax  any
 	}{
-		{name: "chatgpt", kind: agent.CredentialOAuth, wantPath: "/chatgpt/responses", wantMax: nil},
+		{name: "backend", kind: agent.CredentialOAuth, wantPath: "/backend/responses", wantMax: nil},
 		{name: "api key", kind: agent.CredentialAPIKey, wantPath: "/v1/responses", wantMax: float64(64000)},
 	}
 	for _, tt := range tests {
@@ -353,8 +353,8 @@ func TestStream_Request(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			p := New(Init{Auth: staticAuth{Kind: tt.kind, Token: "token"}, BaseURL: srv.URL + "/v1", ChatGPTBaseURL: srv.URL + "/chatgpt"})
-			stream, err := p.Model("gpt-x").Stream(t.Context(), req)
+			p := New(Init{Auth: staticAuth{Kind: tt.kind, Token: "token"}, BaseURL: srv.URL + "/v1", BackendURL: srv.URL + "/backend"})
+			stream, err := p.Model("model-x").Stream(t.Context(), req)
 			if err != nil {
 				t.Fatalf("Stream: %v", err)
 			}
@@ -383,7 +383,7 @@ func TestStream_Request(t *testing.T) {
 }
 
 // TestUsage checks that the usage reports the input that a prompt cache
-// gets apart from it: OpenAI counts the tokens written to the cache in the
+// gets apart from it: the API counts the tokens written to the cache in the
 // input, and Usage does not.
 func TestUsage(t *testing.T) {
 	want := agent.Usage{
@@ -421,10 +421,10 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { retu
 
 // TestStream_CacheKey checks where each credential's requests go, and that
 // a request's cache key reaches the API as prompt_cache_key, cut to 64
-// characters: on the ChatGPT backend, which an OAuth token reaches and
+// characters: on the backend, which an OAuth token reaches and
 // which also takes it as the session headers, and on the provider's API,
 // which an API key reaches, as does an OAuth token where the provider has
-// no ChatGPT backend.
+// no backend.
 func TestStream_CacheKey(t *testing.T) {
 	long := strings.Repeat("k", 80)
 	tests := []struct {
@@ -437,23 +437,23 @@ func TestStream_CacheKey(t *testing.T) {
 		wantSession string
 	}{
 		{
-			name: "chatgpt", kind: agent.CredentialOAuth, backend: chatGPT, key: "sess-1",
-			wantURL: chatGPT + "/responses", wantKey: "sess-1", wantSession: "sess-1",
+			name: "backend", kind: agent.CredentialOAuth, backend: backend, key: "sess-1",
+			wantURL: backend + "/responses", wantKey: "sess-1", wantSession: "sess-1",
 		},
 		{
-			name: "chatgpt without a key", kind: agent.CredentialOAuth, backend: chatGPT,
-			wantURL: chatGPT + "/responses", wantKey: nil,
+			name: "backend without a key", kind: agent.CredentialOAuth, backend: backend,
+			wantURL: backend + "/responses", wantKey: nil,
 		},
 		{
-			name: "chatgpt with a long key", kind: agent.CredentialOAuth, backend: chatGPT, key: long,
-			wantURL: chatGPT + "/responses", wantKey: long[:64], wantSession: long[:64],
+			name: "backend with a long key", kind: agent.CredentialOAuth, backend: backend, key: long,
+			wantURL: backend + "/responses", wantKey: long[:64], wantSession: long[:64],
 		},
 		{
-			name: "api key", kind: agent.CredentialAPIKey, backend: chatGPT, key: "sess-1",
+			name: "api key", kind: agent.CredentialAPIKey, backend: backend, key: "sess-1",
 			wantURL: DefaultBaseURL + "/responses", wantKey: "sess-1",
 		},
 		{
-			name: "oauth without a chatgpt backend", kind: agent.CredentialOAuth, key: "sess-1",
+			name: "oauth without a backend", kind: agent.CredentialOAuth, key: "sess-1",
 			wantURL: DefaultBaseURL + "/responses", wantKey: "sess-1",
 		},
 	}
@@ -461,7 +461,7 @@ func TestStream_CacheKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var sent *http.Request
 			var body map[string]any
-			p := New(Init{Auth: staticAuth{Kind: tt.kind, Token: "token"}, ChatGPTBaseURL: tt.backend})
+			p := New(Init{Auth: staticAuth{Kind: tt.kind, Token: "token"}, BackendURL: tt.backend})
 			p.httpClient.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
 				sent = r
 				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -470,7 +470,7 @@ func TestStream_CacheKey(t *testing.T) {
 				return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("")), Header: http.Header{}}, nil
 			})
 
-			stream, err := p.Model("gpt-x").Stream(t.Context(), agent.Request{
+			stream, err := p.Model("model-x").Stream(t.Context(), agent.Request{
 				Messages: []agent.Message{agent.NewUserMessage("hi")},
 				CacheKey: tt.key,
 			})
@@ -585,7 +585,7 @@ func TestHandler_Reasoning(t *testing.T) {
 // TestToInput_Reasoning checks that a reasoning part that holds
 // encrypted reasoning goes back as the reasoning item the API returned, ID
 // included, just before the items that followed it, and that other
-// reasoning parts, such as Anthropic's, are left out.
+// reasoning parts, such as those of the Messages format, are left out.
 func TestToInput_Reasoning(t *testing.T) {
 	sig, _ := json.Marshal(ReasoningItem{ID: "rs_1", Type: "reasoning", Summary: []OutputContent{}, EncryptedContent: "enc"})
 	msgs := []agent.Message{
@@ -599,7 +599,7 @@ func TestToInput_Reasoning(t *testing.T) {
 			message.ToolResultPart{ToolUseID: "call_1", Text: "go.mod"},
 		}},
 		{Role: message.RoleAgent, Content: []message.ContentPart{
-			message.ReasoningPart{Text: "Claude's.", Signature: "EqQBCgIYAh"},
+			message.ReasoningPart{Text: "Another format's.", Signature: "EqQBCgIYAh"},
 			message.TextPart{Text: "Done."},
 		}},
 	}
@@ -636,11 +636,11 @@ func effortOptions(values ...string) gateway.Reasoning {
 	return c
 }
 
-// The reasoning controls of gpt-5.6, as the catalog lists them, and of a
+// The reasoning controls of a model whose efforts reach max, as the catalog lists them, and of a
 // model whose list ends in a level flow does not know.
 var (
-	gpt56 = effortOptions("none", "low", "medium", "high", "xhigh", "max")
-	gpt7  = effortOptions("none", "low", "medium", "high", "xhigh", "max", "ultra")
+	effortsMax   = effortOptions("none", "low", "medium", "high", "xhigh", "max")
+	effortsUltra = effortOptions("none", "low", "medium", "high", "xhigh", "max", "ultra")
 )
 
 // TestStream_Reasoning checks how the Responses API takes a request's
@@ -654,7 +654,7 @@ func TestStream_Reasoning(t *testing.T) {
 		want      map[string]any
 	}{
 		{
-			name: "responses", kind: agent.CredentialOAuth, reasoning: &agent.Reasoning{Effort: "high", Controls: gpt56},
+			name: "responses", kind: agent.CredentialOAuth, reasoning: &agent.Reasoning{Effort: "high", Controls: effortsMax},
 			want: map[string]any{
 				"reasoning":    map[string]any{"effort": "high", "summary": "auto", "mode": "pro"},
 				"include":      []any{"reasoning.encrypted_content"},
@@ -662,7 +662,7 @@ func TestStream_Reasoning(t *testing.T) {
 			},
 		},
 		{
-			name: "responses at the provider's default", kind: agent.CredentialOAuth, reasoning: &agent.Reasoning{Controls: gpt56},
+			name: "responses at the provider's default", kind: agent.CredentialOAuth, reasoning: &agent.Reasoning{Controls: effortsMax},
 			want: map[string]any{
 				"reasoning":    map[string]any{"summary": "auto", "mode": "pro"},
 				"include":      []any{"reasoning.encrypted_content"},
@@ -674,7 +674,7 @@ func TestStream_Reasoning(t *testing.T) {
 			want: map[string]any{"reasoning": map[string]any{"mode": "pro"}, "include": nil, "service_tier": "priority"},
 		},
 		{
-			name: "effort flow does not know", kind: agent.CredentialOAuth, reasoning: &agent.Reasoning{Effort: "ultra", Controls: gpt7},
+			name: "effort flow does not know", kind: agent.CredentialOAuth, reasoning: &agent.Reasoning{Effort: "ultra", Controls: effortsUltra},
 			want: map[string]any{
 				"reasoning":    map[string]any{"effort": "ultra", "summary": "auto", "mode": "pro"},
 				"include":      []any{"reasoning.encrypted_content"},
@@ -692,8 +692,8 @@ func TestStream_Reasoning(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			p := New(Init{Auth: staticAuth{Kind: tt.kind, Token: "token"}, BaseURL: srv.URL, ChatGPTBaseURL: srv.URL})
-			stream, err := p.Model("gpt-5.6").Stream(t.Context(), agent.Request{
+			p := New(Init{Auth: staticAuth{Kind: tt.kind, Token: "token"}, BaseURL: srv.URL, BackendURL: srv.URL})
+			stream, err := p.Model("model-a").Stream(t.Context(), agent.Request{
 				Messages:  []agent.Message{agent.NewUserMessage("hi")},
 				Reasoning: tt.reasoning,
 				Body:      map[string]any{"service_tier": "priority", "reasoning": map[string]any{"mode": "pro"}},
@@ -729,9 +729,9 @@ func TestHandler_EmptyReasoning(t *testing.T) {
 }
 
 // TestStream_PlatformResponses checks the platform Responses API request an
-// API key makes: the output limit, which the ChatGPT backend does not take,
+// API key makes: the output limit, which the backend does not take,
 // no instructions when the request has no system messages, the reasoning,
-// nothing stored, and no ChatGPT session headers.
+// nothing stored, and no backend session headers.
 func TestStream_PlatformResponses(t *testing.T) {
 	var sent *http.Request
 	var body map[string]any
@@ -743,10 +743,10 @@ func TestStream_PlatformResponses(t *testing.T) {
 		}
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("")), Header: http.Header{}}, nil
 	})
-	stream, err := p.Model("gpt-6-astra").Stream(t.Context(), agent.Request{
+	stream, err := p.Model("model-b").Stream(t.Context(), agent.Request{
 		Messages:  []agent.Message{agent.NewUserMessage("hi")},
 		MaxTokens: 128000,
-		Reasoning: &agent.Reasoning{Effort: "high", Controls: gpt56},
+		Reasoning: &agent.Reasoning{Effort: "high", Controls: effortsMax},
 		CacheKey:  "sess-1",
 	})
 	if err != nil {
@@ -771,7 +771,7 @@ func TestStream_PlatformResponses(t *testing.T) {
 		}
 	}
 	if got := sent.Header.Get("session-id"); got != "" {
-		t.Errorf("session-id header = %q, want none off the ChatGPT backend", got)
+		t.Errorf("session-id header = %q, want none off the backend", got)
 	}
 }
 
@@ -792,8 +792,8 @@ func TestHandler_Ends(t *testing.T) {
 		"type":     "response.failed",
 		"response": map[string]any{"status": "failed", "error": map[string]any{"code": "server_error", "message": "boom"}},
 	})
-	_, err = agent.StreamEvents(eventBody([2]string{"response.failed", string(failed)}), (&Handler{Name: "azure"}).Handle).Collect()
-	if re, ok := errors.AsType[*agent.ResponseError](err); !ok || re.Message != "boom" || re.Provider != "azure" {
-		t.Errorf("failed response error = %v, want a response error from azure saying boom", err)
+	_, err = agent.StreamEvents(eventBody([2]string{"response.failed", string(failed)}), (&Handler{Name: "provider-a"}).Handle).Collect()
+	if re, ok := errors.AsType[*agent.ResponseError](err); !ok || re.Message != "boom" || re.Provider != "provider-a" {
+		t.Errorf("failed response error = %v, want a response error from provider-a saying boom", err)
 	}
 }

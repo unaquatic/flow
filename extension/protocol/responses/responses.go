@@ -1,6 +1,6 @@
-// Package responses speaks OpenAI Responses, the request format of OpenAI's
-// platform API, for every provider whose API takes it: OpenAI's, the ChatGPT
-// backend's, and gateways at their own base URLs, such as Azure's.
+// Package responses speaks the Responses request format, for every
+// provider whose API takes it: the platform API at DefaultBaseURL, a
+// provider's backend for its login, and gateways at their own base URLs.
 package responses
 
 import (
@@ -21,44 +21,43 @@ import (
 )
 
 const (
-	// DefaultBaseURL is the base URL of OpenAI's platform API.
+	// DefaultBaseURL is the base URL of the format's own platform API.
 	DefaultBaseURL = "https://api.openai.com/v1"
 
-	// maxCacheKeyLen is the most characters OpenAI takes in a
+	// maxCacheKeyLen is the most characters the platform API takes in a
 	// prompt_cache_key.
 	maxCacheKeyLen = 64
 )
 
 // Client implements agent.Provider for an API that takes Responses
-// requests at its base URL. An OAuth credential goes to the ChatGPT backend
-// instead, when the provider has one, as OpenAI's has for a ChatGPT login;
-// another provider's, such as Vertex AI's Google token, goes as a bearer
-// token to its API.
+// requests at its base URL. An OAuth credential goes to the provider's
+// backend instead, when it has one for its login; another provider's, such
+// as a cloud's access token, goes as a bearer token to its API.
 type Client struct {
 	name       string
 	auth       agent.Authorizer
 	key        gateway.Auth
 	baseURL    string
-	chatGPTURL string
+	backendURL string
 	httpClient *http.Client
 }
 
 // Init configures a Client.
 type Init struct {
-	// Name is the provider's catalog ID, such as "openai".
+	// Name is the provider's catalog ID, such as "provider-a".
 	Name string
 	// Auth resolves the credential of every request.
 	Auth agent.Authorizer
 	// Key says how an API key goes with a request: as a bearer token, or
-	// in the header it names, such as Azure's api-key.
+	// in the header it names, such as api-key.
 	Key gateway.Auth
 	// BaseURL is the base URL that "/responses" follows. Empty is
 	// DefaultBaseURL.
 	BaseURL string
-	// ChatGPTBaseURL is the base URL of the ChatGPT backend, which an OAuth
+	// BackendURL is the base URL of the provider's backend, which an OAuth
 	// credential's requests reach, in the shape its clients send them.
 	// Empty sends them to BaseURL, as an API key's.
-	ChatGPTBaseURL string
+	BackendURL string
 	// HTTPClient sends the requests. Nil is a new HTTP client.
 	HTTPClient *http.Client
 }
@@ -70,7 +69,7 @@ func New(init Init) *Client {
 		auth:       init.Auth,
 		key:        init.Key,
 		baseURL:    strings.TrimSuffix(cmp.Or(init.BaseURL, DefaultBaseURL), "/"),
-		chatGPTURL: strings.TrimSuffix(init.ChatGPTBaseURL, "/"),
+		backendURL: strings.TrimSuffix(init.BackendURL, "/"),
 		httpClient: cmp.Or(init.HTTPClient, &http.Client{}),
 	}
 }
@@ -100,13 +99,13 @@ type model struct {
 	name string
 }
 
-// stream opens a Responses API event stream: the ChatGPT backend's when
-// chatGPT is set, and else the one at the provider's base URL. Neither
-// stores the response, so each request sends the whole conversation. The
-// ChatGPT backend requires the instructions and takes no output limit, as
+// stream opens a Responses API event stream: the backend's when backend is
+// set, and else the one at the provider's base URL. Neither stores the
+// response, so each request sends the whole conversation. The backend
+// requires the instructions and takes no output limit, as
 // its clients send none; the others take the limit, and the instructions
 // where there are some.
-func (m *model) stream(ctx context.Context, token string, req agent.Request, chatGPT bool) (agent.StreamResponse, error) {
+func (m *model) stream(ctx context.Context, token string, req agent.Request, backend bool) (agent.StreamResponse, error) {
 	instructions, input := ToInput(req.Messages)
 	body := map[string]any{
 		"model":  m.name,
@@ -114,10 +113,10 @@ func (m *model) stream(ctx context.Context, token string, req agent.Request, cha
 		"stream": true,
 		"store":  false,
 	}
-	if chatGPT || instructions != "" {
+	if backend || instructions != "" {
 		body["instructions"] = instructions
 	}
-	if !chatGPT && req.MaxTokens > 0 {
+	if !backend && req.MaxTokens > 0 {
 		body["max_output_tokens"] = req.MaxTokens
 	}
 	if t := toTools(req.Tools); t != nil {
@@ -135,13 +134,13 @@ func (m *model) stream(ctx context.Context, token string, req agent.Request, cha
 		body["include"] = []string{"reasoning.encrypted_content"}
 	}
 	body = request.MergeBody(body, req.Body)
-	header := m.c.authHeader(token, chatGPT)
-	// OpenAI routes a request to a prompt cache by its key. A request
-	// without one rarely reaches a cache that holds its prefix. The ChatGPT
+	header := m.c.authHeader(token, backend)
+	// The platform API routes a request to a prompt cache by its key. A
+	// request without one rarely reaches a cache that holds its prefix. The
 	// backend's session headers carry the same key.
 	if key := cacheKey(req.CacheKey); key != "" {
 		body["prompt_cache_key"] = key
-		if chatGPT {
+		if backend {
 			header.Set("session-id", key)
 			header.Set("x-client-request-id", key)
 		}
@@ -149,8 +148,8 @@ func (m *model) stream(ctx context.Context, token string, req agent.Request, cha
 	request.AddHeaders(header, req.Headers)
 
 	url := m.c.baseURL + "/responses"
-	if chatGPT {
-		url = m.c.chatGPTURL + "/responses"
+	if backend {
+		url = m.c.backendURL + "/responses"
 	}
 	resp, err := post.JSON(ctx, m.c.httpClient, m.c.Name(), url, header, body)
 	if err != nil {
@@ -169,7 +168,7 @@ func (c *Client) authHeader(token string, oauth bool) http.Header {
 	return http.Header{"Authorization": {"Bearer " + token}}
 }
 
-// cacheKey returns key cut to the characters OpenAI takes in a
+// cacheKey returns key cut to the characters the platform API takes in a
 // prompt_cache_key.
 func cacheKey(key string) string {
 	if utf8.RuneCountInString(key) <= maxCacheKeyLen {
@@ -253,7 +252,7 @@ type ReasoningItem struct {
 
 // ParseReasoningItem returns the reasoning item that signature holds, and
 // reports whether it holds one with encrypted reasoning, the only kind
-// worth sending back. Anthropic's signatures hold none.
+// worth sending back. The signatures of the Messages format hold none.
 func ParseReasoningItem(signature string) (ReasoningItem, bool) {
 	var item ReasoningItem
 	if json.Unmarshal([]byte(signature), &item) != nil || item.Type != "reasoning" || item.EncryptedContent == "" {
@@ -576,7 +575,7 @@ type apiResponse struct {
 			ReasoningTokens int `json:"reasoning_tokens"`
 		} `json:"output_tokens_details"`
 		TotalTokens int `json:"total_tokens"`
-		// ChatGPT can reuse Chat Completions usage field names.
+		// The backend can reuse Chat Completions usage field names.
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
 	} `json:"usage"`
@@ -702,13 +701,13 @@ func ToInput(msgs []agent.Message) (instructions string, input []any) {
 	return strings.Join(system, "\n\n"), input
 }
 
-// Stream sends req: with an OAuth credential to the ChatGPT backend, when
+// Stream sends req: with an OAuth credential to the provider's backend, when
 // the provider has one, and else with the credential to the provider's API
 // at its base URL.
 func (m *model) Stream(ctx context.Context, req agent.Request) (agent.StreamResponse, error) {
 	return agent.Authorized(ctx, m.c.auth, func(a agent.Authorization) (agent.StreamResponse, error) {
-		chatGPT := a.Kind == agent.CredentialOAuth && m.c.chatGPTURL != ""
-		return m.stream(ctx, a.Token, req, chatGPT)
+		backend := a.Kind == agent.CredentialOAuth && m.c.backendURL != ""
+		return m.stream(ctx, a.Token, req, backend)
 	})
 }
 

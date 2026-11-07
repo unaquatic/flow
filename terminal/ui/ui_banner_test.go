@@ -46,7 +46,7 @@ func TestBannerOpensInTheInputBox(t *testing.T) {
 	ui := newBannerTestUI(t)
 	ui.renderer.FocusRenderable(ui.input)
 
-	ui.OnBannerShow(EventBannerShow{Title: "Login", Items: []widget.SelectItem{{Name: "openai"}}})
+	ui.OnBannerShow(EventBannerShow{Title: "Login", Items: []widget.SelectItem{{Name: "provider-a"}}})
 	rows := ui.inputMiddleCol.Children()
 	if slices.Index(rows, render.Renderable(ui.bannerPanel)) > slices.Index(rows, render.Renderable(ui.inputContentRow)) {
 		t.Error("banner is not above the input row of the input box")
@@ -71,7 +71,7 @@ func TestBannerMenuAfterEmptyModels(t *testing.T) {
 	ui := newBannerTestUI(t)
 	root := ui.renderer.Root().LayoutNode()
 	providers := func() []widget.SelectItem {
-		return []widget.SelectItem{{Name: "Anthropic"}, {Name: "OpenAI"}}
+		return []widget.SelectItem{{Name: "provider-a"}, {Name: "provider-b"}}
 	}
 	ui.OnBannerShow(EventBannerShow{Title: "Login", Items: providers()})
 	root.ComputeLayout(80, 24)
@@ -102,13 +102,13 @@ func TestBannerMenuAfterEmptyModels(t *testing.T) {
 func TestBannerSearchesFromTheInput(t *testing.T) {
 	ui := newBannerTestUI(t)
 	ui.renderer.FocusRenderable(ui.input)
-	items := []MenuItem{{Name: "openai/gpt-5"}, {Name: "anthropic/claude"}}
+	items := []MenuItem{{Name: "provider-a/model-a"}, {Name: "provider-b/model-b"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	if !ui.inputContentRow.Visible() || !ui.input.Focused() {
 		t.Fatal("input is not on screen and focused for the search")
 	}
 
-	letter := &input.KeyEvent{Name: "g", Text: "g"}
+	letter := &input.KeyEvent{Name: "p", Text: "p"}
 	ui.HandleBannerKey(letter)
 	if letter.DefaultPrevented() {
 		t.Error("banner kept a letter from the input")
@@ -119,9 +119,9 @@ func TestBannerSearchesFromTheInput(t *testing.T) {
 		t.Error("banner passed the down arrow to the input")
 	}
 
-	ui.input.InsertText("gpt")
+	ui.input.InsertText("pa")
 	if got := ui.bannerMenu.ItemCount(); got != 1 {
-		t.Errorf("menu shows %d rows for \"gpt\", want 1", got)
+		t.Errorf("menu shows %d rows for \"pa\", want 1", got)
 	}
 	// Emptying the input reports no change, so clearing it widens the menu.
 	ui.Apply(ui.service.ClearInput())
@@ -129,7 +129,7 @@ func TestBannerSearchesFromTheInput(t *testing.T) {
 		t.Errorf("menu shows %d rows after the input was cleared, want %d", got, len(items))
 	}
 
-	ui.input.InsertText("gpt")
+	ui.input.InsertText("pa")
 	ui.Apply(ui.service.CancelBanner())
 	if got := ui.input.Text(); got != "" {
 		t.Errorf("input kept the query %q after the banner closed", got)
@@ -138,7 +138,7 @@ func TestBannerSearchesFromTheInput(t *testing.T) {
 		t.Error("input lost the focus")
 	}
 
-	ui.OnBannerShow(EventBannerShow{Title: "Login", Items: []widget.SelectItem{{Name: "openai"}}})
+	ui.OnBannerShow(EventBannerShow{Title: "Login", Items: []widget.SelectItem{{Name: "provider-a"}}})
 	letter = &input.KeyEvent{Name: "g", Text: "g"}
 	ui.HandleBannerKey(letter)
 	if !letter.DefaultPrevented() {
@@ -181,7 +181,7 @@ func TestBannerArrowsChangeSetting(t *testing.T) {
 		t.Errorf("shift+right changed the mode to %s or was kept from the input", ui.service.state.CacheMode)
 	}
 
-	items := []MenuItem{{Name: "openai/gpt-5"}}
+	items := []MenuItem{{Name: "provider-a/model-a"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	left := &input.KeyEvent{Name: input.KeyLeft}
 	ui.HandleBannerKey(left)
@@ -200,7 +200,7 @@ func TestBannerArrowsChangeSetting(t *testing.T) {
 // input.
 func TestBannerTabAsksCustomModel(t *testing.T) {
 	ui := newBannerTestUI(t)
-	items := []MenuItem{{Name: "gpt-5", Hint: "[openai]"}}
+	items := []MenuItem{{Name: "model-a", Hint: "[provider-a]"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Title: modelsTitle, Items: func() []MenuItem { return items }, Custom: ui.service.AskCustomModel}))
 	if got := ui.bannerHeader.Keys.Hints; !slices.Contains(got, HintCustom) {
 		t.Errorf("title keys = %v, want %s among them", got, HintCustom)

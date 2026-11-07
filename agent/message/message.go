@@ -134,7 +134,7 @@ type Content struct {
 	// Model names the model variant that produced the message, or that a
 	// prompt was sent to, in "provider/model:option:effort" form, as
 	// agent.Variant.String writes it, such as
-	// "anthropic/claude-opus-5-5:fast:xhigh". It leaves out the option for
+	// "provider-a/model-a:fast:xhigh". It leaves out the option for
 	// the default variant, which with the model decides the price of the
 	// usage, and the effort when the provider chose it. It is empty when
 	// the model is not known.
