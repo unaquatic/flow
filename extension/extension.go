@@ -8,7 +8,8 @@
 //   - Behaviour: the hooks below: DialHook and LoginHook, whose providers
 //     and logins the app runs the model and authorizes its requests with,
 //     ToolHook, whose tools the app offers the model from the start, and the
-//     hooks the app calls as a session runs and moves through its history.
+//     hooks the app calls as a session runs, is titled, and moves through
+//     its history.
 //   - Terminal UI: the views that show its parts, which terminal/ui.Extension
 //     describes.
 //
@@ -168,6 +169,48 @@ type LoginHook interface {
 	// LoginFlows returns the login flow of each provider the extension
 	// logs in to.
 	LoginFlows() map[agent.ProviderID]agent.LoginFlow
+}
+
+// Fork asks a model on from a point of a session, as a branch of it that
+// the session does not follow: it sends the session's history up to that
+// point followed by msgs, as a run sends its requests, with the session's
+// tools and prompt cache, to model, a variant in
+// "provider/model:option:effort" form, or to the model of the message the
+// fork starts from when model is empty. It returns the whole response, and
+// stores msgs and the reply in the session, as a fork below that message of
+// the type of what asked, such as message.TypeTitle, which no transcript,
+// tree, or later run of the session shows.
+// A fork whose response cannot be stored is logged, and still returned.
+type Fork func(ctx context.Context, model string, msgs ...agent.Message) (*agent.Response, error)
+
+// Titling is a session to title, as a prompt sent to it has just been
+// stored.
+type Titling struct {
+	// Prompt is the prompt just stored.
+	Prompt
+	// History is the session's branch from its root to Prompt, as a run
+	// sends it to the model.
+	History []agent.Message
+	// Title is the session's title as the prompt was stored, or empty when
+	// it has none, such as when the prompt is its first.
+	Title string
+	// Fork asks a model on from Prompt, after History, for the hook to
+	// write a title with.
+	Fork Fork
+}
+
+// TitleHook titles sessions as they run. Each time a prompt sent to a
+// session is stored, the app asks the extensions that implement it, in the
+// order it loaded them, in the background while the run answers the prompt,
+// and sets the first title one returns over the session's title. A later
+// prompt to the session cancels the ctx of the hook asked for an earlier
+// one.
+type TitleHook interface {
+	Extension
+	// Title returns the session's title, which may be t.Title to keep it,
+	// or "" to leave it to the next hook. ctx ends when the app closes, or
+	// when a later prompt supersedes t.
+	Title(ctx context.Context, t Titling) (string, error)
 }
 
 // FileDiff is one file that a move changed. It encodes as the JSON of the

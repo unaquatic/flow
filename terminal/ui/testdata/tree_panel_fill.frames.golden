@@ -1,5 +1,6 @@
 === text ===
-|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
+|               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
 |  User add a Divide method to the calculator                            |
 |  Agent I'll add Divide with a zero check.                              |
@@ -13,9 +14,9 @@
 |                                                                        |
 |■                                                                       |
 |                                                                        |
-|                                                                        |
 === fg ===
-|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
 |  CCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                            |
 |  AAAAA DDDD DDD DDDDDD DDDD D DDDD DDDDDD                              |
@@ -29,7 +30,6 @@
 |                                                                        |
 |F                                                                       |
 |                                                                        |
-|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
@@ -37,8 +37,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-| ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ |
 |                                                                        |
+| ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ |
 |                                                                        |
 |                                                                        |
 |                                                                        |

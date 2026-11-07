@@ -51,6 +51,9 @@ type App struct {
 	mu sync.Mutex
 	// operations holds the operation in progress on each busy session.
 	operations map[message.SessionID]*Operation
+	// titlings holds the titling in progress on each session being titled,
+	// made when the first starts.
+	titlings map[message.SessionID]*Titling
 }
 
 // Options are the parts of an App that its caller chooses, as cmd/flow

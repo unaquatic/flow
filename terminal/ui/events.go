@@ -97,18 +97,13 @@ type EventSessionMenuShow struct {
 // EventSessionMenuHide closes the session menu.
 type EventSessionMenuHide struct{}
 
-// EventSessionPreview replaces the session preview transcript.
-type EventSessionPreview struct {
-	// Messages contains the preview transcript.
-	Messages []ChatMessage
-}
-
-// EventSessionPrompts replaces the prompts that inline mode previews under the
-// session list, in place of the transcript preview of fullscreen mode.
+// EventSessionPrompts replaces the prompts previewed under the session list.
 type EventSessionPrompts struct {
-	// Prompts are the selected session's prompts on its active branch, oldest
-	// first, each on one line. None hides the preview.
+	// Prompts are the latest of the selected session's prompts on its active
+	// branch, oldest first, each on one line. None hides the preview.
 	Prompts []string
+	// Earlier counts the prompts before Prompts, which were not loaded.
+	Earlier int
 }
 
 // EventSessionLoad replaces the active transcript, as UI.LoadTranscript
@@ -261,45 +256,45 @@ type EventTreeMoveRequested struct {
 }
 
 // EventToolsExpandedSet shows or hides the details of every tool call and of
-// the changes of every step in the transcript and the session preview, and of
+// the changes of every step in the transcript, and of
 // those added later.
 type EventToolsExpandedSet struct {
 	// Expanded shows the details when true and hides them when false.
 	Expanded bool
 }
 
-// EventExpandStyleSet shows every expanded tool call in the transcript and the
-// session preview, and those added later, as Style says.
+// EventExpandStyleSet shows every expanded tool call in the transcript, and
+// those added later, as Style says.
 type EventExpandStyleSet struct {
 	// Style is how the expanded calls show.
 	Style ExpandedStyle
 }
 
 // EventToolMarkersSet shows or hides ToolMarker before the name of every tool
-// call in the transcript and the session preview, and of those added later.
+// call in the transcript, and of those added later.
 type EventToolMarkersSet struct {
 	// Show shows the marker when true and hides it when false.
 	Show bool
 }
 
-// EventMarkerShapeSet shows the marker of every tool call in the transcript
-// and the session preview, and of those added later, in Shape.
+// EventMarkerShapeSet shows the marker of every tool call in the transcript,
+// and of those added later, in Shape.
 type EventMarkerShapeSet struct {
 	// Shape is the marker's symbol.
 	Shape MarkerShape
 }
 
 // EventToolColorSet shows the marker and the name of every tool call in the
-// transcript and the session preview, and of those added later, in the color
+// transcript, and of those added later, in the color
 // Color names.
 type EventToolColorSet struct {
 	// Color is the color of the markers and the names.
 	Color ToolNameColor
 }
 
-// EventDebugSet shows what helps debug flow in the transcript and the session
-// preview, and in what is added to them later, or hides it: the snapshot each
-// prompt and reply ends with, by its hash, once taken.
+// EventDebugSet shows what helps debug flow in the transcript, and in what is
+// added to it later, or hides it: the snapshot each prompt and reply ends
+// with, by its hash, once taken.
 type EventDebugSet struct {
 	// On shows it when true and hides it when false.
 	On bool
@@ -343,8 +338,8 @@ type EventKeyHintsModeSet struct {
 	Mode KeyHintsMode
 }
 
-// EventCacheModeSet shows the cache use of every reply in the transcript and
-// the session preview, and of those added later, where Mode says.
+// EventCacheModeSet shows the cache use of every reply in the transcript, and
+// of those added later, where Mode says.
 type EventCacheModeSet struct {
 	// Mode is where the cache use shows.
 	Mode CacheMode
@@ -370,7 +365,6 @@ func (EventUsageChanged) uiEvent()      {}
 func (EventSlashMenuShow) uiEvent()     {}
 func (EventSessionMenuShow) uiEvent()   {}
 func (EventSessionMenuHide) uiEvent()   {}
-func (EventSessionPreview) uiEvent()    {}
 func (EventSessionPrompts) uiEvent()    {}
 func (EventSessionLoad) uiEvent()       {}
 func (EventBannerShow) uiEvent()        {}

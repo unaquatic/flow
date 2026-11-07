@@ -11,9 +11,9 @@ import (
 const TitleMark = "ƒ"
 
 // Title returns the terminal title for a session titled title:
-// TitleMark and " | " followed by the title, or TitleMark
-// alone when the title is empty. Control characters are dropped so that the
-// title cannot end the escape sequence that carries it.
+// TitleMark and " | " followed by the title, or by UntitledName when the
+// title is empty, such as "ƒ | Untitled". Control characters are dropped so
+// that the title cannot end the escape sequence that carries it.
 func Title(title string) string {
 	title = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
@@ -21,8 +21,8 @@ func Title(title string) string {
 		}
 		return r
 	}, title)
-	if title == "" {
-		return TitleMark
+	if strings.TrimSpace(title) == "" {
+		title = UntitledName
 	}
 	return TitleMark + " | " + title
 }
@@ -38,6 +38,17 @@ func (s *Service) UpdateTitle() []UIEvent {
 	var title string
 	if stored, err := s.app.Sessions().Session(s.ctx, s.state.Session.ID); err == nil {
 		title = stored.Title
+	}
+	return s.ShowTitle(title)
+}
+
+// ShowTitle returns the event that shows title, the active session's title,
+// in the terminal title, as Title formats it, as UpdateTitle does without
+// reading the session. It returns nothing before session setup or when
+// config.TerminalTitleDisabled.
+func (s *Service) ShowTitle(title string) []UIEvent {
+	if s.state.Session == nil || config.TerminalTitleDisabled() {
+		return nil
 	}
 	return []UIEvent{EventTitleSet{Title: Title(title)}}
 }

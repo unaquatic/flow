@@ -142,7 +142,27 @@ type Content struct {
 	// CreatedAt is when the message was created. A stored message does not
 	// change afterwards.
 	CreatedAt time.Time `json:"created_at"`
+	// Type is what the message is for: empty, or TypeChat, for the
+	// session's conversation, or another type for an exchange that forks
+	// off it, which the conversation leaves out.
+	Type Type `json:"type,omitempty"`
 }
+
+// Type is what a message is for, which the session store records with it.
+type Type string
+
+const (
+	// TypeChat marks a message of a session's conversation: what its
+	// transcript shows and its runs send. A message of the zero Type is
+	// one.
+	TypeChat Type = "chat"
+	// TypeTitle marks a message of the exchange that titled a session,
+	// which forks off its conversation.
+	TypeTitle Type = "title"
+)
+
+// IsChat reports whether t is TypeChat, as the zero Type is.
+func (t Type) IsChat() bool { return t == "" || t == TypeChat }
 
 // Usage returns the token counts of the request that produced the message,
 // as its [UsagePart] records them, or the zero Usage when it has none.

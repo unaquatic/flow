@@ -1,6 +1,6 @@
 === text ===
 |■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]    |
-|               [esc cancel]                                 |
+|               [ctrl+t hidden] [esc cancel]                 |
 |                                                            |
 |  Agent I'll add Divide with a zero check.                  |
 |  ├─ User also add tests                                    |
@@ -15,7 +15,7 @@
 |                                                            |
 === fg ===
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB    |
-|               BBBB BBBBBBB                                 |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                 |
 |                                                            |
 |  AAAAA CCCC CCC CCCCCC CCCC C CCCC CCCCCC                  |
 |  BB DDDD CCCC CCC CCCCC                                    |

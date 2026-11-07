@@ -30,53 +30,53 @@ type UI struct {
 	// Widgets resolve colors from theme during construction.
 	theme *style.Theme
 
-	messageBox        *widget.ScrollBox
-	previewMessageBox *widget.ScrollBox
-	input             *widget.Textarea
-	statusBar         *widget.Text
-	inputFooter       *widget.Box   // the row right under the input box
-	footerHints       *KeyHintsView // the open panel's keys, in the footer while KeyHintsMode is KeyHintsFooter
-	slashMenu         *widget.Select
-	slashMenuRow      *widget.Box  // slashMenu with its header and dividers, at the top of the input box
-	slashStatus       *widget.Text // the status line shown while the slash menu is open, as StatusLine gives it
-	slashStatusBox    *widget.Box  // slashStatus in a box of its own above the input box, with a gap under it
-	statusRow         *StatusRow   // the Usage box, which shows as tool calls do
-	statusHeader      *PanelHeader // the Usage box's title, with the key that pins it
-	statusBounded     bool         // reports that a short terminal leaves slashStatusBox no room
-	statusModel       string       // the model the status row names, in "provider/model:option:effort" format
-	statusUsage       SessionUsage // the token use the status row shows
-	slashHeader       *PanelHeader // the slash menu's title, which counts no rows, unlike other lists' titles
-	inputMiddleCol    *widget.Box  // middleCol of input StreamableMessageBox
-	inputContentRow   *widget.Box  // input content row used as the queue insert anchor
-	queueBox          *widget.Box  // a box for each queued prompt, above the input box
-	queuePrompts      []string     // the queued prompts, the first sent next
-	queueLimit        int          // the most queued prompts shown, or zero for all
-	sessionMenu       *widget.Select
-	sessionPanel      *widget.Box // session list with its header and dividers, at the top of the input box
-	sessionText       *widget.Text
-	sessionTextRow    *widget.Box
-	sessionHeader     *PanelHeader   // the session list's title, with the selected row's place after it while its rows do not all fit
-	sessionCount      *PanelStatus   // under the session list while CountPlace is CountBelow and its rows do not all fit
-	sessionPrompts    *PromptPreview // the selected session's prompts, under the session list in inline mode
-	bannerPanel       *widget.Box    // banner rows and their dividers, at the top of the input box
-	bannerHeader      *PanelHeader   // the banner's title, with the selected row's place after it while its menu's rows do not all fit
-	bannerCount       *PanelStatus   // under the banner menu while CountPlace is CountBelow and its rows do not all fit
-	bannerText        *widget.Text
-	bannerTextRow     *widget.Box
-	bannerDividerRow  *widget.Box // between the header and the text and menu, shown when both are
-	bannerTailRow     *widget.Box // under the banner, shown when a row of the input box follows
-	bannerMenu        *widget.Select
-	bannerSearch      bool         // the input searches the open banner's menu
-	bannerHints       []KeyHint    // the open banner's keys
-	treePanel         *widget.Box  // session tree rows with their header and status, at the top of the input box
-	treeHeader        *PanelHeader // the session tree's title, with the selected row's place after it while its rows do not all fit
-	treeRows          *widget.Text
-	treeRowsBox       *widget.Box  // around treeRows, across the box's whole row, where FillTreeSelection fills the selected row
-	treeSelected      int          // the line of treeRows that holds the selected row, or -1 when there is none
-	treeStatus        *PanelStatus // under the session tree's rows: its filter, or that nothing matches
-	inputWrapper      *widget.Box
-	indicatorBox      *widget.Box  // progress or error line between the transcript and the input
-	indicatorLabel    *widget.Text // text inside indicatorBox
+	messageBox       *widget.ScrollBox
+	input            *widget.Textarea
+	statusBar        *widget.Text
+	inputFooter      *widget.Box   // the row right under the input box
+	footerHints      *KeyHintsView // the open panel's keys, in the footer while KeyHintsMode is KeyHintsFooter
+	slashMenu        *widget.Select
+	slashMenuRow     *widget.Box  // slashMenu with its header and dividers, at the top of the input box
+	slashStatus      *widget.Text // the status line shown while the slash menu is open, as StatusLine gives it
+	slashStatusBox   *widget.Box  // slashStatus in a box of its own above the input box, with a gap under it
+	statusRow        *StatusRow   // the Usage box, which shows as tool calls do
+	statusHeader     *PanelHeader // the Usage box's title, with the key that pins it
+	statusBounded    bool         // reports that a short terminal leaves slashStatusBox no room
+	statusModel      string       // the model the status row names, in "provider/model:option:effort" format
+	statusUsage      SessionUsage // the token use the status row shows
+	slashHeader      *PanelHeader // the slash menu's title, which counts no rows, unlike other lists' titles
+	inputMiddleCol   *widget.Box  // middleCol of input StreamableMessageBox
+	inputContentRow  *widget.Box  // input content row used as the queue insert anchor
+	queueBox         *widget.Box  // a box for each queued prompt, above the input box
+	queuePrompts     []string     // the queued prompts, the first sent next
+	queueLimit       int          // the most queued prompts shown, or zero for all
+	sessionMenu      *widget.Select
+	sessionPanel     *widget.Box // session list with its header and dividers, at the top of the input box
+	sessionText      *widget.Text
+	sessionTextRow   *widget.Box
+	sessionHeader    *PanelHeader   // the session list's title, with the selected row's place after it while its rows do not all fit
+	sessionCount     *PanelStatus   // under the session list while CountPlace is CountBelow and its rows do not all fit
+	sessionPrompts   *PromptPreview // the selected session's prompts, under the session list
+	promptLoader     *PromptLoader  // loads sessionPrompts off the event loop
+	bannerPanel      *widget.Box    // banner rows and their dividers, at the top of the input box
+	bannerHeader     *PanelHeader   // the banner's title, with the selected row's place after it while its menu's rows do not all fit
+	bannerCount      *PanelStatus   // under the banner menu while CountPlace is CountBelow and its rows do not all fit
+	bannerText       *widget.Text
+	bannerTextRow    *widget.Box
+	bannerDividerRow *widget.Box // between the header and the text and menu, shown when both are
+	bannerTailRow    *widget.Box // under the banner, shown when a row of the input box follows
+	bannerMenu       *widget.Select
+	bannerSearch     bool         // the input searches the open banner's menu
+	bannerHints      []KeyHint    // the open banner's keys
+	treePanel        *widget.Box  // session tree rows with their header and status, at the top of the input box
+	treeHeader       *PanelHeader // the session tree's title, with the selected row's place after it while its rows do not all fit
+	treeRows         *widget.Text
+	treeRowsBox      *widget.Box  // around treeRows, across the box's whole row, where FillTreeSelection fills the selected row
+	treeSelected     int          // the line of treeRows that holds the selected row, or -1 when there is none
+	treeStatus       *PanelStatus // under the session tree's rows: its filter, or that nothing matches
+	inputWrapper     *widget.Box
+	indicatorBox     *widget.Box  // progress or error line between the transcript and the input
+	indicatorLabel   *widget.Text // text inside indicatorBox
 	// edgeMarks are the left border cells of the input box that MarkEdge
 	// marks while the input shows in InputBar.
 	edgeMarks []*widget.CharFill
@@ -119,8 +119,6 @@ type UI struct {
 	// earliest messages, which the terminal never showed, as TrimTranscript
 	// leaves them out.
 	trimmed bool
-
-	previewWidgets map[message.ID]*ChatMessageBox
 
 	// extensions add the widgets of what extensions add to messages.
 	extensions []Extension
@@ -414,16 +412,6 @@ func (ui *UI) BuildUI() {
 	// Inline mode parents transcript rows to the root, leaving this unused.
 	ui.messageBox.SetGone(ui.inline)
 
-	ui.previewMessageBox = widget.NewScrollBox(
-		widget.ScrollBoxWithID("preview-messages"),
-		widget.ScrollBoxWithLayout(
-			layout.WithFlexDirection(layout.DirectionColumn),
-			layout.WithFlexGrow(1),
-		),
-		widget.ScrollBoxWithAutoScroll(widget.AutoScrollBottom),
-	)
-	ui.previewMessageBox.SetGone(true)
-
 	ui.input = widget.NewTextarea(
 		widget.TextareaWithID("chat-input"),
 		widget.TextareaWithFg(textFg),
@@ -613,6 +601,13 @@ func (ui *UI) BuildUI() {
 	AddMenuRow(ui.sessionPanel, ui.sessionMenu)
 	ui.sessionCount = AddPanelStatus(ui.sessionPanel, "session-count", inputBorderFg, sessionBg)
 	ui.sessionPrompts = NewPromptPreview(inputBorderFg, sessionBg, ui.theme)
+	ui.promptLoader = &PromptLoader{
+		Load:    ui.LoadSessionPrompts,
+		Enqueue: ui.renderer.Enqueue,
+		Apply:   ui.Apply,
+		Loading: ui.sessionPrompts.SetLoading,
+		Delay:   PromptLoadDelay,
+	}
 	ui.sessionPanel.Add(ui.sessionPrompts.Box)
 	AddDividerRow(ui.sessionPanel, inputBorderFg, sessionBg)
 	ui.inputMiddleCol.InsertBefore(ui.sessionPanel, ui.inputContentRow)
@@ -712,7 +707,6 @@ func (ui *UI) BuildUI() {
 	// child below it keeps its order.
 	root.Add(ui.messageBox)
 	root.Add(ui.indicatorBox)
-	root.Add(ui.previewMessageBox)
 	root.Add(ui.inputWrapper)
 
 	// Inline, the rows that scrolled into the scrollback go to the terminal

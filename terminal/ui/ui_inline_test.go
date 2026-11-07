@@ -498,27 +498,3 @@ func boxIDs(boxes []*widget.Box) []string {
 	}
 	return ids
 }
-
-// TestPreviewReplyStepsTakeRowsUnderTheirReply checks that the session
-// preview shows each step of a reply in a row of its own, under the reply's
-// rows above it, as the transcript does, though another reply follows it.
-func TestPreviewReplyStepsTakeRowsUnderTheirReply(t *testing.T) {
-	ui := newBuiltTestUI(t, false)
-	second := agentText("a2", "second")
-	second.ParentID = "a1"
-	ui.LoadPreview([]ChatMessage{agentText("a1", "first"), agentText("a3", "third"), second})
-
-	want := slices.Concat(slices.Collect(ui.previewWidgets["a1"].Rows()), slices.Collect(ui.previewWidgets["a3"].Rows()))
-	if len(want) != 3 {
-		t.Fatalf("the replies take %d rows, want 3: one for each step", len(want))
-	}
-	got := make([]*widget.Box, 0, len(want))
-	for _, c := range ui.previewMessageBox.ChildrenRaw() {
-		if b, ok := c.(*widget.Box); ok {
-			got = append(got, b)
-		}
-	}
-	if !slices.Equal(got, want) {
-		t.Errorf("preview rows are %v, want %v", boxIDs(got), boxIDs(want))
-	}
-}

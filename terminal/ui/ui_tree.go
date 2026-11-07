@@ -62,6 +62,7 @@ func TreeHints() []KeyHint {
 		HintMove,
 		{Key: "alt+←/→", Action: "fork"},
 		{Key: "ctrl+o", Action: "filter"},
+		{Key: "ctrl+t", Action: HiddenLabel},
 		HintSearch,
 	}
 }
@@ -99,7 +100,8 @@ func (ui *UI) DrawTree(v TreeView) {
 // "Agent", or the label of the tool a row's call runs, as the transcript
 // names it, such as "Read calc.go". The labels take the colors the
 // transcript marks the same rows with: "User" the theme's accent, "Agent"
-// the color of a reply's prose, and a tool's label ToolFg.
+// the color of a reply's prose, and a tool's label ToolFg. A row of a fork
+// off the conversation opens with its type's tag, such as "[title]".
 //
 // The rows of the transcript, from its root to the head, keep their colors,
 // and the rows of other branches are drawn dim, so that the transcript's
@@ -130,6 +132,9 @@ func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 		}
 		chunks := []style.TextChunk{text("  "), dim(row.Prefix)}
 		e := row.Entry
+		if e.Hidden() {
+			chunks = append(chunks, dim(Tag(string(e.Type))+" "))
+		}
 		switch {
 		case e.Role == message.RoleUser:
 			chunks = append(chunks, accent("User "), text(e.Text))
@@ -229,6 +234,8 @@ func (ui *UI) HandleTreeKey(k *input.KeyEvent) {
 		ui.Apply(ui.service.JumpTreeFork(1))
 	case k.Mods.Has(input.ModCtrl) && k.Name == "o":
 		ui.Apply(ui.service.CycleTreeFilter())
+	case k.Mods.Has(input.ModCtrl) && k.Name == "t":
+		ui.Apply(ui.service.ToggleTreeHidden())
 	case k.Name == input.KeyEscape:
 		ui.Apply(ui.service.CancelBanner())
 	default:

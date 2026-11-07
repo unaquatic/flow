@@ -15,6 +15,7 @@ import (
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/demo"
@@ -1190,11 +1191,7 @@ func TestCacheFrames(t *testing.T) {
 // under the panel's title, one row taller. Both name each key before what it
 // does, and none after the panel's title.
 func TestKeyHintsModeFrames(t *testing.T) {
-	sessions := []widget.SelectItem{
-		{Name: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7  2026-09-28 09:14:02", Hint: CurrentHint, Value: "s1"},
-		{Name: "01a0e33d-4571-7ed4-b06b-4229c726c313  2026-09-27 21:40:55", Value: "s2"},
-		{Name: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2  2026-09-26 16:03:18", Value: "s3"},
-	}
+	sessions := threeSessionRows()
 	tests := []struct {
 		name string
 		w, h int
@@ -1282,10 +1279,28 @@ func TestCountInTitleFrames(t *testing.T) {
 
 // sessionRows returns two rows of the session list, which select the
 // sessions first and second.
+// threeSessionRows returns the rows of three sessions, as the session list
+// names them, the first titled and active, with values "s1" to "s3".
+func threeSessionRows() []widget.SelectItem {
+	rows := sessionRows("s1", "s2")
+	names := SessionRowNames([]session.Session{
+		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
+		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
+		{ID: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2", UpdatedAt: time.Date(2026, 9, 26, 16, 3, 18, 0, time.Local)},
+	})
+	return append(rows, widget.SelectItem{Name: names[2], Value: "s3"})
+}
+
+// sessionRows returns the rows of two sessions, as the session list names
+// them, the first titled and active, with values first and second.
 func sessionRows(first, second any) []widget.SelectItem {
+	names := SessionRowNames([]session.Session{
+		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
+		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
+	})
 	return []widget.SelectItem{
-		{Name: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7  2026-09-28 09:14:02", Hint: CurrentHint, Value: first},
-		{Name: "01a0e33d-4571-7ed4-b06b-4229c726c313  2026-09-27 21:40:55", Value: second},
+		{Name: names[0], Hint: CurrentHint, Value: first},
+		{Name: names[1], Value: second},
 	}
 }
 
@@ -1305,9 +1320,21 @@ func TestInlineMenuFrames(t *testing.T) {
 		// The selected session's prompts are listed under the rows.
 		{name: "session_menu_prompts", h: 20, open: func(t *testing.T, ui *UI) {
 			a := ui.service.app
+			loaded := awaitPrompts(t, ui)
 			ui.ShowSessionMenu(EventSessionMenuShow{Items: sessionRows(
 				storePrompts(t, a, "add a Divide method to the calculator", "also add tests",
 					"use table-driven tests instead"),
+				storePrompts(t, a, "fix the flaky login test"),
+			)})
+			loaded()
+		}},
+		// Until the selected session's prompts load, a dim [loading] takes
+		// their place.
+		{name: "session_menu_prompts_loading", h: 16, open: func(t *testing.T, ui *UI) {
+			awaitPrompts(t, ui)
+			a := ui.service.app
+			ui.ShowSessionMenu(EventSessionMenuShow{Items: sessionRows(
+				storePrompts(t, a, "add a Divide method to the calculator"),
 				storePrompts(t, a, "fix the flaky login test"),
 			)})
 		}},
@@ -1324,6 +1351,24 @@ func TestInlineMenuFrames(t *testing.T) {
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
 		})
 	}
+}
+
+// TestFullscreenSessionPromptsFrames checks that fullscreen mode lists the
+// selected session's prompts under the session list, each after a "User"
+// label, as inline mode and the session tree do.
+func TestFullscreenSessionPromptsFrames(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.inline = false
+	a := ui.service.app
+	loaded := awaitPrompts(t, ui)
+	ui.ShowSessionMenu(EventSessionMenuShow{Items: sessionRows(
+		storePrompts(t, a, "add a Divide method to the calculator", "also add tests",
+			"use table-driven tests instead"),
+		storePrompts(t, a, "fix the flaky login test"),
+	)})
+	loaded()
+	buf := renderFrames(72, 14, ui.inputWrapper)
+	testutil.AssertGoldenFrames(t, "session_menu_prompts_fullscreen", buf, surfaceNames(ui))
 }
 
 // TestShortTerminalFrames draws the input box fitted to a terminal of the
@@ -1351,12 +1396,14 @@ func TestShortTerminalFrames(t *testing.T) {
 		{name: "session_menu_prompts_short", w: 72, height: 16, open: func(t *testing.T, ui *UI) {
 			ui.inline = true
 			a := ui.service.app
+			loaded := awaitPrompts(t, ui)
 			ui.ShowSessionMenu(EventSessionMenuShow{Items: sessionRows(
 				storePrompts(t, a, "add a Divide method to the calculator", "also add tests",
 					"use table-driven tests instead", "run them", "add a benchmark for Divide",
 					"document the zero check", "now run go vet", "commit it"),
 				storePrompts(t, a, "fix the flaky login test"),
 			)})
+			loaded()
 		}},
 	}
 	for _, tt := range tests {
@@ -1405,11 +1452,7 @@ func TestFullscreenFrames(t *testing.T) {
 }
 
 func TestMenuFrames(t *testing.T) {
-	sessions := []widget.SelectItem{
-		{Name: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7  2026-09-28 09:14:02", Hint: CurrentHint, Value: "s1"},
-		{Name: "01a0e33d-4571-7ed4-b06b-4229c726c313  2026-09-27 21:40:55", Value: "s2"},
-		{Name: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2  2026-09-26 16:03:18", Value: "s3"},
-	}
+	sessions := threeSessionRows()
 	tests := []struct {
 		name string
 		h    int
@@ -1594,6 +1637,15 @@ func TestMenuFrames(t *testing.T) {
 		{name: "tree_panel_no_match", h: 9, open: func(ui *UI) {
 			ui.Apply(ui.service.OpenTree(forkedTree("a2")))
 			ui.input.InsertText("zzz")
+		}},
+		// Ctrl+T shows the forks off the conversation, such as the exchange
+		// that titled the session: off the transcript, dim, tagged with
+		// their type, ahead of the branch they forked from, and named in the
+		// status line.
+		{name: "tree_panel_hidden", h: 17, open: func(ui *UI) {
+			ui.Apply(ui.service.OpenTree(titledTree("a2")))
+			ui.Apply(ui.service.ToggleTreeHidden())
+			ui.Apply(ui.service.MoveTree(-1))
 		}},
 		{name: "tree_panel_user_only", h: 12, open: func(ui *UI) {
 			ui.Apply(ui.service.OpenTree(forkedTree("a2")))

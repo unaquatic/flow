@@ -61,9 +61,7 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 	}
 
 	// The transcript's calls shimmer while they execute, its views fetch
-	// what they show, and inline it holds back what may still change,
-	// unlike the session preview, which shows another session as it was
-	// stored.
+	// what they show, and inline it holds back what may still change.
 	cm := NewChatMessageBox(msg, append(ui.ChatMessageOptions(msg.Role),
 		ChatMessageWithShimmer(&ui.shimmer), ChatMessageWithEnqueue(ui.renderer.Enqueue),
 		ChatMessageWithHolds(ui.inline))...)
@@ -99,9 +97,9 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 	}
 }
 
-// SetExpandStyle shows every expanded tool call in the transcript and the
-// session preview as ts says. Each of these settings reaches the committed
-// rows of the inline transcript as ReprintCommitted writes them again.
+// SetExpandStyle shows every expanded tool call in the transcript as ts says.
+// Each of these settings reaches the committed rows of the inline transcript
+// as ReprintCommitted writes them again.
 func (ui *UI) SetExpandStyle(ts ExpandedStyle) {
 	for cm := range ui.Bubbles() {
 		cm.SetExpandStyle(ts)
@@ -110,7 +108,7 @@ func (ui *UI) SetExpandStyle(ts ExpandedStyle) {
 }
 
 // SetToolMarkers shows or hides ToolMarker before the name of every tool call
-// and every footer in the transcript and the session preview, and before the
+// and every footer in the transcript, and before the
 // title of the Usage box, as show says.
 func (ui *UI) SetToolMarkers(show bool) {
 	for cm := range ui.Bubbles() {
@@ -121,7 +119,7 @@ func (ui *UI) SetToolMarkers(show bool) {
 }
 
 // SetMarkerShape shows the marker of every tool call and footer in the
-// transcript and the session preview, of the Usage box, and of the
+// transcript, of the Usage box, and of the
 // indicator, in m.
 func (ui *UI) SetMarkerShape(m MarkerShape) {
 	for cm := range ui.Bubbles() {
@@ -139,7 +137,7 @@ func (ui *UI) SetMarkerShape(m MarkerShape) {
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
-// transcript and the session preview in the color c names.
+// transcript in the color c names.
 func (ui *UI) SetToolColor(c ToolNameColor) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolColor(c)
@@ -162,9 +160,8 @@ func (ui *UI) ShowStatusMarker() {
 	ui.SyncSlashStatus()
 }
 
-// SetDebug shows what helps debug flow in the transcript and the session
-// preview, such as the snapshot every prompt and reply ends with, or hides
-// it, as on says.
+// SetDebug shows what helps debug flow in the transcript, such as the snapshot
+// every prompt and reply ends with, or hides it, as on says.
 func (ui *UI) SetDebug(on bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetDebug(on)
@@ -172,8 +169,8 @@ func (ui *UI) SetDebug(on bool) {
 	ui.ReprintCommitted()
 }
 
-// SetCacheMode shows the cache use of every reply in the transcript and the
-// session preview where mode says.
+// SetCacheMode shows the cache use of every reply in the transcript where mode
+// says.
 func (ui *UI) SetCacheMode(mode CacheMode) {
 	for cm := range ui.Bubbles() {
 		cm.SetCacheMode(mode)
@@ -182,7 +179,7 @@ func (ui *UI) SetCacheMode(mode CacheMode) {
 }
 
 // SetToolsExpanded shows or hides the details of every tool call and of the
-// changes of every step in the transcript and the session preview, and of
+// changes of every step in the transcript, and of
 // those added later.
 func (ui *UI) SetToolsExpanded(expanded bool) {
 	for cm := range ui.Bubbles() {
@@ -192,8 +189,7 @@ func (ui *UI) SetToolsExpanded(expanded bool) {
 }
 
 // TogglesTools reports whether SetToolsExpanded(expanded) would show or hide
-// the details of any tool call or changes shown in the transcript or the
-// session preview.
+// the details of any tool call or changes shown in the transcript.
 func (ui *UI) TogglesTools(expanded bool) bool {
 	for cm := range ui.Bubbles() {
 		if cm.TogglesTools(expanded) {
@@ -203,18 +199,10 @@ func (ui *UI) TogglesTools(expanded bool) bool {
 	return false
 }
 
-// Bubbles yields every bubble in the transcript and the session preview. A
-// bubble is yielded once for each of its messages.
+// Bubbles yields every bubble in the transcript. A bubble is yielded once
+// for each of its messages.
 func (ui *UI) Bubbles() iter.Seq[*ChatMessageBox] {
-	return func(yield func(*ChatMessageBox) bool) {
-		for _, widgets := range []map[message.ID]*ChatMessageBox{ui.messageWidgets, ui.previewWidgets} {
-			for cm := range maps.Values(widgets) {
-				if !yield(cm) {
-					return
-				}
-			}
-		}
-	}
+	return maps.Values(ui.messageWidgets)
 }
 
 // UpdateMessage applies the latest parts, which of them are live, and usage,
@@ -437,41 +425,4 @@ func NewResumeNotice(id message.SessionID, theme *style.Theme) *widget.Box {
 // frame shows.
 func (ui *UI) AppendResumeNotice(id message.SessionID) {
 	ui.renderer.Root().Add(NewResumeNotice(id, ui.theme))
-}
-
-// ResetPreview clears the session preview and its widget index, and the
-// prompts previewed in inline mode.
-func (ui *UI) ResetPreview() {
-	for _, child := range ui.previewMessageBox.Children() {
-		ui.previewMessageBox.Remove(child.ID())
-	}
-	ui.previewWidgets = make(map[message.ID]*ChatMessageBox)
-	ui.sessionPrompts.Set(nil)
-}
-
-// LoadPreview replaces the session preview with msgs.
-func (ui *UI) LoadPreview(msgs []ChatMessage) {
-	ui.ResetPreview()
-	for _, msg := range msgs {
-		ui.AddPreviewMessage(msg)
-	}
-}
-
-// AddPreviewMessage appends or merges a message in the session preview.
-func (ui *UI) AddPreviewMessage(msg ChatMessage) {
-	if msg.SharesBubble() {
-		if cm, ok := ui.previewWidgets[msg.ParentID]; ok {
-			if row, above := cm.AddSegment(msg); row != nil {
-				ui.previewMessageBox.InsertAfter(row, above)
-			}
-			ui.previewWidgets[msg.ID] = cm
-			return
-		}
-	}
-
-	cm := NewChatMessageBox(msg, ui.ChatMessageOptions(msg.Role)...)
-	for row := range cm.Rows() {
-		ui.previewMessageBox.Add(row)
-	}
-	ui.previewWidgets[msg.ID] = cm
 }

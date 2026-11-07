@@ -35,8 +35,6 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnSessionMenuHide(e)
 	case EventSessionLoad:
 		ui.OnSessionLoad(e)
-	case EventSessionPreview:
-		ui.OnSessionPreview(e)
 	case EventSessionPrompts:
 		ui.OnSessionPrompts(e)
 	case EventBannerShow:
@@ -220,12 +218,9 @@ func (ui *UI) OnTurnEnded(e EventTurnEnded) {
 // OnSessionLoad rebuilds the transcript from a session's persisted log.
 func (ui *UI) OnSessionLoad(e EventSessionLoad) { ui.LoadTranscript(e.Messages) }
 
-// OnSessionPreview refills the preview pane shown beside the session menu.
-func (ui *UI) OnSessionPreview(e EventSessionPreview) { ui.LoadPreview(e.Messages) }
-
 // OnSessionPrompts replaces the prompts listed under the session menu in
 // inline mode.
-func (ui *UI) OnSessionPrompts(e EventSessionPrompts) { ui.sessionPrompts.Set(e.Prompts) }
+func (ui *UI) OnSessionPrompts(e EventSessionPrompts) { ui.sessionPrompts.Set(e.Prompts, e.Earlier) }
 
 // OnInlineModeSet switches between inline and alternate-screen rendering.
 func (ui *UI) OnInlineModeSet(e EventInlineModeSet) { ui.SetInlineMode(e) }

@@ -12,6 +12,10 @@ import (
 // shows fewer.
 const treeMaxRows = 12
 
+// HiddenLabel names, in the tree's status line, the forks off the
+// conversation that the tree shows while ShowHidden.
+const HiddenLabel = "hidden"
+
 // treeTextLimit bounds the bytes of text a tree row keeps from a message, and
 // from each tool call's input. The row is cut to fit the panel anyway.
 const treeTextLimit = 200
@@ -57,6 +61,10 @@ type TreeEntry struct {
 	Parent message.ID
 	// Role is the message's author.
 	Role message.Role
+	// Type is what the message is for: empty for the conversation, or the
+	// type of the fork it belongs to, such as message.TypeTitle, which the
+	// tree hides until ShowHidden.
+	Type message.Type
 	// Text is the message's text on one line, or empty when it holds none.
 	Text string
 	// Tools are the message's tool calls, in order.
@@ -69,7 +77,10 @@ type TreeEntry struct {
 
 // NewTreeEntry summarizes m for its row in the session tree.
 func NewTreeEntry(m message.Content) TreeEntry {
-	e := TreeEntry{ID: m.ID, Role: m.Role}
+	e := TreeEntry{ID: m.ID, Role: m.Role, Type: m.Type}
+	if e.Type.IsChat() {
+		e.Type = ""
+	}
 	if m.ParentID != nil {
 		e.Parent = *m.ParentID
 	}
@@ -136,10 +147,14 @@ func (e TreeEntry) Split() []TreeEntry {
 	return entries
 }
 
-// Matches reports whether e's role, text, or tool calls contain every one
-// of tokens, which are lower case.
+// Hidden reports whether e belongs to a fork off the conversation, which the
+// tree lists only while ShowHidden is set.
+func (e TreeEntry) Hidden() bool { return e.Type != "" }
+
+// Matches reports whether e's type, role, text, or tool calls contain every
+// one of tokens, which are lower case.
 func (e TreeEntry) Matches(tokens []string) bool {
-	words := []string{e.Role.String(), e.Text}
+	words := []string{string(e.Type), e.Role.String(), e.Text}
 	for _, call := range e.Tools {
 		words = append(words, call.Name, call.Input)
 	}
@@ -174,7 +189,10 @@ type TreeGutter struct {
 // A chain of single children stays at one indent, so the messages of a branch
 // line up under its first one. The branches of a fork indent one level, each
 // opening behind a connector; the roots of a session with many are the
-// branches of a fork above them all.
+// branches of a fork above them all. The asides of a message, the forks off
+// the conversation that hang from it, indent one level behind connectors of
+// their own, and leave a message that the conversation goes on with alone
+// at its indent.
 type TreePlacement struct {
 	// Indent is the row's indent level, each three columns wide.
 	Indent int
@@ -220,6 +238,9 @@ type SessionTree struct {
 	Head message.ID
 	// Filter selects the messages listed.
 	Filter TreeFilter
+	// ShowHidden lists the messages of the forks off the conversation, such
+	// as the exchanges that titled the session, which Ctrl+T toggles.
+	ShowHidden bool
 	// Query is the search the rows match.
 	Query string
 	// Rows are the rows listed, in drawing order.
@@ -232,8 +253,9 @@ type SessionTree struct {
 
 	// Index maps a message to its place in Entries.
 	Index map[message.ID]int
-	// Order lists the indices of Entries depth first, putting the branch
-	// that holds the head ahead of its siblings, which keep creation order.
+	// Order lists the indices of Entries depth first, as OrderBelow orders
+	// each message's children: its forks, then the branch that holds the
+	// head, then its other branches.
 	Order []int
 	// Active marks the messages on the transcript.
 	Active map[message.ID]bool
@@ -249,17 +271,30 @@ type SessionTree struct {
 }
 
 // NewSessionTree returns the session tree of t with the head selected, or
-// the nearest message above it that the tree lists.
+// the nearest message above it that the tree lists. Its entries are t's
+// messages and then its forks, which it hides until ShowHidden; a fork
+// message whose parent t does not hold, as when the fork was read just after
+// its prompt was stored, is left out.
 func NewSessionTree(t app.Tree) *SessionTree {
 	st := &SessionTree{
 		Head:   t.Head,
-		Index:  make(map[message.ID]int, len(t.Messages)),
+		Index:  make(map[message.ID]int, len(t.Messages)+len(t.Forks)),
 		Active: make(map[message.ID]bool),
 		Last:   t.Head,
 	}
-	for i, m := range t.Messages {
+	for _, m := range t.Messages {
+		st.Index[m.ID] = len(st.Entries)
 		st.Entries = append(st.Entries, NewTreeEntry(m))
-		st.Index[m.ID] = i
+	}
+	for _, m := range t.Forks {
+		if m.ParentID == nil {
+			continue
+		}
+		if _, ok := st.Index[*m.ParentID]; !ok {
+			continue
+		}
+		st.Index[m.ID] = len(st.Entries)
+		st.Entries = append(st.Entries, NewTreeEntry(m))
 	}
 	for id := t.Head; id != ""; {
 		i, ok := st.Index[id]
@@ -281,13 +316,23 @@ func NewSessionTree(t app.Tree) *SessionTree {
 
 // OrderBelow appends the subtrees below parent to Order, depth first.
 // children maps each message to the indices of its children in Entries, in
-// creation order. The child on the transcript, of which there is at most one,
-// goes first, and the others keep creation order.
+// creation order. The forks off the conversation go first, so that each
+// sits right under the prompt it forked from, ahead of the conversation
+// that goes on from there; then the child on the transcript, of which there
+// is at most one; and then the other children. Each group keeps creation
+// order.
 func (t *SessionTree) OrderBelow(children map[message.ID][]int, parent message.ID) {
-	kids := children[parent]
-	if i := slices.IndexFunc(kids, func(k int) bool { return t.Active[t.Entries[k].ID] }); i > 0 {
-		kids = slices.Concat(kids[i:i+1], kids[:i], kids[i+1:])
+	rank := func(k int) int {
+		switch e := t.Entries[k]; {
+		case e.Hidden():
+			return 0
+		case t.Active[e.ID]:
+			return 1
+		}
+		return 2
 	}
+	kids := slices.Clone(children[parent])
+	slices.SortStableFunc(kids, func(a, b int) int { return rank(a) - rank(b) })
 	for _, i := range kids {
 		t.Order = append(t.Order, i)
 		t.OrderBelow(children, t.Entries[i].ID)
@@ -296,8 +341,12 @@ func (t *SessionTree) OrderBelow(children map[message.ID][]int, parent message.I
 
 // Lists reports whether the tree's filter and the search tokens, which are
 // lower case, let e have a row. The no-tools filter always lists the head,
-// so that the transcript's end stays visible.
+// so that the transcript's end stays visible. A fork's message has a row
+// only while ShowHidden.
 func (t *SessionTree) Lists(e TreeEntry, tokens []string) bool {
+	if e.Hidden() && !t.ShowHidden {
+		return false
+	}
 	switch t.Filter {
 	case TreeFilterUserOnly:
 		if e.Role != message.RoleUser {
@@ -320,6 +369,13 @@ func (t *SessionTree) Search(query string) {
 // CycleFilter moves to the next filter.
 func (t *SessionTree) CycleFilter() {
 	t.Filter = t.Filter.Next()
+	t.Refresh()
+}
+
+// ToggleHidden shows or hides the messages of the forks off the
+// conversation.
+func (t *SessionTree) ToggleHidden() {
+	t.ShowHidden = !t.ShowHidden
 	t.Refresh()
 }
 
@@ -387,16 +443,55 @@ func (t *SessionTree) Place(id message.ID, p TreePlacement) {
 // PlaceChildren appends the rows below parent, the empty ID for the roots,
 // whose row is indent levels deep and passes gutters on. A single child
 // continues at parent's indent; the children of a fork indent one level,
-// behind connectors.
+// behind connectors. Parent's asides, which come first, indent one level
+// behind connectors of their own, so that a single child the conversation
+// goes on with still continues at parent's indent under them; beside
+// several, they are branches of the same fork.
 func (t *SessionTree) PlaceChildren(parent message.ID, indent int, gutters []TreeGutter) {
 	kids := t.ListedChildren[parent]
-	fork := len(kids) > 1
+	branches := t.Branches(parent)
+	if len(branches) > 1 || len(branches) == len(kids) {
+		t.PlaceFork(kids, indent, gutters)
+		return
+	}
+	t.PlaceFork(kids[:len(kids)-len(branches)], indent, gutters)
+	for _, kid := range branches {
+		t.Place(kid, TreePlacement{Indent: indent, Gutters: gutters})
+	}
+}
+
+// PlaceFork appends the rows of kids, children of a row indent levels deep
+// that passes gutters on: a single one at that indent, or, when there are
+// several or kids are asides, each one level deeper behind a connector.
+func (t *SessionTree) PlaceFork(kids []message.ID, indent int, gutters []TreeGutter) {
+	if len(kids) == 0 {
+		return
+	}
+	fork := len(kids) > 1 || t.Aside(kids[0])
 	if fork {
 		indent++
 	}
 	for i, kid := range kids {
 		t.Place(kid, TreePlacement{Indent: indent, Connector: fork, Last: i == len(kids)-1, Gutters: gutters})
 	}
+}
+
+// Aside reports whether id hangs off the conversation as an aside: a
+// message of a fork whose listed parent is a message of the conversation,
+// such as the request that titled the session, below its prompt.
+func (t *SessionTree) Aside(id message.ID) bool {
+	parent := t.ListedParent[id]
+	if parent == "" || !t.Entries[t.Index[id]].Hidden() {
+		return false
+	}
+	return !t.Entries[t.Index[parent]].Hidden()
+}
+
+// Branches returns the listed children of id that go on from it, leaving out
+// its asides, in drawing order: those the conversation goes on with, or, for
+// a message of a fork, the rest of its fork.
+func (t *SessionTree) Branches(id message.ID) []message.ID {
+	return slices.DeleteFunc(slices.Clone(t.ListedChildren[id]), t.Aside)
 }
 
 // NearestRow returns the row of id, or of the nearest listed message above
@@ -453,7 +548,8 @@ func (t *SessionTree) Page(delta, rows int) {
 // a negative dir, the start of the branch the selection is on. Going down
 // follows the first branch of each fork; a row with nothing below it stays
 // selected. Going up from the start of a branch reaches the start of the
-// branch it forked from, and at last the root.
+// branch it forked from, and at last the root. Asides are no branches: the
+// jumps pass them by.
 func (t *SessionTree) JumpFork(dir int) {
 	row, ok := t.SelectedRow()
 	if !ok {
@@ -462,7 +558,7 @@ func (t *SessionTree) JumpFork(dir int) {
 	id := row.Entry.ID
 	if dir > 0 {
 		for {
-			kids := t.ListedChildren[id]
+			kids := t.Branches(id)
 			if len(kids) == 0 {
 				break
 			}
@@ -479,7 +575,7 @@ func (t *SessionTree) JumpFork(dir int) {
 		if !ok || parent == "" {
 			break
 		}
-		if len(t.ListedChildren[parent]) > 1 && t.RowIndex[id] < t.Selected {
+		if len(t.Branches(parent)) > 1 && t.RowIndex[id] < t.Selected {
 			break
 		}
 		id = parent
@@ -519,6 +615,9 @@ func (t *SessionTree) View(n int) TreeView {
 	if label := t.Filter.Label(); label != "" {
 		status = append(status, "["+label+"]")
 	}
+	if t.ShowHidden {
+		status = append(status, Tag(HiddenLabel))
+	}
 	v.Status = strings.Join(status, " ")
 	return v
 }
@@ -533,8 +632,9 @@ type TreeView struct {
 	// Count is the selected row's place, such as "[3/40]", when the rows do
 	// not all fit, which the panel's title shows, or "".
 	Count string
-	// Status names the filter, such as "[user]", or says that nothing
-	// matches. It is empty when there is nothing to say.
+	// Status names the filter, such as "[user]", and "[hidden]" while the
+	// forks are shown, or says that nothing matches. It is empty when there
+	// is nothing to say.
 	Status string
 	// Query is the search the rows match, which the input shows.
 	Query string

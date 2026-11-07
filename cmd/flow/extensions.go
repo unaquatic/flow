@@ -9,6 +9,7 @@ import (
 	"github.com/unaquatic/flow/extension/protocol"
 	"github.com/unaquatic/flow/extension/snapshot"
 	snapshotui "github.com/unaquatic/flow/extension/snapshot/ui"
+	"github.com/unaquatic/flow/extension/titling"
 	"github.com/unaquatic/flow/extension/tools"
 	toolsui "github.com/unaquatic/flow/extension/tools/ui"
 	"github.com/unaquatic/flow/terminal/ui"
@@ -26,6 +27,7 @@ var extensions = []extension.Load{
 	protocol.Load,
 	tools.Load,
 	snapshot.Load,
+	titling.Load,
 }
 
 // views returns the terminal UI widgets of the extensions loaded into a.

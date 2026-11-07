@@ -49,7 +49,7 @@ func TestOpen_CreatesTheTables(t *testing.T) {
 	}
 	tests := map[string][]string{
 		"sessions":      {"id", "project", "title", "created_at", "updated_at", "deleted_at", "head_id", "forward_id"},
-		"messages":      {"seq", "session_id", "id", "parent_id", "role", "model", "created_at"},
+		"messages":      {"seq", "session_id", "id", "parent_id", "type", "role", "model", "created_at", "updated_at", "deleted_at"},
 		"message_parts": {"seq", "message", "id", "data"},
 	}
 	for table, want := range tests {

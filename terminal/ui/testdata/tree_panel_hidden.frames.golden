@@ -1,0 +1,62 @@
+=== text ===
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
+|               [ctrl+t hidden] [esc cancel]                             |
+|                                                                        |
+|  User add a Divide method to the calculator                            |
+|  Agent I'll add Divide with a zero check.                              |
+|  ├─ User also add tests                                                |
+|  │  └─ [title] User Summarize the user request in this session         |
+|  │     [title] Agent Divide with tests                                 |
+|  │                                                                     |
+|  │  Agent Added TestDivide.                                            |
+|  └─ User use table-driven tests instead                                |
+|     Read calc_test.go                                                  |
+|     Edit calc_test.go                                                  |
+|     Agent Rewrote the tests as a table.                                |
+|  [hidden]                                                              |
+|                                                                        |
+|■                                                                       |
+=== fg ===
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
+|                                                                        |
+|  CCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                            |
+|  AAAAA DDDD DDD DDDDDD DDDD D DDDD DDDDDD                              |
+|  BB CCCC DDDD DDD DDDDD                                                |
+|  B  BB BBBBBBB BBBB BBBBBBBBB BBB BBBB BBBBBBB BB BBBB BBBBBBB         |
+|  B     BBBBBBB BBBBB BBBBBB BBBB BBBBB                                 |
+|  E                                                                     |
+|  B  AAAAA DDDDD DDDDDDDDDDD                                            |
+|  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                |
+|     BBBB BBBBBBBBBBBB                                                  |
+|     BBBB BBBBBBBBBBBB                                                  |
+|     BBBBB BBBBBBB BBB BBBBB BB B BBBBBB                                |
+|  BBBBBBBB                                                              |
+|                                                                        |
+|F                                                                       |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #eb7513
+D #b4b4b4
+E #232323 BoxBg
+F #ff5f00
+░ #ff5f00

@@ -338,3 +338,28 @@ func TestSetTitle_RoundTrips(t *testing.T) {
 		}
 	}
 }
+
+// TestAppendMessage_StampsItsTimes checks that a stored message, of the
+// conversation or a fork, is updated when it is created, since it does not
+// change, and is not deleted.
+func TestAppendMessage_StampsItsTimes(t *testing.T) {
+	ctx := t.Context()
+	store := newTestStore(t)
+	const id = "ses_times"
+	appendAt(t, store, id, "", "msg_1")
+	if err := store.AppendFork(ctx, id, "msg_1", &message.Content{ID: "msg_fork", Role: message.RoleUser, Type: message.TypeTitle}); err != nil {
+		t.Fatal(err)
+	}
+	for _, msg := range []message.ID{"msg_1", "msg_fork"} {
+		var created, updated string
+		var deleted sql.Null[string]
+		if err := store.db.QueryRowContext(ctx, `
+			SELECT created_at, updated_at, deleted_at FROM messages WHERE session_id = ? AND id = ?`,
+			id, string(msg)).Scan(&created, &updated, &deleted); err != nil {
+			t.Fatal(err)
+		}
+		if updated != created || deleted.Valid {
+			t.Errorf("%s: created %s, updated %s, deleted %v; want updated as created, and not deleted", msg, created, updated, deleted)
+		}
+	}
+}

@@ -212,7 +212,7 @@ func ChatMessageWithExtensions(exts []Extension) ChatMessageOption {
 
 // ChatMessageWithEnqueue sets the function that runs a function on the UI's
 // event loop, for the views of the bubble to fetch what they show with. A
-// bubble without one, as the session preview's, fetches nothing.
+// bubble without one fetches nothing.
 func ChatMessageWithEnqueue(enqueue func(func())) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.Enqueue = enqueue }
 }

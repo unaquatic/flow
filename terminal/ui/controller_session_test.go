@@ -12,6 +12,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
@@ -20,7 +21,7 @@ import (
 // openSessionMenu opens the session list of s on a fixed newer and older
 // session, the newer one active, and returns them.
 func openSessionMenu(s *Service) (newer, older session.Session) {
-	newer = session.Session{ID: "0199bbbb-2222", UpdatedAt: time.Date(2026, 9, 27, 14, 3, 11, 0, time.Local)}
+	newer = session.Session{ID: "0199bbbb-2222", Title: "Fix the login", UpdatedAt: time.Date(2026, 9, 27, 14, 3, 11, 0, time.Local)}
 	older = session.Session{ID: "0199aaaa-1111", UpdatedAt: time.Date(2026, 9, 26, 9, 30, 0, 0, time.Local)}
 	s.state.Session = &session.Session{ID: newer.ID}
 	s.state.SessionMenuVisible = true
@@ -40,14 +41,16 @@ func sessionMenuShown(t *testing.T, out []UIEvent) EventSessionMenuShow {
 	return EventSessionMenuShow{}
 }
 
+// TestSessionMenuRows checks that each session's row reads its title, or
+// Untitled, in a column as wide as the widest, then its ID and last update.
 func TestSessionMenuRows(t *testing.T) {
 	s, _ := newTestService(t)
 	newer, older := openSessionMenu(s)
 
 	show := sessionMenuShown(t, s.FilterSessions(""))
 	want := []widget.SelectItem{
-		{Name: "0199bbbb-2222  2026-09-27 14:03:11", Hint: CurrentHint, Value: newer.ID},
-		{Name: "0199aaaa-1111  2026-09-26 09:30:00", Value: older.ID},
+		{Name: "Fix the login  0199bbbb-2222  2026-09-27 14:03:11", Hint: CurrentHint, Value: newer.ID},
+		{Name: "Untitled       0199aaaa-1111  2026-09-26 09:30:00", Value: older.ID},
 	}
 	if !slices.Equal(show.Items, want) {
 		t.Errorf("rows = %+v, want %+v", show.Items, want)
@@ -94,8 +97,9 @@ func storePrompts(t *testing.T, a *app.App, prompts ...string) message.SessionID
 	return id
 }
 
-// sessionPrompts returns the prompts that out previews.
-func sessionPrompts(t *testing.T, out []UIEvent) []string {
+// sessionPrompts returns the prompts that out previews, and the count of the
+// earlier ones it leaves unloaded.
+func sessionPrompts(t *testing.T, out []UIEvent) ([]string, int) {
 	t.Helper()
 	if len(out) != 1 {
 		t.Fatalf("events %v, want one", out)
@@ -104,22 +108,26 @@ func sessionPrompts(t *testing.T, out []UIEvent) []string {
 	if !ok {
 		t.Fatalf("event %T, want EventSessionPrompts", out[0])
 	}
-	return e.Prompts
+	return e.Prompts, e.Earlier
 }
 
 // TestSessionPrompts checks that a session's prompts are previewed oldest
-// first, one line each, without the replies, and that a session that is not
+// first, one line each, without the replies, that only the latest up to the
+// limit are loaded, the earlier ones counted, and that a session that is not
 // stored previews none.
 func TestSessionPrompts(t *testing.T) {
 	s, a := newTestService(t)
-	id := storePrompts(t, a, "add a Divide method\nto the calculator", "also add tests")
+	id := storePrompts(t, a, "add a Divide method\nto the calculator", "also add tests", "commit it")
 
-	want := []string{"add a Divide method to the calculator", "also add tests"}
-	if got := sessionPrompts(t, s.SessionPrompts(id)); !slices.Equal(got, want) {
-		t.Errorf("prompts = %q, want %q", got, want)
+	want := []string{"add a Divide method to the calculator", "also add tests", "commit it"}
+	if got, earlier := sessionPrompts(t, s.SessionPrompts(t.Context(), id, 10)); !slices.Equal(got, want) || earlier != 0 {
+		t.Errorf("prompts = %q after %d earlier, want %q after none", got, earlier, want)
 	}
-	if got := sessionPrompts(t, s.SessionPrompts(message.NewSessionID())); len(got) != 0 {
-		t.Errorf("prompts of a session not stored = %q, want none", got)
+	if got, earlier := sessionPrompts(t, s.SessionPrompts(t.Context(), id, 2)); !slices.Equal(got, want[1:]) || earlier != 1 {
+		t.Errorf("limit 2: prompts = %q after %d earlier, want %q after 1", got, earlier, want[1:])
+	}
+	if got, earlier := sessionPrompts(t, s.SessionPrompts(t.Context(), message.NewSessionID(), 10)); len(got) != 0 || earlier != 0 {
+		t.Errorf("prompts of a session not stored = %q after %d earlier, want none", got, earlier)
 	}
 }
 
@@ -325,5 +333,65 @@ func storeMessage(t *testing.T, a *app.App, id message.SessionID) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestSessionRowNamesCutLongTitles checks that a title wider than
+// sessionTitleMax cells is cut with an ellipsis, counting wide characters
+// as two cells, and that a title on several lines reads on one.
+func TestSessionRowNamesCutLongTitles(t *testing.T) {
+	at := time.Date(2026, 9, 27, 14, 3, 11, 0, time.Local)
+	names := SessionRowNames([]session.Session{
+		{ID: "s1", Title: strings.Repeat("长", 20), UpdatedAt: at},
+		{ID: "s2", Title: "two\nlines", UpdatedAt: at},
+	})
+	cut := strings.Repeat("长", 15) + "…"
+	want := []string{
+		cut + "  s1  2026-09-27 14:03:11",
+		"two lines" + strings.Repeat(" ", 31-9) + "  s2  2026-09-27 14:03:11",
+	}
+	if !slices.Equal(names, want) {
+		t.Errorf("rows = %q, want %q", names, want)
+	}
+}
+
+// TestSessionUpdatedSetsTitle checks that a title published for the active
+// session, as an extension sets it, shows in the terminal title, that one
+// published for another session does not, and that none shows while
+// config.EnvDisableTerminalTitle turns the terminal title off.
+func TestSessionUpdatedSetsTitle(t *testing.T) {
+	t.Setenv(config.EnvDisableTerminalTitle, "")
+	s, _ := newTestService(t)
+	s.state.Session = &session.Session{ID: "ses_active"}
+	updated := func(id message.SessionID) app.EventSessionUpdated {
+		return app.EventSessionUpdated{EventBase: app.EventBase{SessionID: id}, Title: "Fix the login"}
+	}
+
+	want := []UIEvent{EventTitleSet{Title: "ƒ | Fix the login"}}
+	if got := s.ApplyAgentEvent(updated("ses_active")); !slices.Equal(got, want) {
+		t.Errorf("events = %+v, want %+v", got, want)
+	}
+	if got := s.ApplyAgentEvent(updated("ses_other")); len(got) != 0 {
+		t.Errorf("another session's title gave %+v, want nothing", got)
+	}
+	t.Setenv(config.EnvDisableTerminalTitle, "1")
+	if got := s.ApplyAgentEvent(updated("ses_active")); len(got) != 0 {
+		t.Errorf("a disabled terminal title gave %+v, want nothing", got)
+	}
+}
+
+// TestTitle checks that the terminal title reads TitleMark and the
+// session's title, or Untitled when it has none, without control
+// characters.
+func TestTitle(t *testing.T) {
+	for title, want := range map[string]string{
+		"":              "ƒ | Untitled",
+		"  ":            "ƒ | Untitled",
+		"Fix the login": "ƒ | Fix the login",
+		"a\x1b]0;b":     "ƒ | a]0;b",
+	} {
+		if got := Title(title); got != want {
+			t.Errorf("Title(%q) = %q, want %q", title, got, want)
+		}
 	}
 }

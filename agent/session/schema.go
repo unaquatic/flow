@@ -26,6 +26,15 @@ var Migrations = []string{
 // the provider chose it. Telling the option and the effort from the rest of
 // the model ID takes the catalog.
 //
+// A message's type says what it is for, as message.Type names it: 'chat'
+// for the session's conversation, or another type, such as 'title', for the
+// forks that AppendFork stores below a message. The head never rests on a
+// fork, and the reads of the conversation leave forks out, but deleting the
+// message one hangs from deletes it too. A message's updated_at is its
+// created_at, as a stored message does not change. Its deleted_at is kept
+// for deleting messages softly, as sessions are deleted; nothing sets it
+// yet, and DeleteMessage removes the rows.
+//
 // Parts live in their own rows, ordered by seq, because they are the only
 // part of a message whose shape varies. The token usage of a reply is one of
 // them, so messages holds no counts.
@@ -54,9 +63,12 @@ CREATE TABLE messages (
 	session_id TEXT NOT NULL,
 	id         TEXT NOT NULL,
 	parent_id  TEXT,
+	type       TEXT NOT NULL,
 	role       TEXT NOT NULL,
 	model      TEXT NOT NULL,
 	created_at TEXT NOT NULL,
+	updated_at TEXT NOT NULL,
+	deleted_at TEXT,
 	UNIQUE (session_id, id)
 );
 

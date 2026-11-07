@@ -1,5 +1,6 @@
 === text ===
-|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
+|               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
 |  User use table-driven tests instead                                   |
 |                                                                        |
@@ -8,9 +9,9 @@
 |■ table                                                                 |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === fg ===
-|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
 |  BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                   |
 |                                                                        |
@@ -19,13 +20,12 @@
 |C AAAAA                                                                 |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
 |                                                                        |
 |                                                                        |

@@ -366,6 +366,21 @@ func (s Session) historyFromLog() ([]agent.Message, error) {
 	if err != nil {
 		return nil, err
 	}
+	return s.history(msgs), nil
+}
+
+// historyThrough rebuilds provider history from the session's root to
+// message id, as historyFromLog rebuilds it from the active branch.
+func (s Session) historyThrough(id message.ID) ([]agent.Message, error) {
+	msgs, err := s.app.sessions.Path(s.ctx, s.id, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.history(msgs), nil
+}
+
+// history returns msgs as provider history, as historyFromLog describes.
+func (s Session) history(msgs []message.Content) []agent.Message {
 	cat := s.app.Models().Catalog()
 	out := make([]agent.Message, 0, len(msgs))
 	for _, m := range msgs {
@@ -376,7 +391,7 @@ func (s Session) historyFromLog() ([]agent.Message, error) {
 		}
 		out = append(out, pm)
 	}
-	return out, nil
+	return out
 }
 
 // eventBase stamps an event with this session and the current time.
@@ -473,7 +488,8 @@ func settle(ctx context.Context, err error) error {
 // fork. Like storing the prompt, the hooks run in the session's context, so
 // a stop does not cut them short. A prompt that cannot be stored ends with
 // the failure. The first prompt of a session stores the session too, which
-// it then publishes as EventSessionUpdated.
+// it then publishes as EventSessionUpdated. Each stored prompt then has the
+// extensions title the session, as startTitling describes.
 func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Extension) error {
 	id := snd.MessageID
 	if id == "" {
@@ -524,6 +540,7 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 			s.Logger().Warn("read the session the prompt stored", "err", err)
 		}
 	}
+	s.startTitling(p)
 	return err
 }
 

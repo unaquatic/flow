@@ -249,3 +249,158 @@ func TestDeleteMessage_RemovesSubtreeAndRepairsHead(t *testing.T) {
 		t.Errorf("deleting a missing message returned %v, want ErrMessageNotFound", err)
 	}
 }
+
+// TestPrompts_ReadsTheLatestOnTheActiveBranch checks that Prompts returns
+// the newest prompts of the active branch, oldest first, with their parts,
+// up to its limit, and counts every prompt on the branch, leaving out the
+// replies and the prompts of other branches.
+func TestPrompts_ReadsTheLatestOnTheActiveBranch(t *testing.T) {
+	store := newTestStore(t)
+	ctx := t.Context()
+	const id = "ses_prompts"
+	add := func(parent, msgID message.ID, role message.Role) {
+		t.Helper()
+		if err := store.SetHead(ctx, id, Head{ID: parent}); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("set head %q: %v", parent, err)
+		}
+		msg := message.Content{ID: msgID, Role: role, Parts: []message.ContentPart{message.TextPart{ID: message.PartID("prt_" + msgID), Text: string(msgID)}}}
+		if err := store.AppendMessage(ctx, id, &msg); err != nil {
+			t.Fatalf("append %q: %v", msgID, err)
+		}
+	}
+	//	u1 -> a1 -> u2 -> a2 -> u3 -> a3
+	//	                  \-> u2b (abandoned)
+	add("", "u1", message.RoleUser)
+	add("u1", "a1", message.RoleAgent)
+	add("a1", "u2b", message.RoleUser)
+	add("a1", "u2", message.RoleUser)
+	add("u2", "a2", message.RoleAgent)
+	add("a2", "u3", message.RoleUser)
+	add("u3", "a3", message.RoleAgent)
+
+	for _, tt := range []struct {
+		limit int
+		want  []message.ID
+	}{
+		{limit: 10, want: []message.ID{"u1", "u2", "u3"}},
+		{limit: 2, want: []message.ID{"u2", "u3"}},
+		// A limit below one is taken as one.
+		{limit: 0, want: []message.ID{"u3"}},
+	} {
+		got, total, err := store.Prompts(ctx, id, tt.limit)
+		if err != nil {
+			t.Fatalf("prompts: %v", err)
+		}
+		if total != 3 || !equal(ids(got), tt.want) {
+			t.Errorf("limit %d: prompts = %v of %d, want %v of 3", tt.limit, ids(got), total, tt.want)
+		}
+		for _, m := range got {
+			if len(m.Parts) != 1 {
+				t.Errorf("limit %d: prompt %s has %d parts, want its one", tt.limit, m.ID, len(m.Parts))
+			}
+		}
+	}
+
+	if got, total, err := store.Prompts(ctx, "ses_missing", 5); err != nil || total != 0 || len(got) != 0 {
+		t.Errorf("unstored session: prompts = %v of %d, %v, want none", ids(got), total, err)
+	}
+}
+
+// TestAppendFork checks that a fork is stored below its parent, each
+// message below the one before it, of its type, without moving the head or
+// the session's update time, and that every read of the conversation leaves
+// it out, so that a prompt whose only children are forks is still a leaf;
+// that ForkChildren and Path read it, and chat messages read back with the
+// zero Type; that neither append takes the other's messages; and that
+// deleting its parent deletes it.
+func TestAppendFork(t *testing.T) {
+	ctx := t.Context()
+	store := newTestStore(t)
+	const id = "ses_fork"
+	appendAt(t, store, id, "", "msg_1")
+	appendAt(t, store, id, "msg_1", "msg_2")
+	before, err := store.Session(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ask := message.Content{ID: "msg_ask", Role: message.RoleUser, Type: message.TypeTitle, Parts: []message.ContentPart{message.TextPart{Text: "summarize"}}}
+	reply := message.Content{ID: "msg_reply", Role: message.RoleAgent, Type: message.TypeTitle, Parts: []message.ContentPart{message.TextPart{Text: "A title"}}}
+	if err := store.AppendFork(ctx, id, "msg_2", &ask, &reply); err != nil {
+		t.Fatal(err)
+	}
+	if ask.ParentID == nil || *ask.ParentID != "msg_2" || reply.ParentID == nil || *reply.ParentID != "msg_ask" {
+		t.Errorf("parents = %v, %v; want msg_2 then msg_ask", ask.ParentID, reply.ParentID)
+	}
+
+	after, err := store.Session(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Head != before.Head || !after.UpdatedAt.Equal(before.UpdatedAt) {
+		t.Errorf("session = %+v, want its head and update time as before: %+v", after, before)
+	}
+	branch, err := store.Branch(ctx, id)
+	if err != nil || !equal(ids(branch), []message.ID{"msg_1", "msg_2"}) {
+		t.Errorf("branch = %v, %v; want msg_1, msg_2", ids(branch), err)
+	}
+	all, err := store.Messages(ctx, id)
+	if err != nil || !equal(ids(all), []message.ID{"msg_1", "msg_2"}) {
+		t.Errorf("messages = %v, %v; want the visible ones", ids(all), err)
+	}
+	if kids, err := store.Children(ctx, id, "msg_2"); err != nil || len(kids) != 0 {
+		t.Errorf("children of msg_2 = %v, %v; want none", ids(kids), err)
+	}
+	if forks, err := store.Forks(ctx, id); err != nil || len(forks) != 0 {
+		t.Errorf("forks = %v, %v; want none", forks, err)
+	}
+	for _, from := range []message.ID{"msg_1", ""} {
+		if leaf, err := store.Leaf(ctx, id, from); err != nil || leaf != "msg_2" {
+			t.Errorf("leaf from %q = %q, %v; want msg_2", from, leaf, err)
+		}
+	}
+	if n, err := store.Size(ctx, id, "msg_2"); err != nil || n != 1 {
+		t.Errorf("size of msg_2 = %d, %v; want 1", n, err)
+	}
+
+	forked, err := store.ForkChildren(ctx, id, "msg_2", message.TypeTitle)
+	if err != nil || !equal(ids(forked), []message.ID{"msg_ask"}) {
+		t.Fatalf("title children = %v, %v; want msg_ask", ids(forked), err)
+	}
+	if other, err := store.ForkChildren(ctx, id, "msg_2", "other"); err != nil || len(other) != 0 {
+		t.Errorf("children of another type = %v, %v; want none", ids(other), err)
+	}
+	if all, err := store.ForkMessages(ctx, id); err != nil || !equal(ids(all), []message.ID{"msg_ask", "msg_reply"}) {
+		t.Errorf("fork messages = %v, %v; want the fork's, in order", ids(all), err)
+	}
+	path, err := store.Path(ctx, id, "msg_reply")
+	if err != nil || !equal(ids(path), []message.ID{"msg_1", "msg_2", "msg_ask", "msg_reply"}) {
+		t.Errorf("path to the reply = %v, %v; want the fork after the branch", ids(path), err)
+	}
+	if got := path[len(path)-1].Parts; len(got) != 1 || got[0].(message.TextPart).Text != "A title" {
+		t.Errorf("reply parts = %+v, want the stored text", got)
+	}
+	types := make([]message.Type, len(path))
+	for i, m := range path {
+		types[i] = m.Type
+	}
+	if !slices.Equal(types, []message.Type{"", "", message.TypeTitle, message.TypeTitle}) {
+		t.Errorf("types along the path = %q, want chat as the zero Type, then the fork's", types)
+	}
+
+	if err := store.AppendFork(ctx, id, "msg_missing", &message.Content{ID: "msg_x", Role: message.RoleUser, Type: message.TypeTitle}); !errors.Is(err, ErrMessageNotFound) {
+		t.Errorf("fork below a missing message = %v, want ErrMessageNotFound", err)
+	}
+	if err := store.AppendFork(ctx, id, "msg_2", &message.Content{ID: "msg_y", Role: message.RoleUser, Type: message.TypeChat}); !errors.Is(err, ErrMessageType) {
+		t.Errorf("fork of a chat message = %v, want ErrMessageType", err)
+	}
+	if err := store.AppendMessage(ctx, id, &message.Content{ID: "msg_z", Role: message.RoleUser, Type: message.TypeTitle}); !errors.Is(err, ErrMessageType) {
+		t.Errorf("conversation message of a title type = %v, want ErrMessageType", err)
+	}
+	if err := store.DeleteMessage(ctx, id, "msg_2"); err != nil {
+		t.Fatal(err)
+	}
+	if path, err := store.Path(ctx, id, "msg_reply"); err != nil || len(path) != 0 {
+		t.Errorf("path to the reply after deleting its parent = %v, %v; want none", ids(path), err)
+	}
+}

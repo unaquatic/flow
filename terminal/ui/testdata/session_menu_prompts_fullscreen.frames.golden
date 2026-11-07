@@ -1,0 +1,53 @@
+=== text ===
+|■ Sessions [↑/↓ move] [esc cancel]                                      |
+|                                                                        |
+|  Add Divide  01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7  2026-09-28 09:14:0  |
+|  Untitled    01a0e33d-4571-7ed4-b06b-4229c726c313  2026-09-27 21:40:5  |
+|                                                                        |
+|  User add a Divide method to the calculator                            |
+|  User also add tests                                                   |
+|  User use table-driven tests instead                                   |
+|                                                                        |
+|■                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== fg ===
+|A AAAAAAAA BBBB BBBBB BBBB BBBBBBB                                      |
+|                                                                        |
+|  CCC CCCCCC  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  CCCCCCCCCC CCCCCCC  |
+|  AAAAAAAA    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  AAAAAAAAAA AAAAAAA  |
+|                                                                        |
+|  DDDD EEE E EEEEEE EEEEEE EE EEE EEEEEEEEEE                            |
+|  DDDD EEEE EEE EEEEE                                                   |
+|  DDDD EEE EEEEEEEEEEEE EEEEE EEEEEEE                                   |
+|                                                                        |
+|F                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #232323 BoxBg
+D #eb7513
+E #b4b4b4
+F #ff5f00
+░ #ff5f00
