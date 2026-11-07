@@ -126,7 +126,7 @@ func (ui *UI) SetMarkerShape(m MarkerShape) {
 		cm.SetMarkerShape(m)
 	}
 	if ui.indicatorMarker != nil {
-		StyleMarker(ui.indicatorMarker, m, indicatorHintFg)
+		StyleMarker(ui.indicatorMarker, m, ui.IndicatorMarkerFg())
 	}
 	for _, marker := range ui.noticeMarkers {
 		StyleMarker(marker, m, titleFg)

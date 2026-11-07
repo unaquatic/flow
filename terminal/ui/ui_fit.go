@@ -171,12 +171,17 @@ func (ui *UI) Refit(spare int) bool {
 }
 
 // FitParts returns the parts of the input box on screen that can show fewer
-// rows, in the order they give rows up. The prompts previewed under the
-// session list go first, before the rows they preview, and fill the rows the
-// list leaves, up to a row for each prompt. The status box above the input
-// box goes before any of the slash menu's commands does.
+// rows, in the order they give rows up. The body of an error in the
+// indicator above the box goes first, down to a line, so that the input
+// stays in view. The prompts previewed under the session list go next,
+// before the rows they preview, and fill the rows the list leaves, up to a
+// row for each prompt. The status box above the input box goes before any of
+// the slash menu's commands does.
 func (ui *UI) FitParts() []FitPart {
 	var parts []FitPart
+	if ui.indicatorDetail != nil && ui.indicatorBox.Visible() && ui.indicatorDetail.Visible() {
+		parts = append(parts, NodePart(ui.indicatorDetailRow.LayoutNode(), ui.indicatorDetailText.LayoutNode(), 1))
+	}
 	if prompts, ok := ui.sessionPrompts.Part(); ok && ui.sessionPanel.Visible() {
 		parts = append(parts, prompts)
 	}

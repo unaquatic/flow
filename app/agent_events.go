@@ -63,7 +63,7 @@ func AgentEvent(base EventBase, ev agent.Event) Event {
 	case agent.MessageEnded:
 		out := EventMessageEnded{EventBase: base, Message: Message{Content: e.Message}, Finish: e.Finish, Stopped: e.Stopped}
 		if e.Err != nil {
-			u := NewUnknownError(e.Err.Error())
+			u := ErrorOf(e.Err)
 			out.Error = &u
 		}
 		return out
@@ -71,7 +71,7 @@ func AgentEvent(base EventBase, ev agent.Event) Event {
 		out := EventAgentRetrying{EventBase: base, MessageID: e.MessageID, Attempt: e.Attempt, MaxAttempts: e.MaxAttempts,
 			RetryAt: base.Timestamp.Add(e.Delay), Reason: e.Reason, Error: NewUnknownError(e.Reason)}
 		if e.Err != nil {
-			out.Error = NewUnknownError(e.Err.Error())
+			out.Error = ErrorOf(e.Err)
 		}
 		return out
 	}

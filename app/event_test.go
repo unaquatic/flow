@@ -179,6 +179,29 @@ func TestNewUnknownError(t *testing.T) {
 	}
 }
 
+// TestErrorOf checks that a provider's error response, wrapped or not, keeps
+// its provider, status and body, and that another error keeps its message
+// alone.
+func TestErrorOf(t *testing.T) {
+	resp := &agent.ResponseError{Provider: "provider-a", StatusCode: 400, Message: "bad", ResponseBody: `{"error":{"message":"bad"}}`}
+	got := ErrorOf(fmt.Errorf("turn: %w", resp))
+	want := UnknownError{Type: ErrorTypeUnknown, Message: "turn: " + resp.Error(), Provider: "provider-a", Status: 400, Body: resp.ResponseBody}
+	if got != want {
+		t.Errorf("ErrorOf(response error) = %+v, want %+v", got, want)
+	}
+	if got, want := ErrorOf(errors.New("boom")), NewUnknownError("boom"); got != want {
+		t.Errorf("ErrorOf(boom) = %+v, want %+v", got, want)
+	}
+
+	// A body longer than MaxErrorBody is cut short at a rune boundary: the
+	// two-byte é that would straddle the cut is left out whole.
+	long := strings.Repeat("a", MaxErrorBody-1) + "é" + "tail"
+	body := ErrorOf(&agent.ResponseError{Provider: "provider-a", StatusCode: 502, ResponseBody: long}).Body
+	if want := strings.Repeat("a", MaxErrorBody-1); body != want {
+		t.Errorf("ErrorOf(long body).Body is %d bytes, want the %d before é", len(body), len(want))
+	}
+}
+
 // TestAgentEvent checks that each event of an agent run becomes the app event
 // that clients read, stamped with the base it is given, with its message, and
 // the error that ended a message described.

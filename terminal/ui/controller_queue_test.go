@@ -231,10 +231,10 @@ func TestQueue_PromptThatCannotStartStaysQueued(t *testing.T) {
 	}
 	refusal := func(e UIEvent) bool {
 		ind, ok := e.(EventIndicatorShow)
-		return ok && ind.Text == app.ErrBusy.Error()
+		return ok && ind.Error && ind.Text == app.ErrBusy.Error()
 	}
 	if !slices.ContainsFunc(out, refusal) {
-		t.Errorf("events = %+v, want the refusal shown", out)
+		t.Errorf("events = %+v, want the refusal shown as an error", out)
 	}
 
 	q.a.Release(id, op)

@@ -179,7 +179,7 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 		s.state.Running = false
 		out = slices.Concat(s.EndTurn(e.Timestamp), s.SetStatus(StatusHintStyled()), s.SetProgress(false))
 		if e.Error != nil {
-			out = append(out, s.ShowIndicator(e.Error.Message)...)
+			out = append(out, s.ShowError(*e.Error)...)
 			// Queued prompts wait rather than meet the same failure.
 			if len(s.state.Queue) > 0 {
 				s.state.QueuePaused = true
