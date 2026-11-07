@@ -18,8 +18,6 @@ import (
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/demo"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
-	"github.com/unaquatic/flow/extension/protocol/login/claude"
 	"github.com/unaquatic/flow/extension/snapshot"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/buffer"
@@ -173,7 +171,7 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// A notice that names a model draws it in the primary color.
 		{name: "notice_keyword", h: 4, add: func(ui *UI) {
-			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "openai/gpt-5.6-fast:high", ""))
+			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/model-a:high", ""))
 		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
@@ -244,7 +242,7 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_usage", h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.SetCacheMode(CachePerMessage))
 			msg := agentText("a1", "Done.")
-			msg.Model = "anthropic/claude-sonnet-4"
+			msg.Model = "provider-b/model-d"
 			msg.Usage = message.Usage{InputTokens: 1200, OutputTokens: 300, CachedInputTokens: 1024, CacheCreationInputTokens: 176}
 			ui.AddMessage(msg)
 		}},
@@ -674,7 +672,7 @@ func TestSlashStatusFrames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.SetInputText("hello")
-			ui.SetModelLabel("openai/gpt-6-luna:medium")
+			ui.SetModelLabel("provider-a/model-h:medium")
 			ui.SetUsage(tt.usage)
 			ui.service.state.Messages = []ChatMessage{{ID: "a1", Role: message.RoleAgent, Worked: 3*time.Minute + 12*time.Second}}
 			h := 15
@@ -783,7 +781,7 @@ func TestIndicatorFrames(t *testing.T) {
 			show: EventIndicatorShow{Text: `Request Failed: Post "https://api.example.com/v1/messages": EOF`}},
 		// A provider's error shows the raw body it answered with.
 		{name: "indicator_response_error", h: 13, add: replyStarted,
-			show: EventIndicatorShow{Text: (&agent.ResponseError{Provider: "anthropic", StatusCode: 429,
+			show: EventIndicatorShow{Text: (&agent.ResponseError{Provider: "provider-b", StatusCode: 429,
 				ResponseBody: `{"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}`}).Error()}},
 		// Ctrl+O says what it is doing while it lays out a long transcript
 		// again with every tool call expanded.
@@ -893,7 +891,7 @@ func TestWorkedFrames(t *testing.T) {
 		// A reply that read and wrote no cache shows no cache use.
 		{name: "worked_cache_miss", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Done.")
-			msg.Model = "openai/gpt-5.6-luna"
+			msg.Model = "provider-a/model-b"
 			msg.Usage = message.Usage{InputTokens: 1200, OutputTokens: 300}
 			msg.Worked = 42 * time.Second
 			ui.AddMessage(msg)
@@ -912,20 +910,20 @@ func TestWorkedFrames(t *testing.T) {
 		// each reply.
 		{name: "worked_loaded", h: 20, add: func(ui *UI) {
 			ui.Apply(ui.service.SetCacheMode(CachePerMessage))
-			sonnet := func(msg ChatMessage) ChatMessage {
-				msg.Model = "anthropic/claude-sonnet-4:high"
+			modelD := func(msg ChatMessage) ChatMessage {
+				msg.Model = "provider-b/model-d:high"
 				return msg
 			}
-			first := sonnet(agentParts("a1", bash))
+			first := modelD(agentParts("a1", bash))
 			first.Usage = message.Usage{InputTokens: 900, OutputTokens: 40}
-			second := sonnet(agentText("a2", "All tests pass."))
+			second := modelD(agentText("a2", "All tests pass."))
 			second.Usage, second.Window = usage, 200_000
 			msgs := []ChatMessage{
 				userText("u1", "run the tests"),
 				first,
 				second,
 				userText("u2", "commit it"),
-				sonnet(agentText("a3", "Committed.")),
+				modelD(agentText("a3", "Committed.")),
 			}
 			for i, d := range []time.Duration{0, 4 * time.Second, 42 * time.Second, time.Minute, time.Minute + 7*time.Second} {
 				msgs[i].CreatedAt = turnT0.Add(d)
@@ -1273,8 +1271,8 @@ func TestMenuFrames(t *testing.T) {
 		// a search the input row is hidden, since it takes no keys.
 		{name: "banner_login_progress", h: 8, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{
-				Title: "Login with openai",
-				Text:  "Logging in to openai account 01a0e1b4 [browser]...",
+				Title: "Login with provider-a",
+				Text:  "Logging in to provider-a account 01a0e1b4 [browser]...",
 			})
 		}},
 		{name: "banner_login_menu", h: 9, open: func(ui *UI) {
@@ -1285,7 +1283,7 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_login_queued", h: 12, open: func(ui *UI) {
 			ui.ShowQueue([]string{"also update the README"})
 			ui.ShowBanner(EventBannerShow{
-				Title: "Login with openai",
+				Title: "Login with provider-a",
 			})
 		}},
 		// The text sits under the header's divider, where a menu would.
@@ -1303,29 +1301,29 @@ func TestMenuFrames(t *testing.T) {
 			ui.HandleBannerKey(&input.KeyEvent{Name: input.KeyRight})
 		}},
 		// The model menu names each model by its variant, as the catalog's
-		// ID names it without the lab, such as "gpt-5.6:fast", a pro model
+		// ID names it without the lab, such as "model-a:fast", a pro model
 		// by its own ID, and then its provider, dim, such as
-		// "claude-opus-5-5 [anthropic]", with the terminal's model selected.
+		// "model-g [provider-b]", with the terminal's model selected.
 		{name: "banner_model_menu", h: 13, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("openai/gpt-5.6:fast:high"))
+			ui.Apply(ui.service.SelectModel("provider-a/model-a:fast:high"))
 			ui.service.OpenBanner(ModelBanner)
 			cat := ui.service.app.Models().Catalog()
 			ui.Apply(ui.service.ModelsListed([]app.ModelListing{
-				listing(cat, chatgpt.ProviderID, "gpt-5.6", "gpt-5.6-pro", "gpt-5.6-luna"),
-				listing(cat, claude.ProviderID, "claude-opus-5-5"),
+				listing(cat, providerA, "model-a", "model-a-pro", "model-b"),
+				listing(cat, providerB, "model-g"),
 			}))
 		}},
 		// The model menu's next page: the levels the chosen model takes,
 		// with the default marked and the one it would run at selected.
 		{name: "banner_model_effort", h: 14, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("openai/gpt-5.6:high"))
-			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Option: "fast"}))
+			ui.Apply(ui.service.SelectModel("provider-a/model-a:high"))
+			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}))
 		}},
 		// The default is marked on the selected row too, as /effort shows it
 		// for a model that runs at its default.
 		{name: "banner_effort_default_selected", h: 14, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("openai/gpt-5.6:medium"))
-			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6"}))
+			ui.Apply(ui.service.SelectModel("provider-a/model-a:medium"))
+			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a"}))
 		}},
 		// Under the fill selection style, → on the Selection setting fills
 		// the selected row in the primary color, a cell in from either edge,
@@ -1461,28 +1459,30 @@ func TestMenuFrames(t *testing.T) {
 	}
 }
 
-func TestClaudeLoginFrames(t *testing.T) {
-	authorizeURL := "https://claude.ai/oauth/authorize?" + url.Values{
+// TestManualLoginFrames draws a login whose code is pasted: the long
+// authorization URL of an OAuth login, wrapped in full.
+func TestManualLoginFrames(t *testing.T) {
+	authorizeURL := "https://login.provider-b.test/oauth/authorize?" + url.Values{
 		"code": {"true"}, "response_type": {"code"},
-		"client_id":      {"9d1c250a-e61b-44d9-88ed-5944d1962f5e"},
-		"redirect_uri":   {"https://platform.claude.com/oauth/code/callback"},
+		"client_id":      {"0b5e4a3c-7d21-4f8e-9c6a-2e1f0d9b8a47"},
+		"redirect_uri":   {"https://console.provider-b.test/oauth/code/callback"},
 		"code_challenge": {strings.Repeat("a", 43)}, "code_challenge_method": {"S256"},
-		"scope": {"org:create_api_key user:profile user:inference user:sessions:claude_code"},
+		"scope": {"org:create_api_key user:profile user:inference user:sessions:agent"},
 		"state": {strings.Repeat("b", 32)},
 	}.Encode()
 	for _, tt := range []struct {
 		name string
 		w, h int
 	}{
-		{"claude_login_code_narrow", 40, 34},
+		{"manual_login_code_narrow", 40, 34},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.inline = true
 			ui.service.OpenBanner(LoginBanner)
-			ui.ShowBanner(EventBannerShow{Title: "Login with anthropic"})
+			ui.ShowBanner(EventBannerShow{Title: "Login with provider-b"})
 			ui.Apply(ui.service.ApplyAgentEvent(app.EventLoginPrompt{
-				Provider: claude.ProviderID, Account: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2",
+				Provider: providerB, Account: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2",
 				URL: authorizeURL, State: &agent.LoginState{Verifier: "hidden-proof", State: strings.Repeat("b", 32)},
 			}))
 			if len(ui.service.state.Messages) != 0 || len(ui.transcriptRows) != 0 {

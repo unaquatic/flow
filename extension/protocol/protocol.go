@@ -1,19 +1,18 @@
 // Package protocol is the extension that gives flow the providers of the
-// model catalog, by the request protocols they speak, and the logins of
-// Anthropic and OpenAI. It plugs into flow at one of the points package
-// extension describes:
+// model catalog, by the request protocols they speak, and the logins of the
+// providers that have their own. It plugs into flow at one of the points
+// package extension describes:
 //
 //   - Behaviour: it makes the provider of each catalog endpoint whose format
 //     and authentication it speaks through extension.DialHook, and adds the
-//     login flows of Anthropic and OpenAI through extension.LoginHook, as
+//     login flows of the packages of login through extension.LoginHook, as
 //     the app starts.
 //
 // The protocols live in its subpackages, one for each request format of the
-// catalog: messages for Anthropic Messages, completions for OpenAI Chat
-// Completions, responses for OpenAI Responses, and content for Gemini's
-// generateContent. Package google authorizes requests to Google Cloud, and
-// the packages of login sign in to the providers that have logins of their
-// own: chatgpt to OpenAI, and claude to Anthropic.
+// catalog, which each package's doc names: messages, completions, responses
+// and content. Package adc authorizes requests with a cloud's application
+// default credentials, and the packages of login sign in to the providers
+// that have logins of their own: codeflow and backendflow.
 package protocol
 
 import (
@@ -22,16 +21,16 @@ import (
 	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/extension"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
-	"github.com/unaquatic/flow/extension/protocol/login/claude"
+	"github.com/unaquatic/flow/extension/protocol/login/backendflow"
+	"github.com/unaquatic/flow/extension/protocol/login/codeflow"
 )
 
 // Name names the extension.
 const Name = "protocol"
 
 // Extension makes the providers of the protocols it speaks, and logs in to
-// Anthropic and OpenAI. It implements extension.DialHook and
-// extension.LoginHook.
+// the providers of the packages of login. It implements extension.DialHook
+// and extension.LoginHook.
 type Extension struct {
 	// Dialer makes the provider of an endpoint.
 	Dialer agent.Dialer
@@ -62,11 +61,11 @@ func (e *Extension) Dial(t agent.ProviderID, ep gateway.Endpoint, az agent.Autho
 	return e.Dialer(t, ep, az)
 }
 
-// LoginFlows returns the logins of Anthropic and OpenAI, through Claude and
-// ChatGPT sign-in.
+// LoginFlows returns the logins of the packages of login, each for its
+// provider.
 func (e *Extension) LoginFlows() map[agent.ProviderID]agent.LoginFlow {
 	return map[agent.ProviderID]agent.LoginFlow{
-		claude.ProviderID:  claude.NewOAuth(),
-		chatgpt.ProviderID: chatgpt.NewOAuth(),
+		codeflow.ProviderID:    codeflow.NewOAuth(),
+		backendflow.ProviderID: backendflow.NewOAuth(),
 	}
 }

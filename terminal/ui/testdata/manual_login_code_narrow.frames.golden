@@ -1,23 +1,24 @@
 === text ===
 |                                        |
-|  Login with anthropic [enter submit]   |
-|                       [ctrl+l copy]    |
-|                       [esc cancel]     |
+|  Login with provider-b [enter submit]  |
+|                        [ctrl+l copy]   |
+|                        [esc cancel]    |
 |                                        |
 |  Approve access in your browser,       |
 |  then paste the complete code below.   |
-|  https://claude.ai/oauth/authorize?    |
-|  client_id=9d1c250a-e61b-44d9-88ed-    |
-|  5944d1962f5e&code=true&code_challeng  |
+|  https://login.provider-b.test/oauth/  |
+|  authorize?client_id=0b5e4a3c-7d21-    |
+|  4f8e-9c6a-                            |
+|  2e1f0d9b8a47&code=true&code_challeng  |
 |  e=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  |
 |  aaaaaaaaa&code_challenge_method=S256  |
-|  &redirect_uri=https%3A%2F%2Fplatform  |
-|  .claude.                              |
-|  com%2Foauth%2Fcode%2Fcallback&respon  |
-|  se_type=code&scope=org%3Acreate_api_  |
-|  key+user%3Aprofile+user%3Ainference+  |
-|  user%3Asessions%3Aclaude_code&state=  |
-|  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb      |
+|  &redirect_uri=https%3A%2F%2Fconsole.  |
+|  provider-b.                           |
+|  test%2Foauth%2Fcode%2Fcallback&respo  |
+|  nse_type=code&scope=org%3Acreate_api  |
+|  _key+user%3Aprofile+user%3Ainference  |
+|  +user%3Asessions%3Aagent&state=bbbbb  |
+|  bbbbbbbbbbbbbbbbbbbbbbbbbbb           |
 |                                        |
 |  Paste code#state or callback URL      |
 |                                        |
@@ -32,30 +33,29 @@
 |                                        |
 |                                        |
 |                                        |
-|                                        |
 === fg ===
 |                                        |
-|  AAAAA AAAA AAAAAAAAA BBBBBB BBBBBBB   |
-|                       BBBBBBB BBBBB    |
-|                       BBBB BBBBBBB     |
+|  AAAAA AAAA AAAAAAAAAA BBBBBB BBBBBBB  |
+|                        BBBBBBB BBBBB   |
+|                        BBBB BBBBBBB    |
 |                                        |
 |  CCCCCCC CCCCCC CC CCCC CCCCCCCC       |
 |  CCCC CCCCC CCC CCCCCCCC CCCC CCCCCC   |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC    |
-|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC    |
+|  CCCCCCCCCC                            |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
-|  CCCCCCCC                              |
+|  CCCCCCCCCCC                           |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
 |  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
-|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC      |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCC           |
 |                                        |
 |  BBBBB BBBBBBBBBB BB BBBBBBBB BBB      |
-|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -91,7 +91,7 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 |                                        |
 |                                        |
@@ -105,7 +105,7 @@
 |                                        |
 === attrs ===
 |                                        |
-|  BBBBBBBBBBBBBBBBBBBB                  |
+|  BBBBBBBBBBBBBBBBBBBBB                 |
 |                                        |
 |                                        |
 |                                        |

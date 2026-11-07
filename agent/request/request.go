@@ -25,7 +25,7 @@ func MergeBody(dst, src map[string]any) map[string]any {
 
 // AddHeaders adds the headers of extra to h. A header that h holds already
 // takes the value after its own, comma-separated, as list headers such as
-// anthropic-beta take them.
+// a provider's beta header take them.
 func AddHeaders(h http.Header, extra map[string]string) {
 	for k, v := range extra {
 		if cur := h.Get(k); cur != "" {

@@ -49,7 +49,7 @@ func TestLoginCopyURL(t *testing.T) {
 			ui.BuildUI()
 			url := "https://login.test/authorize?state=nonce&code_challenge=challenge"
 			ui.Apply(s.ApplyAgentEvent(app.EventLoginPrompt{
-				Provider: "anthropic", Account: agent.NewAccountID(), URL: url,
+				Provider: "provider-b", Account: agent.NewAccountID(), URL: url,
 				State: &agent.LoginState{Verifier: "hidden-proof", State: "nonce"},
 			}))
 			ui.SetInputText("partially-pasted-code")

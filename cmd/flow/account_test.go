@@ -6,28 +6,37 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unaquatic/catalog/gateway/gatewaytest"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/protocol"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/flow/internal/cmdline"
 )
 
+// testProvider is the provider of the test app's catalog, and keyEnv the
+// environment variable of its API key.
+const (
+	testProvider agent.ProviderID = "provider-a"
+	keyEnv                        = "PROVIDER_A_API_KEY"
+)
+
 // newTestApp returns an app over a new data directory, with snapshots off,
-// no catalog server and no API keys in the environment. The test ends by
-// closing it.
+// no catalog server, a catalog of testProvider alone and no API key in the
+// environment. The test ends by closing it.
 func newTestApp(t *testing.T) *app.App {
 	t.Helper()
 	t.Chdir(t.TempDir())
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("ANTHROPIC_API_KEY", "")
+	t.Setenv(keyEnv, "")
 	home := t.TempDir()
 	settings := `{"snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t,
+		`{"provider-a":{"id":"provider-a","format":"responses","env":["`+keyEnv+`"],"models":{}}}`))
 	conf := config.NewService(home)
 	a, err := app.New(t.Context(), conf, app.Options{Extensions: []extension.Load{protocol.Load}})
 	if err != nil {
@@ -42,7 +51,7 @@ func newTestApp(t *testing.T) *app.App {
 // active, by the provider's alias too, and logout the account it removes.
 func TestAccountCommands(t *testing.T) {
 	a := newTestApp(t)
-	id, err := a.Accounts().SetKey(t.Context(), chatgpt.ProviderID, "", agent.APIKey("sk-test"))
+	id, err := a.Accounts().SetKey(t.Context(), testProvider, "", agent.APIKey("sk-test"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,23 +60,23 @@ func TestAccountCommands(t *testing.T) {
 	if err := listAccounts(t.Context(), &out, a); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "openai\n * "+string(id)) {
-		t.Errorf("account list =\n%s\nwant the active openai account %s", out.String(), id)
+	if !strings.Contains(out.String(), "provider-a\n * "+string(id)) {
+		t.Errorf("account list =\n%s\nwant the active provider-a account %s", out.String(), id)
 	}
 
 	out.Reset()
-	if err := runAccountUse(t.Context(), &out, a, cmdline.NoOptions{}, []string{"openai", string(id)}); err != nil {
+	if err := runAccountUse(t.Context(), &out, a, cmdline.NoOptions{}, []string{"provider-a", string(id)}); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), "Active openai account: "+string(id)+".\n"; got != want {
+	if got, want := out.String(), "Active provider-a account: "+string(id)+".\n"; got != want {
 		t.Errorf("account use = %q, want %q", got, want)
 	}
 
 	out.Reset()
-	if err := runLogout(t.Context(), &out, a, logoutOptions{provider: chatgpt.ProviderID, account: id}, nil); err != nil {
+	if err := runLogout(t.Context(), &out, a, logoutOptions{provider: testProvider, account: id}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), "Removed openai account "+string(id)+".\n"; got != want {
+	if got, want := out.String(), "Removed provider-a account "+string(id)+".\n"; got != want {
 		t.Errorf("logout = %q, want %q", got, want)
 	}
 }

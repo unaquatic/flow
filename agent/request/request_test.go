@@ -7,11 +7,11 @@ import (
 )
 
 func TestMergeBody(t *testing.T) {
-	dst := map[string]any{"model": "gpt-5.6", "reasoning": map[string]any{"effort": "high"}}
+	dst := map[string]any{"model": "model-a", "reasoning": map[string]any{"effort": "high"}}
 	src := map[string]any{"reasoning": map[string]any{"mode": "pro"}, "service_tier": "priority"}
 	got := MergeBody(dst, src)
 	want := map[string]any{
-		"model":        "gpt-5.6",
+		"model":        "model-a",
 		"reasoning":    map[string]any{"effort": "high", "mode": "pro"},
 		"service_tier": "priority",
 	}
@@ -27,10 +27,10 @@ func TestMergeBody(t *testing.T) {
 
 func TestAddHeaders(t *testing.T) {
 	h := http.Header{}
-	h.Set("Anthropic-Beta", "oauth-2025-04-20")
-	AddHeaders(h, map[string]string{"anthropic-beta": "fast-mode-2026-02-01", "X-Other": "1"})
-	if got := h.Get("anthropic-beta"); got != "oauth-2025-04-20,fast-mode-2026-02-01" {
-		t.Errorf("anthropic-beta = %q", got)
+	h.Set("Provider-Beta", "oauth-2025-04-20")
+	AddHeaders(h, map[string]string{"provider-beta": "fast-mode-2026-02-01", "X-Other": "1"})
+	if got := h.Get("provider-beta"); got != "oauth-2025-04-20,fast-mode-2026-02-01" {
+		t.Errorf("provider-beta = %q", got)
 	}
 	if got := h.Get("x-other"); got != "1" {
 		t.Errorf("x-other = %q", got)

@@ -21,29 +21,40 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
+)
+
+// The providers of the tests' catalogs, and the environment variables of
+// their API keys: provider-a speaks the Responses format, and provider-b
+// the Messages format.
+const (
+	providerA agent.ProviderID = "provider-a"
+	providerB agent.ProviderID = "provider-b"
+	keyEnvA                    = "PROVIDER_A_API_KEY"
+	keyEnvB                    = "PROVIDER_B_API_KEY"
 )
 
 // catalogDoc returns a catalog document, as a catalog server serves it,
-// listing claude-x for Anthropic and the models named for OpenAI.
-func catalogDoc(t *testing.T, openai ...string) []byte {
+// listing model-y for provider-b and the models named for provider-a.
+func catalogDoc(t *testing.T, modelsA ...string) []byte {
 	models := map[string]any{}
-	for _, id := range openai {
+	for _, id := range modelsA {
 		models[id] = map[string]any{"id": id, "limit": map[string]int{"context": 128000, "output": 16384}}
 	}
 	b, _ := json.Marshal(map[string]any{
-		"anthropic": map[string]any{"id": "anthropic", "models": map[string]any{
-			"claude-x": map[string]any{"id": "claude-x", "limit": map[string]int{"context": 200000, "output": 64000}},
+		string(providerB): map[string]any{"id": providerB, "format": "messages", "env": []string{keyEnvB}, "models": map[string]any{
+			"model-y": map[string]any{"id": "model-y", "limit": map[string]int{"context": 200000, "output": 64000}},
 		}},
-		"openai": map[string]any{"id": "openai", "models": models},
+		string(providerA): map[string]any{"id": providerA, "format": "responses", "env": []string{keyEnvA}, "models": models},
 	})
 	return apiCatalog(t, string(b))
 }
 
 // apiCatalog returns the catalog document of api, an api.json, as
-// gatewaytest.FromAPI builds it.
+// protocoltest.FromAPI builds it.
 func apiCatalog(t *testing.T, api string) []byte {
 	t.Helper()
-	b, err := json.Marshal(gatewaytest.FromAPI(t, api))
+	b, err := json.Marshal(protocoltest.FromAPI(t, api))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +83,7 @@ func modelIDs(listings []app.ModelListing) []string {
 // TestModelList checks that GET /model lists the catalog models of the
 // signed-in providers, or of the one the provider query names.
 func TestModelList(t *testing.T) {
-	ts, _ := newTestServerWith(t, withCatalog(t, catalogDoc(t, "gpt-x")))
+	ts, _ := newTestServerWith(t, withCatalog(t, catalogDoc(t, "model-x")))
 
 	var got []app.ModelListing
 	if status := doJSON(t, "GET", ts.URL+"/model", nil, &got); status != http.StatusOK || len(got) != 0 {
@@ -85,9 +96,9 @@ func TestModelList(t *testing.T) {
 		wantStatus int
 		want       []string
 	}{
-		{query: "", wantStatus: http.StatusOK, want: []string{"openai/gpt-x"}},
-		{query: "?provider=openai", wantStatus: http.StatusOK, want: []string{"openai/gpt-x"}},
-		{query: "?provider=anthropic", wantStatus: http.StatusOK},
+		{query: "", wantStatus: http.StatusOK, want: []string{"provider-a/model-x"}},
+		{query: "?provider=provider-a", wantStatus: http.StatusOK, want: []string{"provider-a/model-x"}},
+		{query: "?provider=provider-b", wantStatus: http.StatusOK},
 		{query: "?provider=nope", wantStatus: http.StatusNotFound},
 	}
 	for _, tt := range tests {
@@ -102,13 +113,13 @@ func TestModelList(t *testing.T) {
 // TestModelGet checks that GET /model/{provider}/{id} answers with a model's
 // catalog entry, and 404 for a model or provider it does not know.
 func TestModelGet(t *testing.T) {
-	ts, _ := newTestServerWith(t, withCatalog(t, catalogDoc(t, "gpt-x")))
+	ts, _ := newTestServerWith(t, withCatalog(t, catalogDoc(t, "model-x")))
 
 	var m agent.Listing
-	if status := doJSON(t, "GET", ts.URL+"/model/anthropic/claude-x", nil, &m); status != http.StatusOK || m.Model != "anthropic/claude-x" || m.Limit.Output != 64000 {
-		t.Errorf("GET claude-x = %d, %+v, want 200 with its 64000-token output limit", status, m)
+	if status := doJSON(t, "GET", ts.URL+"/model/provider-b/model-y", nil, &m); status != http.StatusOK || m.Model != "provider-b/model-y" || m.Limit.Output != 64000 {
+		t.Errorf("GET model-y = %d, %+v, want 200 with its 64000-token output limit", status, m)
 	}
-	for _, path := range []string{"/model/anthropic/missing", "/model/nope/x"} {
+	for _, path := range []string{"/model/provider-b/missing", "/model/nope/x"} {
 		if status := doJSON(t, "GET", ts.URL+path, nil, nil); status != http.StatusNotFound {
 			t.Errorf("GET %s = %d, want 404", path, status)
 		}
@@ -125,11 +136,11 @@ func TestModelRefresh(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.Write(catalogDoc(t, "gpt-x", "gpt-new"))
+		w.Write(catalogDoc(t, "model-x", "model-new"))
 	}))
 	defer src.Close()
 	ts, _ := newTestServerWith(t, func(cfg *config.Config) {
-		withCatalog(t, catalogDoc(t, "gpt-x"))(cfg)
+		withCatalog(t, catalogDoc(t, "model-x"))(cfg)
 		cfg.CatalogSource = src.URL
 	})
 	addKey(t, ts)
@@ -148,7 +159,7 @@ func TestModelRefresh(t *testing.T) {
 
 	var got []app.ModelListing
 	status := doJSON(t, "POST", ts.URL+"/model/refresh", nil, &got)
-	if want := []string{"openai/gpt-new", "openai/gpt-x"}; status != http.StatusOK || !slices.Equal(modelIDs(got), want) {
+	if want := []string{"provider-a/model-new", "provider-a/model-x"}; status != http.StatusOK || !slices.Equal(modelIDs(got), want) {
 		t.Errorf("POST /model/refresh = %d, %v, want 200, %v", status, modelIDs(got), want)
 	}
 	body := bufio.NewReader(events.Body)
@@ -164,8 +175,8 @@ func TestModelRefresh(t *testing.T) {
 	}
 }
 
-// anthropicReply is a streamed Anthropic reply of "Hello there".
-const anthropicReply = `event: message_start
+// messagesReply is a streamed Messages reply of "Hello there".
+const messagesReply = `event: message_start
 data: {"type":"message_start","message":{"usage":{"input_tokens":12}}}
 
 event: content_block_start
@@ -188,7 +199,7 @@ data: {"type":"message_stop"}
 
 `
 
-// newGenerateServer returns a server whose Anthropic provider is api, with
+// newGenerateServer returns a server whose provider-b is api, with
 // an API key, its app, and a function returning the bodies of the requests
 // api received.
 func newGenerateServer(t *testing.T, api http.HandlerFunc, setups ...func(*config.Config)) (*httptest.Server, *app.App, func() []map[string]any) {
@@ -205,12 +216,12 @@ func newGenerateServer(t *testing.T, api http.HandlerFunc, setups ...func(*confi
 	}))
 	t.Cleanup(stub.Close)
 	ts, a := newTestServerWith(t, func(cfg *config.Config) {
-		cfg.Provider = map[string]*config.Provider{"anthropic": {BaseURL: stub.URL}}
+		cfg.Provider = map[string]*config.Provider{string(providerB): {BaseURL: stub.URL}}
 		for _, setup := range setups {
 			setup(cfg)
 		}
 	})
-	t.Setenv("ANTHROPIC_API_KEY", "sk-test")
+	t.Setenv(keyEnvB, "sk-test")
 	return ts, a, func() []map[string]any {
 		mu.Lock()
 		defer mu.Unlock()
@@ -218,9 +229,9 @@ func newGenerateServer(t *testing.T, api http.HandlerFunc, setups ...func(*confi
 	}
 }
 
-// generateBody is a request for claude-x with a system prompt.
+// generateBody is a request for model-y with a system prompt.
 var generateBody = GenerateRequest{
-	Model:     "anthropic/claude-x",
+	Model:     "provider-b/model-y",
 	Messages:  []GenerateMessage{{Role: "system", Content: "Be brief."}, {Role: "user", Content: "hi"}},
 	MaxTokens: 100,
 }
@@ -229,16 +240,16 @@ var generateBody = GenerateRequest{
 // the model, and answers with the whole reply.
 func TestGenerate(t *testing.T) {
 	ts, _, bodies := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		io.WriteString(w, anthropicReply)
+		io.WriteString(w, messagesReply)
 	})
 
 	var got GenerateResponse
 	if status := doJSON(t, "POST", ts.URL+"/generate", generateBody, &got); status != http.StatusOK {
 		t.Fatalf("POST /generate: status %d", status)
 	}
-	if got.Model != "anthropic/claude-x" || got.Text != "Hello there" || got.StopReason != "end_turn" ||
+	if got.Model != "provider-b/model-y" || got.Text != "Hello there" || got.StopReason != "end_turn" ||
 		got.Usage.InputTokens != 12 || got.Usage.OutputTokens != 5 {
-		t.Errorf("response = %+v, want claude-x's reply Hello there, end_turn, 12 in and 5 out", got)
+		t.Errorf("response = %+v, want model-y's reply Hello there, end_turn, 12 in and 5 out", got)
 	}
 	sentBodies := bodies()
 	if len(sentBodies) != 1 {
@@ -256,7 +267,7 @@ func TestGenerate(t *testing.T) {
 // delta as it arrives, then the whole reply.
 func TestGenerateStream(t *testing.T) {
 	ts, _, _ := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		io.WriteString(w, anthropicReply)
+		io.WriteString(w, messagesReply)
 	})
 
 	body := generateBody
@@ -306,12 +317,12 @@ func TestGenerateErrors(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "not an object", body: "hi", wantStatus: http.StatusBadRequest},
-		{name: "no messages", body: GenerateRequest{Model: "anthropic/claude-x"}, wantStatus: http.StatusBadRequest},
-		{name: "unknown role", body: GenerateRequest{Model: "anthropic/claude-x", Messages: []GenerateMessage{{Role: "tool", Content: "x"}}}, wantStatus: http.StatusBadRequest},
-		{name: "negative limit", body: GenerateRequest{Model: "anthropic/claude-x", Messages: user, MaxTokens: -1}, wantStatus: http.StatusBadRequest},
+		{name: "no messages", body: GenerateRequest{Model: "provider-b/model-y"}, wantStatus: http.StatusBadRequest},
+		{name: "unknown role", body: GenerateRequest{Model: "provider-b/model-y", Messages: []GenerateMessage{{Role: "tool", Content: "x"}}}, wantStatus: http.StatusBadRequest},
+		{name: "negative limit", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: -1}, wantStatus: http.StatusBadRequest},
 		{name: "unknown provider", body: GenerateRequest{Model: "nope/x", Messages: user}, wantStatus: http.StatusNotFound},
-		{name: "no credentials", body: GenerateRequest{Model: "openai/gpt-x", Messages: user}, wantStatus: http.StatusUnauthorized},
-		{name: "refused by the model", body: GenerateRequest{Model: "anthropic/claude-x", Messages: user, MaxTokens: 10}, wantStatus: http.StatusBadGateway},
+		{name: "no credentials", body: GenerateRequest{Model: "provider-a/model-x", Messages: user}, wantStatus: http.StatusUnauthorized},
+		{name: "refused by the model", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: 10}, wantStatus: http.StatusBadGateway},
 	}
 	for _, tt := range tests {
 		if status := doJSON(t, "POST", ts.URL+"/generate", tt.body, nil); status != tt.wantStatus {
@@ -375,7 +386,7 @@ func jsonBody(t *testing.T, v any) io.Reader {
 // than a bad gateway.
 func TestModelRefreshLocalFailure(t *testing.T) {
 	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Write(catalogDoc(t, "gpt-x"))
+		w.Write(catalogDoc(t, "model-x"))
 	}))
 	defer src.Close()
 	ts, _ := newTestServerWith(t, func(cfg *config.Config) {
@@ -390,12 +401,12 @@ func TestModelRefreshLocalFailure(t *testing.T) {
 	}
 }
 
-// variantCatalog is an api.json of an Anthropic model that takes
+// variantCatalog is an api.json of a model of provider-b that takes
 // effort levels and has a fast mode.
-const variantCatalog = `{"anthropic":{"id":"anthropic","models":{"claude-v":{"id":"claude-v","reasoning":true,
+const variantCatalog = `{"provider-b":{"id":"provider-b","format":"messages","env":["PROVIDER_B_API_KEY"],"models":{"model-v":{"id":"model-v","reasoning":true,
   "limit":{"context":200000,"output":64000},
   "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}],
-  "experimental":{"modes":{"fast":{"provider":{"body":{"speed":"fast"},"headers":{"anthropic-beta":"fast-mode-2026-02-01"}}}}}}}}}`
+  "experimental":{"modes":{"fast":{"provider":{"body":{"speed":"fast"},"headers":{"provider-beta":"fast-mode-2026-02-01"}}}}}}}}}`
 
 // TestGenerateVariant checks that POST /generate runs a model variant: its
 // mode's body fields and its level's thinking and effort reach the model,
@@ -403,20 +414,20 @@ const variantCatalog = `{"anthropic":{"id":"anthropic","models":{"claude-v":{"id
 // takes.
 func TestGenerateVariant(t *testing.T) {
 	ts, _, bodies := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		io.WriteString(w, anthropicReply)
+		io.WriteString(w, messagesReply)
 	}, withCatalog(t, apiCatalog(t, variantCatalog)))
 
-	body := GenerateRequest{Model: "anthropic/claude-v:fast:high", Messages: []GenerateMessage{{Role: "user", Content: "hi"}}}
+	body := GenerateRequest{Model: "provider-b/model-v:fast:high", Messages: []GenerateMessage{{Role: "user", Content: "hi"}}}
 	var got GenerateResponse
 	if status := doJSON(t, "POST", ts.URL+"/generate", body, &got); status != http.StatusOK {
 		t.Fatalf("POST /generate: status %d", status)
 	}
-	if got.Model != "anthropic/claude-v:fast:high" {
-		t.Errorf("model = %q, want anthropic/claude-v:fast:high", got.Model)
+	if got.Model != "provider-b/model-v:fast:high" {
+		t.Errorf("model = %q, want provider-b/model-v:fast:high", got.Model)
 	}
 	sent := bodies()[0]
-	if sent["model"] != "claude-v" || sent["speed"] != "fast" {
-		t.Errorf("model request = %v, want claude-v at speed fast", sent)
+	if sent["model"] != "model-v" || sent["speed"] != "fast" {
+		t.Errorf("model request = %v, want model-v at speed fast", sent)
 	}
 	thinking, _ := sent["thinking"].(map[string]any)
 	effort, _ := sent["output_config"].(map[string]any)
@@ -425,11 +436,11 @@ func TestGenerateVariant(t *testing.T) {
 	}
 
 	var listings []app.ModelListing
-	if status := doJSON(t, "GET", ts.URL+"/model?provider=anthropic", nil, &listings); status != http.StatusOK || len(listings) != 1 {
+	if status := doJSON(t, "GET", ts.URL+"/model?provider=provider-b", nil, &listings); status != http.StatusOK || len(listings) != 1 {
 		t.Fatalf("GET /model = %d, %+v, want one listing", status, listings)
 	}
 	want := []agent.ReasoningEffort{"low", "medium", "high", "xhigh", "max"}
-	if got := listings[0].ReasoningEfforts["anthropic/claude-v"]; !slices.Equal(got, want) {
-		t.Errorf("reasoning efforts of claude-v = %v, want %v", got, want)
+	if got := listings[0].ReasoningEfforts["provider-b/model-v"]; !slices.Equal(got, want) {
+		t.Errorf("reasoning efforts of model-v = %v, want %v", got, want)
 	}
 }

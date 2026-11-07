@@ -2,7 +2,7 @@
 |                                                            |
 |  Usage [ctrl+u pin]                                        |
 |                                                            |
-|  gpt-6-luna medium context 64K 7% in 120K out 8.4K cache…  |
+|  model-h medium context 64K 7% in 120K out 8.4K cache 31…  |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -18,7 +18,7 @@
 |                                                            |
 |  AAAAA BBBBBBB BBBB                                        |
 |                                                            |
-|  AAAAAAAAAA AAAAAA BBBBBBB AAA AA BB AAAA BBB AAAA BBBBBA  |
+|  AAAAAAA AAAAAA BBBBBBB AAA AA BB AAAA BBB AAAA BBBBB AAA  |
 |                                                            |
 |                                                            |
 |                                                            |

@@ -9,14 +9,12 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
-	"github.com/unaquatic/flow/extension/protocol/login/claude"
 	"github.com/unaquatic/fluid/input"
 )
 
 // The tests take the levels and variants of the models from testCatalog:
-// gpt-5.6 takes none through max and has a fast tier and a pro mode, and
-// gpt-5 takes minimal through high.
+// model-a takes none through max and has a fast tier and a pro mode, and
+// model-c takes minimal through high.
 
 // toasts returns the texts of the notices that out adds.
 func toasts(out []UIEvent) []string {
@@ -29,13 +27,13 @@ func toasts(out []UIEvent) []string {
 	return texts
 }
 
-// openModelMenu opens the model menu of s on a listing of gpt-5, gpt-5.6
+// openModelMenu opens the model menu of s on a listing of model-c, model-a
 // with fast and pro modes, and model, which takes no levels, and returns
 // the banner it shows.
 func openModelMenu(t *testing.T, s *Service) EventBannerShow {
 	t.Helper()
 	s.OpenBanner(ModelBanner)
-	return bannerShown(t, s.ModelsListed([]app.ModelListing{listing(s.app.Models().Catalog(), chatgpt.ProviderID, "gpt-5", "gpt-5.6", "gpt-5.6-pro", "model")}))
+	return bannerShown(t, s.ModelsListed([]app.ModelListing{listing(s.app.Models().Catalog(), providerA, "model-c", "model-a", "model-a-pro", "model")}))
 }
 
 // TestModelMenuEffortPage checks that choosing a model that takes levels
@@ -62,23 +60,23 @@ func TestModelMenuEffortPage(t *testing.T) {
 			t.Errorf("row %d %q marked default %v, want only medium marked", i, item.Name, marked)
 		}
 	}
-	if s.state.Model != "openai/model" {
-		t.Errorf("model = %q before a level is chosen, want openai/model as it was", s.state.Model)
+	if s.state.Model != "provider-a/model" {
+		t.Errorf("model = %q before a level is chosen, want provider-a/model as it was", s.state.Model)
 	}
 
 	out := s.HandleBannerSelect(3)
-	if s.state.Model != "openai/gpt-5.6:fast:high" || s.state.Banner != NoBanner {
-		t.Errorf("after choosing high: model %q, banner %v, want openai/gpt-5.6:fast:high and the menu closed", s.state.Model, s.state.Banner)
+	if s.state.Model != "provider-a/model-a:fast:high" || s.state.Banner != NoBanner {
+		t.Errorf("after choosing high: model %q, banner %v, want provider-a/model-a:fast:high and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to openai/gpt-5.6:fast:high"}) {
-		t.Errorf("notices = %q, want Switched to openai/gpt-5.6:fast:high", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-a:fast:high"}) {
+		t.Errorf("notices = %q, want Switched to provider-a/model-a:fast:high", got)
 	}
 
 	// The next model's page selects the chosen level, as near as it takes it.
 	openModelMenu(t, s)
 	page = bannerShown(t, s.HandleBannerSelect(0))
 	if got := bannerNames(page); page.SelectedIdx >= len(got) || got[page.SelectedIdx] != "High" {
-		t.Errorf("gpt-5 page selects %d of %q, want high", page.SelectedIdx, got)
+		t.Errorf("model-c page selects %d of %q, want high", page.SelectedIdx, got)
 	}
 }
 
@@ -86,15 +84,15 @@ func TestModelMenuEffortPage(t *testing.T) {
 // levels switches to it at once.
 func TestModelMenuWithoutEfforts(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("openai/gpt-5.6:high")
+	s.SelectModel("provider-a/model-a:high")
 	openModelMenu(t, s)
 
 	out := s.HandleBannerSelect(4)
-	if s.state.Model != "openai/model" || s.state.Banner != NoBanner {
-		t.Errorf("model %q, banner %v, want openai/model and the menu closed", s.state.Model, s.state.Banner)
+	if s.state.Model != "provider-a/model" || s.state.Banner != NoBanner {
+		t.Errorf("model %q, banner %v, want provider-a/model and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to openai/model"}) {
-		t.Errorf("notices = %q, want Switched to openai/model", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model"}) {
+		t.Errorf("notices = %q, want Switched to provider-a/model", got)
 	}
 }
 
@@ -104,7 +102,7 @@ func TestModelMenuWithoutEfforts(t *testing.T) {
 // so.
 func TestEffortCommand(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("openai/gpt-5.6:fast:xhigh")
+	s.SelectModel("provider-a/model-a:fast:xhigh")
 
 	page := bannerShown(t, s.HandleSubmit("/effort"))
 	if page.Title != "Reasoning effort" {
@@ -119,11 +117,11 @@ func TestEffortCommand(t *testing.T) {
 	}
 
 	out := s.HandleBannerSelect(1)
-	if s.state.Model != "openai/gpt-5.6:fast:low" || s.state.Banner != NoBanner {
-		t.Errorf("after choosing low: model %q, banner %v, want openai/gpt-5.6:fast:low and the menu closed", s.state.Model, s.state.Banner)
+	if s.state.Model != "provider-a/model-a:fast:low" || s.state.Banner != NoBanner {
+		t.Errorf("after choosing low: model %q, banner %v, want provider-a/model-a:fast:low and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to openai/gpt-5.6:fast:low"}) {
-		t.Errorf("notices = %q, want Switched to openai/gpt-5.6:fast:low", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-a:fast:low"}) {
+		t.Errorf("notices = %q, want Switched to provider-a/model-a:fast:low", got)
 	}
 }
 
@@ -132,11 +130,11 @@ func TestEffortCommand(t *testing.T) {
 func TestEffortCommandWithoutEfforts(t *testing.T) {
 	s, _ := newTestService(t)
 	out := s.HandleSubmit("/effort")
-	if got := toasts(out); !slices.Equal(got, []string{"Selected model openai/model has no reasoning efforts."}) {
-		t.Errorf("notices = %q, want that openai/model has no reasoning efforts", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Selected model provider-a/model has no reasoning efforts."}) {
+		t.Errorf("notices = %q, want that provider-a/model has no reasoning efforts", got)
 	}
-	if s.state.Banner != NoBanner || s.state.Model != "openai/model" {
-		t.Errorf("banner %v, model %q, want no banner and openai/model", s.state.Banner, s.state.Model)
+	if s.state.Banner != NoBanner || s.state.Model != "provider-a/model" {
+		t.Errorf("banner %v, model %q, want no banner and provider-a/model", s.state.Banner, s.state.Model)
 	}
 }
 
@@ -146,7 +144,7 @@ func TestModelNoticesMarkTheModel(t *testing.T) {
 	s, _ := newTestService(t)
 	for name, out := range map[string][]UIEvent{
 		"no efforts": s.noEffort(),
-		"switched":   s.SelectModel("openai/model"),
+		"switched":   s.SelectModel("provider-a/model"),
 	} {
 		var marked []string
 		for _, ev := range out {
@@ -160,7 +158,7 @@ func TestModelNoticesMarkTheModel(t *testing.T) {
 				}
 			}
 		}
-		if !slices.Equal(marked, []string{"openai/model"}) {
+		if !slices.Equal(marked, []string{"provider-a/model"}) {
 			t.Errorf("%s: text in the primary color = %q, want the model alone", name, marked)
 		}
 	}
@@ -171,11 +169,11 @@ func TestModelNoticesMarkTheModel(t *testing.T) {
 func TestCycleWithoutEfforts(t *testing.T) {
 	s, _ := newTestService(t)
 	out := s.CycleEffort()
-	if got := toasts(out); !slices.Equal(got, []string{"Selected model openai/model has no reasoning efforts."}) {
-		t.Errorf("notices = %q, want that openai/model has no reasoning efforts", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Selected model provider-a/model has no reasoning efforts."}) {
+		t.Errorf("notices = %q, want that provider-a/model has no reasoning efforts", got)
 	}
-	if s.state.Model != "openai/model" {
-		t.Errorf("model = %q, want openai/model", s.state.Model)
+	if s.state.Model != "provider-a/model" {
+		t.Errorf("model = %q, want provider-a/model", s.state.Model)
 	}
 }
 
@@ -184,9 +182,9 @@ func TestCycleWithoutEfforts(t *testing.T) {
 // without a notice.
 func TestCycleEffort(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("openai/gpt-5.6:fast")
-	if s.state.Model != "openai/gpt-5.6:fast:medium" {
-		t.Fatalf("model = %q, want openai/gpt-5.6:fast:medium, the default level", s.state.Model)
+	s.SelectModel("provider-a/model-a:fast")
+	if s.state.Model != "provider-a/model-a:fast:medium" {
+		t.Fatalf("model = %q, want provider-a/model-a:fast:medium, the default level", s.state.Model)
 	}
 
 	var got []string
@@ -201,9 +199,9 @@ func TestCycleEffort(t *testing.T) {
 		got = append(got, s.state.Model)
 	}
 	want := []string{
-		"openai/gpt-5.6:fast:high", "openai/gpt-5.6:fast:xhigh", "openai/gpt-5.6:fast:max",
-		"openai/gpt-5.6:fast:none", "openai/gpt-5.6:fast:low", "openai/gpt-5.6:fast:medium",
-		"openai/gpt-5.6:fast:high", "openai/gpt-5.6:fast:xhigh",
+		"provider-a/model-a:fast:high", "provider-a/model-a:fast:xhigh", "provider-a/model-a:fast:max",
+		"provider-a/model-a:fast:none", "provider-a/model-a:fast:low", "provider-a/model-a:fast:medium",
+		"provider-a/model-a:fast:high", "provider-a/model-a:fast:xhigh",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("cycle = %q\nwant    %q", got, want)
@@ -216,13 +214,13 @@ func TestCycleEffort(t *testing.T) {
 func TestSelectModelKeepsEffort(t *testing.T) {
 	s, _ := newTestService(t)
 	steps := []struct{ selected, want string }{
-		{"openai/gpt-5.6:max", "openai/gpt-5.6:max"},
-		{"openai/gpt-5", "openai/gpt-5:medium"},
-		{"openai/gpt-5.6-pro", "openai/gpt-5.6-pro:max"},
-		{"openai/model", "openai/model"},
-		{"openai/gpt-5.6", "openai/gpt-5.6:max"},
-		{"openai/gpt-5:low", "openai/gpt-5:low"},
-		{"openai/gpt-5.6", "openai/gpt-5.6:low"},
+		{"provider-a/model-a:max", "provider-a/model-a:max"},
+		{"provider-a/model-c", "provider-a/model-c:medium"},
+		{"provider-a/model-a-pro", "provider-a/model-a-pro:max"},
+		{"provider-a/model", "provider-a/model"},
+		{"provider-a/model-a", "provider-a/model-a:max"},
+		{"provider-a/model-c:low", "provider-a/model-c:low"},
+		{"provider-a/model-a", "provider-a/model-a:low"},
 	}
 	for _, step := range steps {
 		out := s.SelectModel(step.selected)
@@ -240,14 +238,14 @@ func TestSelectModelKeepsEffort(t *testing.T) {
 // its level.
 func TestModelMenuListsModes(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("openai/gpt-5.6:fast:high")
+	s.SelectModel("provider-a/model-a:fast:high")
 	show := openModelMenu(t, s)
-	want := []string{"gpt-5 [openai]", "gpt-5.6 [openai]", "gpt-5.6:fast [openai]", "gpt-5.6-pro [openai]", "model [openai]"}
+	want := []string{"model-c [provider-a]", "model-a [provider-a]", "model-a:fast [provider-a]", "model-a-pro [provider-a]", "model [provider-a]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
 	if show.SelectedIdx != 2 {
-		t.Errorf("menu selects %d, want openai/gpt-5.6:fast at 2", show.SelectedIdx)
+		t.Errorf("menu selects %d, want provider-a/model-a:fast at 2", show.SelectedIdx)
 	}
 }
 
@@ -270,11 +268,11 @@ func storeVariantMessage(t *testing.T, a *app.App, id message.SessionID, v agent
 // model variant it last ran, unless the command line chose the terminal's
 // model for the first session.
 func TestResumeRestoresModel(t *testing.T) {
-	ran := agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5.6", Option: "fast", Effort: "high"}
+	ran := agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}
 	t.Run("resume", func(t *testing.T) {
 		s, a := newTestService(t)
 		id := message.NewSessionID()
-		storeVariantMessage(t, a, id, agent.Variant{Provider: chatgpt.ProviderID, Model: "openai/gpt-5"})
+		storeVariantMessage(t, a, id, agent.Variant{Provider: providerA, Model: "provider-a/model-c"})
 		storeVariantMessage(t, a, id, ran)
 		s.NewSession()
 		s.HandleSessionSelect(id)
@@ -297,8 +295,8 @@ func TestResumeRestoresModel(t *testing.T) {
 		storeVariantMessage(t, a, id, ran)
 		s.state.KeepModel = true
 		s.InitSession(t.Context(), id)
-		if s.state.Model != "openai/model" {
-			t.Errorf("model = %q, want openai/model as the command line chose", s.state.Model)
+		if s.state.Model != "provider-a/model" {
+			t.Errorf("model = %q, want provider-a/model as the command line chose", s.state.Model)
 		}
 	})
 }
@@ -308,16 +306,16 @@ func TestResumeRestoresModel(t *testing.T) {
 // named a mode before.
 func TestSessionUsagePricesModes(t *testing.T) {
 	s, a := newTestService(t)
-	base, okBase := a.Models().Catalog().Resolve("openai", "openai/gpt-5.6")
-	fast, okFast := a.Models().Catalog().Resolve("openai", "openai/gpt-5.6:fast")
+	base, okBase := a.Models().Catalog().Resolve("provider-a", "provider-a/model-a")
+	fast, okFast := a.Models().Catalog().Resolve("provider-a", "provider-a/model-a:fast")
 	if !okBase || !okFast || base.Price == nil || fast.Price == nil || fast.Price.Input == base.Price.Input {
-		t.Fatal("the catalog lists no fast price for openai/gpt-5.6")
+		t.Fatal("the catalog lists no fast price for provider-a/model-a")
 	}
 	u := message.Usage{InputTokens: 10_000, OutputTokens: 1_000, TotalTokens: 11_000}
 	s.state.Messages = []ChatMessage{
-		{ID: "a1", Role: message.RoleAgent, Model: "openai/gpt-5.6", Usage: u},
-		{ID: "a2", Role: message.RoleAgent, Model: "openai/gpt-5.6:fast:high", Usage: u},
-		{ID: "a3", Role: message.RoleAgent, Model: "openai/gpt-5.6:fast:high", Usage: u},
+		{ID: "a1", Role: message.RoleAgent, Model: "provider-a/model-a", Usage: u},
+		{ID: "a2", Role: message.RoleAgent, Model: "provider-a/model-a:fast:high", Usage: u},
+		{ID: "a3", Role: message.RoleAgent, Model: "provider-a/model-a:fast:high", Usage: u},
 	}
 	got := s.SessionUsage().Cost
 	want := base.Price.At(10_000).Charge(10_000, 0, 0, 1_000) + 2*fast.Price.At(10_000).Charge(10_000, 0, 0, 1_000)
@@ -331,41 +329,41 @@ func TestSessionUsagePricesModes(t *testing.T) {
 // to the input.
 func TestShiftTabCyclesEffort(t *testing.T) {
 	ui := newInputTestUI(t)
-	ui.Apply(ui.service.SelectModel("openai/gpt-5.6"))
+	ui.Apply(ui.service.SelectModel("provider-a/model-a"))
 
 	tab := &input.KeyEvent{Name: input.KeyTab}
 	ui.HandleKey(tab)
-	if tab.DefaultPrevented() || ui.service.state.Model != "openai/gpt-5.6:medium" {
+	if tab.DefaultPrevented() || ui.service.state.Model != "provider-a/model-a:medium" {
 		t.Errorf("Tab: prevented %v, model %q, want the key passed on and the model as it was", tab.DefaultPrevented(), ui.service.state.Model)
 	}
 
 	shiftTab := &input.KeyEvent{Name: input.KeyTab, Mods: input.ModShift}
 	ui.HandleKey(shiftTab)
-	if !shiftTab.DefaultPrevented() || ui.service.state.Model != "openai/gpt-5.6:high" {
-		t.Errorf("Shift+Tab: prevented %v, model %q, want the key kept and openai/gpt-5.6:high", shiftTab.DefaultPrevented(), ui.service.state.Model)
+	if !shiftTab.DefaultPrevented() || ui.service.state.Model != "provider-a/model-a:high" {
+		t.Errorf("Shift+Tab: prevented %v, model %q, want the key kept and provider-a/model-a:high", shiftTab.DefaultPrevented(), ui.service.state.Model)
 	}
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	if got := ui.slashStatus.PlainText(); !strings.HasPrefix(got, "gpt-5.6 high context ") {
-		t.Errorf("status row = %q, want it to name gpt-5.6 high first", got)
+	if got := ui.slashStatus.PlainText(); !strings.HasPrefix(got, "model-a high context ") {
+		t.Errorf("status row = %q, want it to name model-a high first", got)
 	}
 }
 
 // TestStartsAtDefaultEffort checks that the terminal's starting model runs
-// at its default level when it names none, the catalog's, as Claude Opus
-// 4.8's high, or else medium, where the catalog lists it for the model, and
+// at its default level when it names none, the catalog's, as model-f's
+// high, or else medium, where the catalog lists it for the model, and
 // keeps a level it names.
 func TestStartsAtDefaultEffort(t *testing.T) {
 	_, a := newTestService(t)
 	tests := []struct{ start, want string }{
-		{"openai/gpt-5.6", "openai/gpt-5.6:medium"},
-		{"openai/gpt-5.6:xhigh", "openai/gpt-5.6:xhigh"},
-		// gpt-5-pro lists high alone, not the default.
-		{"openai/gpt-5-pro", "openai/gpt-5-pro"},
+		{"provider-a/model-a", "provider-a/model-a:medium"},
+		{"provider-a/model-a:xhigh", "provider-a/model-a:xhigh"},
+		// model-c-pro lists high alone, not the default.
+		{"provider-a/model-c-pro", "provider-a/model-c-pro"},
 		// A model that takes no levels names none.
-		{"openai/model", "openai/model"},
-		// The catalog gives Opus 4.8 high; Haiku 4.5 lists no levels.
-		{"anthropic/claude-opus-4-8", "anthropic/claude-opus-4-8:high"},
-		{"anthropic/claude-haiku-4-5", "anthropic/claude-haiku-4-5"},
+		{"provider-a/model", "provider-a/model"},
+		// The catalog gives model-f high; model-e lists no levels.
+		{"provider-b/model-f", "provider-b/model-f:high"},
+		{"provider-b/model-e", "provider-b/model-e"},
 	}
 	for _, tt := range tests {
 		state := &UIState{Model: tt.start}
@@ -377,10 +375,10 @@ func TestStartsAtDefaultEffort(t *testing.T) {
 }
 
 // TestEffortPageMarksTheDefault checks that the effort page marks the
-// model's default: the catalog's high for Claude Opus 4.8.
+// model's default: the catalog's high for model-f.
 func TestEffortPageMarksTheDefault(t *testing.T) {
 	s, _ := newTestService(t)
-	page := bannerShown(t, s.ShowEffortMenu(agent.Variant{Provider: claude.ProviderID, Model: "claude-opus-4-8"}))
+	page := bannerShown(t, s.ShowEffortMenu(agent.Variant{Provider: providerB, Model: "model-f"}))
 	for _, item := range page.Items {
 		if marked := item.Hint == DefaultHint; marked != (item.Name == "High") {
 			t.Errorf("row %q marked default %v, want only high marked", item.Name, marked)

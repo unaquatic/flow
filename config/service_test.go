@@ -16,13 +16,13 @@ func TestServiceGetReadsTheFileEachTime(t *testing.T) {
 		t.Fatalf("Get without a file = %q, %v, want the default model", cfg.Model, err)
 	}
 
-	write(t, dir, `{"model":"openai/gpt-x"}`)
-	if cfg, err := s.Get(); err != nil || cfg.Model != "openai/gpt-x" {
-		t.Errorf("Get after a write = %q, %v, want openai/gpt-x", cfg.Model, err)
+	write(t, dir, `{"model":"provider-a/model-a"}`)
+	if cfg, err := s.Get(); err != nil || cfg.Model != "provider-a/model-a" {
+		t.Errorf("Get after a write = %q, %v, want provider-a/model-a", cfg.Model, err)
 	}
-	write(t, dir, `{"model":"anthropic/claude-x"}`)
-	if cfg, err := s.Get(); err != nil || cfg.Model != "anthropic/claude-x" {
-		t.Errorf("Get after a rewrite = %q, %v, want anthropic/claude-x", cfg.Model, err)
+	write(t, dir, `{"model":"provider-b/model-b"}`)
+	if cfg, err := s.Get(); err != nil || cfg.Model != "provider-b/model-b" {
+		t.Errorf("Get after a rewrite = %q, %v, want provider-b/model-b", cfg.Model, err)
 	}
 }
 
@@ -31,15 +31,15 @@ func TestServiceGetReadsTheFileEachTime(t *testing.T) {
 func TestServiceGetReadsEverySetting(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEBUG", "")
-	write(t, dir, `{"model":"openai/gpt-x","log_level":"warn","extensions":{"snapshot":{"enabled":false}},"catalog_source":"http://catalog.test",
-		"provider":{"anthropic":{"base_url":"http://anthropic.test"}},"agent":{"retry_max_attempts":2,"retry_delay":"1s"},
+	write(t, dir, `{"model":"provider-a/model-a","log_level":"warn","extensions":{"snapshot":{"enabled":false}},"catalog_source":"http://catalog.test",
+		"provider":{"provider-b":{"base_url":"http://provider-b.test"}},"agent":{"retry_max_attempts":2,"retry_delay":"1s"},
 		"debug":true,"terminal":{"fullscreen":true,"key_hints":"footer","tool_marker":true}}`)
 	cfg, err := NewService(dir).Get()
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	if cfg.Model != "openai/gpt-x" || cfg.LogLevel != LogWarn || string(cfg.Extensions["snapshot"]) != `{"enabled":false}` || cfg.CatalogSource != "http://catalog.test" ||
-		cfg.Provider["anthropic"].BaseURL != "http://anthropic.test" || cfg.Agent.RetryMaxAttempts != 2 || cfg.Agent.RetryDelay.Seconds() != 1 ||
+	if cfg.Model != "provider-a/model-a" || cfg.LogLevel != LogWarn || string(cfg.Extensions["snapshot"]) != `{"enabled":false}` || cfg.CatalogSource != "http://catalog.test" ||
+		cfg.Provider["provider-b"].BaseURL != "http://provider-b.test" || cfg.Agent.RetryMaxAttempts != 2 || cfg.Agent.RetryDelay.Seconds() != 1 ||
 		!cfg.Debug || !cfg.Terminal.Fullscreen || cfg.Terminal.KeyHints != "footer" || !cfg.Terminal.ToolMarker {
 		t.Errorf("config = %+v, want every setting of the file", cfg)
 	}
@@ -61,19 +61,19 @@ func TestServiceGetUnreadableFile(t *testing.T) {
 func TestServiceSaveModel(t *testing.T) {
 	dir := t.TempDir()
 	s := NewService(dir)
-	if err := s.SaveModel("openai/gpt-x"); err != nil {
+	if err := s.SaveModel("provider-a/model-a"); err != nil {
 		t.Fatalf("SaveModel without a file: %v", err)
 	}
-	if cfg, err := s.Get(); err != nil || cfg.Model != "openai/gpt-x" {
-		t.Errorf("model = %q, %v, want openai/gpt-x", cfg.Model, err)
+	if cfg, err := s.Get(); err != nil || cfg.Model != "provider-a/model-a" {
+		t.Errorf("model = %q, %v, want provider-a/model-a", cfg.Model, err)
 	}
 
-	write(t, dir, `{"log_level":"debug","model":"openai/gpt-x"}`)
-	if err := s.SaveModel("anthropic/claude-x"); err != nil {
+	write(t, dir, `{"log_level":"debug","model":"provider-a/model-a"}`)
+	if err := s.SaveModel("provider-b/model-b"); err != nil {
 		t.Fatalf("SaveModel: %v", err)
 	}
 	cfg, err := s.Get()
-	if err != nil || cfg.Model != "anthropic/claude-x" || cfg.LogLevel != LogDebug {
+	if err != nil || cfg.Model != "provider-b/model-b" || cfg.LogLevel != LogDebug {
 		t.Errorf("config = model %q, log level %q, %v, want the saved model and the kept log level", cfg.Model, cfg.LogLevel, err)
 	}
 	if got, want := names(t, dir), []string{FileName, FileName + ".lock"}; !slices.Equal(got, want) {
@@ -87,7 +87,7 @@ func TestServiceSaveModel(t *testing.T) {
 func TestServiceSaveTerminalAndDebug(t *testing.T) {
 	t.Setenv("DEBUG", "")
 	dir := t.TempDir()
-	write(t, dir, `{"model":"openai/gpt-x","terminal":{"selection":"arrow"}}`)
+	write(t, dir, `{"model":"provider-a/model-a","terminal":{"selection":"arrow"}}`)
 	s := NewService(dir)
 	if err := s.SaveTerminal(Terminal{Fullscreen: true, CacheUsage: "per_turn", ToolMarker: true}); err != nil {
 		t.Fatalf("SaveTerminal: %v", err)
@@ -100,7 +100,7 @@ func TestServiceSaveTerminalAndDebug(t *testing.T) {
 		t.Fatalf("Get: %v", err)
 	}
 	term := cfg.Terminal
-	if cfg.Model != "openai/gpt-x" || !cfg.Debug || !term.Fullscreen || term.CacheUsage != "per_turn" ||
+	if cfg.Model != "provider-a/model-a" || !cfg.Debug || !term.Fullscreen || term.CacheUsage != "per_turn" ||
 		!term.ToolMarker || term.Selection != "" {
 		t.Errorf("config = model %q, debug %v, terminal %+v; want the model kept, debug on, and the saved terminal settings alone",
 			cfg.Model, cfg.Debug, term)
@@ -156,7 +156,7 @@ func TestServiceSaveModelKeepsPermissions(t *testing.T) {
 	s := NewService(dir)
 	path := filepath.Join(dir, FileName)
 
-	if err := s.SaveModel("openai/gpt-x"); err != nil {
+	if err := s.SaveModel("provider-a/model-a"); err != nil {
 		t.Fatal(err)
 	}
 	if mode := perm(t, path); mode != 0o600 {
@@ -167,7 +167,7 @@ func TestServiceSaveModelKeepsPermissions(t *testing.T) {
 		if err := os.Chmod(path, mode); err != nil {
 			t.Fatal(err)
 		}
-		if err := s.SaveModel("anthropic/claude-x"); err != nil {
+		if err := s.SaveModel("provider-b/model-b"); err != nil {
 			t.Fatal(err)
 		}
 		if got := perm(t, path); got != mode {
@@ -195,15 +195,15 @@ func TestServiceSaveModelThroughSymlink(t *testing.T) {
 			}
 
 			s := NewService(dir)
-			if err := s.SaveModel("openai/gpt-x"); err != nil {
+			if err := s.SaveModel("provider-a/model-a"); err != nil {
 				t.Fatal(err)
 			}
 			if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
 				t.Fatalf("config file after SaveModel is not the link: %v, %v", info, err)
 			}
 			cfg, err := s.Get()
-			if err != nil || cfg.Model != "openai/gpt-x" {
-				t.Errorf("model read through the link = %q, %v, want openai/gpt-x", cfg.Model, err)
+			if err != nil || cfg.Model != "provider-a/model-a" {
+				t.Errorf("model read through the link = %q, %v, want provider-a/model-a", cfg.Model, err)
 			}
 			if existing && cfg.LogLevel != LogDebug {
 				t.Errorf("log level = %q, want the target's kept", cfg.LogLevel)

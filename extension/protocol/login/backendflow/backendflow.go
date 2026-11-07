@@ -1,7 +1,8 @@
-// Package chatgpt logs in to OpenAI with ChatGPT sign-in, and says where the
-// requests that its tokens authorize go: OpenAI Responses requests, which
-// package responses sends, to the ChatGPT backend at BaseURL.
-package chatgpt
+// Package backendflow logs in to the provider ProviderID names with its
+// browser and device sign-in, and says where the requests that its tokens
+// authorize go: Responses requests, which package responses sends, to the
+// provider's backend at BaseURL rather than its platform API.
+package backendflow
 
 import (
 	"bytes"
@@ -20,12 +21,12 @@ import (
 	"github.com/unaquatic/flow/product"
 )
 
-// ProviderID identifies OpenAI in the catalog: the provider whose
-// accounts a ChatGPT login signs in to.
+// ProviderID identifies, by its catalog ID, the provider whose accounts
+// this login signs in to.
 const ProviderID agent.ProviderID = "openai"
 
-// BaseURL is the base URL of the ChatGPT backend's Responses API, which a
-// ChatGPT login's requests reach instead of OpenAI's platform API.
+// BaseURL is the base URL of the backend's Responses API, which this
+// login's requests reach instead of the provider's platform API.
 const BaseURL = "https://chatgpt.com/backend-api/codex"
 
 const (
@@ -41,7 +42,7 @@ var userAgent = product.Name + "/" + product.Version()
 // deviceLoginTimeout bounds how long a device login waits for approval.
 const deviceLoginTimeout = 15 * time.Minute
 
-// OAuth implements agent.LoginFlow for ChatGPT sign-in.
+// OAuth implements agent.LoginFlow for the provider's sign-in.
 type OAuth struct {
 	// ClientID identifies the OAuth client.
 	ClientID string
@@ -55,7 +56,7 @@ type OAuth struct {
 	Client *http.Client
 }
 
-// NewOAuth returns an OAuth using OpenAI's endpoints.
+// NewOAuth returns an OAuth using the provider's endpoints.
 func NewOAuth() *OAuth {
 	return &OAuth{
 		ClientID:     clientID,

@@ -17,25 +17,25 @@ func TestResponseErrorError(t *testing.T) {
 	}{
 		{
 			name: "no body",
-			err:  &ResponseError{Provider: "anthropic", StatusCode: 0, Message: "Overloaded"},
-			want: "anthropic response error (0): Overloaded",
+			err:  &ResponseError{Provider: "provider-b", StatusCode: 0, Message: "Overloaded"},
+			want: "provider-b response error (0): Overloaded",
 		},
 		{
 			name: "json body",
-			err: &ResponseError{Provider: "anthropic", StatusCode: 429, Message: "rate_limit_error",
+			err: &ResponseError{Provider: "provider-b", StatusCode: 429, Message: "rate_limit_error",
 				ResponseBody: "{\n  \"type\": \"error\",\n  \"error\": {\"type\": \"rate_limit_error\", \"message\": \"Error\"},\n  \"request_id\": \"req_1\"\n}\n"},
-			want: `anthropic response error (429): {"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_1"}`,
+			want: `provider-b response error (429): {"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_1"}`,
 		},
 		{
 			name: "html body",
-			err: &ResponseError{Provider: "openai", StatusCode: 502, Message: "Bad Gateway",
+			err: &ResponseError{Provider: "provider-a", StatusCode: 502, Message: "Bad Gateway",
 				ResponseBody: "<html>\n  <body>\n\t<h1>502 Bad Gateway</h1>\n  </body>\n</html>\n"},
-			want: "openai response error (502): <html> <body> <h1>502 Bad Gateway</h1> </body> </html>",
+			want: "provider-a response error (502): <html> <body> <h1>502 Bad Gateway</h1> </body> </html>",
 		},
 		{
 			name: "long body",
-			err:  &ResponseError{Provider: "openai", StatusCode: 500, ResponseBody: long},
-			want: "openai response error (500): " + long[:MaxErrorBody] + "…",
+			err:  &ResponseError{Provider: "provider-a", StatusCode: 500, ResponseBody: long},
+			want: "provider-a response error (500): " + long[:MaxErrorBody] + "…",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

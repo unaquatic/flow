@@ -1,7 +1,7 @@
-// Package completions speaks OpenAI Chat Completions, the request format
-// that most of the catalog's providers take: OpenAI's, and every API that
-// takes OpenAI's chat requests at its own base URL, such as OpenRouter's or
-// Vertex AI's OpenAI-compatible endpoint.
+// Package completions speaks the Chat Completions request format, which
+// most of the catalog's providers take: the format's own platform API at
+// DefaultBaseURL, and every API that takes its chat requests at its own
+// base URL, such as a gateway's or a cloud's compatible endpoint.
 package completions
 
 import (
@@ -20,12 +20,12 @@ import (
 	"github.com/unaquatic/flow/sse"
 )
 
-// DefaultBaseURL is the base URL of OpenAI's platform API.
+// DefaultBaseURL is the base URL of the format's own platform API.
 const DefaultBaseURL = "https://api.openai.com/v1"
 
 // Client implements agent.Provider for an API that takes Chat Completions
 // requests at its base URL. Every credential, an API key or another
-// provider's OAuth token, such as Vertex AI's Google token, goes to that API.
+// provider's OAuth token, such as a cloud's access token, goes to that API.
 type Client struct {
 	name       string
 	auth       agent.Authorizer
@@ -36,12 +36,12 @@ type Client struct {
 
 // Init configures a Client.
 type Init struct {
-	// Name is the provider's catalog ID, such as "openrouter".
+	// Name is the provider's catalog ID, such as "provider-a".
 	Name string
 	// Auth resolves the credential of every request.
 	Auth agent.Authorizer
 	// Key says how an API key goes with a request: as a bearer token, or
-	// in the header it names, such as Azure's api-key.
+	// in the header it names, such as api-key.
 	Key gateway.Auth
 	// BaseURL is the base URL that "/chat/completions" follows. Empty is
 	// DefaultBaseURL.
@@ -64,7 +64,7 @@ func New(init Init) *Client {
 // Name returns the provider's catalog ID.
 func (c *Client) Name() string { return c.name }
 
-// Message is an OpenAI Chat Completions message.
+// Message is a Chat Completions message.
 type Message struct {
 	// Role identifies the message sender.
 	Role string `json:"role"`
@@ -87,7 +87,7 @@ func Role(r message.Role) string {
 	}
 }
 
-// ContentPart is one OpenAI multimodal input part.
+// ContentPart is one multimodal input part.
 type ContentPart struct {
 	// Type selects the content representation.
 	Type string `json:"type"`
@@ -99,13 +99,13 @@ type ContentPart struct {
 	InputAudio *Audio `json:"input_audio,omitempty"`
 }
 
-// ImageURL is an image reference in an OpenAI content part.
+// ImageURL is an image reference in a content part.
 type ImageURL struct {
 	// URL is a remote URL or data URL.
 	URL string `json:"url"`
 }
 
-// Audio is an audio input in an OpenAI content part.
+// Audio is an audio input in a content part.
 type Audio struct {
 	// Data contains base64 audio.
 	Data string `json:"data"`
@@ -113,7 +113,7 @@ type Audio struct {
 	Format string `json:"format"`
 }
 
-// ToolCall is a tool request of an OpenAI agent message.
+// ToolCall is a tool request of an agent message.
 type ToolCall struct {
 	// ID identifies the tool call.
 	ID string `json:"id"`
@@ -123,7 +123,7 @@ type ToolCall struct {
 	Function ToolFunction `json:"function"`
 }
 
-// ToolFunction describes the function being called in an OpenAI tool call.
+// ToolFunction describes the function being called in a tool call.
 type ToolFunction struct {
 	// Name identifies the function.
 	Name string `json:"name"`
@@ -136,7 +136,7 @@ type ToolFunction struct {
 func ToMessages(msgs []agent.Message) []Message {
 	out := make([]Message, 0, len(msgs))
 	for _, m := range msgs {
-		// Represent a single tool result as an OpenAI tool message.
+		// Represent a single tool result as a tool message.
 		if len(m.Content) == 1 {
 			if tr, ok := m.Content[0].(message.ToolResultPart); ok {
 				out = append(out, Message{
@@ -263,7 +263,7 @@ type StreamedCall struct {
 
 // Stream opens a Chat Completions event stream at the base URL. The API
 // takes system messages where they are in the conversation. It sends no
-// prompt_cache_key, which servers other than OpenAI's may reject.
+// prompt_cache_key, which servers other than the platform API may reject.
 func (m *model) Stream(ctx context.Context, req agent.Request) (agent.StreamResponse, error) {
 	return agent.Authorized(ctx, m.c.auth, func(a agent.Authorization) (agent.StreamResponse, error) {
 		return m.stream(ctx, a.Token, req)

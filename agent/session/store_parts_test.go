@@ -112,7 +112,7 @@ func TestAppendMessage_RoundTripsVariant(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 	const id = "ses_variant"
-	const variant = "openai/gpt-5.6-fast:high"
+	const variant = "provider-a/model-a-fast:high"
 	msg := message.Content{
 		ID: "msg_1", Role: message.RoleAgent, Parts: []message.ContentPart{message.TextPart{Text: "hi"}},
 		Model: variant,

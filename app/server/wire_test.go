@@ -41,7 +41,7 @@ func assertWireGolden(t *testing.T, name, got string) {
 // testListing returns the listing of one provider with a model that takes
 // reasoning efforts and one that does not.
 func testListing() app.ModelListing {
-	return app.NewModelListing("openai", []agent.Listing{{Model: "gpt-x"}, {Model: "gpt-y", Unlisted: true}})
+	return app.NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
 }
 
 // TestWireBodies checks that the response bodies that carry what the app

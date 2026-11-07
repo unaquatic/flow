@@ -11,17 +11,17 @@ import (
 // model, the variant of the provider's offering of it, and the reasoning
 // effort. Its string form is "provider/model:option:effort", the model
 // without its lab when the provider is the lab, as
-// "openai/gpt-6.1-sol:fast:high" and "openrouter/anthropic/claude-opus-5-5",
+// "provider-a/model-a:fast:high" and "provider-b/lab-a/model-b",
 // leaving out the option and the effort it does not set.
 type Variant struct {
 	// Provider identifies the provider, by its catalog ID.
 	Provider ProviderID
-	// Model is the catalog's model ID, such as "openai/gpt-6.1-sol", or the
+	// Model is the catalog's model ID, such as "provider-a/model-a", or the
 	// provider's own ID of a model the catalog leaves unlisted or does not
 	// know.
 	Model string
 	// Option is what the catalog's variant ID adds to the model ID, such as
-	// "fast" of "openai/gpt-6.1-sol:fast", or empty for the default
+	// "fast" of "provider-a/model-a:fast", or empty for the default
 	// variant.
 	Option string
 	// Effort is the reasoning effort, or empty to leave it to the provider.
@@ -38,7 +38,7 @@ func (v Variant) ID() string {
 }
 
 // ModelName returns v's variant ID as its string form names it: without the
-// lab when the provider is the lab, such as "gpt-6.1-sol:fast".
+// lab when the provider is the lab, such as "model-a:fast".
 func (v Variant) ModelName() string {
 	return strings.TrimPrefix(v.ID(), string(v.Provider)+"/")
 }

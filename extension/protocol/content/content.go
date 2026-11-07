@@ -1,6 +1,6 @@
-// Package content speaks Gemini's generateContent, the request format of
-// Google's Gemini API, for every provider whose API takes it: Google's,
-// Vertex AI's, and gateways at their own base URLs.
+// Package content speaks the generateContent request format, for every
+// provider whose API takes it: the format's own API at DefaultBaseURL, a
+// cloud's, and gateways at their own base URLs.
 package content
 
 import (
@@ -22,18 +22,19 @@ import (
 	"github.com/unaquatic/flow/sse"
 )
 
-// DefaultBaseURL is the base URL of Google's Gemini API.
+// DefaultBaseURL is the base URL of the format's own API.
 const DefaultBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 
-// DefaultKeyHeader is the header that carries a Gemini API key.
+// DefaultKeyHeader is the header that carries an API key of the format's
+// own API.
 const DefaultKeyHeader = "x-goog-api-key"
 
-// SkipSignature is the thought signature Google documents for a function
+// SkipSignature is the thought signature the API documents for a function
 // call whose own signature is lost, such as one another model made, which
-// Gemini 3 models otherwise reject.
+// the models of version 3 and later otherwise reject.
 const SkipSignature = "skip_thought_signature_validator"
 
-// Client implements agent.Provider for an API that takes Gemini's
+// Client implements agent.Provider for an API that takes generateContent
 // requests at its base URL.
 type Client struct {
 	name       string
@@ -45,13 +46,13 @@ type Client struct {
 
 // Init configures a Client.
 type Init struct {
-	// Name is the provider's catalog ID, such as "google".
+	// Name is the provider's catalog ID, such as "provider-a".
 	Name string
 	// Auth resolves the credential of every request.
 	Auth agent.Authorizer
 	// Key says how an API key goes with a request: in a header,
 	// DefaultKeyHeader when it names none, or as a bearer token. An OAuth
-	// token, such as Vertex AI's, always goes as a bearer token.
+	// token, such as a cloud's, always goes as a bearer token.
 	Key gateway.Auth
 	// BaseURL is the base URL that "/models/{model}" follows. Empty is
 	// DefaultBaseURL.
@@ -131,7 +132,7 @@ func (c *Client) Header(a agent.Authorization) http.Header {
 	return h
 }
 
-// Content is one turn of a Gemini conversation.
+// Content is one turn of a conversation.
 type Content struct {
 	// Role is "user" or "model".
 	Role  string `json:"role"`
@@ -166,7 +167,7 @@ type FileData struct {
 
 // FunctionCall is a call of a tool.
 type FunctionCall struct {
-	// ID is the call's ID, which models before Gemini 3 do not give.
+	// ID is the call's ID, which models before version 3 do not give.
 	ID   string          `json:"id,omitempty"`
 	Name string          `json:"name"`
 	Args json.RawMessage `json:"args,omitempty"`
@@ -177,13 +178,17 @@ type FunctionResponse struct {
 	ID   string `json:"id,omitempty"`
 	Name string `json:"name"`
 	// Response holds the result under "output", or a failure under
-	// "error", as Gemini reads them.
+	// "error", as the API reads them.
 	Response map[string]any `json:"response"`
 }
 
-// legacyModel matches the IDs of Gemini models before Gemini 3, which take
-// no call IDs and need no thought signatures on calls.
-var legacyModel = regexp.MustCompile(`(^|/)gemini(-live)?-[12]([.-]|$)`)
+// LegacyFamily is the family of the format's own models, whose IDs before
+// version 3 legacyModel matches.
+const LegacyFamily = "gemini"
+
+// legacyModel matches the IDs of the format's models before version 3,
+// which take no call IDs and need no thought signatures on calls.
+var legacyModel = regexp.MustCompile(`(^|/)` + LegacyFamily + `(-live)?-[12]([.-]|$)`)
 
 // ToContents converts provider messages to the turns of a request to
 // model, and the text of the system messages to the parts of its system
@@ -193,7 +198,7 @@ var legacyModel = regexp.MustCompile(`(^|/)gemini(-live)?-[12]([.-]|$)`)
 // signature with no text is the signature of the part that follows it, as
 // Stream yields a function call's. The first function call of a turn that
 // has none, such as one another model made, takes SkipSignature, which
-// Gemini 3 models need; models before Gemini 3 take no call IDs.
+// models of version 3 and later need; models before it take no call IDs.
 func ToContents(msgs []agent.Message, model string) (system []Part, out []Content) {
 	legacy := legacyModel.MatchString(model)
 	id := func(callID string) string {
@@ -284,7 +289,7 @@ type FunctionDeclaration struct {
 	ParametersJSONSchema agent.InputSchema `json:"parametersJsonSchema"`
 }
 
-// ToFunctionDeclarations converts tools to Gemini function declarations.
+// ToFunctionDeclarations converts tools to function declarations.
 func ToFunctionDeclarations(tools []agent.ToolDefinition) []FunctionDeclaration {
 	out := make([]FunctionDeclaration, 0, len(tools))
 	for _, t := range tools {
@@ -354,12 +359,12 @@ func (u UsageMetadata) Usage() agent.Usage {
 	}
 }
 
-// Stream returns the stream of the Gemini response body of the provider
+// Stream returns the stream of the generateContent response body of the provider
 // named name, which it closes once the stream ends: its thoughts and text,
 // each run of them a block of its own, its function calls, each whole, and
 // then its usage and why it stopped. A function call's thought signature
 // streams as the signature of a reasoning block of its own, just before
-// the call; the signatures of text parts, which Gemini does not need back,
+// the call; the signatures of text parts, which the API does not need back,
 // are left out.
 func Stream(body io.ReadCloser, name string) agent.StreamResponse {
 	return func(yield func(agent.StreamPart, error) bool) {
@@ -461,7 +466,7 @@ func (st *StreamState) Handle(data string, yield func(agent.StreamPart, error) b
 	return true
 }
 
-// CallID returns the ID of a function call that Gemini gave id, or none:
+// CallID returns the ID of a function call that the API gave id, or none:
 // id, unless it is empty or an earlier call of the response had it, or
 // else a new one.
 func (st *StreamState) CallID(id string) string {
@@ -488,7 +493,7 @@ func (st *StreamState) Finish(yield func(agent.StreamPart, error) bool) {
 	yield(agent.Stop{Reason: StopReason(st.finish, len(st.calls) > 0)}, nil)
 }
 
-// StopReason returns the stop reason of Gemini's finish reason, after a
+// StopReason returns the stop reason of the API's finish reason, after a
 // response that called functions when calls is set.
 func StopReason(finish string, calls bool) agent.StopReason {
 	switch finish {

@@ -32,7 +32,7 @@ func TestSessionMenuSearchesFromTheInput(t *testing.T) {
 	if got := ui.sessionMenu.Items()[0].Name; got != "0199bbbb-2222  2026-09-27 14:03:11" {
 		t.Errorf("row = %q, want it as listed, since the arrow has its own column", got)
 	}
-	letter := &input.KeyEvent{Name: "g", Text: "g"}
+	letter := &input.KeyEvent{Name: "p", Text: "p"}
 	ui.HandleSessionMenuKey(letter)
 	if letter.DefaultPrevented() {
 		t.Error("session list kept a letter from the input")
@@ -231,19 +231,19 @@ func TestCtrlCClosesSlashMenu(t *testing.T) {
 // goes.
 func TestSlashStatusRow(t *testing.T) {
 	ui := newInputTestUI(t)
-	ui.SetModelLabel("openai/gpt-6-luna:medium")
+	ui.SetModelLabel("provider-a/model-h:medium")
 	ui.service.state.Messages = []ChatMessage{
 		{ID: "u1", Role: message.RoleUser},
 		{ID: "a1", Role: message.RoleAgent, Worked: 3 * time.Minute},
 	}
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	want := "gpt-6-luna medium context 0K in 0K out 0K cache 0K $0.00 worked 3m 00s"
+	want := "model-h medium context 0K in 0K out 0K cache 0K $0.00 worked 3m 00s"
 	if got := ui.slashStatus.PlainText(); got != want {
 		t.Errorf("opened: status = %q\nwant             %q", got, want)
 	}
 
 	ui.SetUsage(SessionUsage{Input: 1_200, Output: 300, CacheRead: 4_000, Cost: 0.051, Context: 5_500, Window: 100_000})
-	want = "gpt-6-luna medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 00s"
+	want = "model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 00s"
 	if got := ui.slashStatus.PlainText(); got != want {
 		t.Errorf("usage changed: status = %q\nwant                    %q", got, want)
 	}
@@ -252,7 +252,7 @@ func TestSlashStatusRow(t *testing.T) {
 		ui.service.StartTurn(time.Now())
 		time.Sleep(12 * time.Second)
 		ui.Tick()
-		want := "gpt-6-luna medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 12s"
+		want := "model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 12s"
 		if got := ui.slashStatus.PlainText(); got != want {
 			t.Errorf("turn under way: status = %q\nwant                     %q", got, want)
 		}

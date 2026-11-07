@@ -2,12 +2,12 @@
 |                                                                        |
 |  Models [↑/↓ move] [tab custom] [esc cancel]                           |
 |                                                                        |
-|  gpt-5.6 [openai]                                                      |
-|  gpt-5.6:fast [openai]                                                 |
-|  gpt-5.6-pro [openai]                                                  |
-|  gpt-5.6-luna [openai]                                                 |
-|  gpt-5.6-luna:fast [openai]                                            |
-|  claude-opus-5-5 [anthropic]                                           |
+|  model-a [provider-a]                                                  |
+|  model-a:fast [provider-a]                                             |
+|  model-a-pro [provider-a]                                              |
+|  model-b [provider-a]                                                  |
+|  model-b:fast [provider-a]                                             |
+|  model-g [provider-b]                                                  |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -16,12 +16,12 @@
 |                                                                        |
 |  AAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                           |
 |                                                                        |
-|  AAAAAAA BBBBBBBB                                                      |
-|  CCCCCCCCCCCC CCCCCCCC                                                 |
-|  AAAAAAAAAAA BBBBBBBB                                                  |
-|  AAAAAAAAAAAA BBBBBBBB                                                 |
-|  AAAAAAAAAAAAAAAAA BBBBBBBB                                            |
-|  AAAAAAAAAAAAAAA BBBBBBBBBBB                                           |
+|  AAAAAAA BBBBBBBBBBBB                                                  |
+|  CCCCCCCCCCCC CCCCCCCCCCCC                                             |
+|  AAAAAAAAAAA BBBBBBBBBBBB                                              |
+|  AAAAAAA BBBBBBBBBBBB                                                  |
+|  AAAAAAAAAAAA BBBBBBBBBBBB                                             |
+|  AAAAAAA BBBBBBBBBBBB                                                  |
 |                                                                        |
 |                                                                        |
 |                                                                        |

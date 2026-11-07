@@ -17,10 +17,10 @@ func TestProviderValue(t *testing.T) {
 		want    agent.ProviderID
 		wantErr bool
 	}{
-		{name: "anthropic", want: "anthropic"},
-		{name: "openai", want: "openai"},
+		{name: "provider-a", want: "provider-a"},
+		{name: "provider-b", want: "provider-b"},
 		// Any catalog provider parses; the app checks that it is registered.
-		{name: "openrouter", want: "openrouter"},
+		{name: "provider-c", want: "provider-c"},
 		{name: "", wantErr: true},
 	}
 	for _, tt := range tests {
@@ -40,14 +40,14 @@ func TestModelFlags(t *testing.T) {
 		wantErr string
 	}{
 		{name: "none"},
-		{name: "pattern", args: []string{"--model", "sonnet"}, want: modelOptions{model: "sonnet"}},
-		{name: "provider", args: []string{"-p", "openai", "-m", "gpt-5"},
-			want: modelOptions{provider: "openai", model: "gpt-5"}},
-		{name: "gateway provider", args: []string{"--provider", "openrouter", "-m", "opus"},
-			want: modelOptions{provider: "openrouter", model: "opus"}},
+		{name: "pattern", args: []string{"--model", "small"}, want: modelOptions{model: "small"}},
+		{name: "provider", args: []string{"-p", "provider-a", "-m", "model-a"},
+			want: modelOptions{provider: "provider-a", model: "model-a"}},
+		{name: "gateway provider", args: []string{"--provider", "provider-c", "-m", "large"},
+			want: modelOptions{provider: "provider-c", model: "large"}},
 		{name: "empty provider", args: []string{"--provider", " "}, wantErr: "empty provider"},
-		{name: "variant and level", args: []string{"-m", "opus:fast:low", "--effort", "XHIGH"},
-			want: modelOptions{model: "opus:fast:low", effort: "xhigh"}},
+		{name: "variant and level", args: []string{"-m", "large:fast:low", "--effort", "XHIGH"},
+			want: modelOptions{model: "large:fast:low", effort: "xhigh"}},
 		{name: "level alone", args: []string{"--effort", "none"}, want: modelOptions{effort: "none"}},
 		// Any name parses: the catalog decides which levels there are.
 		{name: "level flow does not know", args: []string{"--effort", "XXXHigh"}, want: modelOptions{effort: "xxxhigh"}},
@@ -129,7 +129,7 @@ func TestSelectModelChecksFlags(t *testing.T) {
 	if model, err := selectModel(t.Context(), nil, modelOptions{}); model != "" || err != nil {
 		t.Errorf("no flags: %q, %v, want no model", model, err)
 	}
-	_, err := selectModel(t.Context(), nil, modelOptions{provider: "openai"})
+	_, err := selectModel(t.Context(), nil, modelOptions{provider: "provider-a"})
 	if err == nil || err.Error() != "--provider needs --model" {
 		t.Errorf("provider alone: err = %v, want --provider needs --model", err)
 	}
@@ -145,8 +145,8 @@ func TestLoginFlags(t *testing.T) {
 	}{
 		{name: "defaults, with no provider",
 			want: loginOptions{method: loginMethod(agent.LoginBrowser)}},
-		{name: "device", args: []string{"-m", "device", "-p", "openai"},
-			want: loginOptions{method: loginMethod(agent.LoginDevice), provider: "openai"}},
+		{name: "device", args: []string{"-m", "device", "-p", "provider-a"},
+			want: loginOptions{method: loginMethod(agent.LoginDevice), provider: "provider-a"}},
 		{name: "API key", args: []string{"-method", "key"},
 			want: loginOptions{method: keyMethod}},
 		{name: "account", args: []string{"-account", strings.ToUpper(id)},

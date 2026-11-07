@@ -1,8 +1,7 @@
-// Package google authorizes requests to Google Cloud, such as Vertex AI's,
-// with OAuth access tokens from application default credentials: the file
-// GOOGLE_APPLICATION_CREDENTIALS names, or the one that "gcloud auth
-// application-default login" writes.
-package google
+// Package adc authorizes requests to a cloud's AI platform with OAuth
+// access tokens from its application default credentials: the file that
+// CredentialsEnv names, or the one that LoginCommand writes.
+package adc
 
 import (
 	"cmp"
@@ -30,12 +29,28 @@ import (
 	"github.com/unaquatic/flow/agent"
 )
 
-// DefaultTokenURL is Google's OAuth token endpoint.
+// DefaultTokenURL is the cloud's OAuth token endpoint.
 const DefaultTokenURL = "https://oauth2.googleapis.com/token"
 
 // Scope is the OAuth scope of the tokens Credentials makes, which covers
-// Vertex AI.
+// the cloud's AI platform.
 const Scope = "https://www.googleapis.com/auth/cloud-platform"
+
+// CredentialsEnv is the environment variable that names the application
+// default credentials file.
+const CredentialsEnv = "GOOGLE_APPLICATION_CREDENTIALS"
+
+// LoginCommand is the command of the cloud's CLI that writes the user's
+// application default credentials, in ConfigDir.
+const LoginCommand = "gcloud auth application-default login"
+
+// ConfigDir is the name of the cloud CLI's configuration directory, in the
+// user's configuration directory.
+const ConfigDir = "gcloud"
+
+// QuotaHeader is the request header that names the project that quota and
+// billing go to.
+const QuotaHeader = "X-Goog-User-Project"
 
 // expiryMargin is how long before a token expires that Credentials makes a
 // new one, so that no request goes with a token about to expire.
@@ -87,18 +102,18 @@ type Credentials struct {
 }
 
 // Path returns the application default credentials file: the one
-// GOOGLE_APPLICATION_CREDENTIALS names, or else gcloud's, in CLOUDSDK_CONFIG
-// or the user's gcloud directory. It returns "" when there is no such file.
+// CredentialsEnv names, or else the cloud CLI's, in CLOUDSDK_CONFIG or the
+// user's ConfigDir. It returns "" when there is no such file.
 func (c *Credentials) Path() string {
 	env := c.env()
-	path := env("GOOGLE_APPLICATION_CREDENTIALS")
+	path := env(CredentialsEnv)
 	if path == "" {
 		dir := env("CLOUDSDK_CONFIG")
 		if dir == "" {
 			home := cmp.Or(env("HOME"), func() string { h, _ := os.UserHomeDir(); return h }())
-			dir = filepath.Join(home, ".config", "gcloud")
+			dir = filepath.Join(home, ".config", ConfigDir)
 			if runtime.GOOS == "windows" && env("APPDATA") != "" {
-				dir = filepath.Join(env("APPDATA"), "gcloud")
+				dir = filepath.Join(env("APPDATA"), ConfigDir)
 			}
 		}
 		path = filepath.Join(dir, "application_default_credentials.json")
@@ -117,7 +132,7 @@ func (c *Credentials) Available() bool { return c.Path() != "" }
 func (c *Credentials) Load() (File, string, error) {
 	path := c.Path()
 	if path == "" {
-		return File{}, "", fmt.Errorf("%w: no Google application default credentials: run \"gcloud auth application-default login\" or set GOOGLE_APPLICATION_CREDENTIALS", agent.ErrNotAuthenticated)
+		return File{}, "", fmt.Errorf("%w: no application default credentials: run %q or set %s", agent.ErrNotAuthenticated, LoginCommand, CredentialsEnv)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -149,7 +164,7 @@ func (c *Credentials) Authorize(ctx context.Context, rejected *agent.Authorizati
 	}
 	tok, ttl, err := c.mint(ctx, f, now)
 	if err != nil {
-		return agent.Authorization{}, fmt.Errorf("%w: Google token: %w", agent.ErrNotAuthenticated, err)
+		return agent.Authorization{}, fmt.Errorf("%w: access token: %w", agent.ErrNotAuthenticated, err)
 	}
 	c.token, c.expiry, c.source = tok, now.Add(ttl), source
 	return agent.Authorization{Kind: agent.CredentialOAuth, Token: tok}, nil
@@ -173,7 +188,7 @@ func (c *Credentials) mint(ctx context.Context, f File, now time.Time) (string, 
 		form.Set("client_secret", f.ClientSecret)
 		form.Set("refresh_token", f.RefreshToken)
 	default:
-		return "", 0, fmt.Errorf("credentials of type %q are not supported; use a service account key or a gcloud login", f.Type)
+		return "", 0, fmt.Errorf("credentials of type %q are not supported; use a service account key or %q", f.Type, LoginCommand)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cmp.Or(f.TokenURI, DefaultTokenURL), strings.NewReader(form.Encode()))
 	if err != nil {
@@ -242,19 +257,19 @@ func Assertion(f File, now time.Time) (string, error) {
 
 // Transport returns an http.RoundTripper that sends requests with base, or
 // http.DefaultTransport when base is nil, naming the quota project of the
-// application default credentials, when they have one, in the
-// x-goog-user-project header, as Google's client libraries do.
+// application default credentials, when they have one, in QuotaHeader, as
+// the cloud's client libraries do.
 func (c *Credentials) Transport(base http.RoundTripper) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
 	}
 	return TransportFunc(func(req *http.Request) (*http.Response, error) {
 		f, _, err := c.Load()
-		if err != nil || f.QuotaProject == "" || req.Header.Get("X-Goog-User-Project") != "" {
+		if err != nil || f.QuotaProject == "" || req.Header.Get(QuotaHeader) != "" {
 			return base.RoundTrip(req)
 		}
 		out := req.Clone(req.Context())
-		out.Header.Set("X-Goog-User-Project", f.QuotaProject)
+		out.Header.Set(QuotaHeader, f.QuotaProject)
 		return base.RoundTrip(out)
 	})
 }

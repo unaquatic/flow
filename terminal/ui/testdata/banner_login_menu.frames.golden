@@ -2,8 +2,8 @@
 |                                                                        |
 |  Login [↑/↓ move] [esc cancel]                                         |
 |                                                                        |
-|  anthropic                                                             |
-|  openai                                                                |
+|  provider-a                                                            |
+|  provider-b                                                            |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -12,8 +12,8 @@
 |                                                                        |
 |  AAAAA BBBB BBBBB BBBB BBBBBBB                                         |
 |                                                                        |
-|  CCCCCCCCC                                                             |
-|  AAAAAA                                                                |
+|  CCCCCCCCCC                                                            |
+|  AAAAAAAAAA                                                            |
 |                                                                        |
 |                                                                        |
 |                                                                        |

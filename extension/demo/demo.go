@@ -46,10 +46,10 @@ func Next(ctx context.Context, i int) (string, bool) {
 }
 
 // Provider and ModelName are the model the demo stands in for, which its
-// messages carry.
+// messages carry: a placeholder, which no catalog lists.
 const (
-	Provider  agent.ProviderID = "openai"
-	ModelName                  = "openai/gpt-6-luna"
+	Provider  agent.ProviderID = "provider-a"
+	ModelName                  = "provider-a/model-a"
 )
 
 // The pace of the demo's replies, as a provider streams them and its tools

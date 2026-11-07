@@ -32,7 +32,7 @@ var (
 	ErrFormatNotSupported = errors.New("request format not supported")
 
 	// ErrMissingVariable indicates that a base URL names an environment
-	// variable that is not set, such as Azure's resource name.
+	// variable that is not set, such as a cloud resource's name.
 	ErrMissingVariable = errors.New("environment variable not set")
 )
 
@@ -107,7 +107,7 @@ func OneLineBody(body string) string {
 }
 
 // RetryAfter returns how long the provider asked to wait before the next
-// request, from the retry-after-ms header that OpenAI sends or the
+// request, from the retry-after-ms header that some providers send or the
 // standard Retry-After header in seconds or as an HTTP date, measured
 // from now. It returns zero when no header asks for a wait.
 func (e *ResponseError) RetryAfter(now time.Time) time.Duration {

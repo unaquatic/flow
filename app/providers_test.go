@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,21 +14,43 @@ import (
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/protocol"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/flow/internal/catalog"
 )
 
-// providersCatalog is an api.json of the built-in providers, a gateway
-// whose base URL names its host in an environment variable beside its key,
-// Google's Gemini API, and Amazon Bedrock and GitLab, whose formats the
+// providersCatalog is an api.json of two providers with login flows, a
+// gateway whose base URL names its host in an environment variable beside
+// its key, a provider of the generateContent format, and two whose formats the
 // catalog does not know, so leaves them out.
 const providersCatalog = `{
-"anthropic":{"id":"anthropic","models":{}},
-"openai":{"id":"openai","models":{}},
-"gw":{"id":"gw","npm":"@ai-sdk/openai-compatible","api":"https://${GW_HOST}/v1","env":["GW_HOST","GW_API_KEY"],"models":{}},
-"google":{"id":"google","npm":"@ai-sdk/google","env":["GEMINI_API_KEY"],"models":{}},
-"amazon-bedrock":{"id":"amazon-bedrock","npm":"@ai-sdk/amazon-bedrock","env":["AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY","AWS_REGION","AWS_BEARER_TOKEN_BEDROCK"],"models":{}},
-"gitlab":{"id":"gitlab","npm":"@gitlab/gitlab-ai-provider","env":["GITLAB_TOKEN"],"models":{}}
+"provider-b":{"id":"provider-b","format":"messages","models":{}},
+"provider-a":{"id":"provider-a","format":"responses","models":{}},
+"gw":{"id":"gw","format":"chat","api":"https://${GW_HOST}/v1","env":["GW_HOST","GW_API_KEY"],"models":{}},
+"provider-c":{"id":"provider-c","format":"content","env":["PROVIDER_C_API_KEY"],"models":{}},
+"provider-d":{"id":"provider-d","npm":"unknown-package","env":["PROVIDER_D_ACCESS_KEY","PROVIDER_D_REGION"],"models":{}},
+"provider-e":{"id":"provider-e","npm":"other-package","env":["PROVIDER_E_TOKEN"],"models":{}}
 }`
+
+// loginExtension is the protocol extension, which dials the providers of
+// the formats it speaks, with login flows of provider-a and provider-b in
+// place of its own.
+type loginExtension struct{ *protocol.Extension }
+
+// LoginFlows returns a flow of provider-a and one of provider-b.
+func (loginExtension) LoginFlows() map[agent.ProviderID]agent.LoginFlow {
+	return map[agent.ProviderID]agent.LoginFlow{providerA: noLogin{}, providerB: noLogin{}}
+}
+
+// noLogin is a LoginFlow that never logs in.
+type noLogin struct{}
+
+func (noLogin) Device(context.Context, func(agent.LoginPrompt)) (agent.OAuthToken, error) {
+	return agent.OAuthToken{}, errors.ErrUnsupported
+}
+
+func (noLogin) Refresh(context.Context, agent.OAuthToken) (agent.OAuthToken, error) {
+	return agent.OAuthToken{}, errors.ErrUnsupported
+}
 
 // TestNew_MakesProvidersOfExtensions checks that an app registers every
 // provider of the catalog whose format an extension's DialHook speaks, and
@@ -35,11 +59,11 @@ const providersCatalog = `{
 func TestNew_MakesProvidersOfExtensions(t *testing.T) {
 	t.Chdir(t.TempDir())
 	home := t.TempDir()
-	settings := `{"catalog_source":"http://127.0.0.1:1","provider":{"openai":{"disabled":true}}}`
+	settings := `{"catalog_source":"http://127.0.0.1:1","provider":{"provider-a":{"disabled":true}}}`
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gatewaytest.WriteCache(t, home, gatewaytest.FromAPI(t, providersCatalog))
+	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, providersCatalog))
 	registered := func(loads ...extension.Load) ([]agent.ProviderID, []agent.ProviderID) {
 		t.Helper()
 		a, err := New(t.Context(), config.NewService(home), Options{Extensions: loads})
@@ -50,12 +74,12 @@ func TestNew_MakesProvidersOfExtensions(t *testing.T) {
 		return a.Accounts().Providers(), a.Accounts().LoginProviders()
 	}
 
-	got, logins := registered(protocol.Load)
-	if want := []agent.ProviderID{"anthropic", "google", "gw"}; !slices.Equal(got, want) {
-		t.Errorf("Providers = %v, want %v: not the disabled openai, not Bedrock or GitLab, which the catalog leaves out", got, want)
+	got, logins := registered(loadOf(loginExtension{protocol.New(protocol.Options{})}))
+	if want := []agent.ProviderID{"gw", providerB, "provider-c"}; !slices.Equal(got, want) {
+		t.Errorf("Providers = %v, want %v: not the disabled provider-a, not provider-d or provider-e, which the catalog leaves out", got, want)
 	}
-	if want := []agent.ProviderID{"anthropic"}; !slices.Equal(logins, want) {
-		t.Errorf("LoginProviders = %v, want %v: not API-key-only providers or the disabled openai", logins, want)
+	if want := []agent.ProviderID{providerB}; !slices.Equal(logins, want) {
+		t.Errorf("LoginProviders = %v, want %v: not API-key-only providers or the disabled provider-a", logins, want)
 	}
 	got, logins = registered()
 	if len(got) != 0 {
@@ -75,7 +99,7 @@ func TestConfigKeys(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	gatewaytest.WriteCache(t, home, gatewaytest.FromAPI(t, providersCatalog))
+	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, providersCatalog))
 	conf := config.NewService(home)
 	keys := configKeys(conf, catalog.NewStore(gateway.StoreOptions{Dir: home}))
 

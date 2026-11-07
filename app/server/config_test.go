@@ -34,7 +34,7 @@ func TestConfig(t *testing.T) {
 		t.Fatalf("GET /config = %d, %+v, want 200 and test/model", status, got)
 	}
 
-	model := "openai/gpt-x"
+	model := "provider-a/model-x"
 	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{Model: &model}, &got); status != http.StatusOK || got.Model != model {
 		t.Fatalf("PATCH /config = %d, %+v, want 200 and %s", status, got, model)
 	}
@@ -49,7 +49,7 @@ func TestConfig(t *testing.T) {
 		t.Errorf("PATCH /config with no setting = %d, %+v, want 200 and %s unchanged", status, got, model)
 	}
 
-	unqualified, unknown := "gpt-x", "nope/x"
+	unqualified, unknown := "model-x", "nope/x"
 	tests := []struct {
 		name       string
 		body       any
@@ -78,9 +78,9 @@ func TestConfig(t *testing.T) {
 // it.
 func TestRequestsUseTheConfigModel(t *testing.T) {
 	ts, _, bodies := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		io.WriteString(w, anthropicReply)
+		io.WriteString(w, messagesReply)
 	})
-	model := "anthropic/claude-x"
+	model := "provider-b/model-y"
 	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{Model: &model}, nil); status != http.StatusOK {
 		t.Fatalf("PATCH /config: status %d", status)
 	}

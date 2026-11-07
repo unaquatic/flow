@@ -11,3 +11,6 @@ logs/
 # Local workspace over the sibling checkouts (../catalog, ../fluid)
 go.work
 go.work.sum
+
+# The catalog snapshot, which go generate ./internal/catalog writes
+internal/catalog/snapshot/catalog.json

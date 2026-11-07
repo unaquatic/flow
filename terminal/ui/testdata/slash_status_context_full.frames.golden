@@ -2,7 +2,7 @@
 |                                                                                    |
 |  Usage [ctrl+u pin]                                                                |
 |                                                                                    |
-|  gpt-6-luna medium context 182K 91% in 180K out 2.0K cache 0K $0.57 worked 3m 12s  |
+|  model-h medium context 182K 91% in 180K out 2.0K cache 0K $0.57 worked 3m 12s     |
 |                                                                                    |
 |                                                                                    |
 |                                                                                    |
@@ -18,7 +18,7 @@
 |                                                                                    |
 |  AAAAA BBBBBBB BBBB                                                                |
 |                                                                                    |
-|  AAAAAAAAAA AAAAAA BBBBBBB CCCC CCC BB AAAA BBB AAAA BBBBB AA AAAAA BBBBBB AA AAA  |
+|  AAAAAAA AAAAAA BBBBBBB CCCC CCC BB AAAA BBB AAAA BBBBB AA AAAAA BBBBBB AA AAA     |
 |                                                                                    |
 |                                                                                    |
 |                                                                                    |

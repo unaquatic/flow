@@ -1,4 +1,4 @@
-package claude
+package codeflow
 
 import (
 	"context"
@@ -75,7 +75,7 @@ func TestBrowser(t *testing.T) {
 			if got := oauth.Scopes; len(got) != 4 {
 				t.Fatalf("unexpected scopes: %v", got)
 			}
-			if oauth.TokenURL != "https://platform.claude.com/v1/oauth/token" {
+			if oauth.TokenURL != tokenURL {
 				t.Fatalf("token URL = %s", oauth.TokenURL)
 			}
 			oauth.TokenURL = server.URL

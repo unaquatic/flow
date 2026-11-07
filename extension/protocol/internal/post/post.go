@@ -51,9 +51,9 @@ func JSON(ctx context.Context, client *http.Client, name, url string, header htt
 }
 
 // errorMessage returns the error.message field of an error response body,
-// where Anthropic, OpenAI and Google put it, or the message field, where
-// some others do, or else the whole body. A message that says no more than
-// "Error", as Anthropic's rate limit responses can, is replaced by the
+// where the APIs of every request format put it, or the message field,
+// where some others do, or else the whole body. A message that says no more
+// than "Error", as some rate limit responses do, is replaced by the
 // error.type field, such as "rate_limit_error", when there is one.
 func errorMessage(body []byte) string {
 	var parsed struct {

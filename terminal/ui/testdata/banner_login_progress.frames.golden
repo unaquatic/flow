@@ -1,17 +1,17 @@
 === text ===
 |                                                                        |
-|  Login with openai [esc cancel]                                        |
+|  Login with provider-a [esc cancel]                                    |
 |                                                                        |
-|  Logging in to openai account 01a0e1b4 [browser]...                    |
+|  Logging in to provider-a account 01a0e1b4 [browser]...                |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === fg ===
 |                                                                        |
-|  AAAAA AAAA AAAAAA BBBB BBBBBBB                                        |
+|  AAAAA AAAA AAAAAAAAAA BBBB BBBBBBB                                    |
 |                                                                        |
-|  CCCCCCC CC CC CCCCCC CCCCCCC CCCCCCCC CCCCCCCCCCCC                    |
+|  CCCCCCC CC CC CCCCCCCCCC CCCCCCC CCCCCCCC CCCCCCCCCCCC                |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -27,7 +27,7 @@
 |                                                                        |
 === attrs ===
 |                                                                        |
-|  BBBBBBBBBBBBBBBBB                                                     |
+|  BBBBBBBBBBBBBBBBBBBBB                                                 |
 |                                                                        |
 |                                                                        |
 |                                                                        |

@@ -25,7 +25,7 @@ func sseBody(chunks ...string) io.ReadCloser {
 	return io.NopCloser(strings.NewReader(b.String()))
 }
 
-// reply is a streamed Gemini 3 response that thinks, answers, and calls two
+// reply is a streamed response of a version 3 model that thinks, answers, and calls two
 // functions in parallel, the first signed.
 var reply = []string{
 	`{"candidates":[{"content":{"role":"model","parts":[{"text":"Looking at ","thought":true}]}}]}`,
@@ -37,10 +37,10 @@ var reply = []string{
 
 // TestStream checks the parts of a streamed response, as Collect gathers
 // them: the thoughts with their signature, the text, the first call's
-// signature just before it, and both calls, with Gemini's ID or one of
+// signature just before it, and both calls, with the API's ID or one of
 // their own, and the usage, the thoughts counted as output.
 func TestStream(t *testing.T) {
-	resp, err := Stream(sseBody(reply...), "google").Collect()
+	resp, err := Stream(sseBody(reply...), "provider-c").Collect()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,12 +72,12 @@ func TestStream(t *testing.T) {
 	}
 }
 
-// TestToContents checks that a streamed reply goes back as Gemini sent it:
+// TestToContents checks that a streamed reply goes back as the API sent it:
 // the thoughts signed, and the signature on the call it came with; and
 // that the first call of another model's turn takes SkipSignature, unless
-// the model is older than Gemini 3, which takes no IDs either.
+// the model is older than version 3, which takes no IDs either.
 func TestToContents(t *testing.T) {
-	resp, err := Stream(sseBody(reply...), "google").Collect()
+	resp, err := Stream(sseBody(reply...), "provider-c").Collect()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestToContents(t *testing.T) {
 		other,
 	}
 
-	system, contents := ToContents(msgs, "gemini-3.5-flash")
+	system, contents := ToContents(msgs, "model-a")
 	if !reflect.DeepEqual(system, []Part{{Text: "Be brief."}}) {
 		t.Errorf("system = %+v", system)
 	}
@@ -111,7 +111,7 @@ func TestToContents(t *testing.T) {
 		t.Errorf("thought and text = %+v, %+v", model[0], model[1])
 	}
 	if model[2].FunctionCall == nil || model[2].FunctionCall.ID != "c1" || model[2].ThoughtSignature != "sig-call" || model[3].ThoughtSignature != "" {
-		t.Errorf("calls = %+v, %+v; want the first signed, as Gemini sent them", model[2], model[3])
+		t.Errorf("calls = %+v, %+v; want the first signed, as the API sent them", model[2], model[3])
 	}
 	results := contents[2].Parts
 	if results[0].FunctionResponse.Response["output"] != "go.mod" || results[1].FunctionResponse.Response["error"] != "no such file" || results[0].FunctionResponse.ID != "c1" {
@@ -121,9 +121,11 @@ func TestToContents(t *testing.T) {
 		t.Errorf("another model's calls signed %q, %q; want SkipSignature on the first", calls[0].ThoughtSignature, calls[1].ThoughtSignature)
 	}
 
-	_, legacy := ToContents(msgs, "gemini-2.5-flash")
+	// The protocol tells a model before version 3 by its ID alone, so this
+	// test names one of LegacyFamily.
+	_, legacy := ToContents(msgs, LegacyFamily+"-2.5")
 	if calls := legacy[3].Parts; calls[0].ThoughtSignature != "" || calls[0].FunctionCall.ID != "" || legacy[2].Parts[0].FunctionResponse.ID != "" {
-		t.Errorf("Gemini 2.5 call = %+v, response = %+v; want no signature and no IDs", calls[0], legacy[2].Parts[0].FunctionResponse)
+		t.Errorf("version 2.5 call = %+v, response = %+v; want no signature and no IDs", calls[0], legacy[2].Parts[0].FunctionResponse)
 	}
 }
 
@@ -160,14 +162,14 @@ func TestRequest(t *testing.T) {
 		Reasoning: &agent.Reasoning{Effort: "low", Controls: gateway.Reasoning{Efforts: []gateway.Effort{"low", "high"}}},
 		Body:      map[string]any{"serviceTier": "priority", "generationConfig": map[string]any{"temperature": 0.5}},
 	}
-	resp, err := p.Model("gemini-3.5-flash").Stream(t.Context(), req)
+	resp, err := p.Model("model-a").Stream(t.Context(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if r, err := resp.Collect(); err != nil || r.Message.TextContent() != "ok" || r.StopReason != agent.StopEndTurn {
 		t.Fatalf("Collect = %+v, %v", r, err)
 	}
-	if got.path != "/v1beta/models/gemini-3.5-flash:streamGenerateContent" || got.query != "alt=sse" || got.key != "gk" || got.bearer != "" {
+	if got.path != "/v1beta/models/model-a:streamGenerateContent" || got.query != "alt=sse" || got.key != "gk" || got.bearer != "" {
 		t.Errorf("request to %s?%s, key %q, bearer %q", got.path, got.query, got.key, got.bearer)
 	}
 	gen := got.body["generationConfig"].(map[string]any)
@@ -183,33 +185,33 @@ func TestRequest(t *testing.T) {
 		t.Errorf("systemInstruction = %v", si)
 	}
 
-	vertex := New(Init{Auth: key{oauth: true}, BaseURL: srv.URL + "/v1/projects/p/locations/global/publishers/google"})
-	resp, err = vertex.Model("gemini-3.5-flash").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}})
+	cloud := New(Init{Auth: key{oauth: true}, BaseURL: srv.URL + "/v1/projects/p/locations/global/publishers/lab-c"})
+	resp, err = cloud.Model("model-a").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	resp.Collect()
-	if got.bearer != "Bearer ya29" || got.key != "" || got.path != "/v1/projects/p/locations/global/publishers/google/models/gemini-3.5-flash:streamGenerateContent" {
-		t.Errorf("Vertex request to %s, bearer %q, key %q", got.path, got.bearer, got.key)
+	if got.bearer != "Bearer ya29" || got.key != "" || got.path != "/v1/projects/p/locations/global/publishers/lab-c/models/model-a:streamGenerateContent" {
+		t.Errorf("cloud request to %s, bearer %q, key %q", got.path, got.bearer, got.key)
 	}
 }
 
 // TestStreamFailures checks an error event, a blocked prompt, and a stream
 // that ends before the response finishes.
 func TestStreamFailures(t *testing.T) {
-	_, err := Stream(sseBody(`{"error":{"code":429,"message":"Resource exhausted","status":"RESOURCE_EXHAUSTED"}}`), "google").Collect()
+	_, err := Stream(sseBody(`{"error":{"code":429,"message":"Resource exhausted","status":"RESOURCE_EXHAUSTED"}}`), "provider-c").Collect()
 	if re, ok := errors.AsType[*agent.ResponseError](err); !ok || re.StatusCode != 429 || re.Message != "Resource exhausted" {
 		t.Errorf("error event: %v", err)
 	}
-	_, err = Stream(sseBody(`{"promptFeedback":{"blockReason":"SAFETY"}}`), "google").Collect()
+	_, err = Stream(sseBody(`{"promptFeedback":{"blockReason":"SAFETY"}}`), "provider-c").Collect()
 	if re, ok := errors.AsType[*agent.ResponseError](err); !ok || !strings.Contains(re.Message, "SAFETY") {
 		t.Errorf("blocked prompt: %v", err)
 	}
-	_, err = Stream(sseBody(`{"candidates":[{"content":{"parts":[{"text":"cut"}]}}]}`), "google").Collect()
+	_, err = Stream(sseBody(`{"candidates":[{"content":{"parts":[{"text":"cut"}]}}]}`), "provider-c").Collect()
 	if _, ok := errors.AsType[*agent.ResponseParseError](err); !ok {
 		t.Errorf("cut stream: %v, want a parse error", err)
 	}
-	r, err := Stream(sseBody(`{"candidates":[{"content":{"parts":[{"text":"long"}]},"finishReason":"MAX_TOKENS"}]}`), "google").Collect()
+	r, err := Stream(sseBody(`{"candidates":[{"content":{"parts":[{"text":"long"}]},"finishReason":"MAX_TOKENS"}]}`), "provider-c").Collect()
 	if err != nil || r.StopReason != agent.StopMaxTokens {
 		t.Errorf("MAX_TOKENS: %+v, %v", r, err)
 	}

@@ -12,9 +12,9 @@ import (
 	"github.com/unaquatic/fluid/style"
 )
 
-// usageReply returns an agent message of OpenAI model with usage u.
+// usageReply returns an agent message of provider-a's model with usage u.
 func usageReply(id message.ID, model string, u message.Usage) ChatMessage {
-	return ChatMessage{ID: id, Role: message.RoleAgent, Model: "openai/" + model, Usage: u}
+	return ChatMessage{ID: id, Role: message.RoleAgent, Model: "provider-a/" + model, Usage: u}
 }
 
 // TestSumUsage checks that the totals count the input apart from the cache,
@@ -23,19 +23,19 @@ func usageReply(id message.ID, model string, u message.Usage) ChatMessage {
 func TestSumUsage(t *testing.T) {
 	read := 0.1
 	price := func(m ChatMessage) (gateway.Price, bool) {
-		if m.Model != "openai/gpt-x" {
+		if m.Model != "provider-a/model-x" {
 			return gateway.Price{}, false
 		}
 		return gateway.Price{Rates: gateway.Rates{Input: 1, Output: 10, CacheRead: &read}}, true
 	}
 	msgs := []ChatMessage{
 		userText("u1", "hi"),
-		usageReply("a1", "gpt-x", message.Usage{InputTokens: 1000, OutputTokens: 100, TotalTokens: 1100}),
+		usageReply("a1", "model-x", message.Usage{InputTokens: 1000, OutputTokens: 100, TotalTokens: 1100}),
 		usageReply("a2", "unpriced", message.Usage{InputTokens: 500, OutputTokens: 50, TotalTokens: 550}),
-		usageReply("a3", "gpt-x", message.Usage{InputTokens: 3000, CachedInputTokens: 2000, OutputTokens: 200, TotalTokens: 3200}),
+		usageReply("a3", "model-x", message.Usage{InputTokens: 3000, CachedInputTokens: 2000, OutputTokens: 200, TotalTokens: 3200}),
 		// A reply that reported nothing, such as one stopped early, changes
 		// nothing.
-		usageReply("a4", "gpt-x", message.Usage{}),
+		usageReply("a4", "model-x", message.Usage{}),
 	}
 	got := SumUsage(msgs, price)
 	want := SessionUsage{Input: 2500, Output: 350, CacheRead: 2000, Context: 3200}
@@ -52,9 +52,9 @@ func TestSumUsage(t *testing.T) {
 }
 
 // TestSumUsageCacheWrites checks that tokens written to a cache count apart
-// from the input, as Anthropic reports them, and in the context.
+// from the input, as the Messages format reports them, and in the context.
 func TestSumUsageCacheWrites(t *testing.T) {
-	msgs := []ChatMessage{usageReply("a1", "claude-x", message.Usage{
+	msgs := []ChatMessage{usageReply("a1", "model-y", message.Usage{
 		InputTokens: 100, CachedInputTokens: 50, CacheCreationInputTokens: 900, OutputTokens: 10,
 	})}
 	got := SumUsage(msgs, func(ChatMessage) (gateway.Price, bool) { return gateway.Price{}, false })
@@ -101,13 +101,13 @@ func TestContextChunk(t *testing.T) {
 // with its reasoning effort after a space, and keeps the colons of a model ID.
 func TestModelName(t *testing.T) {
 	for model, want := range map[string]string{
-		"openai/gpt-5.6-luna":                     "gpt-5.6-luna",
-		"anthropic/claude-sonnet-4":               "claude-sonnet-4",
-		"claude-sonnet-4":                         "claude-sonnet-4",
-		"openai/gpt-5.6-luna-fast:medium":         "gpt-5.6-luna-fast medium",
-		"anthropic/claude-opus-4-8:max":           "claude-opus-4-8 max",
-		"openai/ft:gpt-4o:acme:support:a1b2":      "ft:gpt-4o:acme:support:a1b2",
-		"openai/ft:gpt-4o:acme:support:a1b2:high": "ft:gpt-4o:acme:support:a1b2 high",
+		"provider-a/model-b":                           "model-b",
+		"provider-b/model-d":                           "model-d",
+		"model-d":                                      "model-d",
+		"provider-a/model-b-fast:medium":               "model-b-fast medium",
+		"provider-b/model-f:max":                       "model-f max",
+		"provider-a/ft:model-a:acme:support:a1b2":      "ft:model-a:acme:support:a1b2",
+		"provider-a/ft:model-a:acme:support:a1b2:high": "ft:model-a:acme:support:a1b2 high",
 	} {
 		if got := ModelName(model); got != want {
 			t.Errorf("ModelName(%q) = %q, want %q", model, got, want)
@@ -217,15 +217,15 @@ func TestStatusLine(t *testing.T) {
 	}{
 		{
 			name:  "session under way",
-			model: "openai/gpt-6-luna:medium",
+			model: "provider-a/model-h:medium",
 			usage: SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000,
 				Cost: 0.4249, Context: 64_000, Window: 922_000},
 			worked: 3*time.Minute + 12*time.Second,
-			want:   "gpt-6-luna medium context 64K 7% in 120K out 8.4K cache 310K $0.42 worked 3m 12s",
+			want:   "model-h medium context 64K 7% in 120K out 8.4K cache 310K $0.42 worked 3m 12s",
 		},
 		// Before any request every count and the cost show as none.
-		{name: "new session", model: "anthropic/claude-sonnet-4", usage: SessionUsage{Window: 200_000},
-			want: "claude-sonnet-4 context 0K 0% in 0K out 0K cache 0K $0.00 worked 0s"},
+		{name: "new session", model: "provider-b/model-d", usage: SessionUsage{Window: 200_000},
+			want: "model-d context 0K 0% in 0K out 0K cache 0K $0.00 worked 0s"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -255,13 +255,13 @@ func usageShown(t *testing.T, out []UIEvent) SessionUsage {
 // leaves it as it is.
 func TestUsageOnMessageEnd(t *testing.T) {
 	s, a := newTestService(t)
-	s.state.Model = "openai/gpt-5"
-	model := offeringOf(t, a, "openai/gpt-5")
-	price, ok := a.Models().Catalog().Resolve("openai", "openai/gpt-5")
+	s.state.Model = "provider-a/model-c"
+	model := offeringOf(t, a, "provider-a/model-c")
+	price, ok := a.Models().Catalog().Resolve("provider-a", "provider-a/model-c")
 	if !ok || price.Price == nil {
-		t.Fatal("the catalog lists no price for openai/gpt-5")
+		t.Fatal("the catalog lists no price for provider-a/model-c")
 	}
-	reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "openai/gpt-5"}
+	reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "provider-a/model-c"}
 	s.ApplyAgentEvent(app.EventMessageStarted{Message: app.Message{Content: reply}})
 
 	stopped := s.ApplyAgentEvent(app.EventMessageEnded{Message: app.Message{Content: reply}, Stopped: true})
@@ -286,7 +286,7 @@ func TestUsageOnMessageEnd(t *testing.T) {
 	}
 
 	// Another model changes the window, and keeps the totals.
-	if got := usageShown(t, s.SelectModel("openai/model")); got.Window != 0 || got.Input != want.Input {
+	if got := usageShown(t, s.SelectModel("provider-a/model")); got.Window != 0 || got.Input != want.Input {
 		t.Errorf("usage after switching to a model the catalog lacks = %+v, want no window and the same totals", got)
 	}
 }

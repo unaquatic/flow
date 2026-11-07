@@ -3,7 +3,7 @@
 |  ok                                                                    |
 |                                                                        |
 |                                                                        |
-|  anthropic response error (429): {"type":"error","error":{"type":      |
+|  provider-b response error (429): {"type":"error","error":{"type":     |
 |  "rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}  |
 |                                                                        |
 |                                                                        |
@@ -17,7 +17,7 @@
 |  AA                                                                    |
 |                                                                        |
 |                                                                        |
-|  BBBBBBBBB BBBBBBBB BBBBB BBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB      |
+|  BBBBBBBBBB BBBBBBBB BBBBB BBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB     |
 |  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB  |
 |                                                                        |
 |                                                                        |

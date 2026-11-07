@@ -39,7 +39,7 @@ type NoOptions = struct{}
 
 // An EnvVar is an environment variable that a command reads.
 type EnvVar struct {
-	// Name is the variable's name, such as "OPENAI_API_KEY".
+	// Name is the variable's name, such as "PROVIDER_A_API_KEY".
 	Name string
 	// Usage describes what the variable sets.
 	Usage string

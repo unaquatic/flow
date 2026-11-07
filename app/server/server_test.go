@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
@@ -42,12 +45,13 @@ func newTestServerApp(t *testing.T) (*httptest.Server, *app.App) {
 
 // newTestServerWith returns a server and its app as newTestServerApp does,
 // with the configuration setup changes, if not nil, written to the config
-// file before the app starts.
+// file before the app starts. The app reads the catalog of catalogDoc,
+// unless setup caches one of its own or takes the cache's place.
 func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Server, *app.App) {
 	t.Helper()
 	t.Chdir(t.TempDir())
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("ANTHROPIC_API_KEY", "")
+	t.Setenv(keyEnvA, "")
+	t.Setenv(keyEnvB, "")
 	cfg := &config.Config{
 		Model:      "test/model",
 		HomeDir:    t.TempDir(),
@@ -55,6 +59,9 @@ func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Serv
 	}
 	if setup != nil {
 		setup(cfg)
+	}
+	if _, err := os.Stat(filepath.Join(cfg.HomeDir, gateway.StoreFile)); errors.Is(err, fs.ErrNotExist) {
+		withCatalog(t, catalogDoc(t))(cfg)
 	}
 	if cfg.CatalogSource == "" {
 		// No test downloads the catalog from a real catalog server.

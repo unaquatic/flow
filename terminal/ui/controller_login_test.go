@@ -18,27 +18,26 @@ import (
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/protocol"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
-	"github.com/unaquatic/flow/extension/protocol/login/claude"
+	"github.com/unaquatic/flow/extension/protocol/login/codeflow"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/style"
 )
 
-// newTestService returns a Service over an isolated app whose model is
-// openai/model and in which no API key is set in the environment.
+// newTestService returns a Service over an isolated app of testCatalog,
+// whose providers no API key in the environment authorizes, which logs in
+// to them as loginTestFlows does, and whose model is provider-a/model.
 func newTestService(t *testing.T, loads ...extension.Load) (*Service, *app.App) {
 	t.Helper()
 	t.Chdir(t.TempDir())
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("ANTHROPIC_API_KEY", "")
 	home := t.TempDir()
-	settings := `{"model":"openai/model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
+	settings := `{"model":"provider-a/model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	writeTestCatalog(t, home)
 	conf := config.NewService(home)
-	a, err := app.New(t.Context(), conf, app.Options{Extensions: append([]extension.Load{protocol.Load}, loads...)})
+	a, err := app.New(t.Context(), conf, app.Options{Extensions: append([]extension.Load{protocol.Load, loadLoginTestFlows}, loads...)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,18 +53,20 @@ func newTestService(t *testing.T, loads ...extension.Load) (*Service, *app.App) 
 
 // LoginTestExtension supplies an isolated login flow for UI lifecycle tests.
 type LoginTestExtension struct {
-	// Flow is the Claude login under test.
+	// Flow is provider-b's login under test.
 	Flow agent.LoginFlow
 }
 
 // Name identifies the test extension.
 func (e *LoginTestExtension) Name() string { return "test_login" }
 
-// LoginFlows overrides Claude sign-in for the test app.
+// LoginFlows replaces provider-b's sign-in for the test app.
 func (e *LoginTestExtension) LoginFlows() map[agent.ProviderID]agent.LoginFlow {
-	return map[agent.ProviderID]agent.LoginFlow{claude.ProviderID: e.Flow}
+	return map[agent.ProviderID]agent.LoginFlow{providerB: e.Flow}
 }
 
+// TestManualLoginLifecycle runs a login whose code is pasted, as package
+// codeflow's OAuth takes it, at endpoints of the test's own.
 func TestManualLoginLifecycle(t *testing.T) {
 	for _, action := range []string{"retry", "escape", "ctrl-c"} {
 		t.Run(action, func(t *testing.T) {
@@ -76,7 +77,8 @@ func TestManualLoginLifecycle(t *testing.T) {
 				fmt.Fprint(w, `{"access_token":"access","refresh_token":"refresh","expires_in":3600}`)
 			}))
 			defer server.Close()
-			oauth := claude.NewOAuth()
+			oauth := codeflow.NewOAuth()
+			oauth.AuthURL = server.URL + "/oauth/authorize"
 			oauth.TokenURL = server.URL
 			oauth.OpenBrowser = func(string) error { return nil }
 			ui := newInputTestUI(t, func(context.Context, extension.Host) (extension.Extension, error) {
@@ -86,7 +88,7 @@ func TestManualLoginLifecycle(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 			events := a.Subscribe(ctx)
-			if _, err := a.Accounts().StartLogin(claude.ProviderID, "", agent.LoginBrowser); err != nil {
+			if _, err := a.Accounts().StartLogin(providerB, "", agent.LoginBrowser); err != nil {
 				t.Fatal(err)
 			}
 			var prompt app.EventLoginPrompt
@@ -160,20 +162,20 @@ func TestManualLoginLifecycle(t *testing.T) {
 	}
 }
 
-// openAIStatus returns the OpenAI accounts of a.
-func openAIStatus(t *testing.T, a *app.App) agent.AuthStatus {
+// providerAStatus returns the provider-a accounts of a.
+func providerAStatus(t *testing.T, a *app.App) agent.AuthStatus {
 	t.Helper()
-	st, err := a.Accounts().Status(t.Context(), chatgpt.ProviderID)
+	st, err := a.Accounts().Status(t.Context(), providerA)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return st
 }
 
-// addKey saves an API key as a new OpenAI account of a and returns its ID.
+// addKey saves an API key as a new provider-a account of a and returns its ID.
 func addKey(t *testing.T, a *app.App) agent.AccountID {
 	t.Helper()
-	id, err := a.Accounts().SetKey(t.Context(), chatgpt.ProviderID, "", "sk")
+	id, err := a.Accounts().SetKey(t.Context(), providerA, "", "sk")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,10 +207,10 @@ func choose(name string) step {
 	}
 }
 
-// askKey returns the steps that open /login and choose OpenAI, Add account
+// askKey returns the steps that open /login and choose provider-a, Add account
 // and API key, which leaves the API key question open.
 func askKey() []step {
-	return []step{submit("/login"), choose("openai"), choose(addAccountName), choose(apiKeyName)}
+	return []step{submit("/login"), choose("provider-a"), choose(addAccountName), choose(apiKeyName)}
 }
 
 // run performs steps and fails the test if one sends the input to the model
@@ -230,7 +232,7 @@ func TestLoginKeyAddsAccount(t *testing.T) {
 	s, a := newTestService(t)
 	run(t, s, append(askKey(), submit("  sk-test\n"))...)
 
-	st := openAIStatus(t, a)
+	st := providerAStatus(t, a)
 	if len(st.Accounts) != 1 {
 		t.Fatalf("accounts = %+v, want one", st.Accounts)
 	}
@@ -255,18 +257,18 @@ func TestLoginKeyCancelled(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s, a := newTestService(t)
 			run(t, s, append(askKey(), tt.cancel)...)
-			if st := openAIStatus(t, a); len(st.Accounts) != 0 {
+			if st := providerAStatus(t, a); len(st.Accounts) != 0 {
 				t.Errorf("accounts = %+v, want none", st.Accounts)
 			}
 		})
 	}
 }
 
-// accountMenu opens the OpenAI account menu of s and returns its banner and
+// accountMenu opens the provider-a account menu of s and returns its banner and
 // the names of its options.
 func accountMenu(t *testing.T, s *Service) (EventBannerShow, []string) {
 	t.Helper()
-	out := s.ShowAccountMenu(chatgpt.ProviderID)
+	out := s.ShowAccountMenu(providerA)
 	if len(out) != 1 {
 		t.Fatalf("menu = %v, want one banner", out)
 	}
@@ -284,7 +286,7 @@ func accountMenu(t *testing.T, s *Service) (EventBannerShow, []string) {
 func TestLoginMenuSearch(t *testing.T) {
 	s, _ := newTestService(t)
 	show := bannerShown(t, s.HandleSubmit("/login"))
-	all := []string{string(claude.ProviderID), string(chatgpt.ProviderID)}
+	all := []string{string(providerA), string(providerB)}
 	if got := bannerNames(show); !show.Search || show.Title != "Login" || !slices.Equal(got, all) {
 		t.Fatalf("menu = %+v, want %q under a search field titled Login", show, all)
 	}
@@ -294,8 +296,8 @@ func TestLoginMenuSearch(t *testing.T) {
 		want     []string
 		wantText string
 	}{
-		{query: "anth", want: []string{string(claude.ProviderID)}},
-		{query: "OAI", want: []string{string(chatgpt.ProviderID)}},
+		{query: "pb", want: []string{string(providerB)}},
+		{query: "PA", want: []string{string(providerA)}},
 		{query: "zzz", wantText: NoMatchesText},
 	}
 	for _, tt := range tests {
@@ -306,18 +308,18 @@ func TestLoginMenuSearch(t *testing.T) {
 	}
 
 	bannerShown(t, s.HandleBannerSearch(""))
-	bannerShown(t, choose("openai")(s))
-	if show := bannerShown(t, s.HandleBannerSearch("open")); len(show.Items) != 0 {
+	bannerShown(t, choose("provider-a")(s))
+	if show := bannerShown(t, s.HandleBannerSearch("prov")); len(show.Items) != 0 {
 		t.Errorf("search in the account menu lists %q, want its own rows, none of which match", bannerNames(show))
 	}
 }
 
 func TestLoginMenuOmitsAPIKeyProviders(t *testing.T) {
 	s, a := newTestService(t, func(_ context.Context, host extension.Host) (extension.Extension, error) {
-		gatewaytest.WriteCache(t, host.DataDir, gatewaytest.FromAPI(t, `{
-			"anthropic":{"id":"anthropic","models":{}},
-			"openai":{"id":"openai","models":{}},
-			"api-key-only":{"id":"api-key-only","npm":"@ai-sdk/openai-compatible","api":"https://api.example/v1","models":{}}
+		gatewaytest.WriteCache(t, host.DataDir, protocoltest.FromAPI(t, `{
+			"provider-b":{"id":"provider-b","format":"messages","models":{}},
+			"provider-a":{"id":"provider-a","format":"responses","models":{}},
+			"api-key-only":{"id":"api-key-only","format":"chat","api":"https://api.example/v1","models":{}}
 		}`))
 		return nil, nil
 	})
@@ -325,7 +327,7 @@ func TestLoginMenuOmitsAPIKeyProviders(t *testing.T) {
 		t.Fatal("setup: API-key-only provider is not registered")
 	}
 	show := bannerShown(t, s.ShowLoginMenu())
-	if got, want := bannerNames(show), []string{"anthropic", "openai"}; !slices.Equal(got, want) {
+	if got, want := bannerNames(show), []string{"provider-a", "provider-b"}; !slices.Equal(got, want) {
 		t.Fatalf("login providers = %v, want %v", got, want)
 	}
 }
@@ -346,13 +348,13 @@ func TestAccountMenu(t *testing.T) {
 	}
 
 	s.HandleBannerSelect(show.Items[0].Value)
-	if st := openAIStatus(t, a); st.Active != older {
+	if st := providerAStatus(t, a); st.Active != older {
 		t.Errorf("active account = %q, want %q", st.Active, older)
 	}
 	if s.state.Banner != NoBanner {
 		t.Error("menu stayed open")
 	}
-	if want := "openai/model"; s.state.ModelLabel != want {
+	if want := "provider-a/model"; s.state.ModelLabel != want {
 		t.Errorf("model label = %q, want the model alone, %q", s.state.ModelLabel, want)
 	}
 }
@@ -369,15 +371,15 @@ func TestModelLabel(t *testing.T) {
 		t.Fatal("/status shows no notice")
 	}
 	status, _ := toastOf(events[i])
-	if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == "Model     openai/model" }) {
+	if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == "Model     provider-a/model" }) {
 		t.Errorf("/status lines = %+v, want the model alone", status.Lines)
 	}
 
-	out := s.ApplyAgentEvent(app.EventAccountsChanged{Provider: chatgpt.ProviderID, Active: id})
+	out := s.ApplyAgentEvent(app.EventAccountsChanged{Provider: providerA, Active: id})
 	if slices.ContainsFunc(out, func(ev UIEvent) bool { _, ok := ev.(EventModelLabelChanged); return ok }) {
 		t.Error("the label under the input changed with the accounts")
 	}
-	if want := "openai/model"; s.state.ModelLabel != want {
+	if want := "provider-a/model"; s.state.ModelLabel != want {
 		t.Errorf("label under the input = %q, want %q", s.state.ModelLabel, want)
 	}
 }
@@ -401,8 +403,8 @@ func TestApplyManualLoginPrompt(t *testing.T) {
 	s, _ := newTestService(t)
 	s.OpenBanner(LoginBanner)
 	s.ApplyAgentEvent(app.EventLoginPrompt{
-		Provider: claude.ProviderID, Account: agent.NewAccountID(),
-		URL: "https://claude.ai/oauth/authorize", State: &agent.LoginState{Verifier: "proof", State: "nonce"},
+		Provider: providerB, Account: agent.NewAccountID(),
+		URL: "https://login.provider-b.test/oauth/authorize", State: &agent.LoginState{Verifier: "proof", State: "nonce"},
 	})
 	if s.state.Login == nil || s.state.Banner != LoginBanner || s.state.Prompt != nil {
 		t.Fatal("manual login did not keep its state in the input panel")

@@ -7,19 +7,36 @@ import (
 
 	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/extension/protocol/adc"
 	"github.com/unaquatic/flow/extension/protocol/completions"
 	"github.com/unaquatic/flow/extension/protocol/content"
-	"github.com/unaquatic/flow/extension/protocol/google"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
+	"github.com/unaquatic/flow/extension/protocol/login/backendflow"
 	"github.com/unaquatic/flow/extension/protocol/messages"
 	"github.com/unaquatic/flow/extension/protocol/responses"
 )
 
+// The request formats of the catalog, named by the protocol package that
+// speaks each.
+const (
+	// FormatMessages is the format of package messages.
+	FormatMessages = gateway.FormatAnthropicMessages
+	// FormatMessagesRawPredict is the format of package messages in the
+	// raw predict shape of a cloud, as messages.Init.RawPredict sends it.
+	FormatMessagesRawPredict = gateway.FormatAnthropicVertex
+	// FormatResponses is the format of package responses.
+	FormatResponses = gateway.FormatOpenAIResponses
+	// FormatChat is the format of package completions.
+	FormatChat = gateway.FormatOpenAIChat
+	// FormatContent is the format of package content.
+	FormatContent = gateway.FormatGemini
+)
+
+// AuthCloud is the authentication of an endpoint that a cloud's
+// application default credentials authorize, as package adc reads them.
+const AuthCloud = gateway.AuthGoogle
+
 // Formats are the request formats of the catalog that the protocols speak.
-var Formats = []gateway.Format{
-	gateway.FormatAnthropicMessages, gateway.FormatAnthropicVertex, gateway.FormatOpenAIResponses,
-	gateway.FormatOpenAIChat, gateway.FormatGemini,
-}
+var Formats = []gateway.Format{FormatMessages, FormatMessagesRawPredict, FormatResponses, FormatChat, FormatContent}
 
 // Options configures a Dialer.
 type Options struct {
@@ -36,18 +53,18 @@ type Options struct {
 //
 //   - with an API key, from the authorizer it is given, as a bearer token
 //     or in a header;
-//   - by Google, with OAuth tokens from the application default
-//     credentials of the environment, as google.Credentials makes them.
+//   - by a cloud, with OAuth tokens from the application default
+//     credentials of the environment, as adc.Credentials makes them.
 //
-// OpenAI's Responses endpoints also send the requests of a ChatGPT login to
-// the ChatGPT backend, as ChatGPTURL says. An endpoint of another format or
-// authentication has no provider.
+// The Responses endpoints of backendflow's provider also send the requests
+// of its login to its backend, as BackendURL says. An endpoint of another
+// format or authentication has no provider.
 func Dialer(opts Options) agent.Dialer {
 	env := opts.Env
 	if env == nil {
 		env = os.Getenv
 	}
-	gcp := &google.Credentials{Env: env, Client: opts.Client}
+	cloud := &adc.Credentials{Env: env, Client: opts.Client}
 	var base http.RoundTripper
 	if opts.Client != nil {
 		base = opts.Client.Transport
@@ -59,26 +76,26 @@ func Dialer(opts Options) agent.Dialer {
 		client, ambient := opts.Client, func() bool { return false }
 		switch ep.Auth.Scheme {
 		case gateway.AuthBearer, gateway.AuthHeader:
-		case gateway.AuthGoogle:
-			az, ambient = gcp, gcp.Available
-			client = &http.Client{Transport: gcp.Transport(base)}
+		case AuthCloud:
+			az, ambient = cloud, cloud.Available
+			client = &http.Client{Transport: cloud.Transport(base)}
 		default:
 			return nil, false
 		}
 		name := string(t)
 		var p agent.Provider
 		switch ep.Format {
-		case gateway.FormatAnthropicMessages, gateway.FormatAnthropicVertex:
-			p = messages.New(messages.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, Vertex: ep.Format == gateway.FormatAnthropicVertex, HTTPClient: client})
-		case gateway.FormatOpenAIResponses:
+		case FormatMessages, FormatMessagesRawPredict:
+			p = messages.New(messages.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, RawPredict: ep.Format == FormatMessagesRawPredict, HTTPClient: client})
+		case FormatResponses:
 			init := responses.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, HTTPClient: client}
-			if t == chatgpt.ProviderID {
-				init.ChatGPTBaseURL = ChatGPTURL(ep.API)
+			if t == backendflow.ProviderID {
+				init.BackendURL = BackendURL(ep.API)
 			}
 			p = responses.New(init)
-		case gateway.FormatOpenAIChat:
+		case FormatChat:
 			p = completions.New(completions.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, HTTPClient: client})
-		case gateway.FormatGemini:
+		case FormatContent:
 			p = content.New(content.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, HTTPClient: client})
 		default:
 			return nil, false
@@ -87,26 +104,26 @@ func Dialer(opts Options) agent.Dialer {
 	}
 }
 
-// ChatGPTURL returns the base URL that the requests of a ChatGPT login go
-// to, for OpenAI's Responses endpoint at api: the ChatGPT backend for
-// OpenAI's platform API, and api itself for another, such as a proxy's that
-// the configuration moves OpenAI to.
-func ChatGPTURL(api string) string {
+// BackendURL returns the base URL that the requests of backendflow's login
+// go to, for its provider's Responses endpoint at api: the backend for the
+// provider's platform API, and api itself for another, such as a proxy's
+// that the configuration moves the provider to.
+func BackendURL(api string) string {
 	if strings.TrimSuffix(api, "/") == responses.DefaultBaseURL {
-		return chatgpt.BaseURL
+		return backendflow.BaseURL
 	}
 	return api
 }
 
 // Provider is a provider that Dialer makes: its models run at the effort
 // their lab documents as their default, whichever provider serves them, as
-// OpenRouter's Claude runs at Anthropic's, and it reports whether the
+// a gateway's lab-a model runs at lab-a's, and it reports whether the
 // environment holds credentials that authorize it.
 type Provider struct {
 	agent.Provider
 	// Ambient reports whether the environment holds credentials that
-	// authorize the provider's requests without an account, such as
-	// Google's application default credentials.
+	// authorize the provider's requests without an account, such as a
+	// cloud's application default credentials.
 	Ambient func() bool
 }
 

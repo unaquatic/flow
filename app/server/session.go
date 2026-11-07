@@ -211,7 +211,7 @@ type SendRequest struct {
 	// Text is the user prompt.
 	Text string `json:"text"`
 	// Model is the model to answer with, in "provider/model:option:effort"
-	// format, such as "openai/gpt-5.6:fast:high", leaving out the option
+	// format, such as "provider-a/model-a:fast:high", leaving out the option
 	// and the level it does not set. The level is one the catalog lists for the
 	// model; a model that names none runs at its default level, the
 	// catalog's or else medium, where the catalog lists it for the model. Empty selects the default

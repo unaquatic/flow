@@ -3,32 +3,58 @@
 package catalog
 
 import (
-	_ "embed"
+	"embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"sync"
 
 	"github.com/unaquatic/catalog/gateway"
 )
 
-// snapshot is the catalog compiled into flow, of the built-in providers
+// SnapshotFile is the file, in the snapshot directory of this package,
+// that go generate writes the snapshot to. Git ignores it.
+const SnapshotFile = "snapshot/catalog.json"
+
+// snapshot holds the catalog compiled into flow, of the built-in providers
 // alone, for a cold start with no cache and no server: the catalog of the
 // catalog module version go.mod requires, which go run builds the catalog
-// command at. Regenerate it with go generate after a change of that
-// version, as go get github.com/unaquatic/catalog@latest makes.
+// command at, of the providers that command keeps by default. Generate it
+// with go generate before a release build, and after a change of that
+// version, as go get github.com/unaquatic/catalog@latest makes. A build
+// without it compiles in an empty snapshot.
 //
-//go:generate go run github.com/unaquatic/catalog/cmd/catalog snapshot -providers anthropic,openai -o snapshot.json
-//go:embed snapshot.json
-var snapshot []byte
+//go:generate go run github.com/unaquatic/catalog/cmd/catalog snapshot -o snapshot/catalog.json
+//go:embed all:snapshot
+var snapshot embed.FS
 
-// Snapshot returns the catalog compiled into flow.
+// Snapshot returns the catalog compiled into flow, or an empty catalog when
+// the build compiled in none.
 var Snapshot = sync.OnceValue(func() *gateway.Catalog {
-	c, err := gateway.Decode(snapshot)
+	data, err := snapshot.ReadFile(SnapshotFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return &gateway.Catalog{
+			Version:   gateway.Version,
+			Models:    map[gateway.ModelID]gateway.Model{},
+			Providers: map[gateway.ProviderID]gateway.Provider{},
+		}
+	}
+	if err != nil {
+		panic(fmt.Sprintf("catalog: embedded snapshot: %v", err))
+	}
+	c, err := gateway.Decode(data)
 	if err != nil {
 		// The snapshot is compiled in, so only a broken build gets here.
 		panic(fmt.Sprintf("catalog: embedded snapshot: %v", err))
 	}
 	return c
 })
+
+// Embedded reports whether the build compiled in a snapshot.
+func Embedded() bool {
+	_, err := fs.Stat(snapshot, SnapshotFile)
+	return err == nil
+}
 
 // NewStore returns a gateway.Store configured by opts, which falls back to
 // Snapshot unless opts names a snapshot of its own.

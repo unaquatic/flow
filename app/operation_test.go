@@ -19,7 +19,6 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
 	"github.com/unaquatic/flow/extension/snapshot"
 	"github.com/unaquatic/flow/internal/catalog"
 	"github.com/unaquatic/flow/internal/flock"
@@ -209,17 +208,17 @@ func TestSend_KeepsReasoningOfTheModelThatRuns(t *testing.T) {
 	a, gw := newActorTestApp(t, "hello")
 	dir := t.TempDir()
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
-	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, agenttest.Provider{ID: chatgpt.ProviderID, Gateway: gw})
+	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, agenttest.Provider{ID: providerA, Gateway: gw})
 	stored := func(role message.Role, model string, parts ...message.ContentPart) {
 		appendMessage(t, a.sessions, "ses_mixed", &message.Content{ID: message.NewID(), Role: role, Model: model, Parts: parts})
 	}
-	stored(message.RoleUser, "openai/gpt-5.6:fast:high", message.TextPart{Text: "hi"})
-	stored(message.RoleAgent, "openai/gpt-5.6:fast:high", message.ReasoningPart{Text: "own"}, message.TextPart{Text: "one"})
-	stored(message.RoleUser, "anthropic/claude-x", message.TextPart{Text: "and you?"})
-	stored(message.RoleAgent, "anthropic/claude-x", message.ReasoningPart{Text: "other"}, message.TextPart{Text: "two"})
+	stored(message.RoleUser, "provider-a/model-a:fast:high", message.TextPart{Text: "hi"})
+	stored(message.RoleAgent, "provider-a/model-a:fast:high", message.ReasoningPart{Text: "own"}, message.TextPart{Text: "one"})
+	stored(message.RoleUser, "provider-b/model-x", message.TextPart{Text: "and you?"})
+	stored(message.RoleAgent, "provider-b/model-x", message.ReasoningPart{Text: "other"}, message.TextPart{Text: "two"})
 
 	events := a.Subscribe(t.Context())
-	send(t, a, "ses_mixed", SendInput{Text: "again", Model: "openai/gpt-5.6:xhigh"})
+	send(t, a, "ses_mixed", SendInput{Text: "again", Model: "provider-a/model-a:xhigh"})
 	collectUntilIdle(t, events)
 
 	if len(gw.StreamCalls) != 1 {
@@ -893,23 +892,23 @@ func TestSend_RecordsVariant(t *testing.T) {
 	tests := []struct {
 		model, want string
 	}{
-		{model: "openai/gpt-5.6:fast:high", want: "openai/gpt-5.6:fast:high"},
-		{model: "openai/gpt-5.6:xhigh", want: "openai/gpt-5.6:xhigh"},
-		{model: "openai/gpt-5.6", want: "openai/gpt-5.6:medium"},
+		{model: "provider-a/model-a:fast:high", want: "provider-a/model-a:fast:high"},
+		{model: "provider-a/model-a:xhigh", want: "provider-a/model-a:xhigh"},
+		{model: "provider-a/model-a", want: "provider-a/model-a:medium"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.model, func(t *testing.T) {
 			a, gw := newActorTestApp(t, "hello")
 			dir := t.TempDir()
 			gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
-			a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, agenttest.Provider{ID: chatgpt.ProviderID, Gateway: gw})
+			a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, agenttest.Provider{ID: providerA, Gateway: gw})
 
 			events := a.Subscribe(t.Context())
 			send(t, a, "ses_variant", SendInput{Text: "hi", Model: tt.model})
 			got := collectUntilIdle(t, events)
 
-			if !slices.Equal(gw.StreamModels, []string{"gpt-5.6"}) {
-				t.Errorf("provider got models %q, want gpt-5.6", gw.StreamModels)
+			if !slices.Equal(gw.StreamModels, []string{"model-a"}) {
+				t.Errorf("provider got models %q, want model-a", gw.StreamModels)
 			}
 			ended := eventsOfType[EventMessageEnded](got)
 			if len(ended) != 2 {

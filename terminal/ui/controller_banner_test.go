@@ -8,7 +8,6 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
-	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
 )
 
 // greekMenu returns a menu of three rows that selects "beta" while its search
@@ -481,10 +480,10 @@ func TestMenusSearchUnderTitle(t *testing.T) {
 		{name: "settings", show: (*Service).ShowSettingsMenu, title: "Settings", change: true},
 		{name: "demo", show: demo, title: "Demos"},
 		{name: "providers", show: (*Service).ShowLoginMenu, title: "Login"},
-		{name: "accounts", show: func(s *Service) []UIEvent { return s.ShowAccountMenu(chatgpt.ProviderID) },
-			title: "openai accounts"},
-		{name: "login methods", show: func(s *Service) []UIEvent { return s.ShowLoginMethodMenu(chatgpt.ProviderID) },
-			title: "New openai account"},
+		{name: "accounts", show: func(s *Service) []UIEvent { return s.ShowAccountMenu(providerA) },
+			title: "provider-a accounts"},
+		{name: "login methods", show: func(s *Service) []UIEvent { return s.ShowLoginMethodMenu(providerA) },
+			title: "New provider-a account"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

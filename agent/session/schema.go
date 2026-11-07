@@ -21,7 +21,7 @@ var Migrations = []string{
 // from its root to head_id; forward_id is the leaf a redo returns to. A
 // message's model is the variant that produced it, or that a prompt was sent
 // to, in "provider/model:option:effort" form, such as
-// anthropic/claude-opus-5-5:fast:xhigh: the catalog variant's option, which
+// provider-a/model-a:fast:xhigh: the catalog variant's option, which
 // prices its usage, is left out for the default variant, and the effort when
 // the provider chose it. Telling the option and the effort from the rest of
 // the model ID takes the catalog.

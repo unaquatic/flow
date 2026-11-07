@@ -1,6 +1,8 @@
-// Package claude logs in to Anthropic with Claude sign-in. The requests that
-// its tokens authorize are Anthropic Messages, which package messages sends.
-package claude
+// Package codeflow logs in to the provider ProviderID names with its
+// sign-in, whose browser login ends with a code the user pastes. The
+// requests that its tokens authorize are Messages requests, which package
+// messages sends.
+package codeflow
 
 import (
 	"bytes"
@@ -19,8 +21,8 @@ import (
 	"github.com/unaquatic/flow/agent"
 )
 
-// ProviderID identifies Anthropic in the catalog: the provider whose
-// accounts a Claude login signs in to.
+// ProviderID identifies, by its catalog ID, the provider whose accounts
+// this login signs in to.
 const ProviderID agent.ProviderID = "anthropic"
 
 const (
@@ -33,7 +35,7 @@ const (
 	userAgent   = "axios/1.13.6"
 )
 
-// OAuth implements agent.LoginFlow for Claude sign-in.
+// OAuth implements agent.LoginFlow for the provider's sign-in.
 type OAuth struct {
 	// ClientID identifies the OAuth client.
 	ClientID string
@@ -51,7 +53,7 @@ type OAuth struct {
 	OpenBrowser func(string) error
 }
 
-// NewOAuth returns an OAuth using Anthropic's endpoints.
+// NewOAuth returns an OAuth using the provider's endpoints.
 func NewOAuth() *OAuth {
 	return &OAuth{
 		ClientID:  clientID,
@@ -62,7 +64,7 @@ func NewOAuth() *OAuth {
 	}
 }
 
-// BeginBrowser opens Anthropic's authorization page and returns the temporary
+// BeginBrowser opens the provider's authorization page and returns the temporary
 // state the caller needs to complete sign-in. It does not wait for user input.
 func (a *OAuth) BeginBrowser() agent.LoginPrompt {
 	pkce := agent.NewPKCE()
@@ -116,7 +118,7 @@ func (a *OAuth) CompleteBrowser(ctx context.Context, state agent.LoginState, pas
 }
 
 // ParseCode extracts an authorization code and verifies its state. It accepts
-// Anthropic's code#state format, a callback URL, or URL query parameters.
+// the provider's code#state format, a callback URL, or URL query parameters.
 func ParseCode(input, expectedState string) (string, error) {
 	input = strings.TrimSpace(input)
 	var code, state string

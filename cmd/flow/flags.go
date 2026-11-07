@@ -31,7 +31,7 @@ func modelFlags(fs *flag.FlagSet, o *modelOptions) {
 	const providerUsage = "Model provider `name` to choose from"
 	fs.Var(providerValue{id: &o.provider}, "provider", providerUsage)
 	fs.Var(providerValue{id: &o.provider}, "p", providerUsage)
-	const modelUsage = "Model ID or `pattern` to use, such as opus:fast:high"
+	const modelUsage = "Model ID or `pattern` to use, such as name:fast:high"
 	fs.StringVar(&o.model, "model", "", modelUsage)
 	fs.StringVar(&o.model, "m", "", modelUsage)
 	fs.Var(effortValue{effort: &o.effort}, "effort",
@@ -150,7 +150,7 @@ func accountFlag(fs *flag.FlagSet, id *agent.AccountID, usage string) {
 }
 
 // providerValue is the flag.Value of a provider, named by its catalog ID,
-// such as anthropic or openrouter. The app checks that the catalog lists it.
+// such as provider-a. The app checks that the catalog lists it.
 type providerValue struct {
 	// id is the variable the flag sets.
 	id *agent.ProviderID

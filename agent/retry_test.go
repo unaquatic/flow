@@ -39,78 +39,78 @@ func TestClassify(t *testing.T) {
 
 		{
 			name:      "500 server error",
-			err:       &ResponseError{Provider: "anthropic", StatusCode: 500, Message: "Internal Server Error"},
+			err:       &ResponseError{Provider: "provider-b", StatusCode: 500, Message: "Internal Server Error"},
 			retryable: true,
 			message:   "server error",
 		},
 		{
 			name:      "502 bad gateway",
-			err:       &ResponseError{Provider: "openai", StatusCode: 502, Message: "Bad Gateway"},
+			err:       &ResponseError{Provider: "provider-a", StatusCode: 502, Message: "Bad Gateway"},
 			retryable: true,
 			message:   "server error",
 		},
 		{
 			name:      "503 service unavailable",
-			err:       &ResponseError{Provider: "openai", StatusCode: 503, Message: "Service Unavailable"},
+			err:       &ResponseError{Provider: "provider-a", StatusCode: 503, Message: "Service Unavailable"},
 			retryable: true,
 			message:   "server error",
 		},
 		{
 			name:      "529 overloaded",
-			err:       &ResponseError{Provider: "anthropic", StatusCode: 529, Message: "Overloaded"},
+			err:       &ResponseError{Provider: "provider-b", StatusCode: 529, Message: "Overloaded"},
 			retryable: true,
 			message:   "provider overloaded",
 		},
 		{
 			name:      "429 rate limited",
-			err:       &ResponseError{Provider: "anthropic", StatusCode: 429, Message: "Rate limit reached"},
+			err:       &ResponseError{Provider: "provider-b", StatusCode: 429, Message: "Rate limit reached"},
 			retryable: true,
 			message:   "rate limited",
 		},
 		{
 			name: "401 unauthorized",
-			err:  &ResponseError{Provider: "openai", StatusCode: 401, Message: "Invalid API key"},
+			err:  &ResponseError{Provider: "provider-a", StatusCode: 401, Message: "Invalid API key"},
 		},
 		{
 			name: "403 forbidden",
-			err:  &ResponseError{Provider: "anthropic", StatusCode: 403, Message: "Permission denied"},
+			err:  &ResponseError{Provider: "provider-b", StatusCode: 403, Message: "Permission denied"},
 		},
 		{
 			name: "400 bad request",
-			err:  &ResponseError{Provider: "anthropic", StatusCode: 400, Message: "Invalid request"},
+			err:  &ResponseError{Provider: "provider-b", StatusCode: 400, Message: "Invalid request"},
 		},
 		{
 			name: "404 not found",
-			err:  &ResponseError{Provider: "openai", StatusCode: 404, Message: "Model not found"},
+			err:  &ResponseError{Provider: "provider-a", StatusCode: 404, Message: "Model not found"},
 		},
 
 		{
 			name:      "mid-stream overloaded",
-			err:       &ResponseError{Provider: "anthropic", StatusCode: 0, Message: "Overloaded"},
+			err:       &ResponseError{Provider: "provider-b", StatusCode: 0, Message: "Overloaded"},
 			retryable: true,
 			message:   "provider overloaded",
 		},
 		{
 			name:      "mid-stream rate limit",
-			err:       &ResponseError{Provider: "openai", StatusCode: 0, Message: "Rate limit reached"},
+			err:       &ResponseError{Provider: "provider-a", StatusCode: 0, Message: "Rate limit reached"},
 			retryable: true,
 			message:   "rate limited",
 		},
 		{
 			name:      "mid-stream too many requests",
-			err:       &ResponseError{Provider: "openai", StatusCode: 0, Message: "Too Many Requests"},
+			err:       &ResponseError{Provider: "provider-a", StatusCode: 0, Message: "Too Many Requests"},
 			retryable: true,
 			message:   "too many requests",
 		},
 		{
 			name: "mid-stream unrecognized message",
-			err:  &ResponseError{Provider: "openai", StatusCode: 0, Message: "something else entirely"},
+			err:  &ResponseError{Provider: "provider-a", StatusCode: 0, Message: "something else entirely"},
 		},
 
 		{
 			name: "body contains rate_limit_error",
 			err: &ResponseError{
-				Provider:     "anthropic",
+				Provider:     "provider-b",
 				StatusCode:   0,
 				Message:      "error occurred",
 				ResponseBody: `{"error":{"type":"rate_limit_error","message":"Rate limit"}}`,
@@ -121,7 +121,7 @@ func TestClassify(t *testing.T) {
 		{
 			name: "body contains overloaded_error",
 			err: &ResponseError{
-				Provider:     "anthropic",
+				Provider:     "provider-b",
 				StatusCode:   0,
 				Message:      "error occurred",
 				ResponseBody: `{"error":{"type":"overloaded_error","message":"Overloaded"}}`,
@@ -139,7 +139,7 @@ func TestClassify(t *testing.T) {
 
 		{
 			name:      "wrapped 500",
-			err:       fmt.Errorf("gateway: %w", &ResponseError{Provider: "anthropic", StatusCode: 500, Message: "fail"}),
+			err:       fmt.Errorf("gateway: %w", &ResponseError{Provider: "provider-b", StatusCode: 500, Message: "fail"}),
 			retryable: true,
 			message:   "server error",
 		},
@@ -150,7 +150,7 @@ func TestClassify(t *testing.T) {
 		},
 		{
 			name:      "429 generic error",
-			err:       &ResponseError{Provider: "anthropic", StatusCode: 429, Message: "Error"},
+			err:       &ResponseError{Provider: "provider-b", StatusCode: 429, Message: "Error"},
 			retryable: true,
 			message:   "rate limited",
 		},
@@ -174,7 +174,7 @@ func TestClassify(t *testing.T) {
 func TestPolicyDelayFor(t *testing.T) {
 	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
 	limited := func(h http.Header) error {
-		return fmt.Errorf("stream: %w", &ResponseError{Provider: "anthropic", StatusCode: 429, ResponseHeaders: h})
+		return fmt.Errorf("stream: %w", &ResponseError{Provider: "provider-b", StatusCode: 429, ResponseHeaders: h})
 	}
 	p := Policy{Delay: 3 * time.Second}
 	for _, tt := range []struct {

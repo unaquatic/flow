@@ -5,26 +5,28 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/unaquatic/catalog/gateway/gatewaytest"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/protocol"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 )
 
 // newTestApp returns an app over a new data directory, with snapshots off,
-// no catalog server and no API keys in the environment, in a new working
-// directory. The test ends by closing it.
+// no catalog server and a catalog of one provider, provider-a, whose API key
+// no environment variable holds, in a new working directory. The test ends
+// by closing it.
 func newTestApp(t *testing.T) *app.App {
 	t.Helper()
 	t.Chdir(t.TempDir())
-	t.Setenv("OPENAI_API_KEY", "")
-	t.Setenv("ANTHROPIC_API_KEY", "")
 	home := t.TempDir()
-	settings := `{"model":"openai/model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
+	settings := `{"model":"provider-a/model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, `{"provider-a":{"id":"provider-a","format":"responses","models":{}}}`))
 	conf := config.NewService(home)
 	a, err := app.New(t.Context(), conf, app.Options{Extensions: []extension.Load{protocol.Load}})
 	if err != nil {
