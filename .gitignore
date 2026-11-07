@@ -7,3 +7,7 @@
 
 # Logs
 logs/
+
+# Local workspace over the sibling checkouts (../catalog, ../fluid)
+go.work
+go.work.sum
