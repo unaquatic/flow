@@ -1,8 +1,7 @@
 === text ===
 |  Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
 |                                                            |
-|                                                            |
-|  Commands [↑/↓ move] [esc cancel]                          |
+|■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
 |  /new                      Clear the chat and start a new  |
 |  /model                    Switch the model                |
@@ -10,7 +9,8 @@
 |  /status                   Show the version and session i  |
 |  /undo                     Move the workspace back one tu  |
 |                                                            |
-|  hello                                                     |
+|■ hello                                                     |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -19,10 +19,9 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA AAAAA AAAAAAA AA AA AA AAA AA AAAAA A AAAAAAA AAAA  |
+|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC B AAAAAAA AAAA  |
 |                                                            |
-|                                                            |
-|  BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
+|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
 |                                                            |
 |  BBBB                      CCCCC CCC CCCC CCC CCCCC C CCC  |
 |  BBBBBB                    CCCCCC CCC CCCCC                |
@@ -30,7 +29,8 @@
 |  BBBBBBB                   CCCC CCC CCCCCCC CCC CCCCCCC C  |
 |  DDDDD                     DDDD DDD DDDDDDDDD DDDD DDD DD  |
 |                                                            |
-|  BBBBB                                                     |
+|E BBBBB                                                     |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -41,17 +41,17 @@
 === bg ===
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -63,5 +63,5 @@ A #8c8c8c
 B #e6e6e6
 C #707070
 D #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+E #ff5f00
+░ #ff5f00

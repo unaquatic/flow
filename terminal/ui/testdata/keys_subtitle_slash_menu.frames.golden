@@ -1,13 +1,13 @@
 === text ===
 |  Usage model context 0K in 0K out 0K cache 0K $0.00 work…  |
 |                                                            |
-|                                                            |
-|  Commands                                                  |
+|■ Commands                                                  |
 |  esc cancel  ↑/↓ move  tab complete                        |
 |                                                            |
 |  /status                   Show the version and session i  |
 |                                                            |
-|  hello                                                     |
+|■ hello                                                     |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -16,15 +16,15 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA AAAAA AAAAAAA AA AA AA AAA AA AAAAA AA AAAAA AAAAA  |
+|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC BB BBBBB CCCCB  |
 |                                                            |
-|                                                            |
-|  BBBBBBBB                                                  |
-|  CCC DDDDDD  CCC DDDD  CCC DDDDDDDD                        |
+|B BBBBBBBB                                                  |
+|  DDD CCCCCC  DDD CCCC  DDD CCCCCCCC                        |
 |                                                            |
 |  EEEEEEE                   EEEE EEE EEEEEEE EEE EEEEEEE E  |
 |                                                            |
-|  BBBBB                                                     |
+|F BBBBB                                                     |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -35,14 +35,14 @@
 === bg ===
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -52,8 +52,8 @@
 === legend ===
 A #8c8c8c
 B #e6e6e6
-C #b4b4b4
-D #707070
+C #707070
+D #b4b4b4
 E #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+F #ff5f00
+░ #ff5f00

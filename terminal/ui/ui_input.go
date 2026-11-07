@@ -35,9 +35,12 @@ func (ui *UI) HandleKey(k *input.KeyEvent) {
 		}
 	}
 	if k.Name == input.KeyEnter {
-		if k.Mods.Has(input.ModAlt) {
+		switch {
+		case NewlineKey(k):
+			ui.HandleNewline()
+		case k.Mods.Has(input.ModAlt):
 			ui.HandleSendNow()
-		} else {
+		default:
 			ui.HandleEnter()
 		}
 		k.PreventDefault()
@@ -90,6 +93,28 @@ func (ui *UI) HandleEnter() {
 		return
 	}
 	ui.Apply(ui.service.HandleSubmit(ui.input.Text()))
+}
+
+// NewlineKey reports whether k, an Enter key, breaks the input's line rather
+// than submitting it: Shift+Enter, which a terminal tells apart from Enter
+// through the Kitty keyboard protocol, or a line feed, which Ctrl+J types,
+// and which terminals without the protocol can be set to send for
+// Shift+Enter.
+func NewlineKey(k *input.KeyEvent) bool {
+	if k.Mods.Has(input.ModCtrl) || k.Mods.Has(input.ModAlt) {
+		return false
+	}
+	return k.Mods.Has(input.ModShift) || k.Raw == "\n"
+}
+
+// HandleNewline breaks the input's line at the cursor, while the input takes
+// a prompt. With a banner open or a login asked for, it acts as Enter.
+func (ui *UI) HandleNewline() {
+	if ui.service.state.Login != nil || ui.service.state.Banner != NoBanner {
+		ui.HandleEnter()
+		return
+	}
+	ui.input.InsertText("\n")
 }
 
 // HandleSendNow sends the input ahead of the queue on Alt+Enter, stopping the

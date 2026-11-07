@@ -11,6 +11,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/buffer"
 	"github.com/unaquatic/fluid/input"
+	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/terminal"
 	"github.com/unaquatic/fluid/widget"
 )
@@ -293,7 +294,8 @@ func TestMenuSelectionSurvivesPartialRepaint(t *testing.T) {
 				damage := buffer.Rect{X: menu.X() + 1, Y: menu.Y(), Width: menu.Width() - 1, Height: menu.Height()}
 				root.PrepareLayout(0)
 				root.SyncPositions(0)
-				buf.FillRect(damage.X, damage.Y, damage.Width, damage.Height, ui.BoxBg())
+				// The renderer clears the region to its own background first.
+				buf.FillRect(damage.X, damage.Y, damage.Width, damage.Height, style.ColorTransparent)
 				root.Draw(buf, 0, damage)
 
 				for y := range h {

@@ -318,6 +318,13 @@ type EventPromptStyleSet struct {
 	Style PromptStyle
 }
 
+// EventInputStyleSet shows the input box and the panels that open in it as
+// Style says.
+type EventInputStyleSet struct {
+	// Style is how the input box and its panels show.
+	Style InputStyle
+}
+
 // EventSelectionStyleSet marks the selected row of every menu as Style says.
 type EventSelectionStyleSet struct {
 	// Style is how the menus mark their selected row.
@@ -391,4 +398,5 @@ func (EventUsagePinnedSet) uiEvent()    {}
 func (EventCountPlaceSet) uiEvent()     {}
 func (EventSelectionStyleSet) uiEvent() {}
 func (EventPromptStyleSet) uiEvent()    {}
+func (EventInputStyleSet) uiEvent()     {}
 func (EventInputHintChanged) uiEvent()  {}

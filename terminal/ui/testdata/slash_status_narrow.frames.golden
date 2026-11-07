@@ -1,12 +1,12 @@
 === text ===
 |  Usage model-h medium context 64K 7% in 120… [ctrl+u pin]  |
 |                                                            |
-|                                                            |
-|  Commands [↑/↓ move] [esc cancel]                          |
+|■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
 |  /status                   Show the version and session i  |
 |                                                            |
-|  hello                                                     |
+|■ hello                                                     |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -15,14 +15,14 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA AAAAAAA AAAAAA AAAAAAA AAA AA AA AAAA AAAAAAA AAAA  |
+|  AAAAA BBBBBBB BBBBBB CCCCCCC BBB BB CC BBBB AAAAAAA AAAA  |
 |                                                            |
-|                                                            |
-|  BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
+|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
 |                                                            |
 |  DDDDDDD                   DDDD DDD DDDDDDD DDD DDDDDDD D  |
 |                                                            |
-|  BBBBB                                                     |
+|E BBBBB                                                     |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -33,13 +33,13 @@
 === bg ===
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -51,5 +51,5 @@ A #8c8c8c
 B #e6e6e6
 C #707070
 D #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+E #ff5f00
+░ #ff5f00

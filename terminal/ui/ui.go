@@ -77,6 +77,20 @@ type UI struct {
 	inputWrapper      *widget.Box
 	indicatorBox      *widget.Box  // progress or error line between the transcript and the input
 	indicatorLabel    *widget.Text // text inside indicatorBox
+	// edgeMarks are the left border cells of the input box that MarkEdge
+	// marks while the input shows in InputBar.
+	edgeMarks []*widget.CharFill
+	// inputTopBorder is the blank top row of the input box, which InputBar
+	// leaves out, so that a single blank row parts the box from what is
+	// above it.
+	inputTopBorder *widget.Box
+	// inputBottomBorder is the blank bottom row of the input box, which
+	// InputBar leaves out too, so that the footer's row alone parts the box
+	// from the terminal's bottom edge.
+	inputBottomBorder *widget.Box
+	// inputFills set the fills of the input box and its panels that were
+	// BoxBg, as SetInputStyle finds them the first time it runs.
+	inputFills []func(style.Color)
 	// noticeMarkers head the notices of the transcript that show as
 	// PromptBar shows a prompt, as NewNoticeBarRow makes them, so that
 	// /settings restyles them.
@@ -249,6 +263,11 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 		EnableAutoFocus:  true,
 		HandleCtrlC:      true,
 		DebugLog:         "logs/fluid.log",
+		// The Kitty keyboard protocol tells Shift+Enter, which breaks the
+		// input's line, apart from Enter, which sends it. A terminal without
+		// it ignores the request.
+		UseKittyKeyboard:   true,
+		KittyKeyboardFlags: input.KittyFlagDisambiguate,
 	}
 
 	// Width probing is opt-in because it delays renderer startup.
@@ -526,6 +545,9 @@ func (ui *UI) BuildUI() {
 	)
 	inputOuterBox, inputMiddleCol := StreamableMessageBox(inputBorderFg, inputBg, inputRow)
 	ui.inputMiddleCol = inputMiddleCol
+	edges := inputOuterBox.Children()
+	ui.inputTopBorder = edges[0].(*widget.Box)
+	ui.inputBottomBorder = edges[len(edges)-1].(*widget.Box)
 	ui.inputContentRow = inputMiddleCol.Children()[0].(*widget.Box)
 
 	// Queued prompts sit above the input box, each in a box of its own, as
@@ -645,6 +667,10 @@ func (ui *UI) BuildUI() {
 	ui.inputMiddleCol.InsertBefore(ui.bannerPanel, ui.inputContentRow)
 	ui.BuildTreePanel(inputBorderFg, bannerBg)
 	ui.SyncKeyHints()
+	ui.MarkInputEdges()
+	if ui.service.state.InputStyle == InputBar {
+		ui.SetInputStyle(InputBar)
+	}
 
 	// Keep progress and errors visible below the scrolling transcript, as a
 	// line on the canvas inset like the prose. The transcript ends in a blank
@@ -695,6 +721,7 @@ func (ui *UI) BuildUI() {
 	root.AddLifecyclePass(ui.CommitScrolledRows)
 	// Every frame fits the input box to the terminal before it is laid out,
 	// whatever changed it: a menu, the input text, the queue, or a resize.
+	root.AddLifecyclePass(ui.SyncInputGap)
 	root.AddLifecyclePass(ui.KeepInputBoxInView)
 
 	// Inline, what may still change stays out of the scrollback, and what

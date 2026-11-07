@@ -161,6 +161,12 @@ type Terminal struct {
 	// background, or "bar", with a primary color cell at its left edge.
 	PromptStyle string `json:"prompt_style,omitempty"`
 
+	// InputStyle is how the input box and the panels that open in it show:
+	// "bar", the default, on the canvas, with a marker at the left edge of
+	// the input and of each panel's title, or "filled", on the box
+	// background.
+	InputStyle string `json:"input_style,omitempty"`
+
 	// Selection is how the menus mark their selected row: "full_width",
 	// "fill", or "arrow".
 	Selection string `json:"selection,omitempty"`

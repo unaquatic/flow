@@ -145,9 +145,9 @@ func TestFitInputBoxGivesRowsBack(t *testing.T) {
 		t.Run(panel.name, func(t *testing.T) {
 			ui := newBuiltTestUI(t, true)
 			panel.open(ui)
-			fitInputBox(ui, 12)
+			fitInputBox(ui, 10)
 			if ui.service.state.MenuRows == 0 {
-				t.Fatal("the list is not bounded on a 12-row terminal")
+				t.Fatal("the list is not bounded on a 10-row terminal")
 			}
 
 			fitInputBox(ui, 60)
@@ -312,7 +312,7 @@ func TestFitInputBoxBoundsTheQueue(t *testing.T) {
 	if got := len(ui.queueBox.Children()); got < 1 || got >= len(prompts) {
 		t.Errorf("queue shows %d boxes, want the first few", got)
 	}
-	if got := ui.queueBox.LayoutNode().Computed.Height % queueItemRows; got != 0 {
+	if got := ui.queueBox.LayoutNode().Computed.Height % ui.QueueItemRows(); got != 0 {
 		t.Errorf("queue is cut %d rows into a box, want whole boxes", got)
 	}
 	fitInputBox(ui, 200)

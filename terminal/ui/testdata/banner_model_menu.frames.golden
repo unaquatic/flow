@@ -1,6 +1,5 @@
 === text ===
-|                                                                        |
-|  Models [↑/↓ move] [tab custom] [ctrl+s save default] [esc cancel]     |
+|■ Models [↑/↓ move] [tab custom] [ctrl+s save default] [esc cancel]     |
 |                                                                        |
 |  Model A        provider-a/model-a        [provider-a]                 |
 |  Model A Fast   provider-a/model-a:fast   [provider-a]                 |
@@ -9,12 +8,12 @@
 |  Model B Fast   provider-a/model-b:fast   [provider-a]                 |
 |  Model G        provider-b/model-g        [provider-b]                 |
 |                                                                        |
+|■                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === fg ===
-|                                                                        |
-|  AAAAAA BBBB BBBBB BBBB BBBBBBB BBBBBBB BBBB BBBBBBBB BBBB BBBBBBB     |
+|A AAAAAA BBBB BBBBB BBBB BBBBBBB BBBBBBB BBBB BBBBBBBB BBBB BBBBBBB     |
 |                                                                        |
 |  AAAAA A        BBBBBBBBBBBBBBBBBB        BBBBBBBBBBBB                 |
 |  CCCCC C CCCC   CCCCCCCCCCCCCCCCCCCCCCC   CCCCCCCCCCCC                 |
@@ -23,26 +22,27 @@
 |  AAAAA A AAAA   BBBBBBBBBBBBBBBBBBBBBBB   BBBBBBBBBBBB                 |
 |  AAAAA A        BBBBBBBBBBBBBBBBBB        BBBBBBBBBBBB                 |
 |                                                                        |
+|D                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === bg ===
+|                                                                        |
+|                                                                        |
+|                                                                        |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 |                                                                        |
 === legend ===
 A #e6e6e6
 B #707070
 C #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+D #ff5f00
+░ #ff5f00

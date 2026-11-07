@@ -1,46 +1,32 @@
 === text ===
+|■ also update the README [queued] [alt+enter send now]      |
 |                                                            |
-|  also update the README [queued] [alt+enter send now]      |
+|■ then run go vet on every package in the reposi… [queued]  |
 |                                                            |
-|                                                            |
-|                                                            |
-|  then run go vet on every package in the reposi… [queued]  |
-|                                                            |
+|■ hello                                                     |
 |                                                            |
 |                                                            |
-|  hello                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === fg ===
+|A BBBB BBBBBB BBB BBBBBB CCCCCCCC CCCCCCCCCC CCCC CCCC      |
 |                                                            |
-|  AAAA AAAAAA AAA AAAAAA BBBBBBBB BBBBBBBBBB BBBB BBBB      |
+|A BBBB BBB BB BBB BB BBBBB BBBBBBB BB BBB BBBBBBB CCCCCCCC  |
 |                                                            |
-|                                                            |
-|                                                            |
-|  AAAA AAA AA AAA AA AAAAA AAAAAAA AA AAA AAAAAAA BBBBBBBB  |
-|                                                            |
-|                                                            |
-|                                                            |
-|  AAAAA                                                     |
+|A BBBBB                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                            |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                            |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #e6e6e6
-B #707070
-░ #232323 BoxBg
+A #ff5f00
+B #e6e6e6
+C #707070

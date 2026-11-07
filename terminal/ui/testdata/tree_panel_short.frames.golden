@@ -1,53 +1,53 @@
 === text ===
-|                                                            |
-|  Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]    |
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]    |
 |               [esc cancel]                                 |
 |                                                            |
+|  Agent I'll add Divide with a zero check.                  |
 |  ├─ User also add tests                                    |
 |  │  Agent Added TestDivide.                                |
 |  │                                                         |
 |  └─ User use table-driven tests instead                    |
+|     Read calc_test.go                                      |
 |  [4/8]                                                     |
 |                                                            |
-|                                                            |
-|                                                            |
+|■                                                           |
 |                                                            |
 |                                                            |
 === fg ===
-|                                                            |
-|  AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB    |
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB    |
 |               BBBB BBBBBBB                                 |
 |                                                            |
-|  BB CCCC DDDD DDD DDDDD                                    |
-|  B  AAAAA DDDDD DDDDDDDDDDD                                |
+|  AAAAA CCCC CCC CCCCCC CCCC C CCCC CCCCCC                  |
+|  BB DDDD CCCC CCC CCCCC                                    |
+|  B  AAAAA CCCCC CCCCCCCCCCC                                |
 |  E                                                         |
 |  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                    |
+|     BBBB BBBBBBBBBBBB                                      |
 |  BBBBB                                                     |
 |                                                            |
-|                                                            |
-|                                                            |
+|F                                                           |
 |                                                            |
 |                                                            |
 === bg ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 === legend ===
 A #e6e6e6
 B #707070
-C #eb7513
-D #b4b4b4
+C #b4b4b4
+D #eb7513
 E #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+F #ff5f00
+░ #ff5f00

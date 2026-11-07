@@ -131,21 +131,18 @@ func (ui *UI) SetMarkerShape(m MarkerShape) {
 		StyleMarker(ui.indicatorMarker, m, indicatorHintFg)
 	}
 	for _, marker := range ui.noticeMarkers {
-		StyleMarker(marker, m, ui.service.state.ToolColor.Fg())
+		StyleMarker(marker, m, titleFg)
 	}
+	ui.RepaintEdgeMarks()
 	ui.ShowStatusMarker()
 	ui.ReprintCommitted()
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
-// transcript and the session preview, and the marker of every notice in
-// PromptBar, in the color c names.
+// transcript and the session preview in the color c names.
 func (ui *UI) SetToolColor(c ToolNameColor) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolColor(c)
-	}
-	for _, marker := range ui.noticeMarkers {
-		StyleMarker(marker, ui.service.state.MarkerShape, c.Fg())
 	}
 	ui.ShowStatusMarker()
 	ui.ReprintCommitted()
@@ -306,8 +303,9 @@ func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 // NewNoticeBarRow returns the row, with id, that shows lines, those of n, as
 // PromptBar shows a prompt: on the canvas, with no padding above or below,
 // inset by PaddingX at the sides like the prose. Its header starts with a
-// marker in its left padding, in the marker shape /settings sets and the
-// tool name color, and then n's Title, or without one the first of lines.
+// marker in its left padding, in the marker shape /settings sets and in
+// titleFg, the color of the header it heads, and then n's Title, or without
+// one the first of lines.
 // The other lines follow under the header, unmarked. A blank row follows
 // it.
 func (ui *UI) NewNoticeBarRow(id string, n Notice, lines []style.StyledText) *widget.Box {
@@ -316,7 +314,7 @@ func (ui *UI) NewNoticeBarRow(id string, n Notice, lines []style.StyledText) *wi
 	if n.Title == "" {
 		header, body = lines[0], lines[1:]
 	}
-	marker := NewMarker(st.MarkerShape, st.ToolColor.Fg())
+	marker := NewMarker(st.MarkerShape, titleFg)
 	ui.noticeMarkers = append(ui.noticeMarkers, marker)
 	// The marker fills the left padding with the gap after it, so that the
 	// header starts where the lines under it do.

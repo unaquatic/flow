@@ -6,7 +6,7 @@
 |  provider-b response error (429): {"type":"error","error":{"type":     |
 |  "rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}  |
 |                                                                        |
-|                                                                        |
+|■                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -20,7 +20,7 @@
 |  BBBBBBBBBB BBBBBBBB BBBBB BBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB     |
 |  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB  |
 |                                                                        |
-|                                                                        |
+|C                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -34,13 +34,14 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === legend ===
 A #e6e6e6
 B #787878
+C #ff5f00
 ░ #232323 BoxBg

@@ -293,9 +293,45 @@ func (cm *ChatMessageBox) build(msg ChatMessage) {
 		// stays until the next prompt takes its place. Only its text pins:
 		// the rest of it, in TailRow, scrolls as any row does.
 		cm.Box.LayoutNode().Sticky = layout.StickyTop
+		cm.Box.RenderBeforeHook = cm.ClearPinned
+		cm.SyncPinGap()
 	}
 	cm.SyncRows()
 	cm.SyncHeld()
+}
+
+// Pins reports whether the bubble's Box pins to the top of the fullscreen
+// transcript on the canvas: a prompt's, while it fills no background, as in
+// PromptBar, and the bubble does not Hold, as inline, where nothing pins.
+func (cm *ChatMessageBox) Pins() bool {
+	return cm.role == message.RoleUser && cm.Box != nil && !cm.Filled() && !cm.Holds
+}
+
+// SyncPinGap gives a Box that Pins a blank row above its text, as it has one
+// under it, so that its text stays a row apart from the rows that scroll
+// under it once pinned. The row lies over the blank row that ends the row
+// above, which it takes the place of, so the transcript shows the rows
+// around the prompt as it did.
+func (cm *ChatMessageBox) SyncPinGap() {
+	if cm.Box == nil {
+		return
+	}
+	gap := 0
+	if cm.Pins() {
+		gap = 1
+	}
+	SetEdge(cm.Box, &cm.Box.LayoutNode().PaddingTop, gap)
+	SetEdge(cm.Box, &cm.Box.LayoutNode().MarginTop, -gap)
+}
+
+// ClearPinned blanks the cells of the Box while it Pins and is pinned, before
+// it draws its text: the canvas shows through a prompt that fills no
+// background, and would show the rows that scroll under it.
+func (cm *ChatMessageBox) ClearPinned(buf *buffer.Buffer, _ time.Duration) {
+	if !cm.Pins() || cm.Box.StickyOffsetY() <= 0 {
+		return
+	}
+	buf.FillRect(cm.Box.X(), cm.Box.Y(), cm.Box.Width(), cm.Box.Height(), style.ColorTransparent)
 }
 
 // PromptRail is the column at the left edge of a prompt that PromptBar
@@ -621,6 +657,7 @@ func (cm *ChatMessageBox) SetHolds(holds bool) {
 	}
 	cm.Holds = holds
 	cm.SyncHeld()
+	cm.SyncPinGap()
 }
 
 // SyncHeld shows each part of the bubble whole, or, while the bubble Holds,

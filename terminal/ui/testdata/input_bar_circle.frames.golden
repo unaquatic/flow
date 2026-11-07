@@ -1,0 +1,55 @@
+=== text ===
+|  Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
+|                                                            |
+|● Commands [↑/↓ move] [esc cancel]                          |
+|                                                            |
+|  /status                   Show the version and session i  |
+|                                                            |
+|● hello                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC B AAAAAAA AAAA  |
+|                                                            |
+|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
+|                                                            |
+|  DDDDDDD                   DDDD DDD DDDDDDD DDD DDDDDDD D  |
+|                                                            |
+|E BBBBB                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== bg ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8c8c8c
+B #e6e6e6
+C #707070
+D #232323 BoxBg
+E #ff5f00
+░ #ff5f00

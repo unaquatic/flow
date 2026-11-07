@@ -31,6 +31,7 @@ var (
 	keyHintsModeKeys   = map[KeyHintsMode]string{KeyHintsTitle: "title", KeyHintsSubtitle: "subtitle", KeyHintsFooter: "footer"}
 	countPlaceKeys     = map[CountPlace]string{CountBelow: "below", CountInTitle: "title"}
 	promptStyleKeys    = map[PromptStyle]string{PromptFilled: "filled", PromptBar: "bar"}
+	inputStyleKeys     = map[InputStyle]string{InputBar: "bar", InputFilled: "filled"}
 	selectionStyleKeys = map[SelectionStyle]string{SelectionFullWidth: "full_width", SelectionFill: "fill", SelectionArrow: "arrow"}
 )
 
@@ -59,6 +60,7 @@ func (st *UIState) ApplyConfig(t config.Terminal, debug bool) {
 	st.Count = SettingValue(countPlaceKeys, t.ListCount)
 	st.Selection = SettingValue(selectionStyleKeys, t.Selection)
 	st.PromptStyle = SettingValue(promptStyleKeys, t.PromptStyle)
+	st.InputStyle = SettingValue(inputStyleKeys, t.InputStyle)
 	st.Debug = debug
 }
 
@@ -76,6 +78,7 @@ func (st *UIState) TerminalConfig() config.Terminal {
 		ListCount:       countPlaceKeys[st.Count],
 		Selection:       selectionStyleKeys[st.Selection],
 		PromptStyle:     promptStyleKeys[st.PromptStyle],
+		InputStyle:      inputStyleKeys[st.InputStyle],
 	}
 }
 

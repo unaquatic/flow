@@ -271,7 +271,8 @@ const NoMatchesText = "[no matches]"
 // keyHintsSetting the row that sets the KeyHintsMode,
 // listCountSetting the row that sets the CountPlace, selectionSetting the
 // row that sets the SelectionStyle, promptSetting the row that sets the
-// PromptStyle, and debugSetting the row that switches
+// PromptStyle, inputSetting the row that sets the InputStyle, and
+// debugSetting the row that switches
 // Debug.
 const (
 	fullscreenSetting  = "Fullscreen"
@@ -284,6 +285,7 @@ const (
 	listCountSetting   = "List count"
 	selectionSetting   = "Selection"
 	promptSetting      = "Prompt style"
+	inputSetting       = "Input style"
 	debugSetting       = "Debug"
 )
 
@@ -332,6 +334,9 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			}),
 			setting(promptSetting, s.state.PromptStyle.String(), func(step int) []UIEvent {
 				return s.SetPromptStyle(s.state.PromptStyle.Next(step))
+			}),
+			setting(inputSetting, s.state.InputStyle.String(), func(step int) []UIEvent {
+				return s.SetInputStyle(s.state.InputStyle.Next(step))
 			}),
 			setting(debugSetting, onOff(s.state.Debug), func(int) []UIEvent {
 				return s.SetDebug(!s.state.Debug)
@@ -398,6 +403,14 @@ func (s *Service) SetCountPlace(place CountPlace) []UIEvent {
 func (s *Service) SetPromptStyle(style PromptStyle) []UIEvent {
 	s.state.PromptStyle = style
 	return append([]UIEvent{EventPromptStyleSet{Style: style}}, s.PersistTerminal()...)
+}
+
+// SetInputStyle shows the input box and the panels that open in it as style
+// says: on the box background, or on the canvas with a marker at the left
+// edge of the input and of each panel's title.
+func (s *Service) SetInputStyle(style InputStyle) []UIEvent {
+	s.state.InputStyle = style
+	return append([]UIEvent{EventInputStyleSet{Style: style}}, s.PersistTerminal()...)
 }
 
 // SetSelectionStyle marks the selected row of every menu as style says: with

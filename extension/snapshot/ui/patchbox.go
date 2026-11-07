@@ -69,6 +69,9 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 		Theme: theme,
 		Fg:    fg,
 	}
+	// The marker takes the color of the title it heads, as a panel's does.
+	b.MarkerFg = ui.TitleChunk(PatchTitle).Fg
+	b.SetMarkerShape(b.MarkerShape)
 	b.Content = b
 	b.Details.Add(b.Summary)
 	b.Details.Add(b.Files)

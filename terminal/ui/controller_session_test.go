@@ -181,16 +181,17 @@ func TestActiveSessionIDOffLoop(t *testing.T) {
 }
 
 // TestInitSessionNoticeFirst checks that a session opened at startup loads its
-// transcript in one event, which the UI builds the last rows of, with its
-// /status notice above its messages, and adds nothing to it after.
+// transcript in one event, which the UI builds the last rows of, with the
+// logo above its messages and no /status notice, and adds nothing to it
+// after.
 func TestInitSessionNoticeFirst(t *testing.T) {
 	tests := []struct {
 		name     string
 		messages int
 		want     []string
 	}{
-		{name: "new session", want: []string{"notice"}},
-		{name: "stored session", messages: 2, want: []string{"notice", "message", "message"}},
+		{name: "new session", want: []string{"logo"}},
+		{name: "stored session", messages: 2, want: []string{"logo", "message", "message"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -220,7 +221,9 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 				switch {
 				case m.Notice == nil:
 					got = append(got, "message")
-				case m.Notice.Surface != NoticeCanvas:
+				case m.Notice.Surface == NoticeCanvas:
+					got = append(got, "logo")
+				default:
 					got = append(got, "notice")
 				}
 			}
