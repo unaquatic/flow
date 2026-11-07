@@ -54,6 +54,9 @@ type ToolStateCompleted struct {
 	Title string `json:"title,omitempty"`
 	// Metadata contains optional tool-specific result data.
 	Metadata map[string]any `json:"metadata,omitempty"`
+	// Attachments are files the tool returned for the model to see beside
+	// Output, such as the image a read of an image file returns.
+	Attachments []FilePart `json:"attachments,omitempty"`
 	// StartedAt is when execution began.
 	StartedAt time.Time `json:"started_at"`
 	// EndedAt is when execution completed.
@@ -143,6 +146,8 @@ type ToolStateJSON struct {
 	Title string `json:"title,omitempty"`
 	// Metadata contains state-specific data.
 	Metadata map[string]any `json:"metadata,omitempty"`
+	// Attachments are the files a completed tool returned.
+	Attachments []FilePart `json:"attachments,omitempty"`
 	// Error contains a failure message.
 	Error string `json:"error,omitempty"`
 	// StartedAt is when execution began.
@@ -162,12 +167,13 @@ func (s ToolStateJSON) decode() ToolState {
 		return ToolStateRunning{Input: s.Input, Output: s.Output, StartedAt: s.StartedAt}
 	case ToolStatusCompleted:
 		return ToolStateCompleted{
-			Input:     s.Input,
-			Output:    s.Output,
-			Title:     s.Title,
-			Metadata:  s.Metadata,
-			StartedAt: s.StartedAt,
-			EndedAt:   s.EndedAt,
+			Input:       s.Input,
+			Output:      s.Output,
+			Title:       s.Title,
+			Metadata:    s.Metadata,
+			Attachments: s.Attachments,
+			StartedAt:   s.StartedAt,
+			EndedAt:     s.EndedAt,
 		}
 	case ToolStatusError:
 		return ToolStateError{
@@ -198,13 +204,14 @@ func toolStateJSON(state ToolState) ToolStateJSON {
 		return ToolStateJSON{Status: ToolStatusRunning, Input: v.Input, Output: v.Output, StartedAt: v.StartedAt}
 	case ToolStateCompleted:
 		return ToolStateJSON{
-			Status:    ToolStatusCompleted,
-			Input:     v.Input,
-			Output:    v.Output,
-			Title:     v.Title,
-			Metadata:  v.Metadata,
-			StartedAt: v.StartedAt,
-			EndedAt:   v.EndedAt,
+			Status:      ToolStatusCompleted,
+			Input:       v.Input,
+			Output:      v.Output,
+			Title:       v.Title,
+			Metadata:    v.Metadata,
+			Attachments: v.Attachments,
+			StartedAt:   v.StartedAt,
+			EndedAt:     v.EndedAt,
 		}
 	case ToolStateError:
 		return ToolStateJSON{

@@ -74,13 +74,17 @@ func (s *Tools) Execute(ctx context.Context, call ToolCall) ToolResult {
 		return ToolFailure(call.ID, ToolErrorText(err))
 	}
 
-	slog.Debug("run tool", "name", call.Name, "result_len", len(out.Text), "is_error", out.IsError)
-	return ToolResult{
+	slog.Debug("run tool", "name", call.Name, "result_len", len(out.Text), "is_error", out.IsError, "attachments", len(out.Attachments))
+	res := ToolResult{
 		CallID:  call.ID,
 		Content: out.Text,
 		Title:   out.Title,
 		IsError: out.IsError,
 	}
+	if !out.IsError {
+		res.Attachments = out.Attachments
+	}
+	return res
 }
 
 // ToolFailure returns the result of call callID that failed with message: the

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -71,7 +72,7 @@ func TestBash_Result(t *testing.T) {
 			if err != nil {
 				t.Errorf("error = %v; want nil", err)
 			}
-			if out != tt.want {
+			if !reflect.DeepEqual(out, tt.want) {
 				t.Errorf("output = %+v; want %+v", out, tt.want)
 			}
 		})
@@ -87,7 +88,7 @@ func TestBash_TimeoutKillsProcessGroup(t *testing.T) {
 	start := time.Now()
 	out, err := runBash(t.Context(), command, 200*time.Millisecond)
 	want := agent.ToolOutput{Text: "[timeout after 0.2s]", IsError: true}
-	if err != nil || out != want {
+	if err != nil || !reflect.DeepEqual(out, want) {
 		t.Fatalf("= %+v, %v; want %+v, nil", out, err, want)
 	}
 
@@ -169,7 +170,7 @@ func TestBash_UsesDefaultShell(t *testing.T) {
 		t.Errorf("shell argument description %q does not name bash as the default", desc)
 	}
 	out, err := bt.Execute(t.Context(), map[string]any{"command": "echo $0"})
-	if want := (agent.ToolOutput{Text: bash + "\n"}); err != nil || out != want {
+	if want := (agent.ToolOutput{Text: bash + "\n"}); err != nil || !reflect.DeepEqual(out, want) {
 		t.Errorf("= %+v, %v; want %+v, nil", out, err, want)
 	}
 }
@@ -234,7 +235,7 @@ func TestBash_ShellArgument(t *testing.T) {
 		t.Errorf("shell enum = %v; want it to contain sh", enum)
 	}
 	out, err := bt.Execute(t.Context(), map[string]any{"command": "echo $0", "shell": "sh"})
-	if want := (agent.ToolOutput{Text: sh + "\n"}); err != nil || out != want {
+	if want := (agent.ToolOutput{Text: sh + "\n"}); err != nil || !reflect.DeepEqual(out, want) {
 		t.Errorf("= %+v, %v; want %+v, nil", out, err, want)
 	}
 }

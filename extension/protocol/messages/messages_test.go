@@ -573,3 +573,28 @@ func TestStream_RateLimited(t *testing.T) {
 		})
 	}
 }
+
+// TestToMessages_ToolResultAttachments checks that a tool result's text goes
+// as its content alone, and that with attachments its content is a text
+// block and then an image block for an image and a document block for any
+// other file, inline.
+func TestToMessages_ToolResultAttachments(t *testing.T) {
+	result := message.ToolResultPart{ToolUseID: "c1", Text: "Read image shot.png", Attachments: []message.FilePart{
+		{Data: "aW1n", MediaType: "image/png", Filename: "shot.png"},
+		{Data: "cGRm", MediaType: "application/pdf", Filename: "spec.pdf"},
+	}}
+	plain := message.ToolResultPart{ToolUseID: "c2", Text: "ok"}
+	_, msgs := ToMessages([]agent.Message{{Role: message.RoleUser, Content: []message.ContentPart{result, plain}}})
+	got, err := json.Marshal(msgs[0].Content)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"type":"tool_result","tool_use_id":"c1","content":[` +
+		`{"type":"text","text":"Read image shot.png"},` +
+		`{"type":"image","source":{"type":"base64","media_type":"image/png","data":"aW1n"}},` +
+		`{"type":"document","source":{"type":"base64","media_type":"application/pdf","data":"cGRm"}}]},` +
+		`{"type":"tool_result","tool_use_id":"c2","content":"ok"}]`
+	if string(got) != want {
+		t.Errorf("content =\n%s\nwant\n%s", got, want)
+	}
+}

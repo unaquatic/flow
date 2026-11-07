@@ -180,6 +180,22 @@ type FunctionResponse struct {
 	// Response holds the result under "output", or a failure under
 	// "error", as the API reads them.
 	Response map[string]any `json:"response"`
+	// Parts are the files of the result, such as an image, which models of
+	// version 3 and later take in a function response.
+	Parts []FunctionResponsePart `json:"parts,omitempty"`
+}
+
+// FunctionResponsePart is a file of a FunctionResponse.
+type FunctionResponsePart struct {
+	InlineData *FunctionResponseBlob `json:"inlineData"`
+}
+
+// FunctionResponseBlob is the inline data of a FunctionResponsePart, named
+// by DisplayName.
+type FunctionResponseBlob struct {
+	MimeType    string `json:"mimeType"`
+	Data        string `json:"data"`
+	DisplayName string `json:"displayName,omitempty"`
 }
 
 // LegacyFamily is the family of the format's own models, whose IDs before
@@ -199,6 +215,11 @@ var legacyModel = regexp.MustCompile(`(^|/)` + LegacyFamily + `(-live)?-[12]([.-
 // Stream yields a function call's. The first function call of a turn that
 // has none, such as one another model made, takes SkipSignature, which
 // models of version 3 and later need; models before it take no call IDs.
+//
+// The attachments of a tool result, such as an image, go in its function
+// response's parts to models of version 3 and later. Models before it take
+// none there, so theirs follow the turn of the function responses in a
+// user turn, each after a line that names its call.
 func ToContents(msgs []agent.Message, model string) (system []Part, out []Content) {
 	legacy := legacyModel.MatchString(model)
 	id := func(callID string) string {
@@ -220,7 +241,7 @@ func ToContents(msgs []agent.Message, model string) (system []Part, out []Conten
 		if m.Role == message.RoleAgent {
 			role = "model"
 		}
-		var parts []Part
+		var parts, attached []Part
 		var pending string
 		signed := false
 		take := func() string {
@@ -269,13 +290,27 @@ func ToContents(msgs []agent.Message, model string) (system []Part, out []Conten
 				if v.IsError {
 					key = "error"
 				}
-				parts = append(parts, Part{FunctionResponse: &FunctionResponse{
-					ID: id(v.ToolUseID), Name: v.Name, Response: map[string]any{key: v.Text},
-				}})
+				fr := &FunctionResponse{ID: id(v.ToolUseID), Name: v.Name, Response: map[string]any{key: v.Text}}
+				if legacy && len(v.Attachments) > 0 {
+					attached = append(attached, Part{Text: "Attachments of the " + v.Name + " call:"})
+				}
+				for _, f := range v.Attachments {
+					if legacy {
+						attached = append(attached, Part{InlineData: &Blob{MimeType: f.MediaType, Data: f.Data}})
+						continue
+					}
+					fr.Parts = append(fr.Parts, FunctionResponsePart{InlineData: &FunctionResponseBlob{
+						MimeType: f.MediaType, Data: f.Data, DisplayName: f.Filename,
+					}})
+				}
+				parts = append(parts, Part{FunctionResponse: fr})
 			}
 		}
 		if len(parts) > 0 {
 			out = append(out, Content{Role: role, Parts: parts})
+		}
+		if len(attached) > 0 {
+			out = append(out, Content{Role: "user", Parts: attached})
 		}
 	}
 	return system, out

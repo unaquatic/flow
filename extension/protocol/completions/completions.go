@@ -132,24 +132,14 @@ type ToolFunction struct {
 }
 
 // ToMessages converts provider-agnostic Messages to Chat Completions
-// messages.
+// messages. Each tool result is a tool message, whose content is text alone,
+// so the attachments of a message's tool results follow its tool messages in
+// a user message, each after a line that names its call.
 func ToMessages(msgs []agent.Message) []Message {
 	out := make([]Message, 0, len(msgs))
 	for _, m := range msgs {
-		// Represent a single tool result as a tool message.
-		if len(m.Content) == 1 {
-			if tr, ok := m.Content[0].(message.ToolResultPart); ok {
-				out = append(out, Message{
-					Role:       "tool",
-					Content:    tr.Text,
-					ToolCallID: tr.ToolUseID,
-				})
-				continue
-			}
-		}
-
 		var toolCalls []ToolCall
-		var contentParts []ContentPart
+		var contentParts, attached []ContentPart
 
 		for _, p := range m.Content {
 			switch v := p.(type) {
@@ -169,19 +159,7 @@ func ToMessages(msgs []agent.Message) []Message {
 					ImageURL: &ImageURL{URL: url},
 				})
 			case message.FilePart:
-				if isAudioMediaType(v.MediaType) {
-					contentParts = append(contentParts, ContentPart{
-						Type:       "input_audio",
-						InputAudio: &Audio{Data: v.Data, Format: audioFormat(v.MediaType)},
-					})
-				} else {
-					// Send non-audio files through the image URL representation.
-					url := "data:" + v.MediaType + ";base64," + v.Data
-					contentParts = append(contentParts, ContentPart{
-						Type:     "image_url",
-						ImageURL: &ImageURL{URL: url},
-					})
-				}
+				contentParts = append(contentParts, FileContentPart(v))
 			case message.ReasoningPart:
 			case message.ToolUsePart:
 				args := string(v.Input)
@@ -203,7 +181,16 @@ func ToMessages(msgs []agent.Message) []Message {
 					Content:    v.Text,
 					ToolCallID: v.ToolUseID,
 				})
+				if len(v.Attachments) > 0 {
+					attached = append(attached, ContentPart{Type: "text", Text: "Attachments of tool call " + v.ToolUseID + ":"})
+					for _, f := range v.Attachments {
+						attached = append(attached, FileContentPart(f))
+					}
+				}
 			}
+		}
+		if len(attached) > 0 {
+			out = append(out, Message{Role: Role(message.RoleUser), Content: attached})
 		}
 
 		// Tool-result-only messages were emitted above.
@@ -224,6 +211,16 @@ func ToMessages(msgs []agent.Message) []Message {
 		out = append(out, om)
 	}
 	return out
+}
+
+// FileContentPart returns the content part that sends f inline: an
+// input_audio part for audio, and an image_url part holding a data URL for
+// any other file.
+func FileContentPart(f message.FilePart) ContentPart {
+	if isAudioMediaType(f.MediaType) {
+		return ContentPart{Type: "input_audio", InputAudio: &Audio{Data: f.Data, Format: audioFormat(f.MediaType)}}
+	}
+	return ContentPart{Type: "image_url", ImageURL: &ImageURL{URL: "data:" + f.MediaType + ";base64," + f.Data}}
 }
 
 // Model returns the model with ID name.

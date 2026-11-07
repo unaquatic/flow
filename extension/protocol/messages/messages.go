@@ -273,8 +273,10 @@ type ContentBlock struct {
 
 	// ToolUseID identifies the corresponding tool call.
 	ToolUseID string `json:"tool_use_id,omitempty"`
-	// ResultContent contains tool output.
-	ResultContent string `json:"content,omitempty"`
+	// ResultContent contains tool output: its text, or the blocks that
+	// ToolResultContent makes when the result carries attachments. It is nil
+	// for a result with neither.
+	ResultContent any `json:"content,omitempty"`
 	// IsError marks failed tool output.
 	IsError bool `json:"is_error,omitempty"`
 
@@ -378,7 +380,7 @@ func ToMessages(msgs []agent.Message) (system []ContentBlock, out []Message) {
 			case message.ToolResultPart:
 				ab.Type = "tool_result"
 				ab.ToolUseID = v.ToolUseID
-				ab.ResultContent = v.Text
+				ab.ResultContent = ToolResultContent(v)
 				ab.IsError = v.IsError
 				ab.CacheControl = v.CacheControl
 			}
@@ -390,6 +392,37 @@ func ToMessages(msgs []agent.Message) (system []ContentBlock, out []Message) {
 		out = append(out, Message{Role: Role(m.Role), Content: blocks})
 	}
 	return system, out
+}
+
+// ToolResultContent returns the content of the tool_result block of r: its
+// text, or, when r carries attachments, a text block, when there is text,
+// and then the block of each attachment, as AttachmentBlock makes it. It
+// returns nil for a result with neither.
+func ToolResultContent(r message.ToolResultPart) any {
+	if len(r.Attachments) == 0 {
+		if r.Text == "" {
+			return nil
+		}
+		return r.Text
+	}
+	blocks := make([]ContentBlock, 0, len(r.Attachments)+1)
+	if r.Text != "" {
+		blocks = append(blocks, ContentBlock{Type: "text", Text: r.Text})
+	}
+	for _, f := range r.Attachments {
+		blocks = append(blocks, AttachmentBlock(f))
+	}
+	return blocks
+}
+
+// AttachmentBlock returns the block that sends f, inline: an image block for
+// an image, and a document block for any other file.
+func AttachmentBlock(f message.FilePart) ContentBlock {
+	typ := "document"
+	if agent.AttachmentModality(f.MediaType) == "image" {
+		typ = "image"
+	}
+	return ContentBlock{Type: typ, Source: &Source{Type: "base64", MediaType: f.MediaType, Data: f.Data}}
 }
 
 // buildUsage adds cache reads to input while retaining cache creation

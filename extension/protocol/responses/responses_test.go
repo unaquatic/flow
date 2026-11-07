@@ -797,3 +797,29 @@ func TestHandler_Ends(t *testing.T) {
 		t.Errorf("failed response error = %v, want a response error from provider-a saying boom", err)
 	}
 }
+
+// TestToInput_ToolResultAttachments checks that a function call's output is
+// its text alone, and that with attachments it is an input_text item and
+// then an input_image item for an image and an input_file item for any
+// other file, each inline as a data URL.
+func TestToInput_ToolResultAttachments(t *testing.T) {
+	result := message.ToolResultPart{ToolUseID: "c1", Text: "Read image shot.png", Attachments: []message.FilePart{
+		{Data: "aW1n", MediaType: "image/png", Filename: "shot.png"},
+		{Data: "cGRm", MediaType: "application/pdf", Filename: "spec.pdf"},
+	}}
+	plain := message.ToolResultPart{ToolUseID: "c2", Text: "ok"}
+	_, input := ToInput([]agent.Message{{Role: message.RoleUser, Content: []message.ContentPart{result, plain}}})
+	got, err := json.Marshal(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"call_id":"c1","output":[` +
+		`{"text":"Read image shot.png","type":"input_text"},` +
+		`{"image_url":"data:image/png;base64,aW1n","type":"input_image"},` +
+		`{"file_data":"data:application/pdf;base64,cGRm","filename":"spec.pdf","type":"input_file"}],` +
+		`"type":"function_call_output"},` +
+		`{"call_id":"c2","output":"ok","type":"function_call_output"}]`
+	if string(got) != want {
+		t.Errorf("input =\n%s\nwant\n%s", got, want)
+	}
+}

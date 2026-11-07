@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/fs"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -25,11 +27,12 @@ const defaultLsLimit = 500
 
 // Read returns a tool that reads a file's lines from an optional offset,
 // returning at most MaxLines lines and MaxBytes bytes. A result that leaves
-// out lines ends with a notice of the lines it shows.
+// out lines ends with a notice of the lines it shows. An image, as its
+// content shows, it returns whole as an attachment, as ReadImage does.
 func Read() agent.Tool {
 	return agent.Tool{
 		Name:        "read",
-		Description: fmt.Sprintf("Read the contents of a file from disk. Use absolute paths or paths relative to the working directory. Output is truncated to %d lines or %dKB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete.", MaxLines, MaxBytes/1024),
+		Description: fmt.Sprintf("Read the contents of a file from disk. Use absolute paths or paths relative to the working directory. Output is truncated to %d lines or %dKB (whichever is hit first). Use offset/limit for large files. When you need the full file, continue with offset until complete. PNG, JPEG, GIF, and WebP images up to %d px per side and %dMB base64-encoded are returned as images for you to look at; offset and limit do not apply to them. A larger image is an error: resize or compress it into another file, and read that.", MaxLines, MaxBytes/1024, MaxImageSide, MaxImageEncoded>>20),
 		Schema: agent.InputSchema{
 			Type: "object",
 			Properties: map[string]agent.PropertySchema{
@@ -54,6 +57,9 @@ func Read() agent.Tool {
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return agent.ToolOutput{}, err
+			}
+			if mediaType := http.DetectContentType(data); slices.Contains(imageTypes, mediaType) {
+				return ReadImage(path, mediaType, data)
 			}
 			offset, _ := NumberAsInt64(args["offset"])
 			limit, hasLimit := NumberAsInt64(args["limit"])

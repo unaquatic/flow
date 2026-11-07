@@ -691,7 +691,7 @@ func ToInput(msgs []agent.Message) (instructions string, input []any) {
 				results = append(results, map[string]any{
 					"type":    "function_call_output",
 					"call_id": v.ToolUseID,
-					"output":  v.Text,
+					"output":  ToolOutput(v),
 				})
 			}
 		}
@@ -699,6 +699,29 @@ func ToInput(msgs []agent.Message) (instructions string, input []any) {
 		input = append(input, results...)
 	}
 	return strings.Join(system, "\n\n"), input
+}
+
+// ToolOutput returns the output of the function_call_output item of r: its
+// text, or, when r carries attachments, an input_text item, when there is
+// text, and then an input_image item for each image and an input_file item
+// for any other file, each inline as a data URL.
+func ToolOutput(r message.ToolResultPart) any {
+	if len(r.Attachments) == 0 {
+		return r.Text
+	}
+	items := make([]map[string]any, 0, len(r.Attachments)+1)
+	if r.Text != "" {
+		items = append(items, map[string]any{"type": "input_text", "text": r.Text})
+	}
+	for _, f := range r.Attachments {
+		url := "data:" + f.MediaType + ";base64," + f.Data
+		if agent.AttachmentModality(f.MediaType) == "image" {
+			items = append(items, map[string]any{"type": "input_image", "image_url": url})
+			continue
+		}
+		items = append(items, map[string]any{"type": "input_file", "file_data": url, "filename": f.Filename})
+	}
+	return items
 }
 
 // Stream sends req: with an OAuth credential to the provider's backend, when

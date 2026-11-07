@@ -43,7 +43,7 @@ func ExpandToolParts(msgs []Message) []Message {
 			result := message.ToolResultPart{ToolUseID: tp.CallID, Name: tp.Name, IsError: true}
 			switch s := tp.State.(type) {
 			case message.ToolStateCompleted:
-				result.Text, result.IsError = s.Output, false
+				result.Text, result.IsError, result.Attachments = s.Output, false, s.Attachments
 			case message.ToolStateError:
 				result.Text = s.Error
 			default:
