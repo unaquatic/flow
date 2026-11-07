@@ -120,19 +120,41 @@ func ModelName(model string) string {
 // color above 70% of the window and its danger color above 90%. Before any
 // request it shows the context as none, such as "0K 0%".
 func ContextChunk(u SessionUsage, fg style.Color, th *style.Theme) style.TextChunk {
-	th = themeOrDefault(th)
 	context := FormatTokens(u.Context)
 	if u.Window > 0 {
-		percent := float64(u.Context) / float64(u.Window) * 100
-		context += fmt.Sprintf(" %.0f%%", percent)
-		switch {
-		case percent > contextDangerPercent:
-			fg = th.Danger
-		case percent > contextWarnPercent:
-			fg = th.Warning
-		}
+		context += " " + ContextPercent(u)
+	}
+	if warn, ok := ContextWarnFg(u, th); ok {
+		fg = warn
 	}
 	return style.New().WithFg(fg).Func()(context)
+}
+
+// ContextPercent returns the share of u's window its context fills,
+// rounded to a whole percent, such as "2%", or "" when the window is not
+// known.
+func ContextPercent(u SessionUsage) string {
+	if u.Window <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("%.0f%%", float64(u.Context)/float64(u.Window)*100)
+}
+
+// ContextWarnFg returns th's warning color when u's context fills more than
+// 70% of its window, and its danger color above 90%, and reports false
+// below that or when the window is not known.
+func ContextWarnFg(u SessionUsage, th *style.Theme) (style.Color, bool) {
+	if u.Window <= 0 {
+		return style.Color{}, false
+	}
+	th = themeOrDefault(th)
+	switch percent := float64(u.Context) / float64(u.Window) * 100; {
+	case percent > contextDangerPercent:
+		return th.Danger, true
+	case percent > contextWarnPercent:
+		return th.Warning, true
+	}
+	return style.Color{}, false
 }
 
 // statusGap parts the fields of StatusLine.

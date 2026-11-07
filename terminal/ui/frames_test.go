@@ -147,17 +147,20 @@ func movedFiles() []app.FileDiff {
 
 // statusLines returns the rows of a /status notice with fixed values.
 func statusLines() []style.StyledText {
-	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
-	var lines []style.StyledText
-	for _, row := range [][2]string{
-		{"Version", product.Name + " v0.1.0"},
-		{"Session", "01a0e33d-4571-7ed4-b06b-4229c726c313"},
-		{"Messages", "4"},
-		{"Model", "provider/model"},
-	} {
-		lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("%-10s", row[0])), style.Plain(row[1])))
+	return StatusLines(statusInfo(20_000), nil)
+}
+
+// statusInfo returns the session info of a session whose latest request
+// used context tokens of a 400K window.
+func statusInfo(context int) StatusInfo {
+	return StatusInfo{
+		Version:   product.Name + " v0.1.0",
+		Session:   "01a0e33d-4571-7ed4-b06b-4229c726c313",
+		Messages:  4,
+		Model:     "provider/model",
+		Usage:     SessionUsage{Context: context, Window: 400_000},
+		Directory: "/work/project",
 	}
-	return lines
 }
 
 func TestTranscriptFrames(t *testing.T) {
@@ -200,17 +203,24 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// /status is a system notice under the logo, which sits on the canvas
 		// from the left edge, a blank row above the notice.
-		{name: "status_notice", h: 16, add: func(ui *UI) {
+		{name: "status_notice", h: 18, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines())...)
 		}},
-		// /status draws the logo in the primary color alone, then in pairs of
-		// colors made from it, each over the line of Go that sets its color,
-		// its const keyword in that color.
-		{name: "status_logo_colors", w: 72, h: 77, add: func(ui *UI) {
-			ui.AddNotice(LogoNotice(LogoColorLines(LogoColorRows(product.LogoInitialColor)), statusLines())...)
+		// /status shows the session info alone, without the logo a new
+		// session opens under.
+		{name: "status_command", h: 9, add: func(ui *UI) {
+			ui.AddNotice(LogoNotice(nil, statusLines())...)
+		}},
+		// A context that fills most of the window shows in the warning
+		// color, and past 90% in the danger color, as the status row's does.
+		{name: "status_context_warn", h: 9, add: func(ui *UI) {
+			ui.AddNotice(LogoNotice(nil, StatusLines(statusInfo(300_000), nil))...)
+		}},
+		{name: "status_context_danger", h: 9, add: func(ui *UI) {
+			ui.AddNotice(LogoNotice(nil, StatusLines(statusInfo(380_000), nil))...)
 		}},
 		// /new heads the emptied transcript with the new session's /status.
-		{name: "new_chat", h: 20, add: func(ui *UI) {
+		{name: "new_chat", h: 22, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines())...)
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
@@ -684,6 +694,29 @@ func TestInputFrames(t *testing.T) {
 		{name: "input_slash_arrow", h: 19, open: func(ui *UI) {
 			ui.Apply(ui.service.SetSelectionStyle(SelectionArrow))
 			ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
+		}},
+		// In the filled input style, the input sits in a box on the box
+		// background, with no marker.
+		{name: "input_filled", h: 5, open: func(ui *UI) {
+			ui.Apply(ui.service.SetInputStyle(InputFilled))
+		}},
+		// The panels that open in the box fill it too, their titles unmarked.
+		{name: "input_filled_slash_menu", h: 15, open: func(ui *UI) {
+			ui.Apply(ui.service.SetInputStyle(InputFilled))
+			ui.ShowSlashMenu(ui.service.SlashMenuItems("/st"))
+		}},
+		// In the bar input style, the default, the marker follows the shape
+		// /settings sets: in the primary color before the input, and in the
+		// color of a panel's title before it.
+		{name: "input_bar_circle", h: 15, open: func(ui *UI) {
+			ui.Apply(ui.service.SetMarkerShape(MarkerCircle))
+			ui.ShowSlashMenu(ui.service.SlashMenuItems("/st"))
+		}},
+		// Back in the bar style, the box shows as it did before it was filled.
+		{name: "input_bar_again", golden: "input_slash_menu", h: 15, open: func(ui *UI) {
+			ui.Apply(ui.service.SetInputStyle(InputFilled))
+			ui.Apply(ui.service.SetInputStyle(InputBar))
+			ui.ShowSlashMenu(ui.service.SlashMenuItems("/st"))
 		}},
 		// Closing the menu leaves the box as it was.
 		{name: "input_slash_closed", golden: "input_closed", h: 5, open: func(ui *UI) {
@@ -1416,6 +1449,12 @@ func TestMenuFrames(t *testing.T) {
 			ui.ShowBanner(EventBannerShow{Title: "Models", Text: "Loading models..."})
 		}},
 		{name: "banner_settings_menu", h: 13, open: func(ui *UI) {
+			ui.Apply(ui.service.ShowSettingsMenu())
+		}},
+		// In the filled input style, /settings fills the box, its title
+		// unmarked.
+		{name: "banner_settings_filled", h: 13, open: func(ui *UI) {
+			ui.Apply(ui.service.SetInputStyle(InputFilled))
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
 		// → moves the selected setting to its next value, and the setting

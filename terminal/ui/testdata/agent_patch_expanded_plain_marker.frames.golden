@@ -17,14 +17,14 @@
 === fg ===
 |A AAAAAAA AAA AAAAAAAAAAA               |
 |                                        |
-|B AAAA                                  |
-|  A AAAA  CC DD                         |
+|A AAAA                                  |
+|  A AAAA  BB CC                         |
 |                                        |
-|  AAAAAAA  CC DD                        |
+|  AAAAAAA  BB CC                        |
 |  AA AAAA AAAA AA                       |
 |   AAAAAAA AAAA                         |
-|  E                                     |
-|  EEEEEEE EEEEEEEE                      |
+|  D                                     |
+|  DDDDDDD DDDDDDDD                      |
 |                                        |
 |                                        |
 |                                        |
@@ -32,7 +32,6 @@
 |                                        |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-C #5fc882
-D #dc646e
-E #91b557
+B #5fc882
+C #dc646e
+D #91b557

@@ -1,45 +1,45 @@
 === text ===
-|                                                            |
-|  Commands [↑/↓ move] [esc cancel]                          |
+|■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
 |  /resume                   Resume a previous session from  |
 |  /new                      Clear the chat and start a new  |
 |  /model                    Switch the model                |
 |  /effort                   Change the reasoning effort     |
+|  /status                   Show the version and session i  |
 |                                                            |
-|  hello                                                     |
+|■ hello                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
 === fg ===
-|                                                            |
-|  AAAAAAAA BBBB BBBBB BBBB BBBBBBB                          |
+|A AAAAAAAA BBBB BBBBB BBBB BBBBBBB                          |
 |                                                            |
 |  CCCCCCC                   CCCCCC C CCCCCCCC CCCCCCC CCCC  |
 |  AAAA                      BBBBB BBB BBBB BBB BBBBB B BBB  |
 |  AAAAAA                    BBBBBB BBB BBBBB                |
 |  AAAAAAA                   BBBBBB BBB BBBBBBBBB BBBBBB     |
+|  AAAAAAA                   BBBB BBB BBBBBBB BBB BBBBBBB B  |
 |                                                            |
-|  AAAAA                                                     |
+|D AAAAA                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
 === bg ===
+|                                                            |
+|                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 === legend ===
 A #e6e6e6
 B #707070
 C #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+D #ff5f00
+░ #ff5f00

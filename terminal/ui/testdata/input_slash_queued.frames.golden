@@ -1,16 +1,16 @@
 === text ===
 |  Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
 |                                                            |
+|■ also update the README [queued] [alt+enter send now]      |
 |                                                            |
-|  also update the README [queued] [alt+enter send now]      |
-|                                                            |
-|                                                            |
-|                                                            |
-|  Commands [↑/↓ move] [esc cancel]                          |
+|■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
 |  /status                   Show the version and session i  |
 |                                                            |
-|  hello                                                     |
+|■ hello                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -19,18 +19,18 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA AAAAA AAAAAAA AA AA AA AAA AA AAAAA A AAAAAAA AAAA  |
+|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC B AAAAAAA AAAA  |
+|                                                            |
+|D BBBB BBBBBB BBB BBBBBB CCCCCCCC CCCCCCCCCC CCCC CCCC      |
+|                                                            |
+|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
+|                                                            |
+|  EEEEEEE                   EEEE EEE EEEEEEE EEE EEEEEEE E  |
+|                                                            |
+|D BBBBB                                                     |
 |                                                            |
 |                                                            |
-|  BBBB BBBBBB BBB BBBBBB CCCCCCCC CCCCCCCCCC CCCC CCCC      |
 |                                                            |
-|                                                            |
-|                                                            |
-|  BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
-|                                                            |
-|  DDDDDDD                   DDDD DDD DDDDDDD DDD DDDDDDD D  |
-|                                                            |
-|  BBBBB                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -41,17 +41,17 @@
 === bg ===
 |                                                            |
 |                                                            |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -62,6 +62,6 @@
 A #8c8c8c
 B #e6e6e6
 C #707070
-D #232323 BoxBg
-░ #232323 BoxBg
-▒ #ff5f00
+D #ff5f00
+E #232323 BoxBg
+░ #ff5f00

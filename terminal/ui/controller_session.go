@@ -30,18 +30,81 @@ const StatusTitle = "Status"
 
 // LogoNotice returns the notices that show logo on the canvas, from the
 // transcript's left edge, and under it lines on the system surface, titled
-// StatusTitle.
+// StatusTitle. An empty logo leaves the canvas notice out.
 func LogoNotice(logo, lines []style.StyledText) []Notice {
-	return []Notice{
-		{Lines: logo, Surface: NoticeCanvas},
-		{Lines: lines, Surface: NoticeSystem, Title: StatusTitle},
+	info := Notice{Lines: lines, Surface: NoticeSystem, Title: StatusTitle}
+	if len(logo) == 0 {
+		return []Notice{info}
 	}
+	return []Notice{{Lines: logo, Surface: NoticeCanvas}, info}
 }
 
-// ShowStatus runs /status: ShowInfoUnder the product logo drawn once in each
-// of the LogoColorRows of product.LogoInitialColor, to compare them.
+// ShowStatus runs /status, showing the session info as ShowInfoUnder does,
+// without the product logo, which only a new session opens under.
 func (s *Service) ShowStatus() []UIEvent {
-	return s.ShowInfoUnder(LogoColorLines(LogoColorRows(product.LogoInitialColor)))
+	return s.ShowInfoUnder(nil)
+}
+
+// StatusInfo holds the facts the session info shows, as StatusLines lays
+// them out.
+type StatusInfo struct {
+	// Version names the running product and its version.
+	Version string
+	// Session identifies the active session.
+	Session string
+	// Title is the session's title, or empty when it has none.
+	Title string
+	// Updated is when the session was last stored, or zero before it is.
+	Updated time.Time
+	// Messages counts the transcript's messages.
+	Messages int
+	// Model is the terminal's model variant.
+	Model string
+	// Usage is the session's token use, whose context and window the
+	// Context row shows.
+	Usage SessionUsage
+	// Directory is the working directory.
+	Directory string
+}
+
+// statusLabelWidth is the width of the session info's label column.
+const statusLabelWidth = 10
+
+// StatusLines returns the rows of the session info, each a dim label and its
+// value: the version, the session's ID, its title when it has one, its last
+// update once it is stored, its message count, the model, the context, and
+// the working directory. The context reads as the tokens of the latest
+// request, the model's window and the share of it they fill, such as
+// "18K / 400K 5%", or the tokens alone when the window is not known, in th's
+// warning or danger color once they fill most of the window, as the slash
+// menu's status row colors them.
+func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
+	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
+	var lines []style.StyledText
+	add := func(label string, value style.TextChunk) {
+		lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("%-*s", statusLabelWidth, label)), value))
+	}
+	add("Version", style.Plain(info.Version))
+	add("Session", style.Plain(info.Session))
+	if info.Title != "" {
+		add("Title", style.Plain(info.Title))
+	}
+	if !info.Updated.IsZero() {
+		add("Updated", style.Plain(info.Updated.Local().Format(time.DateTime)))
+	}
+	add("Messages", style.Plain(strconv.Itoa(info.Messages)))
+	add("Model", style.Plain(info.Model))
+	context := FormatTokens(info.Usage.Context)
+	if info.Usage.Window > 0 {
+		context += " / " + FormatTokens(info.Usage.Window) + " " + ContextPercent(info.Usage)
+	}
+	chunk := style.Plain(context)
+	if fg, ok := ContextWarnFg(info.Usage, th); ok {
+		chunk = style.New().WithFg(fg).Func()(context)
+	}
+	add("Context", chunk)
+	add("Directory", style.Plain(info.Directory))
+	return lines
 }
 
 // ShowInfo reports the running version and the active session in the
@@ -51,10 +114,15 @@ func (s *Service) ShowInfo() []UIEvent {
 	return s.ShowInfoUnder(slices.Collect(LogoLines()))
 }
 
+// ShowLogo shows the product logo on the canvas, from the transcript's left
+// edge, as a new session opens under it.
+func (s *Service) ShowLogo() []UIEvent {
+	return s.AddNotice(Notice{Lines: slices.Collect(LogoLines()), Surface: NoticeCanvas})
+}
+
 // ShowInfoUnder reports the running version and the active session in the
-// transcript, as LogoNotice shows them under logo: the session's ID, title,
-// last update, message count, model and working directory. The title is
-// omitted when empty, and the last update until the session is stored.
+// transcript, as StatusLines lays them out, under logo as LogoNotice shows
+// it, or alone when logo is empty.
 func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 	if s.state.Session == nil {
 		return s.ShowToast("No active session")
@@ -65,23 +133,19 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		return s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
 	}
 
-	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
-	var lines []style.StyledText
-	add := func(label, value string) {
-		lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("%-10s", label)), style.Plain(value)))
+	info := StatusInfo{
+		Version:   product.Name + " " + product.Version(),
+		Session:   string(id),
+		Messages:  s.MessageCount(),
+		Model:     s.state.Model,
+		Usage:     s.SessionUsage(),
+		Directory: s.app.WorkingDir(),
 	}
-	add("Version", product.Name+" "+product.Version())
-	add("Session", string(id))
 	if stored != nil {
-		if stored.Title != "" {
-			add("Title", stored.Title)
-		}
-		add("Updated", stored.UpdatedAt.Local().Format(time.DateTime))
+		info.Title = stored.Title
+		info.Updated = stored.UpdatedAt
 	}
-	add("Messages", strconv.Itoa(s.MessageCount()))
-	add("Model", s.state.Model)
-	add("Directory", s.app.WorkingDir())
-	return s.AddNotice(LogoNotice(logo, lines)...)
+	return s.AddNotice(LogoNotice(logo, StatusLines(info, nil))...)
 }
 
 // HandleSessionList displays the stored sessions, one row each, searched
@@ -294,11 +358,12 @@ func ChatMessageOf(m message.Content) ChatMessage {
 }
 
 // InitSession opens the initial session, the stored session id or a new one
-// when id is empty, and returns the load of its transcript, its /status
-// notice followed by its messages, and its terminal title. A stored session
+// when id is empty, and returns the load of its transcript, the product logo
+// followed by its messages, without the session info /status shows, and its
+// terminal title. A stored session
 // takes the model variant its messages last ran, unless state.KeepModel keeps
 // the terminal's. A stored session that fails to load leaves the new session
-// active, and says so under the notice.
+// active, and says so under the logo.
 //
 // The transcript is loaded whole, rather than a message at a time, so that
 // the UI builds the rows of the last messages alone, as BuildTranscript
@@ -315,9 +380,9 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The notices head the transcript, above the messages they follow in.
+	// The logo heads the transcript, above the messages it follows in.
 	loaded := len(s.state.Messages)
-	s.ShowInfo()
+	s.ShowLogo()
 	s.state.Messages = slices.Concat(s.state.Messages[loaded:], s.state.Messages[:loaded])
 	return slices.Concat(restored, []UIEvent{EventSessionLoad{Messages: s.state.Messages}}, s.UpdateUsage(), s.UpdateTitle())
 }

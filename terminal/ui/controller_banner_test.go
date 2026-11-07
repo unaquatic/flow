@@ -281,6 +281,29 @@ func TestSettingsMenuPromptStyle(t *testing.T) {
 	}
 }
 
+// TestSettingsMenuInputStyle checks that /settings shows the input by a bar
+// by default, after the prompt style, and that choosing the setting fills it
+// and shows it by a bar again, keeping the menu open on the setting.
+func TestSettingsMenuInputStyle(t *testing.T) {
+	s := &Service{state: &UIState{}}
+	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	names := bannerNames(settings)
+	row := slices.Index(names, inputSetting)
+	if row < 0 || row != slices.Index(names, promptSetting)+1 || settings.Items[row].Description != InputBar.String() {
+		t.Fatalf("settings = %+v, want the input style a bar after the prompt style", settings.Items)
+	}
+	for _, want := range []InputStyle{InputFilled, InputBar} {
+		out := choose(inputSetting)(s)
+		if !slices.Contains(out, UIEvent(EventInputStyleSet{Style: want})) || s.state.InputStyle != want {
+			t.Errorf("events %v with style %s, want %s", out, s.state.InputStyle, want)
+		}
+		settings = bannerShown(t, out)
+		if settings.SelectedIdx != row || settings.Items[row].Description != want.String() {
+			t.Errorf("banner selects %d of %+v, want the input style %s selected", settings.SelectedIdx, settings.Items, want)
+		}
+	}
+}
+
 // TestSettingsMenuDebug checks that /settings shows debug off by default, as
 // its last row, and that choosing it switches debug on and off again, keeping
 // the menu open on the setting.
@@ -323,6 +346,7 @@ func TestSettingsPersist(t *testing.T) {
 		func() []UIEvent { return s.SetCountPlace(CountInTitle) },
 		func() []UIEvent { return s.SetSelectionStyle(SelectionArrow) },
 		func() []UIEvent { return s.SetPromptStyle(PromptBar) },
+		func() []UIEvent { return s.SetInputStyle(InputFilled) },
 		func() []UIEvent { return s.SetDebug(true) },
 	} {
 		for _, ev := range change() {
@@ -338,7 +362,7 @@ func TestSettingsPersist(t *testing.T) {
 	var next UIState
 	next.ApplyConfig(conf.Terminal, conf.Debug)
 	want := UIState{Inline: false, CacheMode: CachePerMessage, ExpandStyle: ExpandedPlain, ToolMarkers: true,
-		MarkerShape: MarkerCircleOutline, ToolColor: ToolNameWhite, KeyHints: KeyHintsFooter, Count: CountInTitle, Selection: SelectionArrow, PromptStyle: PromptBar, Debug: true}
+		MarkerShape: MarkerCircleOutline, ToolColor: ToolNameWhite, KeyHints: KeyHintsFooter, Count: CountInTitle, Selection: SelectionArrow, PromptStyle: PromptBar, InputStyle: InputFilled, Debug: true}
 	if next.TerminalConfig() != want.TerminalConfig() || next.Debug != want.Debug {
 		t.Errorf("next terminal starts with %+v and debug %v, want %+v and debug on",
 			next.TerminalConfig(), next.Debug, want.TerminalConfig())
@@ -391,6 +415,11 @@ func TestApplyConfigDefaults(t *testing.T) {
 	for _, style := range ExpandedStyles {
 		if got := SettingValue(expandedStyleKeys, expandedStyleKeys[style]); got != style {
 			t.Errorf("expanded tools %s reads back as %s", style, got)
+		}
+	}
+	for _, in := range InputStyles {
+		if got := SettingValue(inputStyleKeys, inputStyleKeys[in]); got != in {
+			t.Errorf("input style %s reads back as %s", in, got)
 		}
 	}
 	for _, p := range PromptStyles {

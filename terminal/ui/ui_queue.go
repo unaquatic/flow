@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unaquatic/fluid/layout"
+	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
@@ -14,9 +15,15 @@ const (
 	SendNowHint = "[alt+enter send now]"
 )
 
-// queueItemRows is the rows each queued prompt takes above the input box: its
-// box's edge rows, its line between them, and the gap under the box.
-const queueItemRows = 4
+// QueueItemRows returns the rows each queued prompt takes above the input
+// box: its box's edge rows, its line between them, and the gap under the
+// box, but for the edge rows, which InputBar leaves out.
+func (ui *UI) QueueItemRows() int {
+	if ui.service.state.InputStyle == InputBar {
+		return 2
+	}
+	return 4
+}
 
 // ShowQueue shows each of prompts in a box of its own above the input box,
 // the first sent next at the top, as DrawQueue draws them. It removes the
@@ -70,7 +77,18 @@ func (ui *UI) DrawQueue() {
 			),
 			widget.Children(text, hints),
 		)
-		box, _ := StreamableMessageBox(ui.BorderFg(), ui.BoxBg(), line)
+		box, middle := StreamableMessageBox(ui.BorderFg(), ui.InputBg(), line)
+		// On the canvas, a queued prompt starts with the primary color marker,
+		// as the input and a prompt sent do.
+		if edge := LeftEdge(middle.Children()[0].(*widget.Box)); edge != nil {
+			edge.RenderAfterHook = ui.EdgeMarker(edge, func() style.Color { return productFg })
+		}
+		// On the canvas, it leaves out its blank edge rows, so that a single
+		// blank row, the gap under it, parts it from the row under it.
+		bar := ui.service.state.InputStyle == InputBar
+		edges := box.Children()
+		edges[0].(*widget.Box).SetGone(bar)
+		edges[len(edges)-1].(*widget.Box).SetGone(bar)
 		gap := widget.NewBox(
 			widget.BoxWithLayout(layout.WithHeight(layout.Points(1)), layout.WithFlexShrink(0)),
 		)
@@ -97,13 +115,14 @@ func (ui *UI) QueuePart() (FitPart, bool) {
 	if ui.queueLimit > 0 {
 		shown = min(n, ui.queueLimit)
 	}
+	item := ui.QueueItemRows()
 	return FitPart{
-		Rows: shown * queueItemRows,
-		Want: n * queueItemRows,
-		Min:  queueItemRows,
-		Step: queueItemRows,
+		Rows: shown * item,
+		Want: n * item,
+		Min:  item,
+		Step: item,
 		Bound: func(rows int) {
-			limit := rows / queueItemRows
+			limit := rows / item
 			if limit >= n {
 				limit = 0
 			}

@@ -4,16 +4,16 @@
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
 |  Messages  4                           |
 |  Model     provider/model              |
-|                                        |
-|                                        |
+|  Context   20K / 400K 5%               |
+|  Directory /work/project               |
 === fg ===
 |                                        |
 |  AAAAAAA   BBBB BBBBBB                 |
 |  AAAAAAA   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
 |  AAAAAAAA  B                           |
 |  AAAAA     BBBBBBBBBBBBBB              |
-|                                        |
-|                                        |
+|  AAAAAAA   BBB B BBBB BB               |
+|  AAAAAAAAA BBBBBBBBBBBBB               |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -21,7 +21,7 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 === legend ===
 A #8c8c8c
 B #e6e6e6

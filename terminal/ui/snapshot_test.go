@@ -184,9 +184,14 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 	tests := []struct {
 		name   string
 		scroll int
+		bar    bool
 	}{
 		// At the top, nothing is pinned yet.
 		{name: "fullscreen_snapshot_top"},
+		// A prompt by a bar fills no background, so once pinned it blanks the
+		// rows under it, and keeps a blank row above and under its text, the
+		// one above lying over the blank row that ends the row above it.
+		{name: "fullscreen_prompt_bar_pinned", scroll: 4, bar: true},
 		// The prompt's text is scrolled past and pinned, and its snapshot
 		// scrolls up under it, as a row of the reply would.
 		{name: "fullscreen_snapshot_scrolling", scroll: 1},
@@ -196,6 +201,9 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := ui.NewInputTestUI(t, snapshotViews())
+			if tt.bar {
+				u.Apply(u.Service().SetPromptStyle(ui.PromptBar))
+			}
 			prompt := ui.UserText("u1", "Run the tests")
 			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
 			u.AddMessage(prompt)

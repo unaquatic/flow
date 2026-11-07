@@ -16,12 +16,12 @@
 === fg ===
 |A BBB BBB BBBBB                         |
 |                                        |
-|C BBBB BBBBBBB                          |
+|B BBBB BBBBBBB                          |
 |                                        |
-|C BBBBBBBB BBBBBBBBBB                   |
-|  B BBBBB  DD EE                        |
-|  FFFFFFFFFFFFFFFFFF  DD EE             |
-|  FFFFFFFFFFFFFFFFFFFFFFF  DD EE        |
+|B BBBBBBBB BBBBBBBBBB                   |
+|  B BBBBB  CC DD                        |
+|  EEEEEEEEEEEEEEEEEE  CC DD             |
+|  EEEEEEEEEEEEEEEEEEEEEEE  CC DD        |
 |                                        |
 |                                        |
 |                                        |
@@ -31,7 +31,6 @@
 === legend ===
 A #ff5f00
 B #e6e6e6
-C #8c8c8c
-D #5fc882
-E #dc646e
-F #dcdcdc
+C #5fc882
+D #dc646e
+E #dcdcdc

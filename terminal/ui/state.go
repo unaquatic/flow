@@ -433,6 +433,36 @@ func (s PromptStyle) String() string {
 	return "Filled"
 }
 
+// InputStyle is how the input box, and the panels that open in it, such as
+// the slash menu and /settings, show, which /settings sets.
+type InputStyle int
+
+const (
+	// InputBar shows the input box and its panels on the canvas, as a tool
+	// call's row is, with the marker shape at the left edge of the input's
+	// first row, in the primary color, and of each panel's title, in the
+	// color of the title. It is the default.
+	InputBar InputStyle = iota
+	// InputFilled shows the input box and its panels on the box background.
+	InputFilled
+)
+
+// InputStyles lists the input styles in the order /settings offers them.
+var InputStyles = [...]InputStyle{InputBar, InputFilled}
+
+// Next returns the style step places after s in InputStyles, going round.
+func (s InputStyle) Next(step int) InputStyle {
+	return Cycle(InputStyles[:], s, step)
+}
+
+// String returns the name /settings shows for s: "Filled" or "Bar".
+func (s InputStyle) String() string {
+	if s == InputBar {
+		return "Bar"
+	}
+	return "Filled"
+}
+
 // SelectionStyle is how the lists in the input box, the slash menu, the
 // session list, a banner's menu, and the session tree, mark their selected
 // row, which /settings sets.
@@ -617,6 +647,9 @@ type UIState struct {
 	// PromptStyle is how the transcript marks a prompt, which /settings
 	// sets. It is PromptFilled by default.
 	PromptStyle PromptStyle
+	// InputStyle is how the input box and its panels show, which /settings
+	// sets. It is InputBar by default.
+	InputStyle InputStyle
 }
 
 // StatusHintStyled returns the default keyboard hint.

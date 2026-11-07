@@ -89,6 +89,8 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnSelectionStyleSet(e)
 	case EventPromptStyleSet:
 		ui.OnPromptStyleSet(e)
+	case EventInputStyleSet:
+		ui.OnInputStyleSet(e)
 	case EventInputHintChanged:
 		ui.OnInputHintChanged(e)
 	}
@@ -124,6 +126,9 @@ func (ui *UI) OnCountPlaceSet(EventCountPlaceSet) { ui.SyncCounts() }
 // OnPromptStyleSet shows every prompt as e says, building the transcript
 // again, since a prompt's background is set as it is built.
 func (ui *UI) OnPromptStyleSet(EventPromptStyleSet) { ui.RebuildTranscript() }
+
+// OnInputStyleSet shows the input box and its panels as e says.
+func (ui *UI) OnInputStyleSet(e EventInputStyleSet) { ui.SetInputStyle(e.Style) }
 
 // OnSelectionStyleSet redraws every menu, whose selected row MarkSelection
 // marks as the style now says, and the session tree, whose selected row

@@ -13,16 +13,17 @@ const StatusLabel = "Usage"
 // session: the model, the context, the session's tokens, cost, and worked
 // time, as StatusLine gives them. It is a row like a collapsed tool call's,
 // with nothing to expand, as a cache row has not: one row on the canvas,
-// StatusLabel in NameFg and then the line in ToolFg, as a call's name
-// and input are, with the box's keys as its status, and ToolMarker before
+// StatusLabel in NameFg and then the line in its own colors, as StatusLine
+// gives them, with the box's keys as its status, and ToolMarker before
 // it while SetMarker shows it, whether tool calls are expanded or not.
 type StatusRow struct {
 	*PartBox
 	// Line holds the status line in its own colors, as StatusLine gives it.
 	// It is not shown.
 	Line *widget.Text
-	// Summary is the status line as the header shows it, as SetLine sets it.
-	Summary string
+	// Summary is the status line as the header shows it, in its own colors,
+	// as SetLine sets it.
+	Summary style.StyledText
 }
 
 var _ BoxContent = (*StatusRow)(nil)
@@ -50,19 +51,19 @@ func NewStatusRow(theme *style.Theme) *StatusRow {
 // panel's title names them, as the box's status.
 func (b *StatusRow) SetLine(line style.StyledText, keys string) {
 	b.Line.SetStyledContent(line)
-	if summary := line.PlainText(); summary != b.Summary {
-		b.Summary = summary
-		b.ShowHeader()
-	}
+	b.Summary = line
+	b.ShowHeader()
 	b.SetStatus(keys)
 }
 
-// ShowHeader writes StatusLabel in NameFg, not bold, then Summary in
-// ToolFg.
+// ShowHeader writes StatusLabel in NameFg, not bold, then Summary in its
+// own colors: its values bright, their labels dim, and the context in the
+// warning or danger color once it fills most of the window.
 func (b *StatusRow) ShowHeader() {
 	header := style.NewStyledText(ToolNameChunk(StatusLabel, b.NameFg))
-	if b.Summary != "" {
-		header.Chunks = append(header.Chunks, style.Plain(" "), style.TextChunk{Text: b.Summary, Fg: ToolFg})
+	if len(b.Summary.Chunks) > 0 {
+		header.Chunks = append(header.Chunks, style.Plain(" "))
+		header.Chunks = append(header.Chunks, b.Summary.Chunks...)
 	}
 	b.Header.SetStyledContent(header)
 }

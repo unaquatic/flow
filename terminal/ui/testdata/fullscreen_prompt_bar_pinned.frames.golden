@@ -1,0 +1,29 @@
+=== text ===
+|                                        |
+|■ Run the tests                         |
+|                                        |
+|                                        |
+|  three                                 |
+|                                        |
+|  four                                  |
+|                                        |
+|  five                                  |
+|                                        |
+|  six                                   |
+|                                        |
+=== fg ===
+|                                        |
+|A BBB BBB BBBBB                         |
+|                                        |
+|                                        |
+|  BBBBB                                 |
+|                                        |
+|  BBBB                                  |
+|                                        |
+|  BBBB                                  |
+|                                        |
+|  BBB                                   |
+|                                        |
+=== legend ===
+A #ff5f00
+B #e6e6e6

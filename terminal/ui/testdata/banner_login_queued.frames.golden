@@ -1,10 +1,10 @@
 === text ===
+|■ also update the README [queued] [alt+enter send now]                  |
 |                                                                        |
-|  also update the README [queued] [alt+enter send now]                  |
+|■ Login with Provider A [esc cancel]                                    |
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|  Login with Provider A [esc cancel]                                    |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -12,32 +12,19 @@
 |                                                                        |
 |                                                                        |
 === fg ===
+|A BBBB BBBBBB BBB BBBBBB CCCCCCCC CCCCCCCCCC CCCC CCCC                  |
 |                                                                        |
-|  AAAA AAAAAA AAA AAAAAA BBBBBBBB BBBBBBBBBB BBBB BBBB                  |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|  AAAAA AAAA AAAAAAAA A BBBB BBBBBBB                                    |
+|B BBBBB BBBB BBBBBBBB B CCCC CCCCCCC                                    |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
-|                                                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === legend ===
-A #e6e6e6
-B #707070
-░ #232323 BoxBg
+A #ff5f00
+B #e6e6e6
+C #707070

@@ -96,9 +96,12 @@ type PartBox struct {
 	MarkerShape MarkerShape
 	// MarkerOn reports that SetMarker shows Marker. It is off by default.
 	MarkerOn bool
-	// NameFg colors Marker, and the name the Content writes in Header, as
-	// SetNameFg sets it. It is ToolFg by default.
+	// NameFg colors the name the Content writes in Header, and Marker unless
+	// MarkerFg is set, as SetNameFg sets it. It is ToolFg by default.
 	NameFg style.Color
+	// MarkerFg, when set, colors Marker in place of NameFg, as for a box
+	// whose header starts with a title rather than a tool's name.
+	MarkerFg style.Color
 	// Shape is how the box shows while it is collapsed.
 	Shape BoxShape
 	// Style is how the box shows as a block: on Surface, or on the canvas.
@@ -259,16 +262,26 @@ func (b *PartBox) ShowMarker() {
 // SetMarkerShape shows Marker in shape.
 func (b *PartBox) SetMarkerShape(shape MarkerShape) {
 	b.MarkerShape = shape
-	StyleMarker(b.Marker, shape, b.NameFg)
+	StyleMarker(b.Marker, shape, b.MarkerColor())
 }
 
-// SetNameFg colors Marker and the name the Content writes in Header fg.
+// MarkerColor returns the color of Marker: MarkerFg when set, and NameFg
+// otherwise.
+func (b *PartBox) MarkerColor() style.Color {
+	if !b.MarkerFg.IsTransparent() {
+		return b.MarkerFg
+	}
+	return b.NameFg
+}
+
+// SetNameFg colors the name the Content writes in Header fg, and Marker
+// unless MarkerFg is set.
 func (b *PartBox) SetNameFg(fg style.Color) {
 	if fg == b.NameFg {
 		return
 	}
 	b.NameFg = fg
-	StyleMarker(b.Marker, b.MarkerShape, fg)
+	StyleMarker(b.Marker, b.MarkerShape, b.MarkerColor())
 	b.ShowHeader()
 }
 

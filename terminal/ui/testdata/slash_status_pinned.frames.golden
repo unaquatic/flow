@@ -1,8 +1,8 @@
 === text ===
 |  Usage model-h medium context 64K 7% in 120K out 8.4K cache 310K $0.42 worked 3m…  |
 |                                                                                    |
+|■ hello                                                                             |
 |                                                                                    |
-|  hello                                                                             |
 |                                                                                    |
 |                                                                                    |
 |                                                                                    |
@@ -11,23 +11,11 @@
 |                                                                                    |
 |                                                                                    |
 === fg ===
-|  AAAAA AAAAAAA AAAAAA AAAAAAA AAA AA AA AAAA AAA AAAA AAAAA AAAA AAAAA AAAAAA AAA  |
+|  AAAAA BBBBBBB BBBBBB CCCCCCC BBB BB CC BBBB CCC BBBB CCCCC BBBB BBBBB CCCCCC BBB  |
+|                                                                                    |
+|D BBBBB                                                                             |
 |                                                                                    |
 |                                                                                    |
-|  BBBBB                                                                             |
-|                                                                                    |
-|                                                                                    |
-|                                                                                    |
-|                                                                                    |
-|                                                                                    |
-|                                                                                    |
-|                                                                                    |
-=== bg ===
-|                                                                                    |
-|                                                                                    |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                                    |
 |                                                                                    |
 |                                                                                    |
@@ -37,4 +25,5 @@
 === legend ===
 A #8c8c8c
 B #e6e6e6
-░ #232323 BoxBg
+C #707070
+D #ff5f00
