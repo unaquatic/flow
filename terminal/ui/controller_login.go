@@ -76,7 +76,8 @@ func (s *Service) ProviderName(pt agent.ProviderID) string {
 	return string(pt)
 }
 
-// ProviderItems returns OAuth-capable providers in ID order, each named as
+// ProviderItems returns the providers of the login menu, as
+// app.Accounts.LoginProviders lists them, in ID order, each named as
 // ProviderName names it, which the search finds by its ID too. Choosing one
 // shows its accounts.
 func (s *Service) ProviderItems() []MenuItem {
@@ -93,17 +94,20 @@ func (s *Service) ProviderItems() []MenuItem {
 }
 
 // ShowLoginMethodMenu presents the ways to add an account of pt, searched
-// from the input: logging in through the browser or with a device code, or
-// entering an API key.
+// from the input: logging in through the browser or with a device code, when
+// pt has a login flow, or entering an API key.
 func (s *Service) ShowLoginMethodMenu(pt agent.ProviderID) []UIEvent {
 	login := func(method agent.LoginMethod) func() []UIEvent {
 		return s.Closing(func() []UIEvent { return s.StartLogin(pt, method) })
 	}
-	items := []MenuItem{
-		{Name: "Browser", Choose: login(agent.LoginBrowser)},
-		{Name: "Device code", Choose: login(agent.LoginDevice)},
-		{Name: apiKeyName, Choose: s.Closing(func() []UIEvent { return s.AskKey(pt) })},
+	var items []MenuItem
+	if s.app.Accounts().SupportsLogin(pt) {
+		items = append(items,
+			MenuItem{Name: "Browser", Choose: login(agent.LoginBrowser)},
+			MenuItem{Name: "Device code", Choose: login(agent.LoginDevice)},
+		)
 	}
+	items = append(items, MenuItem{Name: apiKeyName, Choose: s.Closing(func() []UIEvent { return s.AskKey(pt) })})
 	return s.ShowSearchMenu(&SearchMenu{
 		Title: fmt.Sprintf("New %s account", s.ProviderName(pt)),
 		Items: func() []MenuItem { return items },

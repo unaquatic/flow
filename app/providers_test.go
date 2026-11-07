@@ -91,6 +91,34 @@ func TestNew_MakesProvidersOfExtensions(t *testing.T) {
 	}
 }
 
+// TestLoginProviders_BuiltIn checks that the login providers hold the
+// built-in ones beside those with a login flow, though they take an API key
+// alone, but not a built-in one the configuration disables or the app does
+// not register.
+func TestLoginProviders_BuiltIn(t *testing.T) {
+	t.Chdir(t.TempDir())
+	home := t.TempDir()
+	settings := `{"catalog_source":"http://127.0.0.1:1","provider":{"provider-a":{"disabled":true}}}`
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, providersCatalog))
+	a, err := New(t.Context(), config.NewService(home), Options{
+		BuiltIn:    []agent.ProviderID{"gw", providerA, "provider-d"},
+		Extensions: []extension.Load{loadOf(loginExtension{protocol.New(protocol.Options{})})},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	if got, want := a.Accounts().LoginProviders(), []agent.ProviderID{"gw", providerB}; !slices.Equal(got, want) {
+		t.Errorf("LoginProviders = %v, want %v: the built-in gw, which takes a key alone, and provider-b, which has a login, not the disabled provider-a or the unregistered provider-d", got, want)
+	}
+	if a.Accounts().SupportsLogin("gw") || !a.Accounts().SupportsLogin(providerB) {
+		t.Error("SupportsLogin reports a login for gw or none for provider-b")
+	}
+}
+
 // TestConfigKeys checks that a provider's key is the configuration's, or
 // else the first environment variable the catalog names for it that its base
 // URL does not take, and that holds a key.

@@ -9,7 +9,7 @@ import (
 )
 
 // TestSnapshot checks that the catalog compiled in decodes, as flow reads it
-// on a cold start, with the built-in providers, each with models; that it
+// on a cold start, with the built-in providers, BuiltIn's, each with models; that it
 // names every offering as its model; and that it names exactly the labs and
 // families of its models. That the catalog names its models from their IDs
 // is the catalog module's to check.
@@ -20,6 +20,9 @@ func TestSnapshot(t *testing.T) {
 	c := Snapshot()
 	if c.Version != gateway.Version || len(c.Providers) == 0 {
 		t.Fatalf("snapshot: version %d, %d providers", c.Version, len(c.Providers))
+	}
+	if got, want := slices.Sorted(maps.Keys(c.Providers)), BuiltIn(); !slices.Equal(got, want) {
+		t.Errorf("snapshot providers %v, want BuiltIn's %v: keep the go:generate line and BuiltIn alike, and run go generate", got, want)
 	}
 	for pid, p := range c.Providers {
 		if len(p.Models) == 0 {

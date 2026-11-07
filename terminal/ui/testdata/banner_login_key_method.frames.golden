@@ -1,0 +1,27 @@
+=== text ===
+|■ New Gateway account [↑/↓ move] [esc cancel]                           |
+|                                                                        |
+|  API key                                                               |
+|                                                                        |
+|■                                                                       |
+|                                                                        |
+=== fg ===
+|A AAA AAAAAAA AAAAAAA BBBB BBBBB BBBB BBBBBBB                           |
+|                                                                        |
+|  CCC CCC                                                               |
+|                                                                        |
+|D                                                                       |
+|                                                                        |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #232323 BoxBg
+D #ff5f00
+░ #ff5f00
