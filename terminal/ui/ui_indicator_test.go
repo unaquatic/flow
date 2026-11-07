@@ -7,6 +7,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/fluid/style"
@@ -152,5 +153,29 @@ func TestToolMarkerBlinks(t *testing.T) {
 		if got := box.Blinks(); got != tt.want {
 			t.Errorf("%s: Blinks() = %v, want %v", tt.name, got, tt.want)
 		}
+	}
+}
+
+// TestShowIndicatorWhileKeepsError checks that a line shown for a moment, as
+// Ctrl+O shows one while it lays out the transcript, gives back the error it
+// stood in for: its body, its marker, and its line.
+func TestShowIndicatorWhileKeepsError(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.ShowIndicator(ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 400, ResponseBody: `{"a":1}`})))
+	line, body := ui.indicatorLabel.PlainText(), ui.indicatorDetailText.PlainText()
+
+	ui.ShowIndicatorWhile(ExpandingToolsText, func() {
+		if ui.indicatorDetail.Visible() || ui.indicatorMarker.Visible() {
+			t.Error("the body or the error's marker shows beside the passing line")
+		}
+	})
+	if got := ui.indicatorLabel.PlainText(); got != line {
+		t.Errorf("line = %q, want the error's %q", got, line)
+	}
+	if got := ui.indicatorDetailText.PlainText(); got != body || !ui.indicatorDetail.Visible() {
+		t.Errorf("body = %q, visible %v; want the error's %q shown", got, ui.indicatorDetail.Visible(), body)
+	}
+	if !ui.indicatorMarker.Visible() {
+		t.Error("the error's marker is hidden")
 	}
 }

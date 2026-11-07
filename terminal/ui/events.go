@@ -195,6 +195,15 @@ type EventIndicatorShow struct {
 	// Hint follows Text, dimmed, such as the key that cancels a run in
 	// progress, or is empty.
 	Hint string
+	// Error reports that Text is the error a run ended with, which the
+	// indicator heads with a marker and "Error", as ErrorIndicator makes it.
+	Error bool
+	// Detail shows under Text in a box, as a tool call's output shows, such
+	// as the JSON body a provider answered an error with, formatted; JSON
+	// says it is JSON, which the box highlights. It is empty for none.
+	Detail string
+	// JSON reports that Detail is JSON.
+	JSON bool
 }
 
 // EventIndicatorHide dismisses the status indicator.

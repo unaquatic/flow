@@ -201,6 +201,8 @@ func TestSlashMenuNoMatch(t *testing.T) {
 
 func TestAgentEndedIndicator(t *testing.T) {
 	failed := app.NewUnknownError("connection reset by peer")
+	rejected := app.UnknownError{Type: app.ErrorTypeUnknown, Message: "provider-a response error (400): bad", Provider: providerA, Status: 400,
+		Body: `{"error":{"message":"bad"}}`}
 	tests := []struct {
 		name  string
 		event app.Event
@@ -208,7 +210,12 @@ func TestAgentEndedIndicator(t *testing.T) {
 	}{
 		{name: "run finished", event: app.EventAgentEnded{}, want: EventIndicatorHide{}},
 		{name: "run failed", event: app.EventAgentEnded{Error: &failed},
-			want: EventIndicatorShow{Text: failed.Message}},
+			want: EventIndicatorShow{Text: failed.Message, Error: true}},
+		// A provider's error response shows its provider and status over
+		// its body, formatted.
+		{name: "run rejected", event: app.EventAgentEnded{Error: &rejected},
+			want: EventIndicatorShow{Text: "provider-a response error (400)", Error: true, JSON: true,
+				Detail: "{\n  \"error\": {\n    \"message\": \"bad\"\n  }\n}"}},
 		{name: "message failed", event: app.EventMessageEnded{Message: app.Message{ID: "m1"}, Error: &failed}},
 		{name: "message stopped", event: app.EventMessageEnded{Message: app.Message{ID: "m1"}, Stopped: true}},
 	}

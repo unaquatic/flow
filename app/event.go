@@ -1,8 +1,11 @@
 package app
 
 import (
+	"errors"
 	"time"
+	"unicode/utf8"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 )
 
@@ -49,11 +52,48 @@ type UnknownError struct {
 	Type ErrorType `json:"type"`
 	// Message contains the failure detail.
 	Message string `json:"message"`
+	// Provider names the provider that answered with an error response, or
+	// is empty for a failure of another kind.
+	Provider agent.ProviderID `json:"provider,omitempty"`
+	// Status is the HTTP status of the provider's error response, or zero.
+	Status int `json:"status,omitempty"`
+	// Body is the body of the provider's error response, as it sent it,
+	// such as a JSON error object, or is empty.
+	Body string `json:"body,omitempty"`
 }
 
 // NewUnknownError creates an unclassified session failure.
 func NewUnknownError(message string) UnknownError {
 	return UnknownError{Type: ErrorTypeUnknown, Message: message}
+}
+
+// MaxErrorBody is how many bytes of a provider's error response body an
+// UnknownError holds, which is ample for an error object, while an error
+// page, which some gateways answer with, is cut short.
+const MaxErrorBody = 16 << 10
+
+// ErrorOf returns the unclassified session failure of err, whose Message is
+// err's, and which, when err is a provider's error response, as an
+// *agent.ResponseError, also holds the provider, the status and the body it
+// answered with, cut to MaxErrorBody bytes, at a rune boundary.
+func ErrorOf(err error) UnknownError {
+	e := NewUnknownError(err.Error())
+	if resp, ok := errors.AsType[*agent.ResponseError](err); ok {
+		e.Provider, e.Status, e.Body = agent.ProviderID(resp.Provider), resp.StatusCode, cutBody(resp.ResponseBody, MaxErrorBody)
+	}
+	return e
+}
+
+// cutBody returns body, or its first n bytes or fewer, ending at a rune
+// boundary, when it is longer.
+func cutBody(body string, n int) string {
+	if len(body) <= n {
+		return body
+	}
+	for n > 0 && !utf8.RuneStart(body[n]) {
+		n--
+	}
+	return body[:n]
 }
 
 // eventBase returns a process-level event stamp.

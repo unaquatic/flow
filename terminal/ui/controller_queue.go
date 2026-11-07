@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/unaquatic/flow/app"
 )
 
 // QueuePrompt adds text to the end of the queue, to be sent once the session
@@ -44,7 +46,7 @@ func (s *Service) SendQueued() []UIEvent {
 	}
 	if err := s.SendPrompt(s.state.Queue[0]); err != nil {
 		s.state.QueuePaused = true
-		return s.ShowIndicator(err.Error())
+		return s.ShowError(app.ErrorOf(err))
 	}
 	s.state.Queue = slices.Delete(s.state.Queue, 0, 1)
 	return slices.Concat(s.QueueChanged(), s.ResetError(), s.ShowIndicator(""))

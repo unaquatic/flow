@@ -931,12 +931,20 @@ func TestIndicatorFrames(t *testing.T) {
 			next.ParentID = "a1"
 			ui.AddMessage(next)
 		}, show: WorkingIndicator(12*time.Second, false), working: true},
+		// An error starts with a marker and Error, in the danger color, as a
+		// tool call's row starts with its marker and name.
 		{name: "indicator_error", h: 11, add: replyStarted,
-			show: EventIndicatorShow{Text: `Request Failed: Post "https://api.example.com/v1/messages": EOF`}},
-		// A provider's error shows the raw body it answered with.
-		{name: "indicator_response_error", h: 13, add: replyStarted,
-			show: EventIndicatorShow{Text: (&agent.ResponseError{Provider: "provider-b", StatusCode: 429,
-				ResponseBody: `{"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}`}).Error()}},
+			show: ErrorIndicator(app.NewUnknownError(`Request Failed: Post "https://api.example.com/v1/messages": EOF`))},
+		// A provider's error names the provider and status, over the body it
+		// answered with, formatted and highlighted, in a box filled as a
+		// tool's is.
+		{name: "indicator_response_error", h: 20, add: replyStarted,
+			show: ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "provider-b", StatusCode: 429,
+				ResponseBody: `{"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}`}))},
+		// A body that is not JSON shows as its text, wrapped.
+		{name: "indicator_response_error_text", h: 13, add: replyStarted,
+			show: ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 502,
+				ResponseBody: "upstream connect error or disconnect/reset before headers. reset reason: connection termination"}))},
 		// Ctrl+O says what it is doing while it lays out a long transcript
 		// again with every tool call expanded.
 		{name: "indicator_expanding_tools", h: 13, add: func(ui *UI) {
@@ -1388,6 +1396,38 @@ func TestShortTerminalFrames(t *testing.T) {
 			ui.FitInputBox(tt.height)
 			root.Remove(ui.inputWrapper.ID())
 			buf := renderFrames(w, tt.height, ui.inputWrapper)
+			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
+		})
+	}
+}
+
+// TestIndicatorErrorShortFrames draws an error whose body is taller than the
+// terminal leaves it: the body gives its rows up first, down to a line, so
+// that the input stays in view under it.
+func TestIndicatorErrorShortFrames(t *testing.T) {
+	var body strings.Builder
+	body.WriteString("{")
+	for i := range 30 {
+		fmt.Fprintf(&body, `"k%d":%d,`, i, i)
+	}
+	body.WriteString(`"end":0}`)
+	for _, tt := range []struct {
+		name   string
+		height int
+	}{
+		{name: "indicator_error_short", height: 16},
+		{name: "indicator_error_shortest", height: 10},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ui := newInputTestUI(t)
+			root := ui.renderer.Root()
+			root.Resize(60, tt.height)
+			root.Add(ui.inputWrapper)
+			ui.SetInputText("hello")
+			ui.ShowIndicator(ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 400, ResponseBody: body.String()})))
+			ui.FitInputBox(tt.height)
+			root.Remove(ui.inputWrapper.ID())
+			buf := renderFrames(60, tt.height, detachFromRoot(ui, ui.indicatorBox), ui.inputWrapper)
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
 		})
 	}

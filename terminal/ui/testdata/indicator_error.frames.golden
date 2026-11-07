@@ -3,10 +3,10 @@
 |  ok                                                                    |
 |                                                                        |
 |                                                                        |
-|  Request Failed: Post "https://api.example.com/v1/messages": EOF       |
+|■ Error Request Failed: Post "https://api.example.com/v1/messages":     |
+|  EOF                                                                   |
 |                                                                        |
 |■                                                                       |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -15,10 +15,10 @@
 |  AA                                                                    |
 |                                                                        |
 |                                                                        |
-|  BBBBBBB BBBBBBB BBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BBB       |
+|B BBBBB CCCCCCC CCCCCCC CCCC CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC     |
+|  CCC                                                                   |
 |                                                                        |
-|C                                                                       |
-|                                                                        |
+|D                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -36,6 +36,7 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #787878
-C #ff5f00
+B #ff7c78
+C #787878
+D #ff5f00
 ░ #232323 BoxBg

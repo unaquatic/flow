@@ -20,19 +20,35 @@ var (
 )
 
 // ShowIndicator displays IndicatorText of e between the transcript and the
-// input, and while it shows the time of a run in progress, blinks the
-// markers.
+// input, with e's detail in a box under it, and while it shows the time of a
+// run in progress, blinks the markers.
 func (ui *UI) ShowIndicator(e EventIndicatorShow) {
-	ui.indicatorLabel.SetStyledContent(IndicatorText(e))
+	ui.indicatorError = e.Error
+	ui.indicatorLabel.SetStyledContent(IndicatorText(e, ui.ErrorFg()))
+	ui.ShowIndicatorDetail(e)
 	ui.indicatorBox.SetGone(false)
 	ui.ShowIndicatorMarker()
 	ui.SyncBlink()
 }
 
+// ErrorFg returns the color of the marker and the "Error" an error starts
+// with in the indicator: the theme's Danger.
+func (ui *UI) ErrorFg() style.Color { return themeOrDefault(ui.theme).Danger }
+
+// IndicatorErrorTitle starts the line of an error in the indicator.
+const IndicatorErrorTitle = "Error"
+
 // IndicatorText returns the line the indicator shows for e: its text, in the
 // indicator's color, or, when e has a hint, its text and then a space and the
-// hint, all in indicatorHintFg.
-func IndicatorText(e EventIndicatorShow) style.StyledText {
+// hint, all in indicatorHintFg. An error's text follows IndicatorErrorTitle,
+// in errorFg, and a space.
+func IndicatorText(e EventIndicatorShow, errorFg style.Color) style.StyledText {
+	if e.Error {
+		return style.NewStyledText(
+			style.TextChunk{Text: IndicatorErrorTitle, Fg: errorFg},
+			style.TextChunk{Text: " " + e.Text, Fg: indicatorFg},
+		)
+	}
 	if e.Hint == "" {
 		return style.NewStyledText(style.Plain(e.Text))
 	}
@@ -69,9 +85,44 @@ func (ui *UI) Tick() {
 	}
 }
 
+// ShowIndicatorDetail shows e's detail in the box under the indicator's
+// line, JSON highlighted as code is, or hides the box when e has none. A
+// hidden box keeps the detail it showed, so that ShowIndicatorWhile can
+// show it again.
+func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
+	if ui.indicatorDetail == nil {
+		return
+	}
+	ui.indicatorDetail.SetGone(e.Detail == "")
+	if e.Detail != "" {
+		ui.indicatorDetailText.SetStyledContent(ui.DetailText(e.Detail, e.JSON))
+	}
+}
+
+// DetailText returns detail as the indicator's detail box shows it: in
+// textFg, and, when isJSON reports it is JSON, highlighted as JSON code is.
+// JSON the highlighter fails on shows in textFg.
+func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {
+	if isJSON && ui.highlighter != nil {
+		lines, err := ui.highlighter.Highlight(detail, "json", textFg, style.ColorTransparent)
+		if err == nil && len(lines) > 0 {
+			var chunks []style.TextChunk
+			for i, line := range lines {
+				if i > 0 {
+					chunks = append(chunks, style.Plain("\n"))
+				}
+				chunks = AppendSpans(chunks, line)
+			}
+			return style.NewStyledText(chunks...)
+		}
+	}
+	return style.NewStyledText(style.TextChunk{Text: detail, Fg: textFg})
+}
+
 // HideIndicator dismisses the indicator.
 func (ui *UI) HideIndicator() {
 	ui.indicatorBox.SetGone(true)
+	ui.indicatorError = false
 	ui.SyncBlink()
 }
 
@@ -83,12 +134,19 @@ func (ui *UI) HideIndicator() {
 // transcript again.
 func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
 	content, shown, blink := ui.indicatorLabel.Content(), ui.indicatorBox.Visible(), ui.blink.On.Load()
+	wasError := ui.indicatorError
+	detail := ui.indicatorDetail != nil && ui.indicatorDetail.Visible()
 	ui.ShowIndicator(EventIndicatorShow{Text: text})
 	// The blink marks the time of a run, not text.
 	ui.blink.On.Store(false)
 	ui.renderer.Render()
 	fn()
 	ui.indicatorLabel.SetStyledContent(content)
+	if ui.indicatorDetail != nil {
+		ui.indicatorDetail.SetGone(!detail)
+	}
+	ui.indicatorError = wasError
+	ui.ShowIndicatorMarker()
 	ui.indicatorBox.SetGone(!shown)
 	ui.blink.On.Store(blink)
 }
@@ -112,10 +170,15 @@ func (ui *UI) SyncBlink() {
 }
 
 // ShowIndicatorMarker shows the marker before the indicator's text while a
-// turn is in progress, in its left padding, as a tool call shows its marker,
+// turn is in progress, or the indicator shows an error, in its left padding,
+// as a tool call shows its marker, in the color IndicatorMarkerFg gives it,
 // and hides it otherwise. The text stays where it is either way.
 func (ui *UI) ShowIndicatorMarker() {
-	show := ui.service.state.Working
+	if ui.indicatorMarker == nil {
+		return
+	}
+	StyleMarker(ui.indicatorMarker, ui.service.state.MarkerShape, ui.IndicatorMarkerFg())
+	show := ui.service.state.Working || ui.indicatorError
 	if ui.indicatorMarker.Visible() == show {
 		return
 	}
@@ -125,6 +188,15 @@ func (ui *UI) ShowIndicatorMarker() {
 		margin = -PaddingX
 	}
 	SetEdge(ui.indicatorRow, &ui.indicatorRow.LayoutNode().MarginLeft, margin)
+}
+
+// IndicatorMarkerFg returns the color of the marker before the indicator's
+// text: ErrorFg while it shows an error, and indicatorHintFg otherwise.
+func (ui *UI) IndicatorMarkerFg() style.Color {
+	if ui.indicatorError {
+		return ui.ErrorFg()
+	}
+	return indicatorHintFg
 }
 
 // IndicatorMarkerHidden reports whether the marker before the indicator's

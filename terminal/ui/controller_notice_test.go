@@ -2,6 +2,7 @@ package ui
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -91,5 +92,31 @@ func TestSessionSelectSettlesIndicator(t *testing.T) {
 	out := s.HandleSessionSelect(id)
 	if !slices.Contains(out, UIEvent(EventIndicatorHide{})) || s.state.Working {
 		t.Errorf("switch = %v with working %v, want the indicator hidden", out, s.state.Working)
+	}
+}
+
+// TestErrorBody checks that a provider's error body shows as JSON indented
+// by two spaces, or as its text without the white space around it, cut to
+// MaxErrorDetailLines lines, the last of which counts the lines cut.
+func TestErrorBody(t *testing.T) {
+	tests := []struct {
+		name, body, want string
+		json             bool
+	}{
+		{name: "json", body: ` {"type":"error","error":{"type":"bad_request"}} `, json: true,
+			want: "{\n  \"type\": \"error\",\n  \"error\": {\n    \"type\": \"bad_request\"\n  }\n}"},
+		{name: "text", body: "\n  upstream timed out\n", want: "upstream timed out"},
+		{name: "long", body: strings.Repeat("line\n", MaxErrorDetailLines+5),
+			want: strings.Repeat("line\n", MaxErrorDetailLines-1) + "… 6 more lines"},
+		{name: "long line", body: strings.Repeat("x", MaxErrorDetailBytes*3),
+			want: strings.Repeat("x", MaxErrorDetailBytes) + "…"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, isJSON := ErrorBody(tt.body)
+			if got != tt.want || isJSON != tt.json {
+				t.Errorf("ErrorBody = %q, %v; want %q, %v", got, isJSON, tt.want, tt.json)
+			}
+		})
 	}
 }

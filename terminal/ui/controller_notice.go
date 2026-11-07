@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -261,6 +263,59 @@ func (s *Service) ShowIndicator(text string) []UIEvent {
 	return []UIEvent{EventIndicatorShow{Text: text}}
 }
 
+// ShowError shows e, the error a run ended with, in the indicator, as
+// ErrorIndicator shows it.
+func (s *Service) ShowError(e app.UnknownError) []UIEvent {
+	s.state.Working = false
+	return []UIEvent{ErrorIndicator(e)}
+}
+
+// MaxErrorDetailLines is the most lines of a provider's error body that the
+// indicator shows; a longer body ends in a line that counts the rest.
+const MaxErrorDetailLines = 20
+
+// MaxErrorDetailBytes is the most bytes of a provider's error body that the
+// indicator shows, about MaxErrorDetailLines full lines, so that a body of
+// few but long lines, as minified JSON or HTML is, is cut short too.
+const MaxErrorDetailBytes = 2 << 10
+
+// ErrorIndicator returns the indicator of e, the error a run ended with: for
+// a provider's error response, its provider and status, such as
+// "provider-a response error (400)", over the body it answered with, as
+// ErrorBody formats it; and for another error, its message alone.
+func ErrorIndicator(e app.UnknownError) EventIndicatorShow {
+	if e.Status == 0 || strings.TrimSpace(e.Body) == "" {
+		return EventIndicatorShow{Text: e.Message, Error: true}
+	}
+	detail, isJSON := ErrorBody(e.Body)
+	return EventIndicatorShow{
+		Text:   fmt.Sprintf("%s response error (%d)", e.Provider, e.Status),
+		Error:  true,
+		Detail: detail,
+		JSON:   isJSON,
+	}
+}
+
+// ErrorBody returns body, a provider's error response body, as the
+// indicator shows it, and reports whether it is JSON: JSON indented by two
+// spaces, other text without the white space around it, either cut to
+// MaxErrorDetailLines lines, the last of which then counts the lines cut,
+// and then to MaxErrorDetailBytes bytes, followed by an ellipsis.
+func ErrorBody(body string) (string, bool) {
+	body = strings.TrimSpace(body)
+	var buf bytes.Buffer
+	isJSON := json.Indent(&buf, []byte(body), "", "  ") == nil
+	if isJSON {
+		body = buf.String()
+	}
+	lines := strings.Split(body, "\n")
+	if len(lines) > MaxErrorDetailLines {
+		rest := len(lines) - (MaxErrorDetailLines - 1)
+		lines = append(lines[:MaxErrorDetailLines-1], fmt.Sprintf("… %d more lines", rest))
+	}
+	return Truncate(strings.Join(lines, "\n"), MaxErrorDetailBytes), isJSON
+}
+
 // TickIndicator returns the working indicator with the time the turn in
 // progress has taken by now, while the indicator shows it, and nothing
 // otherwise. The UI calls it every IndicatorTick.
@@ -302,7 +357,8 @@ func (s *Service) ResetError() []UIEvent {
 	return s.HideIndicator()
 }
 
-// SimulateError displays a representative request failure.
+// SimulateError displays a representative request failure, as ShowError
+// shows the error a run ends with.
 func (s *Service) SimulateError() []UIEvent {
-	return s.ShowIndicator("Request Failed: Post \"https://api.example.com/v1/responses\": EOF")
+	return s.ShowError(app.NewUnknownError("Request Failed: Post \"https://api.example.com/v1/responses\": EOF"))
 }

@@ -268,7 +268,7 @@ func (s Session) run(ctx context.Context, release func(), work func(Session, con
 	}()
 	ev := EventAgentEnded{EventBase: s.eventBase()}
 	if err != nil {
-		e := NewUnknownError(err.Error())
+		e := ErrorOf(err)
 		ev.Error = &e
 		log.Warn("run ended", "err", err)
 	} else {

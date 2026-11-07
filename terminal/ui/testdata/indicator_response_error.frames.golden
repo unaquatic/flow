@@ -3,13 +3,20 @@
 |  ok                                                                    |
 |                                                                        |
 |                                                                        |
-|  provider-b response error (429): {"type":"error","error":{"type":     |
-|  "rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}  |
+|■ Error provider-b response error (429)                                 |
+|                                                                        |
+|                                                                        |
+|  {                                                                     |
+|    "type": "error",                                                    |
+|    "error": {                                                          |
+|      "type": "rate_limit_error",                                       |
+|      "message": "Error"                                                |
+|    },                                                                  |
+|    "request_id": "req_011CX7Yq2M"                                      |
+|  }                                                                     |
+|                                                                        |
 |                                                                        |
 |■                                                                       |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 === fg ===
@@ -17,13 +24,20 @@
 |  AA                                                                    |
 |                                                                        |
 |                                                                        |
-|  BBBBBBBBBB BBBBBBBB BBBBB BBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB     |
-|  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|                                                                        |
-|C                                                                       |
+|B BBBBB CCCCCCCCCC CCCCCCCC CCCCC CCCCC                                 |
 |                                                                        |
 |                                                                        |
+|  A                                                                     |
+|    AAAAAAA DDDDDDDA                                                    |
+|    AAAAAAAA A                                                          |
+|      AAAAAAA DDDDDDDDDDDDDDDDDDA                                       |
+|      AAAAAAAAAA DDDDDDD                                                |
+|    AA                                                                  |
+|    AAAAAAAAAAAAA DDDDDDDDDDDDDDDD                                      |
+|  A                                                                     |
 |                                                                        |
+|                                                                        |
+|E                                                                       |
 |                                                                        |
 |                                                                        |
 === bg ===
@@ -33,15 +47,25 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
 |                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #787878
-C #ff5f00
+B #ff7c78
+C #787878
+D #91b557
+E #ff5f00
 ░ #232323 BoxBg
+▒ #1f1f1f SurfaceRaised/SuccessSurface
