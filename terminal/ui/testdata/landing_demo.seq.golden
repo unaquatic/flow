@@ -70,7 +70,7 @@
 |  │ calculator/divide_test.go │ Success and error tests   │   |
 |  └───────────────────────────┴───────────────────────────┘   |
 |                                                              |
-|  Worked for 36s                                              |
+|  Done [36s]                                                  |
 === fg ===
 |                                                              |
 |  AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
@@ -142,7 +142,7 @@
 |  E DDDDDDDDDDDDDDDDDDDDDDDDD E AAAAAAA AAA AAAAA AAAAA   E   |
 |  EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE   |
 |                                                              |
-|  CCCCCC CCC CCC                                              |
+|  CCCC CCCCC                                                  |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -229,53 +229,53 @@
 |                                                              |
 |                                                              |
 |                                                              |
-|  BBBB                                                        |
-|                                                              |
-|                                                              |
-|                                                              |
-|                                                              |
-|  BBBB                                                        |
-|                                                              |
-|                                                              |
-|                                                              |
-|                                                              |
-|  BBBB                                                        |
-|                                                              |
-|                                                              |
-|                                                              |
-|                                                              |
-|  BBBB                                                        |
-|                                                              |
-|                                                              |
-|                                                              |
-|                                                              |
-|  BBBB                                                        |
-|  BBBB                                                        |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
-|  BBBB                                                        |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
-|  BBBBB                                                       |
-|                                                              |
-|                                                              |
-|                                                              |
-|  BBBB                                                        |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
-|  BBBB                                                        |
 |                                                              |
 |                                                              |
 |                                                              |
-|  BBBB                                                        |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
@@ -290,7 +290,7 @@
 === legend ===
 A #e6e6e6
 B #8a8a8a
-C #707070
+C #8c8c8c
 D #91b557
 E #2c2c2d
 ░ #232323 BoxBg
@@ -319,7 +319,7 @@ A #e6e6e6
 ░ #232323 BoxBg
 === step: running ===
 === text ===
-|  Worked for 12s [esc cancel] [ctrl+o expand]                 |
+|■ Working [12s] [esc cancel] [ctrl+o expand]                  |
 |                                                              |
 |                                                              |
 |                                                              |
@@ -327,7 +327,7 @@ A #e6e6e6
 |                                                              |
 |                                                              |
 === fg ===
-|  AAAAAA AAA AAA AAAA AAAAAAA AAAAAAA AAAAAAA                 |
+|A AAAAAAA AAAAA AAAA AAAAAAA AAAAAAA AAAAAAA                  |
 |                                                              |
 |                                                              |
 |                                                              |

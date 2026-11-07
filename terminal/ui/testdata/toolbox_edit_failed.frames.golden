@@ -1,8 +1,6 @@
 === text ===
 |                                                            |
-|  Edit [tool execution failed]                              |
-|                                                            |
-|  calculator/calc.go                                        |
+|  Edit calculator/calc.go [tool execution failed]           |
 |                                                            |
 |  @@ -1,3 +1,6 @@                                           |
 |  -package calculator                                       |
@@ -18,11 +16,11 @@
 |  old_string not found                                      |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 === fg ===
 |                                                            |
-|  AAAA AAAAA AAAAAAAAA AAAAAAA                              |
-|                                                            |
-|  BBBBBBBBBBBBBBBBBB                                        |
+|  AAAA AAAAAAAAAAAAAAAAAA AAAAA AAAAAAAAA AAAAAAA           |
 |                                                            |
 |  BB BBBB BBBB BB                                           |
 |  CCCCCCCC CCCCCCCCCC                                       |
@@ -36,6 +34,8 @@
 |  DD                                                        |
 |                                                            |
 |  BBBBBBBBBB BBB BBBBB                                      |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 === bg ===
@@ -55,31 +55,11 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                            |
-=== attrs ===
-|                                                            |
-|  BBBB                                                      |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #707070
+A #8c8c8c
 B #e6e6e6
 C #ff7c78
 D #91b557

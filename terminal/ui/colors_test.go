@@ -52,6 +52,8 @@ func TestColorIndexers(t *testing.T) {
 		{name: "16 dim text", mode: style.Color16, color: PanelDimFg, want: "\x1b[37m"},
 		{name: "16 accent", mode: style.Color16, color: theme.Accent, want: "\x1b[33m"},
 		{name: "16 success", mode: style.Color16, color: theme.Success, want: "\x1b[92m"},
+		{name: "16 reasoning code", mode: style.Color16, color: ReasoningCodeFg(theme), want: "\x1b[32m"},
+		{name: "256 reasoning code", mode: style.Color256, color: ReasoningCodeFg(theme), want: "\x1b[38;5;101m"},
 		{name: "16 unlisted", mode: style.Color16, color: unlisted, want: style.FgColorSeq(unlisted, style.Color16)},
 		{name: "16 text color as background", mode: style.Color16, color: theme.Success, bg: true,
 			want: style.BgColorSeq(theme.Success, style.Color16)},

@@ -74,7 +74,7 @@ func textChoices(t *style.Theme) []ColorChoice {
 
 		// Dim text, which cards hold too.
 		{t.TextMuted, style.ANSIWhite, 245}, // TextMuted, Interactive, Info, comments, quotes, H5
-		{gray(140), style.ANSIWhite, 245},   // the labels of /status and the diff toast
+		{gray(140), style.ANSIWhite, 245},   // the labels of /status and the diff toast, tool rows and reasoning (ToolFg)
 		{PanelDimFg, style.ANSIWhite, 242},  // panel counts, menu descriptions, hints
 		{gray(92), style.ANSIWhite, 59},     // the banner's text, the session list's no-match notice
 		{gray(80), style.ANSIWhite, 239},    // the words between keys in the status hints
@@ -96,8 +96,9 @@ func textChoices(t *style.Theme) []ColorChoice {
 		{DiffDelFg, style.ANSIBrightRed, 167}, // deleted-line counts
 
 		// Greens.
-		{t.Success, style.ANSIBrightGreen, 84}, // Success, DiffAddFg, strings, regular expressions, inline code
-		{DiffAddFg, style.ANSIBrightGreen, 78}, // added-line counts
+		{t.Success, style.ANSIBrightGreen, 84},     // Success, DiffAddFg, strings, regular expressions, inline code
+		{DiffAddFg, style.ANSIBrightGreen, 78},     // added-line counts
+		{ReasoningCodeFg(t), style.ANSIGreen, 101}, // inline code in reasoning, as dim as its text
 
 		// Blues.
 		{t.InteractiveStrong, style.ANSIBrightBlue, 68}, // InteractiveStrong, link labels

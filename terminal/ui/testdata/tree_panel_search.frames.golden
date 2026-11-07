@@ -2,25 +2,26 @@
 |                                                                        |
 |  Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
 |                                                                        |
-|  user: use table-driven tests instead                                  |
-|  agent: Rewrote the tests as a table.                                  |
+|  User use table-driven tests instead                                   |
+|                                                                        |
+|  Agent Rewrote the tests as a table.                                   |
 |                                                                        |
 |  table                                                                 |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 === fg ===
 |                                                                        |
 |  AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
 |                                                                        |
-|  CCCCC CCC CCCCCCCCCCCC CCCCC CCCCCCC                                  |
-|  BBBBBB BBBBBBB BBB BBBBB BB B BBBBBB                                  |
+|  BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                   |
+|                                                                        |
+|  BBBBB BBBBBBB BBB BBBBB BB B BBBBBB                                   |
 |                                                                        |
 |  AAAAA                                                                 |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -30,21 +31,8 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
-|                                                                        |
-=== attrs ===
-|                                                                        |
-|  BBBBBBBBBBBB                                                          |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 === legend ===
 A #e6e6e6
 B #707070
-C #232323 BoxBg
 ░ #232323 BoxBg
 ▒ #ff5f00

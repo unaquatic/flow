@@ -52,8 +52,9 @@ func (s *Service) TreeView() (TreeView, bool) {
 	return s.state.Tree.View(s.TreeRows()), true
 }
 
-// TreeRows returns the number of rows the session tree shows at once:
-// treeMaxRows, within the input box's bound.
+// TreeRows returns the number of lines the session tree shows at once:
+// treeMaxRows, within the input box's bound. One of them is the insert line,
+// so a page of rows is a line shorter.
 func (s *Service) TreeRows() int {
 	return BoundRows(treeMaxRows, s.state.MenuRows)
 }
@@ -77,7 +78,7 @@ func (s *Service) MoveTree(delta int) []UIEvent {
 // PageTree moves the selection delta pages of shown rows down, or up for a
 // negative delta.
 func (s *Service) PageTree(delta int) []UIEvent {
-	return s.UpdateTree(func(t *SessionTree) { t.Page(delta, s.TreeRows()) })
+	return s.UpdateTree(func(t *SessionTree) { t.Page(delta, max(s.TreeRows()-1, 1)) })
 }
 
 // JumpTreeFork moves the selection to the next branch below it, or for a

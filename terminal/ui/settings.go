@@ -20,11 +20,17 @@ type SettingsStore interface {
 // config.Terminal lists them. A value it leaves out, or does not name,
 // is the setting's zero value, which is its default.
 var (
-	cacheModeKeys      = map[CacheMode]string{CacheOff: "off", CachePerTurn: "per_turn", CachePerMessage: "per_message"}
-	toolCallStyleKeys  = map[ToolCallStyle]string{ToolCallsCompact: "compact", ToolCallsBoxed: "boxed"}
-	toolNameColorKeys  = map[ToolNameColor]string{ToolNameGray: "gray", ToolNameWhite: "white"}
+	cacheModeKeys     = map[CacheMode]string{CacheOff: "off", CachePerTurn: "per_turn", CachePerMessage: "per_message"}
+	expandedStyleKeys = map[ExpandedStyle]string{ExpandedBoxed: "boxed", ExpandedPlain: "plain"}
+	toolNameColorKeys = map[ToolNameColor]string{ToolNameGray: "gray", ToolNameWhite: "white"}
+	markerShapeKeys   = map[MarkerShape]string{
+		MarkerSquare: "square", MarkerSquareOutline: "square_outline", MarkerRoundedOutline: "rounded_outline",
+		MarkerCircle: "circle", MarkerCircleOutline: "circle_outline", MarkerDiamond: "diamond",
+		MarkerDiamondOutline: "diamond_outline", MarkerBlock: "block",
+	}
 	keyHintsModeKeys   = map[KeyHintsMode]string{KeyHintsTitle: "title", KeyHintsSubtitle: "subtitle", KeyHintsFooter: "footer"}
 	countPlaceKeys     = map[CountPlace]string{CountBelow: "below", CountInTitle: "title"}
+	promptStyleKeys    = map[PromptStyle]string{PromptFilled: "filled", PromptBar: "bar"}
 	selectionStyleKeys = map[SelectionStyle]string{SelectionFullWidth: "full_width", SelectionFill: "fill", SelectionArrow: "arrow"}
 )
 
@@ -45,12 +51,14 @@ func SettingValue[T comparable](keys map[T]string, key string) T {
 func (st *UIState) ApplyConfig(t config.Terminal, debug bool) {
 	st.Inline = !t.Fullscreen
 	st.CacheMode = SettingValue(cacheModeKeys, t.CacheUsage)
-	st.ToolStyle = SettingValue(toolCallStyleKeys, t.ToolCalls)
+	st.ExpandStyle = SettingValue(expandedStyleKeys, t.ExpandedTools)
 	st.ToolMarkers = t.ToolMarker
+	st.MarkerShape = SettingValue(markerShapeKeys, t.ToolMarkerShape)
 	st.ToolColor = SettingValue(toolNameColorKeys, t.ToolNameColor)
 	st.KeyHints = SettingValue(keyHintsModeKeys, t.KeyHints)
 	st.Count = SettingValue(countPlaceKeys, t.ListCount)
 	st.Selection = SettingValue(selectionStyleKeys, t.Selection)
+	st.PromptStyle = SettingValue(promptStyleKeys, t.PromptStyle)
 	st.Debug = debug
 }
 
@@ -58,14 +66,16 @@ func (st *UIState) ApplyConfig(t config.Terminal, debug bool) {
 // saves them, each value named, so that the file shows them.
 func (st *UIState) TerminalConfig() config.Terminal {
 	return config.Terminal{
-		Fullscreen:    !st.Inline,
-		CacheUsage:    cacheModeKeys[st.CacheMode],
-		ToolCalls:     toolCallStyleKeys[st.ToolStyle],
-		ToolMarker:    st.ToolMarkers,
-		ToolNameColor: toolNameColorKeys[st.ToolColor],
-		KeyHints:      keyHintsModeKeys[st.KeyHints],
-		ListCount:     countPlaceKeys[st.Count],
-		Selection:     selectionStyleKeys[st.Selection],
+		Fullscreen:      !st.Inline,
+		CacheUsage:      cacheModeKeys[st.CacheMode],
+		ExpandedTools:   expandedStyleKeys[st.ExpandStyle],
+		ToolMarker:      st.ToolMarkers,
+		ToolMarkerShape: markerShapeKeys[st.MarkerShape],
+		ToolNameColor:   toolNameColorKeys[st.ToolColor],
+		KeyHints:        keyHintsModeKeys[st.KeyHints],
+		ListCount:       countPlaceKeys[st.Count],
+		Selection:       selectionStyleKeys[st.Selection],
+		PromptStyle:     promptStyleKeys[st.PromptStyle],
 	}
 }
 

@@ -72,6 +72,10 @@ type Notice struct {
 	Lines []style.StyledText
 	// Surface is what the notice shows on.
 	Surface NoticeSurface
+	// Title, when set, heads the notice while prompts show in PromptBar,
+	// as UI.NewNoticeBarRow shows it, such as "Status" over the session
+	// info. Without one, the notice's first line heads it.
+	Title string
 }
 
 // NoticeSurface is what a notice shows on.
@@ -200,36 +204,36 @@ func (m CacheMode) String() string {
 	}
 }
 
-// ToolCallStyle is how the transcript shows a collapsed tool call, which
-// /settings sets. An expanded call shows as a block in every style.
-type ToolCallStyle int
+// ExpandedStyle is how the transcript shows an expanded tool call, which
+// /settings sets. A collapsed call shows as its header alone, one row on the
+// canvas, in every style, and the rows of consecutive collapsed calls stack
+// with no blank row between them.
+type ExpandedStyle int
 
 const (
-	// ToolCallsCompact shows a collapsed call as its header alone, one row on
-	// the canvas, and stacks the rows of consecutive collapsed calls with no
-	// blank row between them. It is the default.
-	ToolCallsCompact ToolCallStyle = iota
-	// ToolCallsBoxed shows a collapsed call as a block on the success
-	// surface, its header between two rows of padding, a blank row apart
-	// from what comes before and after it, as an expanded call shows.
-	ToolCallsBoxed
+	// ExpandedBoxed shows an expanded call as a block on the success
+	// surface, its content between two rows of padding. It is the default.
+	ExpandedBoxed ExpandedStyle = iota
+	// ExpandedPlain shows an expanded call on the canvas, with no
+	// background and no padding.
+	ExpandedPlain
 )
 
-// ToolCallStyles lists the tool call styles in the order /settings offers
+// ExpandedStyles lists the expanded styles in the order /settings offers
 // them.
-var ToolCallStyles = [...]ToolCallStyle{ToolCallsCompact, ToolCallsBoxed}
+var ExpandedStyles = [...]ExpandedStyle{ExpandedBoxed, ExpandedPlain}
 
-// Next returns the style step places after s in ToolCallStyles, going round.
-func (s ToolCallStyle) Next(step int) ToolCallStyle {
-	return Cycle(ToolCallStyles[:], s, step)
+// Next returns the style step places after s in ExpandedStyles, going round.
+func (s ExpandedStyle) Next(step int) ExpandedStyle {
+	return Cycle(ExpandedStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Compact" or "Boxed".
-func (s ToolCallStyle) String() string {
-	if s == ToolCallsBoxed {
-		return "Boxed"
+// String returns the name /settings shows for s: "Boxed" or "Plain".
+func (s ExpandedStyle) String() string {
+	if s == ExpandedPlain {
+		return "Plain"
 	}
-	return "Compact"
+	return "Boxed"
 }
 
 // ToolNameColor is the color of the marker and the name of each tool call,
@@ -237,7 +241,7 @@ func (s ToolCallStyle) String() string {
 type ToolNameColor int
 
 const (
-	// ToolNameGray shows the marker and the name in PanelDimFg, as the
+	// ToolNameGray shows the marker and the name in ToolFg, as the
 	// input after the name is. It is the default.
 	ToolNameGray ToolNameColor = iota
 	// ToolNameWhite shows the marker and the name in titleFg, as a panel
@@ -262,12 +266,75 @@ func (c ToolNameColor) String() string {
 	return "Gray"
 }
 
-// Fg returns the color c names: PanelDimFg or titleFg.
+// MarkerShape is the symbol of the marker before each tool call's name,
+// ToolMarker, which /settings sets.
+type MarkerShape int
+
+const (
+	// MarkerSquare is a filled square, ■. It is the default.
+	MarkerSquare MarkerShape = iota
+	// MarkerSquareOutline is an unfilled square, □.
+	MarkerSquareOutline
+	// MarkerRoundedOutline is an unfilled square with rounded corners, ▢.
+	MarkerRoundedOutline
+	// MarkerCircle is a filled circle, ●.
+	MarkerCircle
+	// MarkerCircleOutline is an unfilled circle, ○.
+	MarkerCircleOutline
+	// MarkerDiamond is a filled diamond, ◆.
+	MarkerDiamond
+	// MarkerDiamondOutline is an unfilled diamond, ◇.
+	MarkerDiamondOutline
+	// MarkerBlock is a space filled with the marker's color, a solid cell.
+	MarkerBlock
+)
+
+// MarkerShapes lists the marker shapes in the order /settings offers them.
+var MarkerShapes = [...]MarkerShape{
+	MarkerSquare, MarkerSquareOutline, MarkerRoundedOutline, MarkerCircle,
+	MarkerCircleOutline, MarkerDiamond, MarkerDiamondOutline, MarkerBlock,
+}
+
+// markerShapeInfo holds the symbol and the name of each MarkerShape.
+var markerShapeInfo = [...]struct{ glyph, name string }{
+	MarkerSquare:         {"■", "Square"},
+	MarkerSquareOutline:  {"□", "Square outline"},
+	MarkerRoundedOutline: {"▢", "Rounded outline"},
+	MarkerCircle:         {"●", "Circle"},
+	MarkerCircleOutline:  {"○", "Circle outline"},
+	MarkerDiamond:        {"◆", "Diamond"},
+	MarkerDiamondOutline: {"◇", "Diamond outline"},
+	MarkerBlock:          {" ", "Block"},
+}
+
+// Next returns the shape step places after m in MarkerShapes, going round.
+func (m MarkerShape) Next(step int) MarkerShape {
+	return Cycle(MarkerShapes[:], m, step)
+}
+
+// Glyph returns the symbol m draws: a space for MarkerBlock, which the
+// marker's color fills.
+func (m MarkerShape) Glyph() string { return markerShapeInfo[m].glyph }
+
+// Filled reports whether m is a space the marker's color fills, rather than
+// a symbol drawn in it.
+func (m MarkerShape) Filled() bool { return m == MarkerBlock }
+
+// String returns the name /settings shows for m, after its symbol, such as
+// "■ Square", or "Block" for MarkerBlock.
+func (m MarkerShape) String() string {
+	if m.Filled() {
+		return markerShapeInfo[m].name
+	}
+	return markerShapeInfo[m].glyph + " " + markerShapeInfo[m].name
+}
+
+// Fg returns the color c names: ToolFg or titleFg.
 func (c ToolNameColor) Fg() style.Color {
 	if c == ToolNameWhite {
 		return titleFg
 	}
-	return PanelDimFg
+	return ToolFg
 }
 
 // KeyHintsMode is where the panels in the input box name their keys, which
@@ -335,6 +402,35 @@ func (p CountPlace) String() string {
 		return "Title"
 	}
 	return "Below"
+}
+
+// PromptStyle is how the transcript marks a prompt, which /settings sets.
+type PromptStyle int
+
+const (
+	// PromptFilled shows a prompt as a block on the box background, padded
+	// by a row above and below. It is the default.
+	PromptFilled PromptStyle = iota
+	// PromptBar shows a prompt on the canvas, with the marker shape in the
+	// product's primary color at the left edge of each of its rows, or for
+	// the block shape a cell filled with it.
+	PromptBar
+)
+
+// PromptStyles lists the prompt styles in the order /settings offers them.
+var PromptStyles = [...]PromptStyle{PromptFilled, PromptBar}
+
+// Next returns the style step places after s in PromptStyles, going round.
+func (s PromptStyle) Next(step int) PromptStyle {
+	return Cycle(PromptStyles[:], s, step)
+}
+
+// String returns the name /settings shows for s: "Filled" or "Bar".
+func (s PromptStyle) String() string {
+	if s == PromptBar {
+		return "Bar"
+	}
+	return "Filled"
 }
 
 // SelectionStyle is how the lists in the input box, the slash menu, the
@@ -487,12 +583,15 @@ type UIState struct {
 	// ToolsExpanded reports whether tool calls and the changes of each step
 	// show their details, which Ctrl+O toggles. They start collapsed.
 	ToolsExpanded bool
-	// ToolStyle is how collapsed tool calls show, which /settings sets. It is
-	// ToolCallsCompact by default.
-	ToolStyle ToolCallStyle
+	// ExpandStyle is how expanded tool calls show, which /settings sets. It
+	// is ExpandedBoxed by default.
+	ExpandStyle ExpandedStyle
 	// ToolMarkers reports that tool calls show ToolMarker before their name,
 	// which /settings sets. They show none by default.
 	ToolMarkers bool
+	// MarkerShape is the symbol of each tool call's marker, which /settings
+	// sets. It is MarkerSquare by default.
+	MarkerShape MarkerShape
 	// ToolColor is the color of each tool call's marker and name, which
 	// /settings sets. It is ToolNameGray by default.
 	ToolColor ToolNameColor
@@ -515,6 +614,9 @@ type UIState struct {
 	// Selection is how the menus mark their selected row, which /settings
 	// sets. It is SelectionFullWidth by default.
 	Selection SelectionStyle
+	// PromptStyle is how the transcript marks a prompt, which /settings
+	// sets. It is PromptFilled by default.
+	PromptStyle PromptStyle
 }
 
 // StatusHintStyled returns the default keyboard hint.

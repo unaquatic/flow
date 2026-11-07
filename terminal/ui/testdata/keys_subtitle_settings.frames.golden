@@ -5,15 +5,15 @@
 |                                                                        |
 |  Fullscreen              On                                            |
 |  Cache usage             Off                                           |
-|  Tool calls              Compact                                       |
+|  Expanded tools          Boxed                                         |
 |  Tool marker             Off                                           |
+|  Marker shape            ■ Square                                      |
 |  Tool name color         Gray                                          |
 |  Key hints               Subtitle                                      |
 |  List count              Below                                         |
 |  Selection               Full width                                    |
+|  Prompt style            Filled                                        |
 |  Debug                   Off                                           |
-|                                                                        |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 === fg ===
@@ -23,15 +23,15 @@
 |                                                                        |
 |  DDDDDDDDDD              DD                                            |
 |  AAAAA AAAAA             CCC                                           |
-|  AAAA AAAAA              CCCCCCC                                       |
+|  AAAAAAAA AAAAA          CCCCC                                         |
 |  AAAA AAAAAA             CCC                                           |
+|  AAAAAA AAAAA            C CCCCCC                                      |
 |  AAAA AAAA AAAAA         CCCC                                          |
 |  AAA AAAAA               CCCCCCCC                                      |
 |  AAAA AAAAA              CCCCC                                         |
 |  AAAAAAAAA               CCCC CCCCC                                    |
+|  AAAAAA AAAAA            CCCCCC                                        |
 |  AAAAA                   CCC                                           |
-|                                                                        |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 === bg ===
@@ -51,25 +51,7 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-=== attrs ===
-|                                                                        |
-|  BBBBBBBB                                                              |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 === legend ===
 A #e6e6e6
 B #b4b4b4

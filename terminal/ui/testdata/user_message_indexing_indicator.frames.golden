@@ -5,7 +5,7 @@
 |                                                |
 |  Snapshot [indexing]                           |
 |                                                |
-|  Worked for 2s [esc cancel] [ctrl+o expand]    |
+|■ Working [2s] [esc cancel] [ctrl+o expand]     |
 |                                                |
 === fg ===
 |                                                |
@@ -14,7 +14,7 @@
 |                                                |
 |  BBBBBBBB BBBBBBBBBB                           |
 |                                                |
-|  BBBBBB BBB BB BBBB BBBBBBB BBBBBBB BBBBBBB    |
+|C CCCCCCC CCCC CCCC CCCCCCC CCCCCCC CCCCCCC     |
 |                                                |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -25,16 +25,8 @@
 |                                                |
 |                                                |
 |                                                |
-=== attrs ===
-|                                                |
-|                                                |
-|                                                |
-|                                                |
-|  BBBBBBBB                                      |
-|                                                |
-|                                                |
-|                                                |
 === legend ===
 A #e6e6e6
-B #707070
+B #8c8c8c
+C #707070
 ░ #232323 BoxBg

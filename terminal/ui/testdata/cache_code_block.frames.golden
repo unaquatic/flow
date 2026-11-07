@@ -1,44 +1,23 @@
 === text ===
 |  Run this:                             |
 |                                        |
-|                                        |
-|    go test ./...                       |
-|                                        |
+|  go test ./...                         |
 |                                        |
 |  Cache read 7.7K write 0K              |
+|                                        |
+|                                        |
 |                                        |
 |                                        |
 === fg ===
 |  AAA AAAAA                             |
 |                                        |
-|                                        |
-|    AA AAAA AAAAA                       |
-|                                        |
+|  AA AAAA AAAAA                         |
 |                                        |
 |  BBBBB BBBB BBBB BBBBB BB              |
 |                                        |
 |                                        |
-=== bg ===
-|                                        |
-|                                        |
-|  ░░░░░░░░░░░░░░░░░                     |
-|  ░░░░░░░░░░░░░░░░░                     |
-|  ░░░░░░░░░░░░░░░░░                     |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-=== attrs ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|  BBBBB                                 |
 |                                        |
 |                                        |
 === legend ===
 A #e6e6e6
-B #707070
-░ #1f1f1f SurfaceRaised/SuccessSurface
+B #8c8c8c

@@ -135,7 +135,7 @@ func TestSnapshotFrames(t *testing.T) {
 			u.AddMessage(reply)
 		}},
 		// A step's changes start collapsed to a header like a tool call's: the
-		// bold name, and the files counted as an undo notice counts them.
+		// name, and the files counted as an undo notice counts them.
 		{name: "agent_patch", h: 8, add: patchTurn},
 		{name: "agent_patch_expanded", h: 15, add: func(u *ui.UI) {
 			patchTurn(u)

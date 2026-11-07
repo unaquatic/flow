@@ -116,15 +116,15 @@ func ToolFence(filetype, content string) string {
 }
 
 // ToolNameChunk returns label, the name of a call's tool as ToolView.NameLabel
-// gives it, in bold and fg, for the start of a call's header.
+// gives it, in fg and not bold, for the start of a call's header.
 func ToolNameChunk(label string, fg style.Color) style.TextChunk {
-	return style.TextChunk{Text: label, Fg: fg, Attributes: style.AttrBold}
+	return style.TextChunk{Text: label, Fg: fg}
 }
 
 // ToolHeaderOutput returns the call header, its status, and any output: the
 // output so far of a running call, or the output of a completed one, as view
 // shows the call. The header is the tool's name as view.NameLabel gives it,
-// in bold and nameFg, such as "Edit", and then, in inputFg, a one-line
+// in nameFg and not bold, such as "Edit", and then, in inputFg, a one-line
 // summary of the input, such as its path, a search's pattern, or a command,
 // in every state of the call, and then view.HeaderNote. A transparent color
 // leaves its part in the header's color. The status is view.Status when it is

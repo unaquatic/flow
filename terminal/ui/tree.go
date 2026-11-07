@@ -121,6 +121,21 @@ func (e TreeEntry) ToolsOnly() bool {
 	return e.Role == message.RoleAgent && e.Text == "" && len(e.Tools) > 0
 }
 
+// Split returns the entries of e's rows: one for each tool call of a
+// message of tool calls alone, each holding that call, and e itself
+// otherwise.
+func (e TreeEntry) Split() []TreeEntry {
+	if !e.ToolsOnly() || len(e.Tools) < 2 {
+		return []TreeEntry{e}
+	}
+	entries := make([]TreeEntry, len(e.Tools))
+	for i, call := range e.Tools {
+		entries[i] = e
+		entries[i].Tools = []TreeTool{call}
+	}
+	return entries
+}
+
 // Matches reports whether e's role, text, or tool calls contain every one
 // of tokens, which are lower case.
 func (e TreeEntry) Matches(tokens []string) bool {
@@ -222,7 +237,8 @@ type SessionTree struct {
 	Order []int
 	// Active marks the messages on the transcript.
 	Active map[message.ID]bool
-	// RowIndex maps a listed message to its place in Rows.
+	// RowIndex maps a listed message to its place in Rows: its first row,
+	// for a message that takes one row for each of its tool calls.
 	RowIndex map[message.ID]int
 	// ListedParent maps a listed message to the nearest listed message it
 	// descends from, and to the empty ID when there is none.
@@ -328,7 +344,7 @@ func (t *SessionTree) Refresh() {
 	t.Rows = t.Rows[:0]
 	t.PlaceChildren("", 0, nil)
 	t.RowIndex = make(map[message.ID]int, len(t.Rows))
-	for i, row := range t.Rows {
+	for i, row := range slices.Backward(t.Rows) {
 		t.RowIndex[row.Entry.ID] = i
 	}
 	t.Select(t.NearestRow(t.Last))
@@ -347,18 +363,23 @@ func (t *SessionTree) ListedAncestor(id message.ID, listed map[message.ID]bool) 
 	return id
 }
 
-// Place appends the row of id, placed at p, and then the rows below it. A
+// Place appends the rows of id, placed at p, and then the rows below it. A
 // row behind a connector leaves a gutter at the connector's level for the
-// rows below it, which runs on to the next branch of its fork.
+// rows below it, which runs on to the next branch of its fork. A message of
+// tool calls alone takes a row for each call, as the transcript shows them;
+// the rows after its first are drawn as the rows below it are.
 func (t *SessionTree) Place(id message.ID, p TreePlacement) {
-	t.Rows = append(t.Rows, TreeRow{
-		Entry:  t.Entries[t.Index[id]],
-		Prefix: TreePrefix(p),
-		Active: t.Active[id],
-	})
 	gutters := p.Gutters
 	if p.Connector {
 		gutters = append(slices.Clone(gutters), TreeGutter{Level: p.Indent - 1, Line: !p.Last})
+	}
+	e := t.Entries[t.Index[id]]
+	for i, entry := range e.Split() {
+		prefix := TreePrefix(p)
+		if i > 0 {
+			prefix = TreePrefix(TreePlacement{Indent: p.Indent, Gutters: gutters})
+		}
+		t.Rows = append(t.Rows, TreeRow{Entry: entry, Prefix: prefix, Active: t.Active[id]})
 	}
 	t.PlaceChildren(id, p.Indent, gutters)
 }
@@ -477,8 +498,15 @@ func (t *SessionTree) Window(n int) (start, end int) {
 // selection, the count after its title, which, like every menu's, counts the
 // rows only when they do not all fit, and the status line under the rows,
 // which names a filter and says when nothing matches.
+//
+// The rows leave a line of the n for the insert line, which marks where the
+// next prompt goes, as TreeView.InsertLine places it.
 func (t *SessionTree) View(n int) TreeView {
-	start, end := t.Window(n)
+	rows := n
+	if len(t.Rows) > 0 {
+		rows = max(n-1, 1)
+	}
+	start, end := t.Window(rows)
 	// The view keeps its own rows, since Refresh reuses the tree's.
 	v := TreeView{Rows: slices.Clone(t.Rows[start:end]), Selected: t.Selected - start, Query: t.Query}
 	var status []string
@@ -486,7 +514,7 @@ func (t *SessionTree) View(n int) TreeView {
 		v.Selected = -1
 		status = append(status, NoMatchesText)
 	} else {
-		v.Count = TitleCount(t.Selected, len(t.Rows), n)
+		v.Count = TitleCount(t.Selected, len(t.Rows), rows)
 	}
 	if label := t.Filter.Label(); label != "" {
 		status = append(status, "["+label+"]")
@@ -510,4 +538,25 @@ type TreeView struct {
 	Status string
 	// Query is the search the rows match, which the input shows.
 	Query string
+}
+
+// InsertLine returns the line of the tree's lines that marks where the next
+// prompt goes, an empty line that TreeLines draws among the rows, or -1
+// when no row is selected. It opens under the selected row: choosing a
+// reply or a tool call continues the session from it, and choosing a
+// prompt puts it in the input to edit, keeping its row in the tree.
+func (v TreeView) InsertLine() int {
+	if v.Selected < 0 || v.Selected >= len(v.Rows) {
+		return -1
+	}
+	return v.Selected + 1
+}
+
+// TreeLineCount returns the number of lines n rows of the session tree take:
+// the rows, and the insert line among them when there are any.
+func TreeLineCount(n int) int {
+	if n == 0 {
+		return 0
+	}
+	return n + 1
 }

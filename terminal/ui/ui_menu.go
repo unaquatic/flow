@@ -43,12 +43,13 @@ func (ui *UI) ShowSlashMenu(items []widget.SelectItem) {
 
 // SyncSlashStatus brings the status line up to date while the Usage box
 // shows, as StatusBoxWanted reports: the model, the token use, and how long
-// the session's turns have taken by now.
+// the session's turns have taken by now, with the box's keys.
 func (ui *UI) SyncSlashStatus() {
 	if !ui.StatusBoxWanted() {
 		return
 	}
-	ui.slashStatus.SetStyledContent(StatusLine(ui.statusModel, ui.statusUsage, ui.service.SessionWorked(), ui.theme))
+	line := StatusLine(ui.statusModel, ui.statusUsage, ui.service.SessionWorked(), ui.theme)
+	ui.statusRow.SetLine(line, ui.statusHeader.Keys.PlainText())
 }
 
 // SlashMenuOnly reports whether the slash menu is the panel open at the top
@@ -101,6 +102,7 @@ func (ui *UI) UsageKeys() []KeyHint {
 // as UsageKeys gives them.
 func (ui *UI) SyncStatusBox() {
 	ui.SetHeaderKeys(ui.statusHeader, ui.UsageKeys())
+	ui.statusRow.SetStatus(ui.statusHeader.Keys.PlainText())
 	if shown := ui.StatusBoxWanted() && !ui.statusBounded; ui.slashStatusBox.Visible() != shown {
 		ui.slashStatusBox.SetGone(!shown)
 	}

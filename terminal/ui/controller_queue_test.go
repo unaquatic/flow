@@ -93,7 +93,7 @@ func TestDemoShowsTheRun(t *testing.T) {
 	out := q.s.StartScript("Demo", demo.Script())
 	shown := slices.ContainsFunc(out, func(ev UIEvent) bool {
 		e, ok := ev.(EventIndicatorShow)
-		return ok && strings.HasPrefix(e.Text, "Worked for ")
+		return ok && strings.HasPrefix(e.Text, "Working [")
 	})
 	if !shown || !q.s.state.Working {
 		t.Fatalf("starting the demo: indicator shown %v, working %v; want the run's time shown", shown, q.s.state.Working)

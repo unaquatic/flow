@@ -3,18 +3,18 @@
 |  Session tree [30/30] [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]        |
 |                       [esc cancel]                                     |
 |                                                                        |
-|  user: message 19                                                      |
-|  user: message 20                                                      |
-|  user: message 21                                                      |
-|  user: message 22                                                      |
-|  user: message 23                                                      |
-|  user: message 24                                                      |
-|  user: message 25                                                      |
-|  user: message 26                                                      |
-|  user: message 27                                                      |
-|  user: message 28                                                      |
-|  user: message 29                                                      |
-|  user: message 30                                                      |
+|  User message 20                                                       |
+|  User message 21                                                       |
+|  User message 22                                                       |
+|  User message 23                                                       |
+|  User message 24                                                       |
+|  User message 25                                                       |
+|  User message 26                                                       |
+|  User message 27                                                       |
+|  User message 28                                                       |
+|  User message 29                                                       |
+|  User message 30                                                       |
+|                                                                        |
 |  [no-tools]                                                            |
 |                                                                        |
 |                                                                        |
@@ -25,18 +25,18 @@
 |  AAAAAAA AAAA BBBBBBB BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB        |
 |                       BBBB BBBBBBB                                     |
 |                                                                        |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  CCCCC DDDDDDD DD                                                      |
-|  EEEEE EEEEEEE EE                                                      |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|  CCCC DDDDDDD DD                                                       |
+|                                                                        |
 |  BBBBBBBBBB                                                            |
 |                                                                        |
 |                                                                        |
@@ -64,33 +64,10 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
-=== attrs ===
-|                                                                        |
-|  BBBBBBBBBBBB                                                          |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 === legend ===
 A #e6e6e6
 B #707070
 C #eb7513
 D #b4b4b4
-E #232323 BoxBg
 ░ #232323 BoxBg
 ▒ #ff5f00

@@ -55,32 +55,34 @@ func (*Extension) FormatTool(call message.ToolPart) (ui.ToolView, bool) {
 	case "read":
 		lines := ReadLines(call)
 		return ui.ToolView{
-			HeaderNote:   lines,
-			Notes:        nonEmpty(lines),
-			Unnoted:      []string{"offset", "limit"},
-			BodyLang:     LangForPath(ui.StringField(args, "path")),
-			OutputInBody: true,
+			HeaderNote:    lines,
+			ParamInHeader: true,
+			Unnoted:       []string{"offset", "limit"},
+			BodyLang:      LangForPath(ui.StringField(args, "path")),
+			OutputInBody:  true,
 		}, true
 	case "write":
 		return ui.ToolView{
-			Body:     Patch("", ui.StringField(args, "content")),
-			BodyLang: "diff",
-			Unnoted:  []string{"content"},
+			ParamInHeader: true,
+			Body:          Patch("", ui.StringField(args, "content")),
+			BodyLang:      "diff",
+			Unnoted:       []string{"content"},
 		}, true
 	case "edit":
 		return ui.ToolView{
-			Body:     Patch(ui.StringField(args, "old_string"), ui.StringField(args, "new_string")),
-			BodyLang: "diff",
-			Unnoted:  []string{"old_string", "new_string"},
+			ParamInHeader: true,
+			Body:          Patch(ui.StringField(args, "old_string"), ui.StringField(args, "new_string")),
+			BodyLang:      "diff",
+			Unnoted:       []string{"old_string", "new_string"},
 		}, true
 	case "grep":
-		var view ui.ToolView
+		view := ui.ToolView{ParamInHeader: true}
 		if state, ok := call.State.(message.ToolStateCompleted); ok {
 			view.Status = GrepMatches(strings.TrimRight(state.Output, "\n"))
 		}
 		return view, true
 	case "ls":
-		return ui.ToolView{Label: "List"}, true
+		return ui.ToolView{Label: "List", ParamInHeader: true}, true
 	}
 	return ui.ToolView{}, false
 }

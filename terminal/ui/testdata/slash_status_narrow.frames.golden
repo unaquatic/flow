@@ -1,9 +1,5 @@
 === text ===
-|                                                            |
-|  Usage [ctrl+u pin]                                        |
-|                                                            |
-|  model-h medium context 64K 7% in 120K out 8.4K cache 31…  |
-|                                                            |
+|  Usage model-h medium context 64K 7% in 120… [ctrl+u pin]  |
 |                                                            |
 |                                                            |
 |  Commands [↑/↓ move] [esc cancel]                          |
@@ -14,28 +10,28 @@
 |                                                            |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
 === fg ===
-|                                                            |
-|  AAAAA BBBBBBB BBBB                                        |
-|                                                            |
-|  AAAAAAA AAAAAA BBBBBBB AAA AA BB AAAA BBB AAAA BBBBB AAA  |
+|  AAAAA AAAAAAA AAAAAA AAAAAAA AAA AA AA AAAA AAAAAAA AAAA  |
 |                                                            |
 |                                                            |
+|  BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
 |                                                            |
-|  AAAAAAAA BBBB BBBBB BBBB BBBBBBB                          |
+|  DDDDDDD                   DDDD DDD DDDDDDD DDD DDDDDDD D  |
 |                                                            |
-|  CCCCCCC                   CCCC CCC CCCCCCC CCC CCCCCCC C  |
+|  BBBBB                                                     |
 |                                                            |
-|  AAAAA                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
 |                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -46,25 +42,14 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                            |
 |                                                            |
-=== attrs ===
-|                                                            |
-|  BBBBB                                                     |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|  BBBBBBBB                                                  |
-|                                                            |
-|                                                            |
-|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #e6e6e6
-B #707070
-C #232323 BoxBg
+A #8c8c8c
+B #e6e6e6
+C #707070
+D #232323 BoxBg
 ░ #232323 BoxBg
 ▒ #ff5f00

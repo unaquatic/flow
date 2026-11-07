@@ -5,7 +5,7 @@
 |                                                                        |
 |  Bash go test ./...                                                    |
 |                                                                        |
-|  Worked for 12s [esc cancel] [ctrl+o expand]                           |
+|■ Working [12s] [esc cancel] [ctrl+o expand]                            |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -25,7 +25,7 @@
 |                                                                        |
 |  BBBB BB BBBB BBBBB                                                    |
 |                                                                        |
-|  BBBBBB BBB BBB BBBB BBBBBBB BBBBBBB BBBBBBB                           |
+|C CCCCCCC CCCCC CCCC CCCCCCC CCCCCCC CCCCCCC                            |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -58,27 +58,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-=== attrs ===
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|  BBBB                                                                  |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8c8c8c
+C #707070
 ░ #232323 BoxBg

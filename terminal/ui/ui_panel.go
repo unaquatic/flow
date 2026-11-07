@@ -37,6 +37,12 @@ var (
 	// a setting's value, the labels of the Usage box's values, notices, and
 	// other secondary text.
 	PanelDimFg = style.ColorFromInts(112, 112, 112, 255)
+	// ToolFg colors the rows of the transcript that a tool call's collapsed
+	// row sets the look of: a call's status and the input after its name,
+	// its marker and name in ToolNameGray, and the rows that show as it
+	// does, such as the cache, usage, and snapshot rows and the footer that
+	// says how long a turn took, and reasoning.
+	ToolFg = style.ColorFromInts(140, 140, 140, 255)
 )
 
 // Menus yields the menus in the input box: the slash menu, the session list,
@@ -274,7 +280,7 @@ func (v *KeyHintsView) RenderSelf(buf *buffer.Buffer, _ time.Duration) {
 // titles and rows line up. KeyHintsMode picks which of the two rows names
 // the keys, if either does.
 type PanelHeader struct {
-	// Title shows Heading in bold, and Count after it.
+	// Title shows Heading, not bold, and Count after it.
 	Title *widget.Text
 	// Keys draws the keys the panel names after Title, bracketed, which wrap
 	// under themselves rather than under Title on a narrow terminal.
@@ -299,7 +305,8 @@ type PanelHeader struct {
 // panel, whose widget IDs start with id.
 func AddPanelHeader(panel *widget.Box, id, title string, borderFg, bg style.Color) *PanelHeader {
 	h := &PanelHeader{
-		// The heading's chunk is bold, so that the count after it is not.
+		// The heading and the count are separate chunks, so that each has
+		// its own color.
 		Title: widget.NewText("",
 			widget.TextWithID(id+"-title"),
 			widget.TextWithFg(titleFg),
@@ -362,13 +369,13 @@ func (h *PanelHeader) SetSubtitleKeys(hints []KeyHint) {
 	h.SubtitleKeysRow.SetGone(len(hints) == 0)
 }
 
-// ShowTitle shows Heading in bold and then, a space apart, Count in
-// PanelDimFg, not bold, before the keys, collapsing the row while it shows
-// none of them.
+// ShowTitle shows Heading, not bold, and then, a space apart, Count in
+// PanelDimFg, before the keys, collapsing the row while it shows none of
+// them.
 func (h *PanelHeader) ShowTitle() {
 	var text style.StyledText
 	if h.Heading != "" {
-		text.Chunks = append(text.Chunks, style.TextBold(h.Heading))
+		text.Chunks = append(text.Chunks, style.Plain(h.Heading))
 	}
 	if h.Count != "" {
 		count, fg := h.Count, PanelDimFg

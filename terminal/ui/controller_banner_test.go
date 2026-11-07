@@ -164,40 +164,40 @@ func TestSettingsMenuSelection(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuToolCalls checks that /settings shows collapsed tool calls
-// compact by default, after the cache usage, and that choosing the setting
-// boxes them and makes them compact again, keeping the menu open on the
+// TestSettingsMenuExpandedTools checks that /settings shows expanded tool
+// calls boxed by default, after the cache usage, and that choosing the
+// setting makes them plain and boxed again, keeping the menu open on the
 // setting.
-func TestSettingsMenuToolCalls(t *testing.T) {
+func TestSettingsMenuExpandedTools(t *testing.T) {
 	s := &Service{state: &UIState{}}
 	settings := bannerShown(t, s.HandleSubmit("/settings"))
 	names := bannerNames(settings)
-	row := slices.Index(names, toolCallsSetting)
-	if row < 0 || row != slices.Index(names, cacheUsageSetting)+1 || settings.Items[row].Description != ToolCallsCompact.String() {
-		t.Fatalf("settings = %+v, want tool calls compact after the cache usage", settings.Items)
+	row := slices.Index(names, expandedSetting)
+	if row < 0 || row != slices.Index(names, cacheUsageSetting)+1 || settings.Items[row].Description != ExpandedBoxed.String() {
+		t.Fatalf("settings = %+v, want expanded tools boxed after the cache usage", settings.Items)
 	}
-	for _, want := range []ToolCallStyle{ToolCallsBoxed, ToolCallsCompact} {
-		out := choose(toolCallsSetting)(s)
-		if !slices.Contains(out, UIEvent(EventToolStyleSet{Style: want})) || s.state.ToolStyle != want {
-			t.Errorf("events %v with style %s, want %s", out, s.state.ToolStyle, want)
+	for _, want := range []ExpandedStyle{ExpandedPlain, ExpandedBoxed} {
+		out := choose(expandedSetting)(s)
+		if !slices.Contains(out, UIEvent(EventExpandStyleSet{Style: want})) || s.state.ExpandStyle != want {
+			t.Errorf("events %v with style %s, want %s", out, s.state.ExpandStyle, want)
 		}
 		settings = bannerShown(t, out)
 		if settings.SelectedIdx != row || settings.Items[row].Description != want.String() {
-			t.Errorf("banner selects %d of %+v, want tool calls %s selected", settings.SelectedIdx, settings.Items, want)
+			t.Errorf("banner selects %d of %+v, want expanded tools %s selected", settings.SelectedIdx, settings.Items, want)
 		}
 	}
 }
 
 // TestSettingsMenuToolMarker checks that /settings shows the tool marker off
-// by default, after the tool calls, and that choosing the setting shows it
+// by default, after the expanded tools, and that choosing the setting shows it
 // and hides it again, keeping the menu open on the setting.
 func TestSettingsMenuToolMarker(t *testing.T) {
 	s := &Service{state: &UIState{}}
 	settings := bannerShown(t, s.HandleSubmit("/settings"))
 	names := bannerNames(settings)
 	row := slices.Index(names, toolMarkerSetting)
-	if row < 0 || row != slices.Index(names, toolCallsSetting)+1 || settings.Items[row].Description != "Off" {
-		t.Fatalf("settings = %+v, want the tool marker off after the tool calls", settings.Items)
+	if row < 0 || row != slices.Index(names, expandedSetting)+1 || settings.Items[row].Description != "Off" {
+		t.Fatalf("settings = %+v, want the tool marker off after the expanded tools", settings.Items)
 	}
 	for _, show := range []bool{true, false} {
 		out := choose(toolMarkerSetting)(s)
@@ -219,8 +219,8 @@ func TestSettingsMenuToolColor(t *testing.T) {
 	settings := bannerShown(t, s.HandleSubmit("/settings"))
 	names := bannerNames(settings)
 	row := slices.Index(names, toolColorSetting)
-	if row < 0 || row != slices.Index(names, toolMarkerSetting)+1 || settings.Items[row].Description != ToolNameGray.String() {
-		t.Fatalf("settings = %+v, want the tool name color gray after the tool marker", settings.Items)
+	if row < 0 || row != slices.Index(names, markerShapeSetting)+1 || settings.Items[row].Description != ToolNameGray.String() {
+		t.Fatalf("settings = %+v, want the tool name color gray after the marker shape", settings.Items)
 	}
 	for _, want := range []ToolNameColor{ToolNameWhite, ToolNameGray} {
 		out := choose(toolColorSetting)(s)
@@ -230,6 +230,53 @@ func TestSettingsMenuToolColor(t *testing.T) {
 		settings = bannerShown(t, out)
 		if settings.SelectedIdx != row || settings.Items[row].Description != want.String() {
 			t.Errorf("banner selects %d of %+v, want the tool name color %s selected", settings.SelectedIdx, settings.Items, want)
+		}
+	}
+}
+
+// TestSettingsMenuMarkerShape checks that /settings shows the marker shape
+// as a filled square by default, after the tool marker, and that choosing
+// the setting goes through every shape and back, keeping the menu open on
+// the setting.
+func TestSettingsMenuMarkerShape(t *testing.T) {
+	s := &Service{state: &UIState{}}
+	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	names := bannerNames(settings)
+	row := slices.Index(names, markerShapeSetting)
+	if row < 0 || row != slices.Index(names, toolMarkerSetting)+1 || settings.Items[row].Description != "■ Square" {
+		t.Fatalf("settings = %+v, want the marker shape \"■ Square\" after the tool marker", settings.Items)
+	}
+	for _, want := range append(MarkerShapes[1:], MarkerSquare) {
+		out := choose(markerShapeSetting)(s)
+		if !slices.Contains(out, UIEvent(EventMarkerShapeSet{Shape: want})) || s.state.MarkerShape != want {
+			t.Errorf("events %v with shape %s, want %s", out, s.state.MarkerShape, want)
+		}
+		settings = bannerShown(t, out)
+		if settings.SelectedIdx != row || settings.Items[row].Description != want.String() {
+			t.Errorf("banner selects %d of %+v, want the marker shape %s selected", settings.SelectedIdx, settings.Items, want)
+		}
+	}
+}
+
+// TestSettingsMenuPromptStyle checks that /settings shows prompts filled by
+// default, after the selection, and that choosing the setting shows them by
+// a bar and filled again, keeping the menu open on the setting.
+func TestSettingsMenuPromptStyle(t *testing.T) {
+	s := &Service{state: &UIState{}}
+	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	names := bannerNames(settings)
+	row := slices.Index(names, promptSetting)
+	if row < 0 || row != slices.Index(names, selectionSetting)+1 || settings.Items[row].Description != PromptFilled.String() {
+		t.Fatalf("settings = %+v, want the prompt style filled after the selection", settings.Items)
+	}
+	for _, want := range []PromptStyle{PromptBar, PromptFilled} {
+		out := choose(promptSetting)(s)
+		if !slices.Contains(out, UIEvent(EventPromptStyleSet{Style: want})) || s.state.PromptStyle != want {
+			t.Errorf("events %v with style %s, want %s", out, s.state.PromptStyle, want)
+		}
+		settings = bannerShown(t, out)
+		if settings.SelectedIdx != row || settings.Items[row].Description != want.String() {
+			t.Errorf("banner selects %d of %+v, want the prompt style %s selected", settings.SelectedIdx, settings.Items, want)
 		}
 	}
 }
@@ -268,12 +315,14 @@ func TestSettingsPersist(t *testing.T) {
 	for _, change := range []func() []UIEvent{
 		s.ToggleInlineMode,
 		func() []UIEvent { return s.SetCacheMode(CachePerMessage) },
-		func() []UIEvent { return s.SetToolStyle(ToolCallsBoxed) },
+		func() []UIEvent { return s.SetExpandStyle(ExpandedPlain) },
 		func() []UIEvent { return s.SetToolMarkers(true) },
+		func() []UIEvent { return s.SetMarkerShape(MarkerCircleOutline) },
 		func() []UIEvent { return s.SetToolColor(ToolNameWhite) },
 		func() []UIEvent { return s.SetKeyHintsMode(KeyHintsFooter) },
 		func() []UIEvent { return s.SetCountPlace(CountInTitle) },
 		func() []UIEvent { return s.SetSelectionStyle(SelectionArrow) },
+		func() []UIEvent { return s.SetPromptStyle(PromptBar) },
 		func() []UIEvent { return s.SetDebug(true) },
 	} {
 		for _, ev := range change() {
@@ -288,8 +337,8 @@ func TestSettingsPersist(t *testing.T) {
 	}
 	var next UIState
 	next.ApplyConfig(conf.Terminal, conf.Debug)
-	want := UIState{Inline: false, CacheMode: CachePerMessage, ToolStyle: ToolCallsBoxed, ToolMarkers: true,
-		ToolColor: ToolNameWhite, KeyHints: KeyHintsFooter, Count: CountInTitle, Selection: SelectionArrow, Debug: true}
+	want := UIState{Inline: false, CacheMode: CachePerMessage, ExpandStyle: ExpandedPlain, ToolMarkers: true,
+		MarkerShape: MarkerCircleOutline, ToolColor: ToolNameWhite, KeyHints: KeyHintsFooter, Count: CountInTitle, Selection: SelectionArrow, PromptStyle: PromptBar, Debug: true}
 	if next.TerminalConfig() != want.TerminalConfig() || next.Debug != want.Debug {
 		t.Errorf("next terminal starts with %+v and debug %v, want %+v and debug on",
 			next.TerminalConfig(), next.Debug, want.TerminalConfig())
@@ -339,9 +388,19 @@ func TestApplyConfigDefaults(t *testing.T) {
 			t.Errorf("cache usage %s reads back as %s", mode, got)
 		}
 	}
-	for _, style := range ToolCallStyles {
-		if got := SettingValue(toolCallStyleKeys, toolCallStyleKeys[style]); got != style {
-			t.Errorf("tool calls %s reads back as %s", style, got)
+	for _, style := range ExpandedStyles {
+		if got := SettingValue(expandedStyleKeys, expandedStyleKeys[style]); got != style {
+			t.Errorf("expanded tools %s reads back as %s", style, got)
+		}
+	}
+	for _, p := range PromptStyles {
+		if got := SettingValue(promptStyleKeys, promptStyleKeys[p]); got != p {
+			t.Errorf("prompt style %s reads back as %s", p, got)
+		}
+	}
+	for _, m := range MarkerShapes {
+		if got := SettingValue(markerShapeKeys, markerShapeKeys[m]); got != m {
+			t.Errorf("marker shape %s reads back as %s", m, got)
 		}
 	}
 	for _, c := range ToolNameColors {

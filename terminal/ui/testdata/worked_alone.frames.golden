@@ -1,7 +1,7 @@
 === text ===
 |  Bash go test ./...                                                            |
 |                                                                                |
-|  Worked for 3s                                                                 |
+|  Done [3s]                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
@@ -9,18 +9,10 @@
 === fg ===
 |  AAAA AA AAAA AAAAA                                                            |
 |                                                                                |
-|  AAAAAA AAA AA                                                                 |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-=== attrs ===
-|  BBBB                                                                          |
-|                                                                                |
-|                                                                                |
+|  AAAA AAAA                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === legend ===
-A #707070
+A #8c8c8c

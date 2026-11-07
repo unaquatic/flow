@@ -338,10 +338,11 @@ func TestFitInputBoxBoundsTheTreeWindow(t *testing.T) {
 	ui.Apply(ui.service.OpenTree(longTree(30)))
 	fitInputBox(ui, 14)
 
-	rows := ui.service.state.MenuRows
+	// The bound counts the insert line among the rows.
+	rows := ui.service.state.MenuRows - 1
 	v, ok := ui.service.TreeView()
 	if !ok || len(v.Rows) != rows {
-		t.Fatalf("tree draws %d rows, want the bound of %d", len(v.Rows), rows)
+		t.Fatalf("tree draws %d rows, want the bound of %d less the insert line", len(v.Rows), rows)
 	}
 	if v.Count != "[30/30]" {
 		t.Errorf("count = %q, want [30/30]", v.Count)

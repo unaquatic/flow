@@ -127,9 +127,10 @@ func TestUsageDetails(t *testing.T) {
 }
 
 // TestToolBox_ExpandedHeaderDropsParams checks that expanding a call leaves
-// its bold name alone in the header, since the params under it show its
+// its name alone in the header, since the params under it show its
 // input, through later updates too, and that collapsing it brings the input
-// back. Calls without params, such as one whose input still streams, keep
+// back. A read keeps its path in the header, as its view says, and shows no
+// params. Calls without params, such as one whose input still streams, keep
 // their header.
 func TestToolBox_ExpandedHeaderDropsParams(t *testing.T) {
 	input := json.RawMessage(`{"command":"go test ./..."}`)
@@ -139,8 +140,8 @@ func TestToolBox_ExpandedHeaderDropsParams(t *testing.T) {
 	if got := box.Header.PlainText(); got != "Bash" {
 		t.Errorf("expanded header = %q; want %q", got, "Bash")
 	}
-	if label := box.Header.Content().Chunks[0]; label.Attributes&style.AttrBold == 0 {
-		t.Errorf("expanded label = %+v; want it bold", label)
+	if label := box.Header.Content().Chunks[0]; label.Attributes&style.AttrBold != 0 {
+		t.Errorf("expanded label = %+v; want it not bold", label)
 	}
 	box.SetTool(message.ToolPart{Name: "bash", State: message.ToolStateCompleted{Input: input, Output: "ok"}})
 	if got := box.Header.PlainText(); got != "Bash" {
@@ -155,11 +156,11 @@ func TestToolBox_ExpandedHeaderDropsParams(t *testing.T) {
 		Input: json.RawMessage(`{"path":"calc.go","offset":8,"limit":7}`), Output: "func Divide() {}\n\n[showing lines 8-14 of 29]",
 	}}, DefaultTheme(), style.ColorWhite)
 	read.SetExpanded(true)
-	if got := read.Header.PlainText(); got != "Read" {
-		t.Errorf("expanded read header = %q; want %q", got, "Read")
+	if got, want := read.Header.PlainText(), "Read calc.go [8-14]"; got != want {
+		t.Errorf("expanded read header = %q; want %q", got, want)
 	}
-	if got, want := read.Params.PlainText(), "calc.go [8-14]"; got != want {
-		t.Errorf("expanded read params = %q; want %q", got, want)
+	if read.Params.Visible() {
+		t.Errorf("expanded read params = %q; want none, which the header shows", read.Params.PlainText())
 	}
 	read.SetExpanded(false)
 	if got, want := read.Header.PlainText(), "Read calc.go [8-14]"; got != want {
@@ -183,18 +184,28 @@ func TestToolBox_ExpandedHeaderDropsParams(t *testing.T) {
 // TestToolBox_ParamsNoteOtherParams checks that the params of an expanded
 // call show its main param, the one its header shows, and then a note on
 // each other param, in the order the call gave them and in the muted text
-// color, but for those the box shows apart, such as an edit's diff.
+// color, but for those the box shows apart, such as an edit's diff. A read,
+// a write, an edit, a grep, and an ls keep their main param after their
+// name in the header, as their views say, and show only the notes.
 func TestToolBox_ParamsNoteOtherParams(t *testing.T) {
+	headers := map[string]string{
+		"edit":       "Edit calc.go",
+		"write":      "Write calc.go",
+		"read":       "Read calc.go",
+		"read lines": "Read calc.go [8-]",
+		"grep":       "Grep TODO",
+		"ls":         "List calc",
+	}
 	tests := map[string]struct {
 		name, input, want string
 	}{
-		"edit":       {"edit", `{"path":"calc.go","old_string":"a","new_string":"b"}`, "calc.go"},
-		"write":      {"write", `{"path":"calc.go","content":"package calc"}`, "calc.go"},
-		"read":       {"read", `{"path":"calc.go"}`, "calc.go"},
-		"read lines": {"read", `{"path":"calc.go","offset":8}`, "calc.go [8-]"},
-		"grep":       {"grep", `{"pattern":"TODO","path":"internal","include":"*.go","limit":10}`, "TODO [path internal] [include *.go] [limit 10]"},
+		"edit":       {"edit", `{"path":"calc.go","old_string":"a","new_string":"b"}`, ""},
+		"write":      {"write", `{"path":"calc.go","content":"package calc"}`, ""},
+		"read":       {"read", `{"path":"calc.go"}`, ""},
+		"read lines": {"read", `{"path":"calc.go","offset":8}`, ""},
+		"grep":       {"grep", `{"pattern":"TODO","path":"internal","include":"*.go","limit":10}`, "[path internal] [include *.go] [limit 10]"},
 		"glob":       {"glob", `{"path":"internal","pattern":"**/*.go"}`, "**/*.go [path internal]"},
-		"ls":         {"ls", `{"path":"calc","limit":5}`, "calc [limit 5]"},
+		"ls":         {"ls", `{"path":"calc","limit":5}`, "[limit 5]"},
 		"url":        {"webfetch", `{"url":"https://pkg.go.dev/errors","format":"markdown"}`, "https://pkg.go.dev/errors [format markdown]"},
 		// Without a main param, the notes alone are shown.
 		"no main param": {"todo", `{"id":3,"done":true}`, "[id 3] [done true]"},
@@ -209,6 +220,15 @@ func TestToolBox_ParamsNoteOtherParams(t *testing.T) {
 			box := newTestToolBox(t, message.ToolPart{Name: tt.name, State: message.ToolStatePending{Input: json.RawMessage(tt.input)}},
 				DefaultTheme(), style.ColorWhite)
 			box.SetExpanded(true)
+			if header, ok := headers[name]; ok {
+				if got := box.Params.PlainText(); got != tt.want || box.Params.Visible() != (tt.want != "") {
+					t.Errorf("params = %q, shown %v; want %q, the notes alone", got, box.Params.Visible(), tt.want)
+				}
+				if got := box.Header.PlainText(); got != header {
+					t.Errorf("header = %q; want %q", got, header)
+				}
+				return
+			}
 			if got := box.Params.PlainText(); got != tt.want || !box.Params.Visible() {
 				t.Errorf("params = %q, shown %v; want %q shown", got, box.Params.Visible(), tt.want)
 			}
@@ -253,7 +273,9 @@ func TestToolBox_ShowsInputWithoutOutput(t *testing.T) {
 	if got, want := grep.Status.PlainText(), "[interrupted]"; got != want {
 		t.Errorf("interrupted status = %q; want %q", got, want)
 	}
-	if got, want := grep.Params.PlainText(), "TODO [path calc]"; got != want || grep.Body.Visible() {
+	// The pattern is in the header, as the grep view says, and the params
+	// note the rest.
+	if got, want := grep.Params.PlainText(), "[path calc]"; got != want || grep.Body.Visible() {
 		t.Errorf("interrupted params = %q, body shown %v; want %q and no body", got, grep.Body.Visible(), want)
 	}
 
@@ -281,12 +303,12 @@ func TestToolBox_ShowsInputWithoutOutput(t *testing.T) {
 
 // TestToolBox_CollapsedBashHeaderPlain checks that a collapsed bash call's
 // header shows the first line of its command, before an ellipsis, all in the
-// color of its status, compact or boxed, while the command line under an
+// color of its status, in either expanded style, while the command line under an
 // expanded header highlights it.
 func TestToolBox_CollapsedBashHeaderPlain(t *testing.T) {
 	theme := DefaultTheme()
 	tinted := func(c style.TextChunk) bool { return !c.Fg.IsTransparent() && c.Fg != theme.CodeFg }
-	for _, ts := range ToolCallStyles {
+	for _, ts := range ExpandedStyles {
 		t.Run(ts.String(), func(t *testing.T) {
 			box := newTestToolBox(t, message.ToolPart{Name: "bash", State: message.ToolStatePending{Input: json.RawMessage(
 				`{"command":"go test -run 'TestDivide' -count=1\ngo vet ./..."}`)}}, theme, theme.CodeFg)
@@ -294,7 +316,7 @@ func TestToolBox_CollapsedBashHeaderPlain(t *testing.T) {
 			if got, want := box.Header.PlainText(), "Bash go test -run 'TestDivide' -count=1…"; got != want {
 				t.Fatalf("header = %q; want %q", got, want)
 			}
-			// The header is the bold label, a space, and then the command.
+			// The header is the label, a space, and then the command.
 			command := box.Header.Content().Chunks[2:]
 			if len(command) != 1 || command[0].Fg != box.Status.Fg() {
 				t.Errorf("header command = %+v; want it whole in the status's color %v", command, box.Status.Fg())
@@ -307,11 +329,11 @@ func TestToolBox_CollapsedBashHeaderPlain(t *testing.T) {
 	}
 }
 
-// TestToolBox_HeaderBoldNameAndInput checks that every tool's header leads
-// with its name in bold, its first letter capitalized, followed by its input
+// TestToolBox_HeaderNameAndInput checks that every tool's header leads with
+// its name, not bold, its first letter capitalized, followed by its input
 // summary in the color of its status, in every state, even once a completed
 // call carries a result title.
-func TestToolBox_HeaderBoldNameAndInput(t *testing.T) {
+func TestToolBox_HeaderNameAndInput(t *testing.T) {
 	tests := map[string]struct {
 		name, input, want string
 	}{
@@ -340,8 +362,8 @@ func TestToolBox_HeaderBoldNameAndInput(t *testing.T) {
 				}
 				label, _, _ := strings.Cut(tt.want, " ")
 				chunks := box.Header.Content().Chunks
-				if chunks[0].Text != label || chunks[0].Attributes&style.AttrBold == 0 {
-					t.Errorf("label = %+v; want a bold %s", chunks[0], label)
+				if chunks[0].Text != label || chunks[0].Attributes&style.AttrBold != 0 {
+					t.Errorf("label = %+v; want a plain %s, not bold", chunks[0], label)
 				}
 				if input := chunks[len(chunks)-1]; input.Fg != box.Status.Fg() {
 					t.Errorf("input = %+v; want it in the status's color %v", input, box.Status.Fg())

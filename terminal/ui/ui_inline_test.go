@@ -376,7 +376,7 @@ func TestShowIndicatorWhile(t *testing.T) {
 		shown string
 	}{
 		{name: "hidden"},
-		{name: "working", before: WorkingIndicator(12*time.Second, false), shown: "Worked for 12s [esc cancel] [ctrl+o expand]"},
+		{name: "working", before: WorkingIndicator(12*time.Second, false), shown: "Working [12s] [esc cancel] [ctrl+o expand]"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newBuiltTestUI(t, true)
@@ -421,7 +421,7 @@ func TestToolsExpandedSet(t *testing.T) {
 	ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
 		State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
 	ui.ShowIndicator(WorkingIndicator(12*time.Second, false))
-	const working = "Worked for 12s [esc cancel] [ctrl+o expand]"
+	const working = "Working [12s] [esc cancel] [ctrl+o expand]"
 	if !ui.TogglesTools(true) || ui.TogglesTools(false) {
 		t.Fatalf("TogglesTools(true), TogglesTools(false) = %v, %v; want true, false", ui.TogglesTools(true), ui.TogglesTools(false))
 	}

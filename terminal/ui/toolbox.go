@@ -43,14 +43,14 @@ type ToolBox struct {
 
 var _ BoxContent = (*ToolBox)(nil)
 
-// NewToolBox creates the box of a tool call, collapsed in ToolCallsCompact,
-// a row on the canvas, whose block, once it expands or is boxed, fills the
-// theme's success surface. Its status is in PanelDimFg, as a panel colors its
+// NewToolBox creates the box of a tool call, collapsed to a row on the
+// canvas, whose block, once it expands, fills the theme's success surface in
+// ExpandedBoxed. Its status is in ToolFg, as a panel colors its
 // keys after its title, and notes on its input in the theme's muted text
 // color. Its header is a single row: the call summary and then the status,
 // with the summary cut off with an ellipsis when the row is full, after
 // ToolMarker, in the box's left padding, once SetMarker shows it. The marker
-// and the tool's name are in PanelDimFg, as the input is. Clicking the header
+// and the tool's name are in ToolFg, as the input is. Clicking the header
 // expands the block, and the header of an expanded call drops the summary of
 // its input, which the details show, and the marker. The call shows as the
 // first of formats that describes it says.
@@ -64,11 +64,11 @@ func NewToolBox(tool message.ToolPart, theme *style.Theme, fg style.Color, forma
 		Highlighter: widget.NewHighlighter(theme),
 		Params: widget.NewText("",
 			widget.TextWithFg(theme.CodeFg),
-			widget.TextWithBg(bg),
+			widget.TextWithBg(style.ColorTransparent),
 			widget.TextWithWrapMode(textbuf.WrapWord),
 		),
-		Body:   NewToolBody(theme, fg, bg),
-		Output: NewToolBody(theme, fg, bg),
+		Body:   NewToolBody(theme, fg, style.ColorTransparent),
+		Output: NewToolBody(theme, fg, style.ColorTransparent),
 	}
 	b.Content = b
 	b.Details.Add(b.Params)
@@ -128,6 +128,12 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 		key, param = view.ParamKey, view.Param
 	}
 	param = strings.TrimRight(param, "\n")
+	// The header shows the input, so the details need not, as they need not
+	// fall back to the input's JSON for it.
+	inHeader := view.ParamInHeader && param != ""
+	if inHeader {
+		param = ""
+	}
 	content, filetype := view.Body, view.BodyLang
 	if view.OutputInBody {
 		content, output = output, ""
@@ -139,7 +145,7 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 		content, filetype = string(tool.Input()), "json"
 	}
 	hasParams := param != "" || len(notes) > 0
-	if !hasParams && content == "" && output == "" && len(args) > 0 {
+	if !hasParams && !inHeader && content == "" && output == "" && len(args) > 0 {
 		content, filetype = InputJSON(tool.Input()), "json"
 	}
 	b.Params.SetStyledContent(b.ParamsText(param, view.Shell, notes))
@@ -158,9 +164,10 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 // ShowHeader writes the call's header: the tool's name and the summary of its
 // input, as ToolHeaderOutput gives them, with the input in the color of the
 // status, or the name alone while the box is Open and Params shows the
-// input, which the summary repeats.
+// input, which the summary repeats, unless the view keeps the input in the
+// header, as ParamInHeader says.
 func (b *ToolBox) ShowHeader() {
-	if b.Open() && b.Params.Visible() {
+	if b.Open() && b.Params.Visible() && !b.View.ParamInHeader {
 		b.Header.SetStyledContent(style.NewStyledText(ToolNameChunk(b.View.NameLabel(b.Tool.Name), b.NameFg)))
 		return
 	}

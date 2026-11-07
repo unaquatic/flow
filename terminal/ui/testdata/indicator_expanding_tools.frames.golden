@@ -5,7 +5,7 @@
 |                                                                        |
 |  Bash go test ./...                                                    |
 |                                                                        |
-|  Expanding tool calls...                                               |
+|  Expanding                                                             |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -19,7 +19,7 @@
 |                                                                        |
 |  BBBB BB BBBB BBBBB                                                    |
 |                                                                        |
-|  CCCCCCCCC CCCC CCCCCCCC                                               |
+|  CCCCCCCCC                                                             |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -40,22 +40,8 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
 |                                                                        |
-=== attrs ===
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|  BBBB                                                                  |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8c8c8c
 C #787878
 ░ #232323 BoxBg

@@ -40,6 +40,7 @@ type UI struct {
 	slashMenuRow      *widget.Box  // slashMenu with its header and dividers, at the top of the input box
 	slashStatus       *widget.Text // the status line shown while the slash menu is open, as StatusLine gives it
 	slashStatusBox    *widget.Box  // slashStatus in a box of its own above the input box, with a gap under it
+	statusRow         *StatusRow   // the Usage box, which shows as tool calls do
 	statusHeader      *PanelHeader // the Usage box's title, with the key that pins it
 	statusBounded     bool         // reports that a short terminal leaves slashStatusBox no room
 	statusModel       string       // the model the status row names, in "provider/model:option:effort" format
@@ -76,6 +77,16 @@ type UI struct {
 	inputWrapper      *widget.Box
 	indicatorBox      *widget.Box  // progress or error line between the transcript and the input
 	indicatorLabel    *widget.Text // text inside indicatorBox
+	// noticeMarkers head the notices of the transcript that show as
+	// PromptBar shows a prompt, as NewNoticeBarRow makes them, so that
+	// /settings restyles them.
+	noticeMarkers []*widget.Text
+	// indicatorRow lays out indicatorMarker and indicatorLabel on a row
+	// inside indicatorBox.
+	indicatorRow *widget.Box
+	// indicatorMarker starts the indicator's line while a turn is in
+	// progress, as ShowIndicatorMarker shows it.
+	indicatorMarker *widget.Text
 
 	// messageWidgets indexes live transcript bubbles by message ID.
 	messageWidgets map[message.ID]*ChatMessageBox
@@ -257,7 +268,10 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 		r.SetIndexers(mode, ColorIndexers(mode))
 	}
 	theme := DefaultTheme()
-	r.SetBackgroundColor(theme.Bg)
+	// The frame has no background of its own, in either mode, so the
+	// terminal's shows behind the text and past the end of each row. fluid
+	// fills it with black unless told otherwise.
+	r.SetBackgroundColor(style.ColorTransparent)
 
 	ui := &UI{
 		renderer:       r,
@@ -473,29 +487,23 @@ func (ui *UI) BuildUI() {
 			layout.WithAlignItems(layout.AlignStretch),
 		),
 	)
-	// While the menu is open, a box of its own above the input box tells of
-	// the session under a "Usage" header, as the menu's commands show under
-	// theirs: the model, the context, the session's tokens, cost, and worked
-	// time. A row of the canvas parts it from the input box. The line is cut
-	// off at the right end on a narrow terminal, and the box is gone on a
-	// short one, as StatusPart bounds it.
+	// While the menu is open, the Usage box above the input box tells of
+	// the session, as StatusRow says, and shows as tool calls do. A row of
+	// the canvas parts it from the input box. The box is gone on a short
+	// terminal, as StatusPart bounds it. Its keys are those statusHeader
+	// names, as a panel's title would, which the box shows as its status.
 	ui.statusModel, ui.statusUsage = ui.service.state.ModelLabel, ui.service.state.Usage
-	ui.slashStatus = widget.NewStyledText(style.StyledText{},
-		widget.TextWithID("slash-status"),
-		widget.TextWithLayout(layout.WithHeight(layout.Points(1))),
-		widget.TextWithTruncate(true),
-	)
-	statusBox, statusCol := StreamableMessageBox(inputBorderFg, inputBg)
-	ui.statusHeader = AddPanelHeader(statusCol, "status", "Usage", inputBorderFg, inputBg)
-	AddDividerRow(statusCol, inputBorderFg, inputBg)
-	AddContentRow(statusCol, ui.slashStatus, inputBorderFg, inputBg)
+	ui.statusRow = NewStatusRow(ui.theme)
+	ui.slashStatus = ui.statusRow.Line
+	_, statusCol := StreamableMessageBox(inputBorderFg, inputBg)
+	ui.statusHeader = AddPanelHeader(statusCol, "status", StatusLabel, inputBorderFg, inputBg)
 	statusGap := widget.NewBox(
 		widget.BoxWithLayout(layout.WithHeight(layout.Points(1)), layout.WithFlexShrink(0)),
 	)
 	ui.slashStatusBox = widget.NewBox(
 		widget.BoxWithID("slash-status-box"),
 		widget.BoxWithLayout(layout.WithFlexShrink(0), layout.WithAlignItems(layout.AlignStretch)),
-		widget.Children(statusBox, statusGap),
+		widget.Children(ui.statusRow, statusGap),
 	)
 	ui.slashStatusBox.SetGone(true)
 	ui.slashHeader = AddPanelHeader(ui.slashMenuRow, "slash", "Commands", inputBorderFg, inputBg)
@@ -646,8 +654,18 @@ func (ui *UI) BuildUI() {
 		widget.TextWithID("indicator-label"),
 		widget.TextWithFg(indicatorFg),
 		widget.TextWithWrapMode(textbuf.WrapWord),
+		widget.TextWithLayout(layout.WithFlexGrow(1), layout.WithFlexShrink(1)),
 	)
 	ui.indicatorLabel.RenderAfterHook = ui.DrawShimmer
+	// While a turn is in progress, a marker starts the line in its left
+	// padding, as a tool call's does, and blinks while the time shows.
+	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, indicatorHintFg)
+	ui.indicatorMarker.SetGone(true)
+	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden)
+	ui.indicatorRow = widget.NewBox(
+		widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
+		widget.Children(ui.indicatorMarker, ui.indicatorLabel),
+	)
 	ui.input.RenderAfterHook = ui.HideCoveringCursor
 	for menu := range ui.Menus() {
 		menu.RenderAfterHook = ui.MarkSelection(menu)
@@ -660,7 +678,7 @@ func (ui *UI) BuildUI() {
 			layout.WithPaddingRight(layout.Points(PaddingX)),
 			layout.WithMarginBottom(layout.Points(1)),
 		),
-		widget.Children(ui.indicatorLabel),
+		widget.Children(ui.indicatorRow),
 	)
 	ui.indicatorBox.SetGone(true)
 
@@ -683,4 +701,7 @@ func (ui *UI) BuildUI() {
 	// went to the terminal comes back when the transcript is written again.
 	ui.renderer.SetInlineLiveTop(ui.LiveTop)
 	ui.renderer.SetInlineReprint(ui.ReprintTranscript)
+
+	// The Usage box takes the tool marker, which needs every panel built.
+	ui.ShowStatusMarker()
 }

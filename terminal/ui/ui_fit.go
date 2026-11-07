@@ -198,19 +198,9 @@ func (ui *UI) FitParts() []FitPart {
 	return parts
 }
 
-// statusRows is the rows the Usage box takes above the input box without
-// keys under its title: its edge rows, its header and the blank row under
-// it, its line, and the gap under the box.
-const statusRows = 6
-
-// StatusRows returns the rows the Usage box takes above the input box:
-// statusRows, and a row more while its keys show under its title.
-func (ui *UI) StatusRows() int {
-	if len(ui.statusHeader.SubtitleKeys.Hints) > 0 {
-		return statusRows + 1
-	}
-	return statusRows
-}
+// StatusRows returns the rows the Usage box takes above the input box: its
+// row and the gap under it.
+func (ui *UI) StatusRows() int { return 2 }
 
 // StatusPart returns the Usage box above the input box as a part that shows
 // whole or not at all, and false while the box does not belong there, as
@@ -242,7 +232,7 @@ func (ui *UI) ListPart() (FitPart, bool) {
 	switch {
 	case ui.treePanel.Visible():
 		if t := ui.service.state.Tree; t != nil {
-			want = min(len(t.Rows), treeMaxRows)
+			want = min(TreeLineCount(len(t.Rows)), treeMaxRows)
 		}
 	case ui.sessionPanel.Visible():
 		want = min(ui.sessionMenu.ItemCount(), sessionMaxRows)

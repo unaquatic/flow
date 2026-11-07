@@ -1,23 +1,23 @@
 === text ===
 |                                                            |
-|  Read                                                      |
-|                                                            |
-|  calc.go                                                   |
+|  Read calc.go                                              |
 |                                                            |
 |  package calc                                              |
 |                                                            |
 |  func Add(a, b int) int { return a + b }                   |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 === fg ===
 |                                                            |
-|  AAAA                                                      |
+|  AAAA AAAAAAA                                              |
 |                                                            |
-|  BBBBBBB                                                   |
+|  BBBBBBB CCCC                                              |
 |                                                            |
-|  CCCCCCC BBBB                                              |
+|  BBBB DDDCCC C BBBC BBB C BBBBBB C C C C                   |
 |                                                            |
-|  CCCC DDDBBB B CCCB CCC B CCCCCC B B B B                   |
+|                                                            |
 |                                                            |
 |                                                            |
 === bg ===
@@ -28,12 +28,10 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
 |                                                            |
 === attrs ===
-|                                                            |
-|  BBBB                                                      |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -42,9 +40,11 @@
 |  BBBB          BBB  BBB   BBBBBB                           |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 === legend ===
-A #707070
-B #e6e6e6
-C #eb7513
+A #8c8c8c
+B #eb7513
+C #e6e6e6
 D #ffb642
 ░ #1f1f1f SurfaceRaised/SuccessSurface

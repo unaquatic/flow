@@ -1,0 +1,37 @@
+=== text ===
+|■ run the tests                         |
+|                                        |
+|■ Chat cleared                          |
+|                                        |
+|■ Changes                               |
+|  2 files  +3 -1                        |
+|  /work/calc/calc.go  +1 -0             |
+|  /work/calc/calc_test.go  +2 -1        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A BBB BBB BBBBB                         |
+|                                        |
+|C BBBB BBBBBBB                          |
+|                                        |
+|C BBBBBBB                               |
+|  B BBBBB  DD EE                        |
+|  FFFFFFFFFFFFFFFFFF  DD EE             |
+|  FFFFFFFFFFFFFFFFFFFFFFF  DD EE        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #ff5f00
+B #e6e6e6
+C #8c8c8c
+D #5fc882
+E #dc646e
+F #dcdcdc

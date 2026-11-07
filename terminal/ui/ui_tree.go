@@ -83,7 +83,7 @@ func (ui *UI) ShowTree(v TreeView) {
 // CountBelow, on the status line, before the status.
 func (ui *UI) DrawTree(v TreeView) {
 	ui.treeRows.SetStyledContent(JoinStyledLines(TreeLines(v, ui.theme)))
-	ui.treeSelected = v.Selected
+	ui.treeSelected = v.InsertLine()
 	ui.treeRowsBox.RequestRender()
 	count, status := v.Count, v.Status
 	if ui.service.state.Count == CountBelow {
@@ -94,64 +94,83 @@ func (ui *UI) DrawTree(v TreeView) {
 	ui.treeStatus.Set(status)
 }
 
-// TreeLines returns the lines of the session tree's rows: an arrow on the
-// selected row, the tree's connectors, and each message's text behind a
-// colored label: "user:", "agent:", or the name of each tool a reply
-// calls, such as "read: calc.go · edit: calc.go".
+// TreeLines returns the lines of the session tree's rows: the tree's
+// connectors, and each message's text behind a colored label: "User",
+// "Agent", or the label of the tool a row's call runs, as the transcript
+// names it, such as "Read calc.go". The labels take the colors the
+// transcript marks the same rows with: "User" the theme's accent, "Agent"
+// the color of a reply's prose, and a tool's label ToolFg.
 //
 // The rows of the transcript, from its root to the head, keep their colors,
 // and the rows of other branches are drawn dim, so that the transcript's
-// path stands out without a marker shifting its text. The selected row is
-// never dim: its arrow and text are in activeFg, where the other rows draw
-// theirs in panelTextFg, or PanelDimFg off the transcript. Under a
-// SelectionStyle that fills the selected row, FillTreeSelection and
-// MarkTreeSelection redraw it once the lines are drawn.
+// path stands out without a marker shifting its text. Rather than mark the
+// selected row, the lines open an empty line under it, where the next
+// prompt goes, as TreeView.InsertLine places it, with an arrow in activeFg
+// and the selected row's connectors running past it. Under a SelectionStyle
+// that fills the selected row, FillTreeSelection and MarkTreeSelection fill
+// that line once the lines are drawn.
 func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 	theme = themeOrDefault(theme)
 	fg := func(c style.Color) func(string) style.TextChunk { return style.New().WithFg(c).Func() }
 	dim := fg(PanelDimFg)
 
-	lines := make([]style.StyledText, 0, len(v.Rows))
+	lines := make([]style.StyledText, 0, len(v.Rows)+1)
+	insert, insertPrefix := v.InsertLine(), ""
+	if insert >= 0 {
+		insertPrefix = v.Rows[v.Selected].Prefix
+	}
 	for i, row := range v.Rows {
-		selected := i == v.Selected
+		if i == insert {
+			lines = append(lines, InsertLineText(insertPrefix))
+		}
 		text, muted := fg(panelTextFg), fg(theme.TextMuted)
-		accent, success, tool := fg(theme.Accent), fg(theme.Success), fg(theme.InteractiveStrong)
-		switch {
-		case selected:
-			text = fg(activeFg)
-		case !row.Active:
-			text, muted, accent, success, tool = dim, dim, dim, dim, dim
+		accent, agent, tool := fg(theme.Accent), fg(RoleFg(theme, message.RoleAgent)), fg(ToolFg)
+		if !row.Active {
+			text, muted, accent, agent, tool = dim, dim, dim, dim, dim
 		}
-		cursor := text("  ")
-		if selected {
-			cursor = text("→ ")
-		}
-		chunks := []style.TextChunk{cursor, dim(row.Prefix)}
+		chunks := []style.TextChunk{text("  "), dim(row.Prefix)}
 		e := row.Entry
 		switch {
 		case e.Role == message.RoleUser:
-			chunks = append(chunks, accent("user: "), text(e.Text))
+			chunks = append(chunks, accent("User "), text(e.Text))
 		case e.ToolsOnly():
-			for j, call := range e.Tools {
-				if j > 0 {
-					chunks = append(chunks, dim(" · "))
-				}
-				if call.Input == "" {
-					chunks = append(chunks, tool(call.Name))
-					continue
-				}
-				chunks = append(chunks, tool(call.Name+": "), text(call.Input))
+			call := e.Tools[0]
+			if call.Input == "" {
+				chunks = append(chunks, tool(ToolLabel(call.Name)))
+				break
 			}
+			chunks = append(chunks, tool(ToolLabel(call.Name)+" "), text(call.Input))
 		case e.Role == message.RoleAgent && e.Text == "":
-			chunks = append(chunks, success("agent: "), muted("[no content]"))
+			chunks = append(chunks, agent("Agent "), muted("[no content]"))
 		case e.Role == message.RoleAgent:
-			chunks = append(chunks, success("agent: "), text(e.Text))
+			chunks = append(chunks, agent("Agent "), text(e.Text))
 		default:
 			chunks = append(chunks, dim(Tag(e.Role.String())+" "), text(e.Text))
 		}
 		lines = append(lines, style.NewStyledText(chunks...))
 	}
+	if insert == len(v.Rows) {
+		lines = append(lines, InsertLineText(insertPrefix))
+	}
 	return lines
+}
+
+// InsertLineText returns the empty line of the session tree that marks where
+// the next prompt goes: an arrow in activeFg, then the connectors of prefix,
+// the selected row's, as the lines under that row draw them, dim.
+func InsertLineText(prefix string) style.StyledText {
+	return style.NewStyledText(
+		style.TextChunk{Text: "→ ", Fg: activeFg},
+		style.TextChunk{Text: ContinuationPrefix(prefix), Fg: PanelDimFg},
+	)
+}
+
+// ContinuationPrefix returns prefix, a row's connectors, as the lines under
+// the row draw them: a connector that opens the row's branch becomes the
+// line that runs on past it, "├─ " a "│  ", and the last branch's "└─ "
+// blank.
+func ContinuationPrefix(prefix string) string {
+	return strings.NewReplacer("├─ ", "│  ", "└─ ", "   ").Replace(prefix)
 }
 
 // FillTreeSelection is the RenderAfterHook of the box around the session

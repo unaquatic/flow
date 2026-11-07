@@ -268,17 +268,17 @@ func TestCtrlOTogglesTools(t *testing.T) {
 func TestClickKeepsHeaderInPlace(t *testing.T) {
 	const w, h = 60, 12
 	for _, tt := range []struct {
-		style ToolCallStyle
+		style ExpandedStyle
 		// shift is the number of rows the expanded header sits below the
 		// row that was clicked.
 		shift int
 	}{
-		{style: ToolCallsBoxed},
-		{style: ToolCallsCompact, shift: 1},
+		{style: ExpandedPlain},
+		{style: ExpandedBoxed, shift: 1},
 	} {
 		t.Run(tt.style.String(), func(t *testing.T) {
 			ui := newInputTestUI(t)
-			ui.Apply(ui.service.SetToolStyle(tt.style))
+			ui.Apply(ui.service.SetExpandStyle(tt.style))
 			for i := range 4 {
 				ui.AddMessage(userText(message.ID(fmt.Sprintf("u%d", i)), "run the tests"))
 			}
@@ -426,10 +426,10 @@ func TestCacheModeSet(t *testing.T) {
 		rows   bool
 		footer string
 	}{
-		{mode: CacheOff, footer: "Worked for 39s"},
-		{mode: CachePerTurn, footer: "Worked for 39s [cache 18K write 0K]"},
-		{mode: CachePerMessage, rows: true, footer: "Worked for 39s"},
-		{mode: CacheOff, footer: "Worked for 39s"},
+		{mode: CacheOff, footer: "Done [39s]"},
+		{mode: CachePerTurn, footer: "Done [39s] [cache 18K write 0K]"},
+		{mode: CachePerMessage, rows: true, footer: "Done [39s]"},
+		{mode: CacheOff, footer: "Done [39s]"},
 	}
 	for _, tt := range tests {
 		ui.Apply(ui.service.SetCacheMode(tt.mode))
@@ -571,9 +571,9 @@ func TestToolColorSet(t *testing.T) {
 			for box := range cm.ToolBoxes() {
 				n++
 				chunks := box.Header.Content().Chunks
-				if box.Marker.Fg() != want || chunks[0].Fg != want || chunks[len(chunks)-1].Fg != PanelDimFg {
+				if box.Marker.Fg() != want || chunks[0].Fg != want || chunks[len(chunks)-1].Fg != ToolFg {
 					t.Errorf("%s: marker %v, name %v, input %v; want the marker and the name %v, the input %v",
-						when, box.Marker.Fg(), chunks[0].Fg, chunks[len(chunks)-1].Fg, want, PanelDimFg)
+						when, box.Marker.Fg(), chunks[0].Fg, chunks[len(chunks)-1].Fg, want, ToolFg)
 				}
 			}
 		}
@@ -582,50 +582,59 @@ func TestToolColorSet(t *testing.T) {
 		}
 	}
 
-	check("new", PanelDimFg, 1)
+	check("new", ToolFg, 1)
 	ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 	check("white", titleFg, 1)
 	ui.AddMessage(agentParts("a2", bash("t2")))
 	check("added white", titleFg, 2)
 	ui.Apply(ui.service.SetToolColor(ToolNameGray))
-	check("gray", PanelDimFg, 2)
+	check("gray", ToolFg, 2)
 }
 
-// TestToolStyleSet checks that the tool call style applies to the collapsed
-// calls already shown and to those added later: compact calls are rows,
-// boxed calls blocks, and an expanded call is a block in either style.
-func TestToolStyleSet(t *testing.T) {
+// TestExpandStyleSet checks that the expanded style applies to the calls
+// already shown and to those added later: a collapsed call is a row in
+// either style, and an expanded one a block, on the surface when boxed and
+// on the canvas when plain.
+func TestExpandStyleSet(t *testing.T) {
 	ui := newInlineTestUI(t)
 	bash := func(id message.PartID) message.ContentPart {
 		return message.ToolPart{ID: id, CallID: string(id), Name: "bash", State: message.ToolStateCompleted{
 			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}
 	}
 	ui.AddMessage(agentParts("a1", bash("t1")))
-	rows := func() []bool {
-		var got []bool
+	// shapes returns "row", "boxed", or "plain" for each call shown.
+	shapes := func() []string {
+		var got []string
 		for _, id := range []message.ID{"a1", "a2"} {
 			if cm, ok := ui.messageWidgets[id]; ok {
 				for box := range cm.ToolBoxes() {
-					got = append(got, box.Row())
+					switch {
+					case box.Row():
+						got = append(got, "row")
+					case box.Bg().IsTransparent():
+						got = append(got, "plain")
+					default:
+						got = append(got, "boxed")
+					}
 				}
 			}
 		}
 		return got
 	}
-	check := func(when string, want ...bool) {
+	check := func(when string, want ...string) {
 		t.Helper()
-		if got := rows(); !slices.Equal(got, want) {
-			t.Errorf("%s: calls shown as rows %v, want %v", when, got, want)
+		if got := shapes(); !slices.Equal(got, want) {
+			t.Errorf("%s: calls shown as %q, want %q", when, got, want)
 		}
 	}
 
-	check("new", true)
-	ui.Apply(ui.service.SetToolStyle(ToolCallsBoxed))
-	check("boxed", false)
-	ui.AddMessage(agentParts("a2", bash("t2")))
-	check("added boxed", false, false)
-	ui.Apply(ui.service.SetToolStyle(ToolCallsCompact))
-	check("compact", true, true)
+	check("new", "row")
+	ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+	check("plain collapsed", "row")
 	expandTools(ui)
-	check("expanded", false, false)
+	check("plain expanded", "plain")
+	ui.AddMessage(agentParts("a2", bash("t2")))
+	check("added plain expanded", "plain", "plain")
+	ui.Apply(ui.service.SetExpandStyle(ExpandedBoxed))
+	check("boxed expanded", "boxed", "boxed")
 }
