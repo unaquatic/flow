@@ -16,7 +16,7 @@ const addAccountName = "Add account"
 func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 	st, err := s.app.Accounts().Status(s.ctx, pt)
 	if err != nil {
-		return s.ShowToast(fmt.Sprintf("reading the %s accounts failed: %v", pt, err))
+		return s.ShowToast(fmt.Sprintf("reading the %s accounts failed: %v", s.ProviderName(pt), err))
 	}
 
 	items := make([]MenuItem, 0, len(st.Accounts)+1)
@@ -37,7 +37,7 @@ func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 		Choose: func() []UIEvent { return s.ShowLoginMethodMenu(pt) },
 	})
 	return s.ShowSearchMenu(&SearchMenu{
-		Title: fmt.Sprintf("%s accounts", pt),
+		Title: fmt.Sprintf("%s accounts", s.ProviderName(pt)),
 		Items: func() []MenuItem { return items },
 	})
 }
@@ -45,7 +45,7 @@ func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 // UseAccount makes account id the active account of pt.
 func (s *Service) UseAccount(pt agent.ProviderID, id agent.AccountID) []UIEvent {
 	if _, err := s.app.Accounts().Use(s.ctx, pt, id); err != nil {
-		return s.ShowToast(fmt.Sprintf("switching to %s account %s failed: %v", pt, id, err))
+		return s.ShowToast(fmt.Sprintf("switching to %s account %s failed: %v", s.ProviderName(pt), id, err))
 	}
-	return s.ShowToast(fmt.Sprintf("Active %s account: %s.", pt, id))
+	return s.ShowToast(fmt.Sprintf("Active %s account: %s.", s.ProviderName(pt), id))
 }

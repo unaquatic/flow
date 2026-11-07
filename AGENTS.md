@@ -18,6 +18,7 @@ go run github.com/unaquatic/fluid/cmd/fluid design html -o /tmp/goldens.html .  
 
 - Terminal UI changes add or update a golden frames test (`testutil.AssertGoldenFrames`, `terminal/ui/frames_test.go`) and commit the reviewed `testdata/*.frames.golden` diff.
 - UI previews in chat show two frames of the same area, one for text and one for backgrounds, with a legend mapping each symbol to its hex color and name.
+- Tests, test data and doc examples use placeholder names (`provider-a`, `lab-a/model-a`, `gw`, `local`, `model-x`, `*.example` hosts), never real providers, labs, models or their ports; take format IDs from `gateway.Format*` constants instead of writing them out.
 
 ### Go 1.27+ style — IMPORTANT
 

@@ -12,8 +12,8 @@ import (
 func TestServiceGetReadsTheFileEachTime(t *testing.T) {
 	dir := t.TempDir()
 	s := NewService(dir)
-	if cfg, err := s.Get(); err != nil || cfg.Model != DefaultModel {
-		t.Fatalf("Get without a file = %q, %v, want the default model", cfg.Model, err)
+	if cfg, err := s.Get(); err != nil || cfg.Model != "" {
+		t.Fatalf("Get without a file = %q, %v, want no model", cfg.Model, err)
 	}
 
 	write(t, dir, `{"model":"provider-a/model-a"}`)

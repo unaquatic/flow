@@ -1396,8 +1396,8 @@ func TestMenuFrames(t *testing.T) {
 		// a search the input row is hidden, since it takes no keys.
 		{name: "banner_login_progress", h: 8, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{
-				Title: "Login with provider-a",
-				Text:  "Logging in to provider-a account 01a0e1b4 [browser]...",
+				Title: "Login with Provider A",
+				Text:  "Logging in to Provider A account 01a0e1b4 [browser]...",
 			})
 		}},
 		{name: "banner_login_menu", h: 9, open: func(ui *UI) {
@@ -1408,7 +1408,7 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_login_queued", h: 12, open: func(ui *UI) {
 			ui.ShowQueue([]string{"also update the README"})
 			ui.ShowBanner(EventBannerShow{
-				Title: "Login with provider-a",
+				Title: "Login with Provider A",
 			})
 		}},
 		// The text sits under the header's divider, where a menu would.
@@ -1425,10 +1425,11 @@ func TestMenuFrames(t *testing.T) {
 			ui.HandleBannerKey(&input.KeyEvent{Name: input.KeyDown})
 			ui.HandleBannerKey(&input.KeyEvent{Name: input.KeyRight})
 		}},
-		// The model menu names each model by its variant, as the catalog's
-		// ID names it without the lab, such as "model-a:fast", a pro model
-		// by its own ID, and then its provider, dim, such as
-		// "model-g [provider-b]", with the terminal's model selected.
+		// The model menu names each model by the catalog's name of its
+		// variant, such as "Model A Fast", and then, dim, in aligned
+		// columns, its variant ID and its provider, such as
+		// "provider-a/model-a:fast   [provider-a]", with the terminal's
+		// model selected.
 		{name: "banner_model_menu", h: 13, open: func(ui *UI) {
 			ui.Apply(ui.service.SelectModel("provider-a/model-a:fast:high"))
 			ui.service.OpenBanner(ModelBanner)
@@ -1605,7 +1606,7 @@ func TestManualLoginFrames(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.inline = true
 			ui.service.OpenBanner(LoginBanner)
-			ui.ShowBanner(EventBannerShow{Title: "Login with provider-b"})
+			ui.ShowBanner(EventBannerShow{Title: "Login with Provider B"})
 			ui.Apply(ui.service.ApplyAgentEvent(app.EventLoginPrompt{
 				Provider: providerB, Account: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2",
 				URL: authorizeURL, State: &agent.LoginState{Verifier: "hidden-proof", State: strings.Repeat("b", 32)},

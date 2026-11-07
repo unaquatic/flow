@@ -34,6 +34,9 @@ type MenuItem struct {
 	// Change, when set, moves the row's value step places through its
 	// values, back for a negative step, as ←/→ do.
 	Change func(step int) []UIEvent
+	// Save, when set, saves the row as a default, as Ctrl+S does, such as
+	// a model as the config file's default model.
+	Save func() []UIEvent
 }
 
 // SearchMenu is a banner menu that the input narrows as the user types.
@@ -111,7 +114,8 @@ func (m *SearchMenu) Banner() []UIEvent {
 // BannerOn returns the event that shows the rows matching m's query, best
 // first, as Banner does, but with the row named name selected while it
 // matches, as after the row changed its value. The banner names the arrows
-// that change values when any row has values to change.
+// that change values when any row has values to change, and the key that
+// saves a row when any row can be saved.
 func (m *SearchMenu) BannerOn(name string) []UIEvent {
 	items := m.Items()
 	m.Shown = RankByNames(m.Query, items, MenuItem.Names)
@@ -125,6 +129,7 @@ func (m *SearchMenu) BannerOn(name string) []UIEvent {
 		Query:     m.Query,
 		Change:    slices.ContainsFunc(items, func(item MenuItem) bool { return item.Change != nil }),
 		Custom:    m.Custom != nil,
+		Save:      slices.ContainsFunc(items, func(item MenuItem) bool { return item.Save != nil }),
 	}
 	for i, item := range m.Shown {
 		menu.Items[i] = widget.SelectItem{Name: item.Name, Hint: item.Hint, Description: item.Desc, Value: i}
@@ -157,6 +162,17 @@ func (m *SearchMenu) Change(value any, step int) (bool, []UIEvent) {
 		return false, nil
 	}
 	return true, m.Shown[i].Change(step)
+}
+
+// Save saves the shown row that value, an item value from
+// [SearchMenu.Banner], identifies as a default, as Ctrl+S does, and reports
+// whether the row can be saved.
+func (m *SearchMenu) Save(value any) (bool, []UIEvent) {
+	i, ok := value.(int)
+	if !ok || i < 0 || i >= len(m.Shown) || m.Shown[i].Save == nil {
+		return false, nil
+	}
+	return true, m.Shown[i].Save()
 }
 
 // ShowSearchMenu opens m in the banner, searched from the emptied input.
@@ -219,6 +235,15 @@ func (s *Service) HandleBannerSearch(query string) []UIEvent {
 func (s *Service) HandleBannerChange(value any, step int) (bool, []UIEvent) {
 	if m := s.state.Menu; m != nil {
 		return m.Change(value, step)
+	}
+	return false, nil
+}
+
+// HandleBannerSave saves the banner row that value identifies as a default,
+// as Ctrl+S does, and reports whether the row can be saved.
+func (s *Service) HandleBannerSave(value any) (bool, []UIEvent) {
+	if m := s.state.Menu; m != nil {
+		return m.Save(value)
 	}
 	return false, nil
 }

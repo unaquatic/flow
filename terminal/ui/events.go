@@ -151,13 +151,17 @@ type EventBannerShow struct {
 	// Custom reports whether Tab enters an entry the menu does not list, as
 	// in the model menu, which Hints then names.
 	Custom bool
+	// Save reports whether Ctrl+S saves items of the menu as a default, as
+	// in the model menu, which Hints then names.
+	Save bool
 }
 
 // Hints returns the banner's keys: Keys when set, and otherwise esc to
 // cancel, then the arrows to move when there are items to move through,
 // the arrows that change an item's value when Change is set, tab to enter
-// one the menu does not list when Custom is set, and typing to search when
-// the input searches them. A search that matches nothing keeps the arrows,
+// one the menu does not list when Custom is set, ctrl+s to save an item as
+// a default when Save is set, and typing to search when the input searches
+// them. A search that matches nothing keeps the arrows,
 // so the keys hold still as the user types.
 func (e EventBannerShow) Hints() []KeyHint {
 	if e.Keys != nil {
@@ -172,6 +176,9 @@ func (e EventBannerShow) Hints() []KeyHint {
 	}
 	if e.Custom {
 		hints = append(hints, HintCustom)
+	}
+	if e.Save {
+		hints = append(hints, HintSave)
 	}
 	if e.Search {
 		hints = append(hints, HintSearch)

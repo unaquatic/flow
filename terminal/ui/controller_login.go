@@ -15,13 +15,13 @@ const apiKeyName = "API key"
 func (s *Service) StartLogin(pt agent.ProviderID, method agent.LoginMethod) []UIEvent {
 	id, err := s.app.Accounts().StartLogin(pt, "", method)
 	if err != nil {
-		return s.ShowToast(fmt.Sprintf("login to %s failed: %v", pt, err))
+		return s.ShowToast(fmt.Sprintf("login to %s failed: %v", s.ProviderName(pt), err))
 	}
 	s.OpenBanner(LoginBanner)
 	s.state.Prompt = nil
 	progress := EventBannerShow{
-		Title: fmt.Sprintf("Login with %s", pt),
-		Text:  fmt.Sprintf("Logging in to %s account %s [%s]...", pt, id, method),
+		Title: fmt.Sprintf("Login with %s", s.ProviderName(pt)),
+		Text:  fmt.Sprintf("Logging in to %s account %s [%s]...", s.ProviderName(pt), id, method),
 	}
 	return []UIEvent{progress}
 }
@@ -42,7 +42,7 @@ func (s *Service) LoginPanel(reason string) EventBannerShow {
 		text += "\n" + reason
 	}
 	return EventBannerShow{
-		Title: fmt.Sprintf("Login with %s", p.Provider), Text: text, Input: true,
+		Title: fmt.Sprintf("Login with %s", s.ProviderName(p.Provider)), Text: text, Input: true,
 		Keys: []KeyHint{{Key: "enter", Action: "submit"}, {Key: "ctrl+l", Action: "copy"}, HintCancel},
 	}
 }
@@ -67,15 +67,26 @@ func (s *Service) ShowLoginMenu() []UIEvent {
 	return s.ShowSearchMenu(&SearchMenu{Title: "Login", Items: s.ProviderItems})
 }
 
-// ProviderItems returns OAuth-capable providers in ID order. Choosing one
+// ProviderName returns the catalog's name of provider pt, such as "OpenAI",
+// or its ID when the catalog gives it none.
+func (s *Service) ProviderName(pt agent.ProviderID) string {
+	if p, ok := s.app.Models().Catalog().Providers[pt]; ok && p.Name != "" {
+		return p.Name
+	}
+	return string(pt)
+}
+
+// ProviderItems returns OAuth-capable providers in ID order, each named as
+// ProviderName names it, which the search finds by its ID too. Choosing one
 // shows its accounts.
 func (s *Service) ProviderItems() []MenuItem {
 	providers := s.app.Accounts().LoginProviders()
 	items := make([]MenuItem, 0, len(providers))
 	for _, pt := range providers {
 		items = append(items, MenuItem{
-			Name:   string(pt),
-			Choose: func() []UIEvent { return s.ShowAccountMenu(pt) },
+			Name:    s.ProviderName(pt),
+			Aliases: []string{string(pt)},
+			Choose:  func() []UIEvent { return s.ShowAccountMenu(pt) },
 		})
 	}
 	return items
@@ -94,14 +105,14 @@ func (s *Service) ShowLoginMethodMenu(pt agent.ProviderID) []UIEvent {
 		{Name: apiKeyName, Choose: s.Closing(func() []UIEvent { return s.AskKey(pt) })},
 	}
 	return s.ShowSearchMenu(&SearchMenu{
-		Title: fmt.Sprintf("New %s account", pt),
+		Title: fmt.Sprintf("New %s account", s.ProviderName(pt)),
 		Items: func() []MenuItem { return items },
 	})
 }
 
 // AskKey asks for an API key of pt and saves it as a new account.
 func (s *Service) AskKey(pt agent.ProviderID) []UIEvent {
-	question := fmt.Sprintf("Paste the %s API key into the input and press enter.", pt)
+	question := fmt.Sprintf("Paste the %s API key into the input and press enter.", s.ProviderName(pt))
 	return s.AskText(question, PromptHintStyled("save API key"), func(key string) []UIEvent {
 		return s.SubmitKey(pt, key)
 	})
@@ -112,9 +123,9 @@ func (s *Service) AskKey(pt agent.ProviderID) []UIEvent {
 func (s *Service) SubmitKey(pt agent.ProviderID, key string) []UIEvent {
 	id, err := s.app.Accounts().SetKey(s.ctx, pt, "", agent.APIKey(key))
 	if err != nil {
-		return s.ShowToast(fmt.Sprintf("saving the %s API key failed: %v", pt, err))
+		return s.ShowToast(fmt.Sprintf("saving the %s API key failed: %v", s.ProviderName(pt), err))
 	}
-	return s.ShowToast(fmt.Sprintf("Saved the API key as %s account %s; it is now active.", pt, id))
+	return s.ShowToast(fmt.Sprintf("Saved the API key as %s account %s; it is now active.", s.ProviderName(pt), id))
 }
 
 // SettleLogin hides an open login banner and reports the result in the

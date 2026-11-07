@@ -13,28 +13,31 @@ import (
 
 // newAccounts returns the accounts of the providers, which authorize their
 // requests from the auth.json file in the data directory of conf, the
-// configuration's API keys and the environment variables the catalog in
-// store names for each provider, all read anew for every request, with the
-// login flows that the extension.LoginHook of each of exts adds, in order.
-func newAccounts(conf *config.Service, store *gateway.Store, exts []extension.Extension) *agent.Accounts {
+// configuration's API keys and the environment variables the catalog that
+// cat returns names for each provider, all read anew for every request,
+// with the login flows that the extension.LoginHook of each of exts adds, in
+// order.
+func newAccounts(conf *config.Service, cat func() *gateway.Catalog, exts []extension.Extension) *agent.Accounts {
 	flows := make(map[agent.ProviderID]agent.LoginFlow)
 	for h := range extension.Hooks[extension.LoginHook](exts) {
 		maps.Copy(flows, h.LoginFlows())
 	}
 	return agent.NewAccounts(agent.AccountsConfig{
 		Store: agent.AuthFile{Dir: conf.Dir},
-		Keys:  configKeys(conf, store),
+		Keys:  configKeys(conf, cat),
 		Flows: flows,
 	})
 }
 
-// newProviders returns the providers of the catalog in store whose request
-// formats an extension.DialHook of exts speaks, unless the configuration of
-// conf disables them, at their catalog endpoints or the configuration's base
+// newProviders returns the providers of the catalog in store, with the
+// models file of overlay over it, whose request formats an
+// extension.DialHook of exts speaks, unless the configuration of conf
+// disables them, at their catalog endpoints or the configuration's base
 // URLs, authorized by accounts.
-func newProviders(conf *config.Service, store *gateway.Store, accounts *agent.Accounts, exts []extension.Extension) *agent.Providers {
+func newProviders(conf *config.Service, store *gateway.Store, overlay *catalog.Overlay, accounts *agent.Accounts, exts []extension.Extension) *agent.Providers {
 	return agent.NewProviders(agent.ProviderOptions{
 		Catalog:  store,
+		Overlay:  overlay.Apply,
 		Dial:     dialer(exts),
 		Auth:     accounts.For,
 		Settings: providerSettings(conf),
@@ -43,9 +46,11 @@ func newProviders(conf *config.Service, store *gateway.Store, accounts *agent.Ac
 
 // newCatalog returns the store of the catalog, flow's source of truth for
 // providers, models and how to call them, which a catalog server serves at
-// the configuration's catalog source and the data directory of conf caches.
-func newCatalog(conf *config.Service, cfg *config.Config) *gateway.Store {
-	return catalog.NewStore(gateway.StoreOptions{Dir: conf.Dir, Source: cfg.CatalogSource})
+// the configuration's catalog source and the data directory of conf caches,
+// and the overlay of the models file of that directory, which holds the
+// user's own providers and models over the catalog.
+func newCatalog(conf *config.Service, cfg *config.Config) (*gateway.Store, *catalog.Overlay) {
+	return catalog.NewStore(gateway.StoreOptions{Dir: conf.Dir, Source: cfg.CatalogSource}), catalog.NewOverlay(conf.Dir)
 }
 
 // dialer returns the agent.Dialer that asks the extension.DialHook of each
@@ -87,11 +92,11 @@ func providerSettings(conf *config.Service) func(agent.ProviderID) agent.Setting
 
 // configKeys returns an APIKeyFunc that reads the API key of a provider, on
 // every call: the configuration's, from conf, or else the first of the
-// environment variables the catalog in store names for the provider that
+// environment variables the catalog that cat returns names for the provider that
 // holds a key and is set, as gateway.Endpoint.KeyEnv lists them, leaving
 // out a cloud resource's name and the cloud credentials that requests are signed
 // or authorized with.
-func configKeys(conf *config.Service, store *gateway.Store) agent.APIKeyFunc {
+func configKeys(conf *config.Service, cat func() *gateway.Catalog) agent.APIKeyFunc {
 	return func(t agent.ProviderID) (agent.APIKey, error) {
 		cfg, err := conf.Get()
 		if err != nil {
@@ -100,7 +105,7 @@ func configKeys(conf *config.Service, store *gateway.Store) agent.APIKeyFunc {
 		if pc := cfg.Provider[string(t)]; pc != nil && pc.APIKey != "" {
 			return agent.APIKey(pc.APIKey), nil
 		}
-		p, ok := store.Get().Providers[t]
+		p, ok := cat().Providers[t]
 		if !ok {
 			return "", nil
 		}

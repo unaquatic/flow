@@ -540,9 +540,9 @@ func TestMenusSearchUnderTitle(t *testing.T) {
 		{name: "demo", show: demo, title: "Demos"},
 		{name: "providers", show: (*Service).ShowLoginMenu, title: "Login"},
 		{name: "accounts", show: func(s *Service) []UIEvent { return s.ShowAccountMenu(providerA) },
-			title: "provider-a accounts"},
+			title: "Provider A accounts"},
 		{name: "login methods", show: func(s *Service) []UIEvent { return s.ShowLoginMethodMenu(providerA) },
-			title: "New provider-a account"},
+			title: "New Provider A account"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

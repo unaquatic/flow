@@ -38,6 +38,10 @@ type ProviderOptions struct {
 	// Catalog holds the catalog, flow's source of truth for providers,
 	// models and how to call them.
 	Catalog *gateway.Store
+	// Overlay returns the catalog flow reads in place of c, the store's,
+	// such as c with the user's own providers and models added. It must
+	// not change c, and may return it. Nil reads the store's as it is.
+	Overlay func(c *gateway.Catalog) *gateway.Catalog
 	// Dial makes the provider of an endpoint. Nil registers none of the
 	// catalog's providers, only those given in their place.
 	Dial Dialer
@@ -80,9 +84,14 @@ func (s *Providers) WithProvider(p Provider) *Providers {
 	return &Providers{opts: s.opts, overrides: o}
 }
 
-// Catalog returns the catalog as the store has it now.
+// Catalog returns the catalog as the store has it now, with the overlay
+// over it.
 func (s *Providers) Catalog() *gateway.Catalog {
-	return s.opts.Catalog.Get()
+	c := s.opts.Catalog.Get()
+	if s.opts.Overlay != nil {
+		c = s.opts.Overlay(c)
+	}
+	return c
 }
 
 // settings returns the configuration of provider t.
