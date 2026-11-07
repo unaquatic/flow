@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/unaquatic/catalog/gateway"
@@ -101,7 +102,7 @@ func TestConfigKeys(t *testing.T) {
 	}
 	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, providersCatalog))
 	conf := config.NewService(home)
-	keys := configKeys(conf, catalog.NewStore(gateway.StoreOptions{Dir: home}))
+	keys := configKeys(conf, catalog.NewStore(gateway.StoreOptions{Dir: home}).Get)
 
 	t.Setenv("GW_HOST", "gw.example")
 	t.Setenv("GW_API_KEY", "sk-gw")
@@ -120,5 +121,48 @@ func TestConfigKeys(t *testing.T) {
 	t.Setenv("GW_API_KEY", "sk-gw")
 	if k, err := keys("gw"); k != "sk-config" || err != nil {
 		t.Errorf("gw key = %q, %v, want the configuration's, sk-config", k, err)
+	}
+}
+
+// TestNew_ModelsFile checks that an app registers a provider the providers
+// file adds, finds its key in the variables its endpoint names, and does
+// not start over a models file it cannot merge, naming the key at fault.
+func TestNew_ModelsFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	home := t.TempDir()
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"catalog_source":"http://127.0.0.1:1"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, providersCatalog))
+	writeModels := func(doc string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(home, catalog.ModelsFile), []byte(doc), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	open := func() (*App, error) {
+		return New(t.Context(), config.NewService(home), Options{Extensions: []extension.Load{loadOf(loginExtension{protocol.New(protocol.Options{})})}})
+	}
+
+	writeModels(`{"providers": {"local": {
+		"endpoint": {"format": "` + string(gateway.FormatOpenAIChat) + `", "api": "http://local.example/v1", "auth": {"scheme": "bearer"}, "env": ["LOCAL_KEY"]},
+		"unlisted": {"model-x": {"limit": {"context": 32768, "output": 4096}}}
+	}}}`)
+	t.Setenv("LOCAL_KEY", "sk-local")
+	a, err := open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := a.Accounts().Providers(); !slices.Contains(got, "local") {
+		t.Errorf("Providers = %v, want local, which the models file adds", got)
+	}
+	a.Close()
+
+	writeModels(`{"providers": {"local": {"endpoint": {"format": "soap", "api": "http://h"}}}}`)
+	if a, err := open(); err == nil {
+		a.Close()
+		t.Fatal("New over a broken models file succeeded")
+	} else if want := "providers.local.endpoint.format"; !strings.Contains(err.Error(), want) {
+		t.Errorf("New error = %v, want one naming %s", err, want)
 	}
 }

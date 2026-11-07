@@ -210,7 +210,7 @@ func choose(name string) step {
 // askKey returns the steps that open /login and choose provider-a, Add account
 // and API key, which leaves the API key question open.
 func askKey() []step {
-	return []step{submit("/login"), choose("provider-a"), choose(addAccountName), choose(apiKeyName)}
+	return []step{submit("/login"), choose("Provider A"), choose(addAccountName), choose(apiKeyName)}
 }
 
 // run performs steps and fails the test if one sends the input to the model
@@ -286,7 +286,7 @@ func accountMenu(t *testing.T, s *Service) (EventBannerShow, []string) {
 func TestLoginMenuSearch(t *testing.T) {
 	s, _ := newTestService(t)
 	show := bannerShown(t, s.HandleSubmit("/login"))
-	all := []string{string(providerA), string(providerB)}
+	all := []string{"Provider A", "Provider B"}
 	if got := bannerNames(show); !show.Search || show.Title != "Login" || !slices.Equal(got, all) {
 		t.Fatalf("menu = %+v, want %q under a search field titled Login", show, all)
 	}
@@ -296,8 +296,8 @@ func TestLoginMenuSearch(t *testing.T) {
 		want     []string
 		wantText string
 	}{
-		{query: "pb", want: []string{string(providerB)}},
-		{query: "PA", want: []string{string(providerA)}},
+		{query: "pb", want: []string{"Provider B"}},
+		{query: "PA", want: []string{"Provider A"}},
 		{query: "zzz", wantText: NoMatchesText},
 	}
 	for _, tt := range tests {
@@ -307,8 +307,13 @@ func TestLoginMenuSearch(t *testing.T) {
 		}
 	}
 
+	// The search finds a provider by its ID too.
+	if got := bannerNames(bannerShown(t, s.HandleBannerSearch("provider-b"))); len(got) == 0 || got[0] != "Provider B" {
+		t.Errorf("search provider-b lists %q, want Provider B first", got)
+	}
+
 	bannerShown(t, s.HandleBannerSearch(""))
-	bannerShown(t, choose("provider-a")(s))
+	bannerShown(t, choose("Provider A")(s))
 	if show := bannerShown(t, s.HandleBannerSearch("prov")); len(show.Items) != 0 {
 		t.Errorf("search in the account menu lists %q, want its own rows, none of which match", bannerNames(show))
 	}

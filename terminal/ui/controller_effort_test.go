@@ -240,7 +240,7 @@ func TestModelMenuListsModes(t *testing.T) {
 	s, _ := newTestService(t)
 	s.SelectModel("provider-a/model-a:fast:high")
 	show := openModelMenu(t, s)
-	want := []string{"model-c [provider-a]", "model-a [provider-a]", "model-a:fast [provider-a]", "model-a-pro [provider-a]", "model [provider-a]"}
+	want := []string{"Model C provider-a/model-c [provider-a]", "Model A provider-a/model-a [provider-a]", "Model A Fast provider-a/model-a:fast [provider-a]", "Model A Pro provider-a/model-a-pro [provider-a]", "model model [provider-a]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}

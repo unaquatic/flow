@@ -27,7 +27,7 @@ const (
 // tier; and the models of provider-b, model-f taking none through max and
 // model-g low through max.
 const testCatalog = `{
-"provider-a":{"id":"provider-a","format":"responses","models":{
+"provider-a":{"id":"provider-a","name":"Provider A","format":"responses","models":{
   "model-c":{"id":"model-c","name":"Model C","reasoning":true,"release_date":"2025-08-07",
     "limit":{"context":400000,"input":272000,"output":128000},
     "cost":{"input":1.25,"output":10,"cache_read":0.125},
@@ -48,7 +48,7 @@ const testCatalog = `{
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh"]}],
     "experimental":{"modes":{"fast":{"cost":{"input":0.4,"output":2.4},"provider":{"body":{"service_tier":"priority"}}}}}}
 }},
-"provider-b":{"id":"provider-b","format":"messages","models":{
+"provider-b":{"id":"provider-b","name":"Provider B","format":"messages","models":{
   "model-d":{"id":"model-d","name":"Model D","limit":{"context":200000,"output":64000},
     "cost":{"input":3,"output":15}},
   "model-e":{"id":"model-e","name":"Model E","reasoning":true,"limit":{"context":200000,"output":64000},

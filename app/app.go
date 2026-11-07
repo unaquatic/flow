@@ -13,6 +13,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
@@ -78,13 +79,23 @@ type Options struct {
 // providers they make with extension.DialHook, unless opts gives its own.
 // Every provider of the catalog that they speak is registered, unless the
 // configuration disables it, at its catalog endpoint or the configuration's
-// base URL. The settings that shape the app are read from the config file
+// base URL, with the providers and models of the models file over the
+// catalog. The settings that shape the app are read from the config file
 // now; the others whenever they are used. It fails when the config file
-// cannot be read or an extension cannot be loaded.
+// cannot be read, the models file cannot be read or merged into the
+// catalog, or an extension cannot be loaded. A models file that breaks
+// once the app runs is logged, and its last version that merged stays in
+// use.
 func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) {
 	cfg, err := conf.Get()
 	if err != nil {
 		return nil, err
+	}
+	store, overlay := newCatalog(conf, cfg)
+	if opts.Accounts == nil || opts.Providers == nil {
+		if _, err := overlay.Load(store.Get()); err != nil {
+			return nil, err
+		}
 	}
 	wd, err := os.Getwd()
 	if err != nil {
@@ -122,12 +133,11 @@ func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) 
 	}
 	accounts, providers := opts.Accounts, opts.Providers
 	if accounts == nil || providers == nil {
-		store := newCatalog(conf, cfg)
 		if accounts == nil {
-			accounts = newAccounts(conf, store, exts)
+			accounts = newAccounts(conf, func() *gateway.Catalog { return overlay.Apply(store.Get()) }, exts)
 		}
 		if providers == nil {
-			providers = newProviders(conf, store, accounts, exts)
+			providers = newProviders(conf, store, overlay, accounts, exts)
 		}
 	}
 

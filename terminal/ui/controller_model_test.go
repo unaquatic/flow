@@ -30,12 +30,14 @@ func bannerNames(show EventBannerShow) []string {
 	return names
 }
 
-// bannerRows returns the banner's items as their rows read: the name and
-// then the hint, such as "model-c [provider-a]" in the model menu.
+// bannerRows returns the banner's items as their rows read, with the space
+// between their columns collapsed to one: the name, the hint and then the
+// description, such as "Model C provider-a/model-c [provider-a]" in the
+// model menu.
 func bannerRows(show EventBannerShow) []string {
 	var rows []string
 	for _, item := range show.Items {
-		rows = append(rows, strings.TrimSpace(item.Name+" "+item.Hint))
+		rows = append(rows, strings.Join(strings.Fields(item.Name+" "+item.Hint+" "+item.Description), " "))
 	}
 	return rows
 }
@@ -55,7 +57,7 @@ func TestModelMenuListsAll(t *testing.T) {
 	s, _ := newTestService(t)
 	show := listModels(t, s)
 
-	want := []string{"model-c [provider-a]", "model [provider-a]", "model-a4-mini [provider-a]", "model-3-7-small [provider-b]", "model-small-4-6 [provider-b]"}
+	want := []string{"Model C provider-a/model-c [provider-a]", "model model [provider-a]", "model-a4-mini model-a4-mini [provider-a]", "model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
@@ -74,10 +76,10 @@ func TestModelMenuSearch(t *testing.T) {
 		wantIdx     int
 		wantText    string
 	}{
-		{name: "later word", query: "small", want: []string{"model-small-4-6 [provider-b]", "model-3-7-small [provider-b]"}},
-		{name: "case ignored", query: "MC", want: []string{"model-c [provider-a]"}},
-		{name: "typo ties keep listing order", query: "smlal", want: []string{"model-3-7-small [provider-b]", "model-small-4-6 [provider-b]"}},
-		{name: "cleared", query: " ", want: []string{"model-c [provider-a]", "model [provider-a]", "model-a4-mini [provider-a]", "model-3-7-small [provider-b]", "model-small-4-6 [provider-b]"}, wantIdx: 1},
+		{name: "later word", query: "small", want: []string{"model-small-4-6 model-small-4-6 [provider-b]", "model-3-7-small model-3-7-small [provider-b]"}},
+		{name: "case ignored", query: "MC", want: []string{"Model C provider-a/model-c [provider-a]"}},
+		{name: "typo ties keep listing order", query: "smlal", want: []string{"model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}},
+		{name: "cleared", query: " ", want: []string{"Model C provider-a/model-c [provider-a]", "model model [provider-a]", "model-a4-mini model-a4-mini [provider-a]", "model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}, wantIdx: 1},
 		{name: "no match", query: "zzz", wantText: NoMatchesText},
 	}
 	for _, tt := range tests {
@@ -99,10 +101,10 @@ func TestModelMenuSearch(t *testing.T) {
 	}
 }
 
-// TestModelMenuRows checks that the model menu names each row by its
-// variant, as the catalog's ID names it without the lab when the provider
-// is the lab, and not by the name the catalog gives it, followed by the
-// provider as a hint, and finds a row by its whole ID too.
+// TestModelMenuRows checks that the model menu names each row by the name
+// the catalog gives its variant, followed by the variant's ID and its
+// provider, and finds a row by its ID and its whole "provider/model" form
+// too.
 func TestModelMenuRows(t *testing.T) {
 	s, _ := newTestService(t)
 	s.OpenBanner(ModelBanner)
@@ -110,14 +112,14 @@ func TestModelMenuRows(t *testing.T) {
 		listing(s.app.Models().Catalog(), providerA, "model-b"),
 		listing(s.app.Models().Catalog(), providerB, "model-g"),
 	}))
-	want := []string{"model-b [provider-a]", "model-b:fast [provider-a]", "model-g [provider-b]"}
+	want := []string{"Model B provider-a/model-b [provider-a]", "Model B Fast provider-a/model-b:fast [provider-a]", "Model G provider-b/model-g [provider-b]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
 	for query, want := range map[string]string{
-		"b:fast":                  "model-b:fast [provider-a]",
-		"provider-a/model-b:fast": "model-b:fast [provider-a]",
-		"provider-b/":             "model-g [provider-b]",
+		"b:fast":                  "Model B Fast provider-a/model-b:fast [provider-a]",
+		"provider-a/model-b:fast": "Model B Fast provider-a/model-b:fast [provider-a]",
+		"provider-b/":             "Model G provider-b/model-g [provider-b]",
 	} {
 		show := bannerShown(t, s.HandleBannerSearch(query))
 		if got := bannerRows(show); len(got) == 0 || got[0] != want {
@@ -198,6 +200,54 @@ func TestSelectModelIsTheTerminals(t *testing.T) {
 		t.Errorf("prompt sent to %s, want provider-b/model-y", m.Model)
 	}
 	q.until(app.TypeAgentEnded)
+}
+
+// TestModelMenuSaveDefault checks that the model menu and its levels page
+// name Ctrl+S, which saves the selected row as the app's default model, at
+// the level choosing it would run it at, or at the level of the row, and
+// leaves the menu open and the terminal's model as it was. Other menus name
+// no such key.
+func TestModelMenuSaveDefault(t *testing.T) {
+	s, _ := newTestService(t)
+	show := listModels(t, s)
+	if !slices.Contains(show.Hints(), HintSave) {
+		t.Errorf("model menu keys %v lack %v", show.Hints(), HintSave)
+	}
+
+	i := slices.Index(bannerNames(show), "Model C")
+	saved, out := s.HandleBannerSave(i)
+	if !saved {
+		t.Fatal("Ctrl+S on model-c saved nothing")
+	}
+	if got, err := s.app.Models().Default(); got != "provider-a/model-c:medium" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-a/model-c:medium", got, err)
+	}
+	if got := toasts(out); !slices.Equal(got, []string{"Saved provider-a/model-c:medium as the default model"}) {
+		t.Errorf("notices = %q, want the saved model", got)
+	}
+	if s.state.Banner != MenuBanner || s.state.Model != "provider-a/model" {
+		t.Errorf("banner %v, model %q, want the menu open and provider-a/model as it was", s.state.Banner, s.state.Model)
+	}
+
+	show = bannerShown(t, s.ShowEffortMenu(s.app.Models().ParseVariant("provider-a/model-a:fast")))
+	if !slices.Contains(show.Hints(), HintSave) {
+		t.Errorf("levels keys %v lack %v", show.Hints(), HintSave)
+	}
+	if saved, _ := s.HandleBannerSave(slices.Index(bannerNames(show), "High")); !saved {
+		t.Fatal("Ctrl+S on High saved nothing")
+	}
+	if got, err := s.app.Models().Default(); got != "provider-a/model-a:fast:high" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-a/model-a:fast:high", got, err)
+	}
+
+	s.CancelBanner()
+	settings := bannerShown(t, s.ShowSettingsMenu())
+	if slices.Contains(settings.Hints(), HintSave) {
+		t.Errorf("settings keys %v name %v", settings.Hints(), HintSave)
+	}
+	if saved, _ := s.HandleBannerSave(0); saved {
+		t.Error("Ctrl+S saves a row of /settings")
+	}
 }
 
 // TestModelsListFailed checks that a failed listing closes the loading

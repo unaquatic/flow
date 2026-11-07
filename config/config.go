@@ -14,9 +14,6 @@ import (
 	"github.com/unaquatic/flow/product"
 )
 
-// DefaultModel is the model used when none is configured.
-const DefaultModel = "openai/gpt-5.6-luna"
-
 // LogLevel controls logging verbosity. The config file names it in lower
 // case, as "debug", and reads it in any case, as "DEBUG".
 type LogLevel string
@@ -231,7 +228,6 @@ func dataDirPath(name string) (string, error) {
 // file and the environment set nothing.
 func Defaults(dir string) *Config {
 	return &Config{
-		Model:      DefaultModel,
 		LogLevel:   LogInfo,
 		HomeDir:    dir,
 		ShowBorder: true,
