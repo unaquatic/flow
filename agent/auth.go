@@ -25,6 +25,10 @@ var (
 	// ErrNoAuthCode reports an OAuth redirect without an authorization code.
 	ErrNoAuthCode = errors.New("no authorization code provided")
 
+	// ErrInvalidLoginCode reports malformed input that the user can correct
+	// without restarting the pending login.
+	ErrInvalidLoginCode = errors.New("invalid authorization code")
+
 	// ErrDeviceCodeExpired reports a device login that was not approved in
 	// time.
 	ErrDeviceCodeExpired = errors.New("device code expired")
@@ -113,6 +117,17 @@ type LoginPrompt struct {
 	URL string
 	// Code is the code to enter on the page. The browser flow has none.
 	Code string
+	// State holds the parameters needed to complete a manual browser login.
+	State *LoginState `json:"state,omitempty"`
+}
+
+// LoginState is the temporary proof of a manual OAuth authorization attempt.
+// The caller keeps it until completion or cancellation; it must not be persisted.
+type LoginState struct {
+	// Verifier is the PKCE secret used for the token exchange.
+	Verifier string `json:"verifier"`
+	// State is the nonce that must match the authorization result.
+	State string `json:"state"`
 }
 
 // String returns the instruction for the user.
@@ -199,10 +214,6 @@ func (s AuthStatus) Authenticated() bool { return s.Active != "" }
 
 // LoginFlow is the OAuth protocol of one provider.
 type LoginFlow interface {
-	// Browser logs in through the browser. It passes the page to open to
-	// show, then waits for the redirect until ctx is done.
-	Browser(ctx context.Context, show func(LoginPrompt)) (OAuthToken, error)
-
 	// Device logs in with a device code. It passes the page and the code to
 	// enter to show, then polls until the login is approved or expires, or
 	// ctx is done.
@@ -211,4 +222,19 @@ type LoginFlow interface {
 	// Refresh renews t. The returned token may lack a refresh token when
 	// the server keeps the old one valid.
 	Refresh(ctx context.Context, t OAuthToken) (OAuthToken, error)
+}
+
+// BrowserLoginFlow receives an automatic browser redirect to finish a login.
+type BrowserLoginFlow interface {
+	// Browser shows the authorization page and waits for its redirect.
+	Browser(context.Context, func(LoginPrompt)) (OAuthToken, error)
+}
+
+// CodeLoginFlow completes browser authorization from a pasted result. Neither
+// method keeps a pending operation; the caller owns the returned state.
+type CodeLoginFlow interface {
+	// BeginBrowser creates the authorization URL and its temporary proof.
+	BeginBrowser() LoginPrompt
+	// CompleteBrowser validates the result and exchanges it for credentials.
+	CompleteBrowser(context.Context, LoginState, string) (OAuthToken, error)
 }

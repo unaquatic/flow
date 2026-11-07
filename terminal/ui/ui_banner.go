@@ -28,8 +28,8 @@ func (ui *UI) ShowBanner(e EventBannerShow) {
 	ui.SyncFooter()
 	ui.bannerSearch = e.Search
 	ui.SetQuery(e.Query)
-	ui.SetInputShown(e.Search)
-	if e.Search {
+	ui.SetInputShown(e.Search || e.Input)
+	if e.Search || e.Input {
 		ui.renderer.FocusRenderable(ui.input)
 	} else {
 		// A hidden input that kept the focus would leave its last cursor on

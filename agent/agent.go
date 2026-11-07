@@ -216,10 +216,9 @@ func (a *Agent) EndTurn(ctx context.Context, s *TurnState, err error) error {
 
 // streamWithRetry opens the response stream for message id, retrying
 // classified setup failures, each of which it reports as Retrying before it
-// waits.
+// waits the policy's delay for it.
 func (a *Agent) streamWithRetry(ctx context.Context, id message.ID) (StreamResponse, error) {
 	maxAttempts := a.RetryPolicy.EffectiveMaxAttempts()
-	delay := a.RetryPolicy.EffectiveDelay()
 
 	var lastErr error
 	for attempt := range maxAttempts {
@@ -237,6 +236,7 @@ func (a *Agent) streamWithRetry(ctx context.Context, id message.ID) (StreamRespo
 		if !verdict.Retryable || attempt+1 >= maxAttempts {
 			return nil, err
 		}
+		delay := a.RetryPolicy.DelayFor(err, time.Now())
 		a.Emit(Retrying{MessageID: id, Attempt: attempt + 1, MaxAttempts: maxAttempts, Delay: delay, Reason: verdict.Message, Err: err})
 
 		select {

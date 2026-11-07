@@ -1,18 +1,18 @@
 === text ===
 |                                                                        |
-|  Login with openai [↑/↓ move] [esc cancel]                             |
+|  Login with openai [esc cancel]                                        |
 |                                                                        |
 |  Logging in to openai account 01a0e1b4 [browser]...                    |
-|  Enter code manually                                                   |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 === fg ===
 |                                                                        |
-|  AAAAA AAAA AAAAAA BBBB BBBBB BBBB BBBBBBB                             |
+|  AAAAA AAAA AAAAAA BBBB BBBBBBB                                        |
 |                                                                        |
 |  CCCCCCC CC CC CCCCCC CCCCCCC CCCCCCCC CCCCCCCCCCCC                    |
-|  DDDDD DDDD DDDDDDDD                                                   |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -21,8 +21,8 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
 |                                                                        |
 |                                                                        |
 === attrs ===
@@ -38,6 +38,4 @@
 A #e6e6e6
 B #707070
 C #5c5c5c
-D #232323 BoxBg
 ░ #232323 BoxBg
-▒ #ff5f00

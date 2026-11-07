@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/demo"
 	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
 	"github.com/unaquatic/flow/extension/protocol/login/claude"
@@ -504,13 +506,13 @@ func TestDemoToolFrames(t *testing.T) {
 // text, so that its input box renders the same on every run. It returns to the
 // package directory after building the app, which newTestService leaves, so
 // that golden files resolve against this package's testdata.
-func newInputTestUI(t *testing.T) *UI {
+func newInputTestUI(t *testing.T, loads ...extension.Load) *UI {
 	t.Helper()
 	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := newTestService(t)
+	s, _ := newTestService(t, loads...)
 	s.Commands = builtinCommands(t)
 	t.Chdir(wd)
 	// What the renderer writes, such as the progress on the terminal tab,
@@ -779,6 +781,10 @@ func TestIndicatorFrames(t *testing.T) {
 		}, show: WorkingIndicator(12*time.Second, false), working: true},
 		{name: "indicator_error", h: 11, add: replyStarted,
 			show: EventIndicatorShow{Text: `Request Failed: Post "https://api.example.com/v1/messages": EOF`}},
+		// A provider's error shows the raw body it answered with.
+		{name: "indicator_response_error", h: 13, add: replyStarted,
+			show: EventIndicatorShow{Text: (&agent.ResponseError{Provider: "anthropic", StatusCode: 429,
+				ResponseBody: `{"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_011CX7Yq2M"}`}).Error()}},
 		// Ctrl+O says what it is doing while it lays out a long transcript
 		// again with every tool call expanded.
 		{name: "indicator_expanding_tools", h: 13, add: func(ui *UI) {
@@ -1269,8 +1275,10 @@ func TestMenuFrames(t *testing.T) {
 			ui.ShowBanner(EventBannerShow{
 				Title: "Login with openai",
 				Text:  "Logging in to openai account 01a0e1b4 [browser]...",
-				Items: []widget.SelectItem{{Name: "Enter code manually", Value: manualCode}},
 			})
+		}},
+		{name: "banner_login_menu", h: 9, open: func(ui *UI) {
+			ui.Apply(ui.service.ShowLoginMenu())
 		}},
 		// With the input hidden, the banner is the last row of the input box,
 		// under the queue's box.
@@ -1278,7 +1286,6 @@ func TestMenuFrames(t *testing.T) {
 			ui.ShowQueue([]string{"also update the README"})
 			ui.ShowBanner(EventBannerShow{
 				Title: "Login with openai",
-				Items: []widget.SelectItem{{Name: "Enter code manually", Value: manualCode}},
 			})
 		}},
 		// The text sits under the header's divider, where a menu would.
@@ -1449,6 +1456,45 @@ func TestMenuFrames(t *testing.T) {
 			ui := newInputTestUI(t)
 			tt.open(ui)
 			buf := renderFrames(72, tt.h, ui.inputWrapper)
+			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
+		})
+	}
+}
+
+func TestClaudeLoginFrames(t *testing.T) {
+	authorizeURL := "https://claude.ai/oauth/authorize?" + url.Values{
+		"code": {"true"}, "response_type": {"code"},
+		"client_id":      {"9d1c250a-e61b-44d9-88ed-5944d1962f5e"},
+		"redirect_uri":   {"https://platform.claude.com/oauth/code/callback"},
+		"code_challenge": {strings.Repeat("a", 43)}, "code_challenge_method": {"S256"},
+		"scope": {"org:create_api_key user:profile user:inference user:sessions:claude_code"},
+		"state": {strings.Repeat("b", 32)},
+	}.Encode()
+	for _, tt := range []struct {
+		name string
+		w, h int
+	}{
+		{"claude_login_code_narrow", 40, 34},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ui := newInputTestUI(t)
+			ui.inline = true
+			ui.service.OpenBanner(LoginBanner)
+			ui.ShowBanner(EventBannerShow{Title: "Login with anthropic"})
+			ui.Apply(ui.service.ApplyAgentEvent(app.EventLoginPrompt{
+				Provider: claude.ProviderID, Account: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2",
+				URL: authorizeURL, State: &agent.LoginState{Verifier: "hidden-proof", State: strings.Repeat("b", 32)},
+			}))
+			if len(ui.service.state.Messages) != 0 || len(ui.transcriptRows) != 0 {
+				t.Fatal("authorization instructions were added to the transcript")
+			}
+			buf := renderFrames(tt.w, tt.h, ui.inputWrapper)
+			if strings.Contains(buf.String(), "hidden-proof") {
+				t.Fatal("PKCE verifier was rendered")
+			}
+			if !strings.Contains(strings.Join(strings.Fields(buf.String()), ""), authorizeURL) {
+				t.Fatalf("authorization URL was clipped or changed by wrapping:\n%s", buf.String())
+			}
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
 		})
 	}

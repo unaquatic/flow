@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
+	"time"
 )
 
 func TestClassify(t *testing.T) {
@@ -146,6 +148,12 @@ func TestClassify(t *testing.T) {
 			name: "ErrNotAuthenticated",
 			err:  ErrNotAuthenticated,
 		},
+		{
+			name:      "429 generic error",
+			err:       &ResponseError{Provider: "anthropic", StatusCode: 429, Message: "Error"},
+			retryable: true,
+			message:   "rate limited",
+		},
 	}
 
 	for _, tt := range tests {
@@ -156,6 +164,36 @@ func TestClassify(t *testing.T) {
 			}
 			if tt.retryable && v.Message != tt.message {
 				t.Errorf("Message = %q, want %q", v.Message, tt.message)
+			}
+		})
+	}
+}
+
+// TestPolicyDelayFor checks that a provider's retry-after headers lengthen
+// the policy's delay, up to MaxRetryAfter, but never shorten it.
+func TestPolicyDelayFor(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.UTC)
+	limited := func(h http.Header) error {
+		return fmt.Errorf("stream: %w", &ResponseError{Provider: "anthropic", StatusCode: 429, ResponseHeaders: h})
+	}
+	p := Policy{Delay: 3 * time.Second}
+	for _, tt := range []struct {
+		name string
+		err  error
+		want time.Duration
+	}{
+		{name: "network error", err: &RequestError{Err: errors.New("reset")}, want: 3 * time.Second},
+		{name: "no header", err: limited(nil), want: 3 * time.Second},
+		{name: "seconds", err: limited(http.Header{"Retry-After": {"20"}}), want: 20 * time.Second},
+		{name: "shorter than policy", err: limited(http.Header{"Retry-After": {"1"}}), want: 3 * time.Second},
+		{name: "milliseconds", err: limited(http.Header{"Retry-After-Ms": {"7500"}, "Retry-After": {"8"}}), want: 7500 * time.Millisecond},
+		{name: "http date", err: limited(http.Header{"Retry-After": {now.Add(30 * time.Second).Format(http.TimeFormat)}}), want: 30 * time.Second},
+		{name: "capped", err: limited(http.Header{"Retry-After": {"3600"}}), want: MaxRetryAfter},
+		{name: "garbage", err: limited(http.Header{"Retry-After": {"soon"}}), want: 3 * time.Second},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := p.DelayFor(tt.err, now); got != tt.want {
+				t.Errorf("DelayFor = %v, want %v", got, tt.want)
 			}
 		})
 	}

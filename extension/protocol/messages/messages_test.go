@@ -3,6 +3,7 @@ package messages
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -526,5 +527,44 @@ func TestStream_Vertex(t *testing.T) {
 	}
 	if _, ok := body["model"]; ok || body["anthropic_version"] != VertexVersion || body["max_tokens"] != float64(1000) {
 		t.Errorf("body = %v, want Vertex's version and no model", body)
+	}
+}
+
+// TestStream_RateLimited checks that HTTP 429 responses preserve their body
+// and remain retryable regardless of credentials or error text.
+func TestStream_RateLimited(t *testing.T) {
+	const generic = `{"type":"error","error":{"type":"rate_limit_error","message":"Error"},"request_id":"req_1"}`
+	const limited = `{"type":"error","error":{"type":"rate_limit_error","message":"This request would exceed your rate limit"}}`
+	oauth := staticAuth{Kind: agent.CredentialOAuth, Token: "sk-ant-oat"}
+	for _, tt := range []struct {
+		name   string
+		auth   staticAuth
+		vertex bool
+		reply  string
+	}{
+		{name: "oauth generic error", auth: oauth, reply: generic},
+		{name: "oauth rate limited", auth: oauth, reply: limited},
+		{name: "api key", auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "key"}, reply: generic},
+		{name: "vertex", auth: oauth, vertex: true, reply: generic},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusTooManyRequests)
+				io.WriteString(w, tt.reply)
+			}))
+			defer srv.Close()
+			p := New(Init{Name: "anthropic", Auth: tt.auth, BaseURL: srv.URL, Vertex: tt.vertex})
+			_, err := p.Model("claude-opus-5-5").Stream(t.Context(), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}, MaxTokens: 1000})
+			respErr, ok := errors.AsType[*agent.ResponseError](err)
+			if !ok || respErr.StatusCode != http.StatusTooManyRequests {
+				t.Fatalf("error = %#v, want a 429 response error", err)
+			}
+			if want := "anthropic response error (429): " + tt.reply; err.Error() != want {
+				t.Errorf("error text = %q, want %q", err.Error(), want)
+			}
+			if !agent.Classify(err).Retryable {
+				t.Errorf("Classify(%v).Retryable = false, want true", err)
+			}
+		})
 	}
 }

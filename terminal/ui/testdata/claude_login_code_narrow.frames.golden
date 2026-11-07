@@ -1,0 +1,145 @@
+=== text ===
+|                                        |
+|  Login with anthropic [enter submit]   |
+|                       [ctrl+l copy]    |
+|                       [esc cancel]     |
+|                                        |
+|  Approve access in your browser,       |
+|  then paste the complete code below.   |
+|  https://claude.ai/oauth/authorize?    |
+|  client_id=9d1c250a-e61b-44d9-88ed-    |
+|  5944d1962f5e&code=true&code_challeng  |
+|  e=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  |
+|  aaaaaaaaa&code_challenge_method=S256  |
+|  &redirect_uri=https%3A%2F%2Fplatform  |
+|  .claude.                              |
+|  com%2Foauth%2Fcode%2Fcallback&respon  |
+|  se_type=code&scope=org%3Acreate_api_  |
+|  key+user%3Aprofile+user%3Ainference+  |
+|  user%3Asessions%3Aclaude_code&state=  |
+|  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb      |
+|                                        |
+|  Paste code#state or callback URL      |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|                                        |
+|  AAAAA AAAA AAAAAAAAA BBBBBB BBBBBBB   |
+|                       BBBBBBB BBBBB    |
+|                       BBBB BBBBBBB     |
+|                                        |
+|  CCCCCCC CCCCCC CC CCCC CCCCCCCC       |
+|  CCCC CCCCC CCC CCCCCCCC CCCC CCCCCC   |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC    |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC    |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCC                              |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC      |
+|                                        |
+|  BBBBB BBBBBBBBBB BB BBBBBBBB BBB      |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|  BBBBBBBBBBBBBBBBBBBB                  |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #5c5c5c
+░ #232323 BoxBg

@@ -10,6 +10,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"strings"
 
 	"github.com/unaquatic/flow/agent"
 )
@@ -51,16 +52,23 @@ func JSON(ctx context.Context, client *http.Client, name, url string, header htt
 
 // errorMessage returns the error.message field of an error response body,
 // where Anthropic, OpenAI and Google put it, or the message field, where
-// some others do, or else the whole body.
+// some others do, or else the whole body. A message that says no more than
+// "Error", as Anthropic's rate limit responses can, is replaced by the
+// error.type field, such as "rate_limit_error", when there is one.
 func errorMessage(body []byte) string {
 	var parsed struct {
 		Error struct {
+			Type    string `json:"type"`
 			Message string `json:"message"`
 		} `json:"error"`
 		Message string `json:"message"`
 	}
-	if json.Unmarshal(body, &parsed) == nil && cmp.Or(parsed.Error.Message, parsed.Message) != "" {
-		return cmp.Or(parsed.Error.Message, parsed.Message)
+	if json.Unmarshal(body, &parsed) != nil {
+		return string(body)
 	}
-	return string(body)
+	msg := cmp.Or(parsed.Error.Message, parsed.Message)
+	if parsed.Error.Type != "" && (msg == "" || strings.EqualFold(msg, "error")) {
+		return parsed.Error.Type
+	}
+	return cmp.Or(msg, string(body))
 }

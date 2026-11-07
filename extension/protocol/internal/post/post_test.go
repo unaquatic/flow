@@ -31,6 +31,13 @@ func TestJSON(t *testing.T) {
 				ResponseBody: `{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}`},
 		},
 		{
+			name:   "bare error message",
+			status: http.StatusTooManyRequests,
+			reply:  `{"type":"error","error":{"type":"rate_limit_error","message":"Error"}}`,
+			wantErr: &agent.ResponseError{Provider: "test", StatusCode: http.StatusTooManyRequests, Message: "rate_limit_error",
+				ResponseBody: `{"type":"error","error":{"type":"rate_limit_error","message":"Error"}}`},
+		},
+		{
 			name:    "plain body",
 			status:  http.StatusBadGateway,
 			reply:   "Bad Gateway",

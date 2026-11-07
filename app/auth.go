@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -23,6 +24,14 @@ func (c Accounts) Providers() []agent.ProviderID {
 	return c.app.providers.Providers()
 }
 
+// LoginProviders returns enabled, registered providers with an OAuth login flow,
+// in ID order. API-key-only providers remain available through Providers.
+func (c Accounts) LoginProviders() []agent.ProviderID {
+	return slices.DeleteFunc(c.Providers(), func(t agent.ProviderID) bool {
+		return !c.app.accounts.SupportsLogin(t)
+	})
+}
+
 // Status returns the accounts of provider t and which one is active.
 func (c Accounts) Status(ctx context.Context, t agent.ProviderID) (agent.AuthStatus, error) {
 	if err := c.app.registered(t); err != nil {
@@ -31,12 +40,10 @@ func (c Accounts) Status(ctx context.Context, t agent.ProviderID) (agent.AuthSta
 	return c.app.accounts.Status(ctx, t)
 }
 
-// Login logs in to provider t with method m and, once the login ends,
-// returns the ID of the account it saved, which becomes active. An empty id
-// adds a new account; otherwise id must be a saved account of t, whose
-// credential the login replaces. Once the login starts, Login publishes
-// EventLoginStarted, EventLoginPrompt with what the user must do, and
-// EventLoginSucceeded followed by EventAccountsChanged, or EventLoginFailed.
+// Login starts sign-in to account id of provider t. An empty id adds an account;
+// otherwise id must name a saved account. Automatic flows wait and save the
+// account. Manual flows return after EventLoginPrompt supplies State, which the
+// caller passes to CompleteLogin after authorization or discards to cancel.
 func (c Accounts) Login(ctx context.Context, t agent.ProviderID, id agent.AccountID, m agent.LoginMethod) (agent.AccountID, error) {
 	id, err := c.app.target(ctx, t, id)
 	if err != nil {
@@ -45,9 +52,9 @@ func (c Accounts) Login(ctx context.Context, t agent.ProviderID, id agent.Accoun
 	return id, c.app.login(ctx, t, id, m)
 }
 
-// StartLogin checks t and id like Login and returns the ID of the account to
-// be saved, then logs in from a new goroutine, which ends at the latest when
-// the app closes. The login's progress and outcome arrive as events.
+// StartLogin checks t and id like Login and starts sign-in in a worker. Manual
+// flows return their temporary State as an event and finish the worker at once;
+// automatic flows keep working until authorized, cancelled, or the app closes.
 func (c Accounts) StartLogin(t agent.ProviderID, id agent.AccountID, m agent.LoginMethod) (agent.AccountID, error) {
 	id, err := c.app.target(c.app.workerCtx, t, id)
 	if err != nil {
@@ -64,16 +71,44 @@ func (c Accounts) StartLogin(t agent.ProviderID, id agent.AccountID, m agent.Log
 // login logs in to account id of provider t and publishes its events.
 func (a *App) login(ctx context.Context, t agent.ProviderID, id agent.AccountID, m agent.LoginMethod) error {
 	a.publish(EventLoginStarted{EventBase: a.eventBase(), Provider: t, Account: id, Method: m})
+	manual := false
 	show := func(p agent.LoginPrompt) {
-		a.publish(EventLoginPrompt{EventBase: a.eventBase(), Provider: t, Account: id, URL: p.URL, Code: p.Code})
+		manual = p.State != nil
+		a.publish(EventLoginPrompt{EventBase: a.eventBase(), Provider: t, Account: id, URL: p.URL, Code: p.Code, State: p.State})
 	}
 	if err := a.accounts.Login(ctx, t, id, m, show); err != nil {
 		a.publishLoginFailed(t, id, err)
 		return err
 	}
+	if manual {
+		return nil
+	}
 	a.publish(EventLoginSucceeded{EventBase: a.eventBase(), Provider: t, Account: id})
 	a.publishAccountsChanged(ctx, t)
 	return nil
+}
+
+// CompleteLogin exchanges a pasted result using caller-owned temporary state,
+// saves the account, and publishes its outcome. No pending login is required.
+func (c Accounts) CompleteLogin(ctx context.Context, t agent.ProviderID, id agent.AccountID, state agent.LoginState, code string) error {
+	if err := c.app.registered(t); err != nil {
+		return err
+	}
+	if err := c.app.accounts.CompleteLogin(ctx, t, id, state, code); err != nil {
+		c.app.publishLoginFailed(t, id, err)
+		return err
+	}
+	c.app.publish(EventLoginSucceeded{EventBase: c.app.eventBase(), Provider: t, Account: id})
+	c.app.publishAccountsChanged(ctx, t)
+	return nil
+}
+
+// StartCompleteLogin exchanges a pasted result in a worker. Only the network
+// exchange runs in the background; nothing waits while the user authorizes.
+func (c Accounts) StartCompleteLogin(t agent.ProviderID, id agent.AccountID, state agent.LoginState, code string) {
+	c.app.wg.Go(func() {
+		_ = c.CompleteLogin(c.app.workerCtx, t, id, state, code)
+	})
 }
 
 // SetKey saves key as an API key of provider t and returns the ID of the
@@ -156,7 +191,7 @@ func (a *App) registered(t agent.ProviderID) error {
 }
 
 func (a *App) publishLoginFailed(pt agent.ProviderID, id agent.AccountID, err error) {
-	a.publish(EventLoginFailed{EventBase: a.eventBase(), Provider: pt, Account: id, Error: NewUnknownError(err.Error())})
+	a.publish(EventLoginFailed{EventBase: a.eventBase(), Provider: pt, Account: id, Error: NewUnknownError(err.Error()), Retry: errors.Is(err, agent.ErrInvalidLoginCode)})
 }
 
 // publishAccountsChanged publishes the active account of provider t.

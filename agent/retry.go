@@ -12,6 +12,9 @@ const (
 	DefaultRetryMaxAttempts = 5
 	// DefaultRetryDelay is the default delay between requests.
 	DefaultRetryDelay = 3 * time.Second
+	// MaxRetryAfter caps the wait a provider's retry-after header can ask
+	// for between requests.
+	MaxRetryAfter = time.Minute
 )
 
 // RetryVerdict describes whether and why an operation should be retried.
@@ -137,4 +140,15 @@ func (p Policy) EffectiveDelay() time.Duration {
 		return p.Delay
 	}
 	return DefaultRetryDelay
+}
+
+// DelayFor returns how long to wait before retrying after err: the
+// effective delay, or longer when err is a *ResponseError whose headers ask
+// for a longer wait, up to MaxRetryAfter.
+func (p Policy) DelayFor(err error, now time.Time) time.Duration {
+	delay := p.EffectiveDelay()
+	if respErr, ok := errors.AsType[*ResponseError](err); ok {
+		delay = max(delay, min(respErr.RetryAfter(now), MaxRetryAfter))
+	}
+	return delay
 }

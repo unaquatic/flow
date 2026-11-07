@@ -591,6 +591,7 @@ func (ui *UI) BuildUI() {
 	// The banner's text row collapses when its content is empty.
 	ui.bannerText = widget.NewText("",
 		widget.TextWithID("banner-text"),
+		widget.TextWithWrapMode(textbuf.WrapWord),
 		widget.TextWithFg(style.ColorFromInts(92, 92, 92, 255)),
 	)
 	ui.bannerMenu = widget.NewSelect(
@@ -639,10 +640,12 @@ func (ui *UI) BuildUI() {
 
 	// Keep progress and errors visible below the scrolling transcript, as a
 	// line on the canvas inset like the prose. The transcript ends in a blank
-	// row, and a margin keeps one between the line and the input.
+	// row, and a margin keeps one between the line and the input. A long
+	// error, such as a provider's raw response body, wraps onto more lines.
 	ui.indicatorLabel = widget.NewText("",
 		widget.TextWithID("indicator-label"),
 		widget.TextWithFg(indicatorFg),
+		widget.TextWithWrapMode(textbuf.WrapWord),
 	)
 	ui.indicatorLabel.RenderAfterHook = ui.DrawShimmer
 	ui.input.RenderAfterHook = ui.HideCoveringCursor

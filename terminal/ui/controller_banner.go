@@ -172,6 +172,8 @@ func (s *Service) OpenBanner(kind Banner) {
 	s.state.Banner = kind
 	s.state.Menu = nil
 	s.state.Tree = nil
+	s.state.Login = nil
+	s.state.LoginCompleting = false
 }
 
 // CancelBanner hides the active banner. It does not cancel app operations.
@@ -179,8 +181,13 @@ func (s *Service) CancelBanner() []UIEvent {
 	if s.state.Banner == NoBanner {
 		return nil
 	}
+	login := s.state.Login != nil
 	s.OpenBanner(NoBanner)
-	return []UIEvent{EventBannerHide{}}
+	out := []UIEvent{EventBannerHide{}}
+	if login {
+		out = append(out, EventInputHintChanged{})
+	}
+	return out
 }
 
 // Closing returns an action that hides the banner and then runs run.
@@ -194,10 +201,6 @@ func (s *Service) Closing(run func() []UIEvent) func() []UIEvent {
 func (s *Service) HandleBannerSelect(value any) []UIEvent {
 	if m := s.state.Menu; m != nil {
 		return m.Choose(value)
-	}
-	if s.state.Banner == LoginBanner && value == manualCode {
-		// TODO: Accept manually entered login codes.
-		return s.ShowToast("manual code entry not yet implemented")
 	}
 	return nil
 }

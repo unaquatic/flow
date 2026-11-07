@@ -56,6 +56,9 @@ func (s *Service) CancelPrompt() []UIEvent {
 // QuitHint while a second Ctrl+C quits, and otherwise the placeholder of the
 // open question, or "".
 func (s *Service) InputHint(now time.Time) string {
+	if s.state.Login != nil {
+		return "Paste code#state or callback URL"
+	}
 	if s.QuitArmed(now) {
 		return QuitHint
 	}

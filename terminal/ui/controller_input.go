@@ -10,6 +10,9 @@ import (
 // the session list is open the text is their search; otherwise it opens or
 // closes the slash menu.
 func (s *Service) HandleInputChange(text string) []UIEvent {
+	if s.state.Login != nil {
+		return nil
+	}
 	if s.state.SessionMenuVisible || s.state.Banner != NoBanner {
 		return s.FilterMenu(text)
 	}
@@ -37,6 +40,9 @@ const QuitHint = "[ctrl+c quit]"
 // session list is open, it closes it instead, as CloseMenu does, and leaves a
 // run going. It always reports that the key was consumed.
 func (s *Service) HandleCtrlC(hasInput bool) (bool, []UIEvent) {
+	if s.state.Login != nil {
+		return true, append(s.CancelBanner(), s.ClearInput()...)
+	}
 	if s.state.Prompt != nil {
 		return true, s.CancelPrompt()
 	}
@@ -86,6 +92,9 @@ func (s *Service) CloseMenu() []UIEvent {
 // HandleEscape cancels an open question, or stops an active run and resets its
 // status. It reports whether the key was consumed.
 func (s *Service) HandleEscape() (bool, []UIEvent) {
+	if s.state.Login != nil {
+		return true, append(s.CancelBanner(), s.ClearInput()...)
+	}
 	if s.state.Prompt != nil {
 		return true, s.CancelPrompt()
 	}
@@ -132,6 +141,9 @@ func (s *Service) SetToolsExpanded(expanded bool) []UIEvent {
 // commands that replace the session or move its history stop the run
 // themselves. Enter on an empty input resumes a paused queue.
 func (s *Service) HandleSubmit(text string) []UIEvent {
+	if s.state.Login != nil {
+		return s.SubmitLoginCode(strings.TrimSpace(text))
+	}
 	if s.state.Prompt != nil {
 		return s.AnswerPrompt(text)
 	}

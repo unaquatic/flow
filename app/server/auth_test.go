@@ -56,6 +56,28 @@ func TestAuthList(t *testing.T) {
 	}
 }
 
+func TestAuthCodeValidation(t *testing.T) {
+	ts := newTestServer(t)
+	id := addKey(t, ts)
+	for _, tt := range []struct {
+		name   string
+		id     agent.AccountID
+		body   any
+		status int
+	}{
+		{"missing code", id, map[string]string{}, http.StatusBadRequest},
+		{"invalid account", "not-a-uuid", map[string]string{"code": "code#state"}, http.StatusBadRequest},
+		{"missing proof", id, map[string]string{"code": "code#state"}, http.StatusBadRequest},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			status := doJSON(t, "POST", accountURL(ts, tt.id)+"/code", tt.body, nil)
+			if status != tt.status {
+				t.Errorf("status = %d, want %d", status, tt.status)
+			}
+		})
+	}
+}
+
 func TestAuthAdd(t *testing.T) {
 	tests := []struct {
 		name       string
