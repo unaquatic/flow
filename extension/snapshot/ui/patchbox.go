@@ -23,9 +23,9 @@ type PatchBox struct {
 	To snapshot.Hash
 	// Requested reports whether the patch between From and To was requested.
 	Requested bool
-	// Load, when set, fetches the patch between two trees, and shows it with
-	// SetPatch once it arrives. SetMessage calls it once both trees are
-	// known. A box without one, as in the session preview, shows no patch.
+	// Load, when set, reads the patch between two trees, and shows it with
+	// SetPatch. SetMessage calls it once both trees are known. A box without
+	// one, as in the session preview, shows no patch.
 	Load func(from, to snapshot.Hash)
 	// Patch is the unified diff shown, as SetPatch sets it.
 	Patch string

@@ -53,10 +53,11 @@ type Framed interface {
 // how the item shows, and its Content what it shows. While collapsed it is a
 // row on the canvas or a block that fills Surface, as Shape says; a click on
 // its header, or Ctrl+O, expands it into a block that shows Details, when it
-// is Expandable. Its header row holds Marker, while /settings shows it and
-// the box is Marked, then Header, which is cut off with an ellipsis when the
-// row is full, and then Status, which stays whole. While its content is Busy
-// and it shows as a row, the shimmer sweeps across Header.
+// is Expandable, unless it is Held. Its header row holds Marker, while
+// /settings shows it and the box is Marked, then Header, which is cut off
+// with an ellipsis when the row is full, and then Status, which stays whole.
+// While its content is Busy and it shows as a row, the shimmer sweeps across
+// Header.
 type PartBox struct {
 	*widget.Box
 	// Content writes Header and fills Details, as BoxContent describes.
@@ -78,11 +79,15 @@ type PartBox struct {
 	// Header, in PanelDimFg, the color of the keys a panel names after its
 	// title. It is gone while the status is empty.
 	Status *widget.Text
-	// Details holds the widgets the Content shows while the box is
-	// expanded.
+	// Details holds the widgets the Content shows while the box is Open.
 	Details *widget.Box
-	// Expanded reports whether Details is visible.
+	// Expanded reports whether the box shows Details, as a click or Ctrl+O
+	// asks, once it is not Held.
 	Expanded bool
+	// Held keeps the box collapsed whatever Expanded says, as SetHeld sets
+	// it, until its content, and the content above it, take their final
+	// form.
+	Held bool
 	// Expandable reports whether a click on the header and Ctrl+O expand
 	// the box. A box that is not stays collapsed.
 	Expandable bool
@@ -196,9 +201,13 @@ func (b *PartBox) OnHeaderClick(e *input.MouseEvent) {
 	}
 }
 
+// Open reports whether the box shows Details: while it is Expanded and not
+// Held.
+func (b *PartBox) Open() bool { return b.Expanded && !b.Held }
+
 // Row reports whether the box shows as its header alone, one row on the
 // canvas: always when its Shape is ShapeRow, never when it is ShapeBlock,
-// and otherwise while it is collapsed in ToolCallsCompact.
+// and otherwise while it is not Open in ToolCallsCompact.
 func (b *PartBox) Row() bool {
 	switch b.Shape {
 	case ShapeRow:
@@ -206,7 +215,7 @@ func (b *PartBox) Row() bool {
 	case ShapeBlock:
 		return false
 	}
-	return b.Style == ToolCallsCompact && !b.Expanded
+	return b.Style == ToolCallsCompact && !b.Open()
 }
 
 // SetStyle shows the box as ts says while it is collapsed.
@@ -225,10 +234,10 @@ func (b *PartBox) SetMarker(show bool) {
 	b.ShowMarker()
 }
 
-// ShowMarker shows Marker while the box is Marked, collapsed, and MarkerOn
-// is set, and hides it otherwise. Header stays where it is either way.
+// ShowMarker shows Marker while the box is Marked, not Open, and MarkerOn is
+// set, and hides it otherwise. Header stays where it is either way.
 func (b *PartBox) ShowMarker() {
-	show := b.Marked && b.MarkerOn && !b.Expanded
+	show := b.Marked && b.MarkerOn && !b.Open()
 	if b.Marker.Visible() == show {
 		return
 	}
@@ -285,14 +294,36 @@ func (b *PartBox) ShowShape() {
 }
 
 // SetExpanded shows or hides Details, as expanded says, when the box is
-// Expandable, and then has the Content write Header, and shows Marker and
-// the shape, which follow it. A box that is not Expandable stays collapsed.
+// Expandable, as ShowOpen does. A box that is not Expandable stays
+// collapsed, and a Held one stays collapsed until SetHeld releases it.
 func (b *PartBox) SetExpanded(expanded bool) {
 	if expanded && !b.Expandable {
 		return
 	}
 	b.Expanded = expanded
-	b.Details.SetGone(!expanded)
+	b.ShowOpen()
+}
+
+// SetHeld keeps the box collapsed, whatever Expanded says, while held is
+// set, and otherwise shows it as Expanded says, as ShowOpen does.
+//
+// Inline mode holds a box while its content, or the content above it, has
+// yet to take its final form, as a tool call that runs has: rows that
+// scroll into the terminal's scrollback cannot be redrawn, so the box shows
+// only its header, which stays on screen, until nothing above it changes.
+func (b *PartBox) SetHeld(held bool) {
+	if held == b.Held {
+		return
+	}
+	b.Held = held
+	b.ShowOpen()
+}
+
+// ShowOpen shows Details while the box is Open and hides it otherwise, and
+// then has the Content write Header, and shows Marker and the shape, which
+// follow it.
+func (b *PartBox) ShowOpen() {
+	b.Details.SetGone(!b.Open())
 	b.ShowHeader()
 	b.ShowMarker()
 	b.ShowShape()

@@ -115,9 +115,18 @@ func (cm *ChatMessageBox) NewSegmentParts() *PartsBox {
 
 // Rows yields the rows the bubble takes in the transcript, in display order:
 // Box, then the row of the parts that scroll away from a pinned Box, when it
-// has one. A prompt's bubble has both.
+// has one, as a prompt's bubble has both, or the Box of each segment, when
+// they are rows of their own, as SegmentRows says.
 func (cm *ChatMessageBox) Rows() iter.Seq[*widget.Box] {
 	return func(yield func(*widget.Box) bool) {
+		if cm.SegmentRows() {
+			for _, seg := range cm.segments {
+				if !yield(seg.Box) {
+					return
+				}
+			}
+			return
+		}
 		if yield(cm.Box) && cm.TailRow != nil {
 			yield(cm.TailRow)
 		}

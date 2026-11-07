@@ -432,7 +432,16 @@ func TestTreeLinesDimOtherBranches(t *testing.T) {
 // sameEvents reports whether got and want hold equal events in order. It
 // compares them as printed, since some events hold slices.
 func sameEvents(got, want []UIEvent) bool {
-	return slices.EqualFunc(got, want, func(a, b UIEvent) bool { return fmt.Sprintf("%#v", a) == fmt.Sprintf("%#v", b) })
+	return slices.EqualFunc(got, want, func(a, b UIEvent) bool { return eventString(a) == eventString(b) })
+}
+
+// eventString formats ev for sameEvents: a notice by what it shows, without
+// the ID it takes.
+func eventString(ev UIEvent) string {
+	if n, ok := noticeOf(ev); ok {
+		return fmt.Sprintf("notice %#v", n)
+	}
+	return fmt.Sprintf("%#v", ev)
 }
 
 // TestChooseTreeRow checks that choosing any row closes the tree and asks
@@ -480,7 +489,7 @@ func TestShowTree(t *testing.T) {
 	s, a := newTestService(t)
 	s.NewSession()
 	out := s.ShowTree()
-	if toast, ok := out[0].(EventToastShow); len(out) != 1 || !ok || toast.Text != "No messages yet" {
+	if toast, ok := toastOf(out[0]); len(out) != 1 || !ok || toast.Text != "No messages yet" {
 		t.Fatalf("tree of a new session = %#v, want a notice", out)
 	}
 
@@ -542,20 +551,20 @@ func TestCompleteTreeMove(t *testing.T) {
 		{
 			name: "prompt", event: edit,
 			want: []UIEvent{
-				EventToastShow{Text: NoFileChangesText},
+				noticeAdded(Notice{Text: NoFileChangesText}),
 				EventInputSet{Text: "use tables\nplease"},
 			},
 		},
 		{
 			name: "reply", event: reply,
-			want: []UIEvent{EventToastShow{Text: NoFileChangesText}},
+			want: []UIEvent{noticeAdded(Notice{Text: NoFileChangesText})},
 		},
 		{name: "reply the transcript ended at", event: reply, err: app.ErrAlreadyThere},
 		// The prompt stays out of the input, which would send it from the
 		// wrong place.
 		{
 			name: "failed", event: edit, err: snapshot.ErrDisabled,
-			want: []UIEvent{EventToastShow{Text: "tree move failed: snapshots are disabled"}},
+			want: []UIEvent{noticeAdded(Notice{Text: "tree move failed: snapshots are disabled"})},
 		},
 	}
 	for _, tt := range tests {
@@ -579,7 +588,7 @@ func TestHandleContinue(t *testing.T) {
 	// the input.
 	toast := func(out []UIEvent) string {
 		for _, ev := range out {
-			if e, ok := ev.(EventToastShow); ok {
+			if e, ok := toastOf(ev); ok {
 				return e.Text
 			}
 		}

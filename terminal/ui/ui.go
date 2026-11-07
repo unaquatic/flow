@@ -86,6 +86,14 @@ type UI struct {
 	// parents them to the root, which owns unrelated children too, so the
 	// transcript tracks its own rows.
 	transcriptRows []*widget.Box
+	// committed reports that inline rows of the transcript were committed to
+	// the terminal since the transcript was last built, as
+	// CommitScrolledRows commits them.
+	committed bool
+	// trimmed reports that the transcript was built without the rows of the
+	// earliest messages, which the terminal never showed, as TrimTranscript
+	// leaves them out.
+	trimmed bool
 
 	previewWidgets map[message.ID]*ChatMessageBox
 
@@ -97,6 +105,9 @@ type UI struct {
 
 	// fitHeight is the terminal height the input box was last fitted to.
 	fitHeight int
+	// liveReserve is the rows FitInputBox last kept for the live rows of
+	// the transcript, as ReserveLiveRows keeps them.
+	liveReserve int
 
 	// shimmer is where the band that sweeps across the time of a run in
 	// progress is, as DrawShimmer draws it, which the rows of the tool calls
@@ -219,13 +230,14 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	state.ApplyConfig(conf.Terminal, conf.Debug)
 
 	cfg := terminal.Config{
-		Stdin:           os.Stdin,
-		Stdout:          os.Stdout,
-		UseMouse:        true,
-		InlineMode:      state.Inline,
-		EnableAutoFocus: true,
-		HandleCtrlC:     true,
-		DebugLog:        "logs/fluid.log",
+		Stdin:            os.Stdin,
+		Stdout:           os.Stdout,
+		UseMouse:         true,
+		InlineMode:       state.Inline,
+		InlineTrimBlanks: true,
+		EnableAutoFocus:  true,
+		HandleCtrlC:      true,
+		DebugLog:         "logs/fluid.log",
 	}
 
 	// Width probing is opt-in because it delays renderer startup.
@@ -656,7 +668,16 @@ func (ui *UI) BuildUI() {
 	root.Add(ui.previewMessageBox)
 	root.Add(ui.inputWrapper)
 
+	// Inline, the rows that scrolled into the scrollback go to the terminal
+	// before the frame is laid out, while they are where the last frame put
+	// them.
+	root.AddLifecyclePass(ui.CommitScrolledRows)
 	// Every frame fits the input box to the terminal before it is laid out,
 	// whatever changed it: a menu, the input text, the queue, or a resize.
 	root.AddLifecyclePass(ui.KeepInputBoxInView)
+
+	// Inline, what may still change stays out of the scrollback, and what
+	// went to the terminal comes back when the transcript is written again.
+	ui.renderer.SetInlineLiveTop(ui.LiveTop)
+	ui.renderer.SetInlineReprint(ui.ReprintTranscript)
 }

@@ -278,7 +278,7 @@ func TestSettingsPersist(t *testing.T) {
 		func() []UIEvent { return s.SetDebug(true) },
 	} {
 		for _, ev := range change() {
-			if toast, ok := ev.(EventToastShow); ok {
+			if toast, ok := toastOf(ev); ok {
 				t.Fatalf("change shows %q, want it saved", toast.Text)
 			}
 		}
@@ -313,7 +313,7 @@ func TestSettingsPersistFailure(t *testing.T) {
 	} {
 		toasts := 0
 		for _, ev := range out {
-			if toast, ok := ev.(EventToastShow); ok && toast.Text == "Saving settings failed: disk full" {
+			if toast, ok := toastOf(ev); ok && toast.Text == "Saving settings failed: disk full" {
 				toasts++
 			}
 		}

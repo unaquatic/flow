@@ -36,6 +36,7 @@ func NewReasoningBox(part message.ReasoningPart, theme *style.Theme) *ReasoningB
 			widget.StreamMarkdownWithTheme(theme),
 			widget.StreamMarkdownWithFg(theme.TextMuted),
 			widget.StreamMarkdownWithBg(style.ColorTransparent),
+			widget.StreamMarkdownWithPending(WritingRow()),
 			widget.StreamMarkdownWithLayout(layout.WithWidth(layout.Percent(100))),
 		),
 	}

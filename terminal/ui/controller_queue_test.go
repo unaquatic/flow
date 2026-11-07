@@ -300,7 +300,7 @@ func TestQueue_DroppedOnNewSession(t *testing.T) {
 		t.Error("the new session is marked running")
 	}
 	dropped := func(e UIEvent) bool {
-		toast, ok := e.(EventToastShow)
+		toast, ok := toastOf(e)
 		return ok && toast.Text == "Dropped 1 queued prompt"
 	}
 	if !slices.ContainsFunc(out, dropped) {

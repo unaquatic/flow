@@ -11,9 +11,9 @@
 |  AA AAAA                               |
 |                                        |
 |  BB CCCC DDDDDDDC                      |
-|  BB CCC EEEEEE CCCC C CCCC CCCCCC      |
-|  E CCCC DDD CC CC CCC                  |
-|  E CCC CCC CCCCCC                      |
+|  BB CCC AAAAAA CCCC C CCCC CCCCCC      |
+|  A CCCC DDD CC CC CCC                  |
+|  A CCC CCC CCCCCC                      |
 |                                        |
 |                                        |
 === bg ===
@@ -35,9 +35,8 @@
 |                                        |
 |                                        |
 === legend ===
-A #d18616
+A #eb7513
 B #8a8a8a
 C #e6e6e6
 D #91b557
-E #eb7513
 ░ #1a1a1a Bg

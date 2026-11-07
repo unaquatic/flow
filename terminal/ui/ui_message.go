@@ -15,36 +15,56 @@ import (
 )
 
 // ResetTranscript clears the active transcript and its widget indexes.
+// Inline, the terminal then writes the transcript again in full, as
+// ReprintCommitted makes it, in place of rows committed to it.
 func (ui *UI) ResetTranscript() {
+	ui.ReprintCommitted()
+	ui.DropTranscript()
+}
+
+// DropTranscript detaches every row of the transcript and drops its widgets
+// and its widget indexes.
+func (ui *UI) DropTranscript() {
 	ui.ClearTranscriptRows()
 	ui.messageWidgets = make(map[message.ID]*ChatMessageBox)
 	// The rows the shimmer tracks went with the transcript.
 	clear(ui.shimmer.Rows)
+	ui.committed = false
+	ui.trimmed = false
 }
 
-// LoadTranscript replaces the active transcript with msgs.
+// LoadTranscript replaces the active transcript with msgs, as
+// BuildTranscript builds it.
 func (ui *UI) LoadTranscript(msgs []ChatMessage) {
 	ui.ResetTranscript()
-	for _, msg := range msgs {
-		ui.AddMessage(msg)
-	}
+	ui.BuildTranscript(msgs)
 }
 
-// AddMessage appends a message or merges it into its existing parent bubble.
+// AddMessage appends a message or merges it into its existing parent bubble,
+// adding the row the message takes there, if any, under the bubble's last. A
+// notice takes a row of its own, as AddNotice adds it.
 func (ui *UI) AddMessage(msg ChatMessage) {
+	if msg.Notice != nil {
+		ui.AddNotice(*msg.Notice)
+		return
+	}
 	if msg.SharesBubble() {
 		if cm, ok := ui.messageWidgets[msg.ParentID]; ok {
-			cm.AddSegment(msg)
+			if row, above := cm.AddSegment(msg); row != nil {
+				ui.InsertTranscriptRow(row, above)
+			}
 			ui.messageWidgets[msg.ID] = cm
 			return
 		}
 	}
 
-	// The transcript's calls shimmer while they execute, and its views fetch
-	// what they show, unlike those of the session preview, which shows
-	// another session as it was stored.
+	// The transcript's calls shimmer while they execute, its views fetch
+	// what they show, and inline it holds back what may still change,
+	// unlike the session preview, which shows another session as it was
+	// stored.
 	cm := NewChatMessageBox(msg, append(ui.ChatMessageOptions(msg.Role),
-		ChatMessageWithShimmer(&ui.shimmer), ChatMessageWithEnqueue(ui.renderer.Enqueue))...)
+		ChatMessageWithShimmer(&ui.shimmer), ChatMessageWithEnqueue(ui.renderer.Enqueue),
+		ChatMessageWithHolds(ui.inline))...)
 	for row := range cm.Rows() {
 		ui.AddTranscriptRow(row)
 	}
@@ -72,11 +92,13 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 }
 
 // SetToolStyle shows every collapsed tool call in the transcript and the
-// session preview as ts says.
+// session preview as ts says. Each of these settings reaches the committed
+// rows of the inline transcript as ReprintCommitted writes them again.
 func (ui *UI) SetToolStyle(ts ToolCallStyle) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolStyle(ts)
 	}
+	ui.ReprintCommitted()
 }
 
 // SetToolMarkers shows or hides ToolMarker before the name of every tool call
@@ -85,6 +107,7 @@ func (ui *UI) SetToolMarkers(show bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolMarkers(show)
 	}
+	ui.ReprintCommitted()
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
@@ -93,6 +116,7 @@ func (ui *UI) SetToolColor(c ToolNameColor) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolColor(c)
 	}
+	ui.ReprintCommitted()
 }
 
 // SetDebug shows what helps debug flow in the transcript and the session
@@ -102,6 +126,7 @@ func (ui *UI) SetDebug(on bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetDebug(on)
 	}
+	ui.ReprintCommitted()
 }
 
 // SetCacheMode shows the cache use of every reply in the transcript and the
@@ -110,6 +135,7 @@ func (ui *UI) SetCacheMode(mode CacheMode) {
 	for cm := range ui.Bubbles() {
 		cm.SetCacheMode(mode)
 	}
+	ui.ReprintCommitted()
 }
 
 // SetToolsExpanded shows or hides the details of every tool call and of the
@@ -119,6 +145,7 @@ func (ui *UI) SetToolsExpanded(expanded bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolsExpanded(expanded)
 	}
+	ui.ReprintCommitted()
 }
 
 // TogglesTools reports whether SetToolsExpanded(expanded) would show or hide
@@ -147,10 +174,10 @@ func (ui *UI) Bubbles() iter.Seq[*ChatMessageBox] {
 	}
 }
 
-// UpdateMessage applies the latest parts and usage, shows the message in the
-// views extensions show under it, and appends any error as text. A zero
-// Usage leaves the usage shown unchanged, since only the end of a message
-// carries it.
+// UpdateMessage applies the latest parts, which of them are live, and usage,
+// shows the message in the views extensions show under it, and appends any
+// error as text. A zero Usage leaves the usage shown unchanged, since only
+// the end of a message carries it.
 func (ui *UI) UpdateMessage(msg ChatMessage) {
 	cm, ok := ui.messageWidgets[msg.ID]
 	if !ok {
@@ -162,6 +189,7 @@ func (ui *UI) UpdateMessage(msg ChatMessage) {
 		parts = append(parts, message.TextPart{Text: errText})
 	}
 	cm.SetSegmentParts(msg.ID, parts)
+	cm.SetSegmentLive(msg.ID, msg.Live)
 	cm.SetSegmentMessage(msg)
 	if msg.Usage != (message.Usage{}) {
 		cm.SetUsage(msg)
@@ -175,16 +203,43 @@ func (ui *UI) SetTurnEnd(msgID message.ID, worked time.Duration) {
 	}
 }
 
-// AppendNoticeOn adds a row filled with bg to the transcript, padded by a row
-// above and below and by PaddingX at the sides, followed by a blank row. Text
-// in content without a color of its own is in textFg.
-func (ui *UI) AppendNoticeOn(content style.StyledText, bg style.Color) {
-	if len(content.Chunks) == 0 {
-		return
+// AddNotice adds notices to the transcript, under the rows already there, in
+// the rows NewNoticeRow makes, as a message's rows are added.
+func (ui *UI) AddNotice(notices ...Notice) {
+	for _, n := range notices {
+		if row := ui.NewNoticeRow(n); row != nil {
+			ui.AddTranscriptRow(row)
+		}
+	}
+}
+
+// NewNoticeRow returns the row that shows n, followed by a blank row, or nil
+// for a notice that shows nothing. Its rows are on the canvas, from its left
+// edge, or else in a box filled with its surface, padded by a row above and
+// below and by PaddingX at the sides, in textFg where they have no color of
+// their own.
+func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
+	lines := n.Lines
+	if len(lines) == 0 && n.Text != "" {
+		lines = []style.StyledText{style.NewStyledText(style.Plain(n.Text))}
+	}
+	content := JoinStyledLines(lines)
+	if len(lines) == 0 || (n.Surface != NoticeCanvas && len(content.Chunks) == 0) {
+		return nil
 	}
 	id := string(message.NewID())
-	text := widget.NewStyledText(content, widget.TextWithID(id+"-text"), widget.TextWithFg(textFg))
-	ui.AddTranscriptRow(widget.NewBox(
+	if n.Surface == NoticeCanvas {
+		return widget.NewBox(
+			widget.BoxWithID(id),
+			widget.BoxWithLayout(layout.WithFlexShrink(0), layout.WithMarginBottom(layout.Points(1))),
+			widget.Children(widget.NewStyledText(content, widget.TextWithID(id+"-text"))),
+		)
+	}
+	bg := ui.theme.SurfaceRaised
+	if n.Surface == NoticeSystem {
+		bg = ui.SystemBg()
+	}
+	return widget.NewBox(
 		widget.BoxWithID(id),
 		widget.BoxWithLayout(
 			layout.WithFlexShrink(0),
@@ -194,23 +249,8 @@ func (ui *UI) AppendNoticeOn(content style.StyledText, bg style.Color) {
 			layout.WithMarginBottom(layout.Points(1)),
 		),
 		widget.BoxWithBg(bg),
-		widget.Children(text),
-	))
-}
-
-// AppendCanvasRows adds lines to the transcript on the canvas, from its left
-// edge, with no box around them and no inset, followed by a blank row, as a
-// notice is.
-func (ui *UI) AppendCanvasRows(lines []style.StyledText) {
-	if len(lines) == 0 {
-		return
-	}
-	id := string(message.NewID())
-	ui.AddTranscriptRow(widget.NewBox(
-		widget.BoxWithID(id),
-		widget.BoxWithLayout(layout.WithFlexShrink(0), layout.WithMarginBottom(layout.Points(1))),
-		widget.Children(widget.NewStyledText(JoinStyledLines(lines), widget.TextWithID(id+"-text"))),
-	))
+		widget.Children(widget.NewStyledText(content, widget.TextWithID(id+"-text"), widget.TextWithFg(textFg))),
+	)
 }
 
 // productFg is the product's primary color, product.PrimaryColor, as the
@@ -300,21 +340,6 @@ func (ui *UI) AppendResumeNotice(id message.SessionID) {
 	ui.renderer.Root().Add(NewResumeNotice(id, ui.theme))
 }
 
-// AppendToast adds a notice to the transcript, on the system surface when it
-// is a system notice. Lines takes precedence over Text.
-func (ui *UI) AppendToast(e EventToastShow) {
-	bg := ui.theme.SurfaceRaised
-	if e.System {
-		bg = ui.SystemBg()
-	}
-	switch {
-	case len(e.Lines) > 0:
-		ui.AppendNoticeOn(JoinStyledLines(e.Lines), bg)
-	case e.Text != "":
-		ui.AppendNoticeOn(style.NewStyledText(style.Plain(e.Text)), bg)
-	}
-}
-
 // ResetPreview clears the session preview and its widget index, and the
 // prompts previewed in inline mode.
 func (ui *UI) ResetPreview() {
@@ -337,7 +362,9 @@ func (ui *UI) LoadPreview(msgs []ChatMessage) {
 func (ui *UI) AddPreviewMessage(msg ChatMessage) {
 	if msg.SharesBubble() {
 		if cm, ok := ui.previewWidgets[msg.ParentID]; ok {
-			cm.AddSegment(msg)
+			if row, above := cm.AddSegment(msg); row != nil {
+				ui.previewMessageBox.InsertAfter(row, above)
+			}
 			ui.previewWidgets[msg.ID] = cm
 			return
 		}

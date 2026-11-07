@@ -45,10 +45,6 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnBannerUpdate(e)
 	case EventBannerHide:
 		ui.OnBannerHide(e)
-	case EventToastShow:
-		ui.OnToastShow(e)
-	case EventCanvasShow:
-		ui.OnCanvasShow(e)
 	case EventIndicatorShow:
 		ui.OnIndicatorShow(e)
 	case EventIndicatorHide:
@@ -153,21 +149,20 @@ func (ui *UI) OnQuit(EventQuit) {
 func (ui *UI) OnQuitArmed(EventQuitArmed) { ui.ShowQuitHint(ui.renderer.Enqueue) }
 
 // PrepareInlineQuit lays out the frame that an inline quit leaves in the
-// terminal: the transcript and the input box, without the cursor or the quit
-// hint in the input, which no longer apply. The footer's blank row stays, so
-// that the box keeps its place and a blank row parts it from what follows:
-// the notice that tells how to resume a stored session, which Run then
-// reports shown, or else the shell's prompt.
+// terminal: the transcript alone, without the input box or the indicator,
+// which no longer apply, and under it what follows: the notice that tells
+// how to resume a stored session, which Run then reports shown, or else the
+// shell's prompt. The transcript ends in a blank row, which parts the two.
 func (ui *UI) PrepareInlineQuit() {
 	if id := ui.service.Resumable(); id != "" {
 		ui.AppendResumeNotice(id)
 		ui.resumeShown.Store(true)
 	}
-	// The second Ctrl+C quits while the input says it would.
-	ui.SetInputHint("")
 	// The input placed the cursor, and would place it again as the box
 	// redraws. Blurring it hides the cursor for good.
 	ui.input.Blur()
+	ui.inputWrapper.SetGone(true)
+	ui.indicatorBox.SetGone(true)
 	// A shimmer caught mid-sweep would stay in the terminal, over the time
 	// and over the tool call rows alike.
 	ui.shimmer.On.Store(false)
@@ -193,7 +188,7 @@ func (ui *UI) OnUsageChanged(e EventUsageChanged) { ui.SetUsage(e.Usage) }
 func (ui *UI) OnClearMessages(EventClearMessages) { ui.ResetTranscript() }
 
 // OnMessageAdded appends a message, merging it into the preceding
-// bubble when they share a parent.
+// bubble when they share a parent, or a notice.
 func (ui *UI) OnMessageAdded(e EventMessageAdded) { ui.AddMessage(e.Msg) }
 
 // OnMessageUpdated applies the latest parts and usage to a message.
@@ -215,12 +210,6 @@ func (ui *UI) OnSessionPreview(e EventSessionPreview) { ui.LoadPreview(e.Message
 // OnSessionPrompts replaces the prompts listed under the session menu in
 // inline mode.
 func (ui *UI) OnSessionPrompts(e EventSessionPrompts) { ui.sessionPrompts.Set(e.Prompts) }
-
-// OnToastShow appends a notice to the transcript.
-func (ui *UI) OnToastShow(e EventToastShow) { ui.AppendToast(e) }
-
-// OnCanvasShow appends rows to the transcript on the canvas, with no box.
-func (ui *UI) OnCanvasShow(e EventCanvasShow) { ui.AppendCanvasRows(e.Lines) }
 
 // OnInlineModeSet switches between inline and alternate-screen rendering.
 func (ui *UI) OnInlineModeSet(e EventInlineModeSet) { ui.SetInlineMode(e) }
@@ -250,9 +239,11 @@ func (ui *UI) OnTreeMoveRequested(e EventTreeMoveRequested) { ui.RequestTreeMove
 // OnToolsExpandedSet shows or hides the details of every tool call and of the
 // changes of every step. Laying out a long transcript again and writing it to
 // the terminal holds the event loop for a while, so when that changes any
-// block, the indicator says so until the new frame is drawn.
+// block, the indicator says so until the new frame is drawn. Rows committed to
+// the terminal are written again whatever they show, as ReprintCommitted
+// writes them.
 func (ui *UI) OnToolsExpandedSet(e EventToolsExpandedSet) {
-	if !ui.TogglesTools(e.Expanded) {
+	if !ui.committed && !ui.TogglesTools(e.Expanded) {
 		ui.SetToolsExpanded(e.Expanded)
 		return
 	}

@@ -22,7 +22,7 @@ import (
 func toasts(out []UIEvent) []string {
 	var texts []string
 	for _, ev := range out {
-		if toast, ok := ev.(EventToastShow); ok {
+		if toast, ok := toastOf(ev); ok {
 			texts = append(texts, cmp.Or(toast.Text, JoinStyledLines(toast.Lines).PlainText()))
 		}
 	}
@@ -150,7 +150,7 @@ func TestModelNoticesMarkTheModel(t *testing.T) {
 	} {
 		var marked []string
 		for _, ev := range out {
-			if toast, ok := ev.(EventToastShow); ok {
+			if toast, ok := toastOf(ev); ok {
 				for _, line := range toast.Lines {
 					for _, c := range line.Chunks {
 						if c.Fg == productFg {

@@ -65,22 +65,19 @@ func textChoices(t *style.Theme) []ColorChoice {
 	gray := func(v uint8) style.Color { return style.ColorFromInts(v, v, v, 255) }
 	return []ColorChoice{
 		// Text.
-		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, the shimmer
+		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, the shimmer, code attributes, objects, numbers, types, constants, and properties
 		{logoFg, style.ANSIBrightWhite, 254},           // the logo after its "f"
 		{gray(220), style.ANSIBrightWhite, 253},        // paths in the diff toast
 		{style.ColorWhite, style.ANSIBrightWhite, 231}, // OnAccent, OnInteractive and the other On roles
 		{panelTextFg, style.ANSIWhite, 249},            // session tree rows, footer keys
-		{t.Code.Attribute.Fg, style.ANSIWhite, 250},    // code attributes
-		{t.Code.Object.Fg, style.ANSIWhite, 250},       // code objects
 		{boxBg, style.ANSIBlack, 235},                  // text on the bar of a selected row, selected input text
 
 		// Dim text, which cards hold too.
-		{t.TextMuted, style.ANSIWhite, 245},             // TextMuted, Interactive, Info, comments, quotes, H5
-		{t.MarkdownHeading[5].Fg, style.ANSIWhite, 247}, // H6
-		{gray(140), style.ANSIWhite, 245},               // the labels of /status and the diff toast
-		{PanelDimFg, style.ANSIWhite, 242},              // panel counts, menu descriptions, hints
-		{gray(92), style.ANSIWhite, 59},                 // the banner's text, the session list's no-match notice
-		{gray(80), style.ANSIWhite, 239},                // the words between keys in the status hints
+		{t.TextMuted, style.ANSIWhite, 245}, // TextMuted, Interactive, Info, comments, quotes, H5
+		{gray(140), style.ANSIWhite, 245},   // the labels of /status and the diff toast
+		{PanelDimFg, style.ANSIWhite, 242},  // panel counts, menu descriptions, hints
+		{gray(92), style.ANSIWhite, 59},     // the banner's text, the session list's no-match notice
+		{gray(80), style.ANSIWhite, 239},    // the words between keys in the status hints
 
 		// Dim text and lines on the canvas only.
 		{indicatorFg, style.ANSIBrightBlack, 243},   // the indicator
@@ -90,30 +87,23 @@ func textChoices(t *style.Theme) []ColorChoice {
 		{t.BorderStrong, style.ANSIBrightBlack, 59}, // BorderStrong
 
 		// Oranges.
-		{t.Accent, style.ANSIYellow, 202},                // Accent, TextLink, Warning, H1, links, bold, bullets, keywords
-		{t.AccentStrong, style.ANSIYellow, 172},          // AccentStrong, H2
-		{t.MarkdownHeading[2].Fg, style.ANSIYellow, 130}, // H3
-		{t.MarkdownHeading[3].Fg, style.ANSIYellow, 95},  // H4
-		{productFg, style.ANSIWhite, 202},                // the product name, the logo's "f", selected rows
+		{t.Accent, style.ANSIYellow, 202},       // Accent, TextLink, Warning, H1, H3, H4, H6, links, bold, bullets, keywords
+		{t.AccentStrong, style.ANSIYellow, 172}, // AccentStrong, H2
+		{productFg, style.ANSIWhite, 202},       // the product name, the logo's "f", selected rows
 
 		// Reds.
 		{t.Danger, style.ANSIBrightRed, 203},  // Danger, DiffRemoveFg, code errors
 		{DiffDelFg, style.ANSIBrightRed, 167}, // deleted-line counts
 
 		// Greens.
-		{t.Success, style.ANSIBrightGreen, 84},         // Success, DiffAddFg
-		{DiffAddFg, style.ANSIBrightGreen, 78},         // added-line counts
-		{t.Code.String.Fg, style.ANSIBrightGreen, 107}, // strings, regular expressions, inline code
+		{t.Success, style.ANSIBrightGreen, 84}, // Success, DiffAddFg, strings, regular expressions, inline code
+		{DiffAddFg, style.ANSIBrightGreen, 78}, // added-line counts
 
 		// Blues.
 		{t.InteractiveStrong, style.ANSIBrightBlue, 68}, // InteractiveStrong, link labels
-		{t.Code.Number.Fg, style.ANSIBrightBlue, 67},    // numbers
-		{t.Code.Type.Fg, style.ANSIBrightCyan, 73},      // types
 
-		// Yellows and purples.
-		{t.Code.Function.Fg, style.ANSIBrightYellow, 214},  // functions, tags
-		{t.Code.Decorator.Fg, style.ANSIBrightYellow, 178}, // decorators, preprocessor directives
-		{t.Code.Constant.Fg, style.ANSIBrightMagenta, 140}, // constants, properties
+		// Yellows.
+		{t.Code.Function.Fg, style.ANSIBrightYellow, 214}, // functions, tags, decorators, preprocessor directives
 	}
 }
 

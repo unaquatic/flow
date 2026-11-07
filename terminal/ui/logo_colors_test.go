@@ -112,7 +112,7 @@ func TestShowStatusComparesLogoColors(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("ShowStatus returned %d events, want the logos and the notice", len(events))
 	}
-	logos, ok := events[0].(EventCanvasShow)
+	logos, ok := canvasOf(events[0])
 	if !ok {
 		t.Fatalf("first event is %+v, want the logos on the canvas", events[0])
 	}
@@ -127,7 +127,7 @@ func TestShowStatusComparesLogoColors(t *testing.T) {
 			t.Errorf("canvas has no line %s", line)
 		}
 	}
-	if toast, ok := events[1].(EventToastShow); !ok || !toast.System {
+	if toast, ok := toastOf(events[1]); !ok || toast.Surface != NoticeSystem {
 		t.Errorf("second event is %+v, want the session info notice", events[1])
 	}
 }

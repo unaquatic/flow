@@ -18,7 +18,7 @@
 |  CC CCCCCC CCCCCCC CCC CCCCCCCCC                           |
 |  DDDD BB BBBBBBBBBBBB EEEEEEBBB B DDDDDDDB DDDDDDD B       |
 |                                                            |
-|  BBBBBBBB BBBBB FBF BB FFB                                 |
+|  BBBBBBBB BBBBB BBB BB BBB                                 |
 |                                                            |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -37,7 +37,7 @@
 |                                                            |
 |                                                            |
 |                                                            |
-|  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIII                           |
+|                                                            |
 |  BBBB                             BBBBBBB  BBBBBBB         |
 |                                                            |
 |                                                            |
@@ -48,5 +48,4 @@ B #e6e6e6
 C #8a8a8a
 D #eb7513
 E #ffb642
-F #5a99c9
 ░ #1f1f1f SurfaceRaised/SuccessSurface

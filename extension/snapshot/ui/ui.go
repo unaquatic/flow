@@ -13,20 +13,20 @@ import (
 	"github.com/unaquatic/flow/terminal/ui"
 )
 
-// maxPatchLoads is the number of patches fetched at once, so that loading a
-// long session does not diff every step at once.
-const maxPatchLoads = 4
-
 // Extension adds the widgets of snapshots to the transcript. It implements
 // ui.Extension.
 type Extension struct {
 	// Snapshots is the extension that records the snapshots, whose patches
 	// PatchBox shows.
 	Snapshots *snapshot.Extension
+	// ReadPatch reads the patch from one tree to another, as the Patch of
+	// Snapshots does.
+	ReadPatch func(ctx context.Context, from, to snapshot.Hash) (string, error)
+	// Patches holds the patches LoadPatch read, by the trees they go between,
+	// which it shows again without reading them again.
+	Patches map[[2]snapshot.Hash]string
 	// ctx is the context patches are read in.
 	ctx context.Context
-	// slots bounds the patches fetched at once.
-	slots chan struct{}
 }
 
 var _ ui.Extension = (*Extension)(nil)
@@ -34,7 +34,7 @@ var _ ui.Extension = (*Extension)(nil)
 // New returns the widgets of the snapshots that s records, whose patches are
 // read in ctx.
 func New(ctx context.Context, s *snapshot.Extension) *Extension {
-	return &Extension{Snapshots: s, ctx: ctx, slots: make(chan struct{}, maxPatchLoads)}
+	return &Extension{Snapshots: s, ReadPatch: s.Patch, Patches: make(map[[2]snapshot.Hash]string), ctx: ctx}
 }
 
 // NewPartView returns the StepBox of a step part, and nil for another part.
@@ -59,21 +59,23 @@ func (e *Extension) NewSegmentView(msg ui.ChatMessage, host ui.ViewHost) ui.Segm
 	return box
 }
 
-// LoadPatch reads the patch from one tree to another off the event loop,
-// since it reads the snapshot database, and shows it in box back on the
-// loop, laying out the bubble again.
+// LoadPatch shows in box the patch from one tree to another, and lays the
+// bubble out again. It reads the patch at once, on the event loop, the first
+// time, and keeps it in Patches. Every changes box of a transcript is then
+// whole as the transcript is written, and one written again, as a resize
+// writes it, reads none. A patch that arrived later would change a row that
+// may have scrolled into the scrollback, which keeps the row as it was.
 func (e *Extension) LoadPatch(box *PatchBox, from, to snapshot.Hash, host ui.ViewHost) {
-	go func() {
-		e.slots <- struct{}{}
-		patch, err := e.Snapshots.Patch(e.ctx, from, to)
-		<-e.slots
-		if err != nil {
+	key := [2]snapshot.Hash{from, to}
+	patch, ok := e.Patches[key]
+	if !ok {
+		var err error
+		if patch, err = e.ReadPatch(e.ctx, from, to); err != nil {
 			slog.Warn("step patch", "from", from, "to", to, "err", err)
 			return
 		}
-		host.Enqueue(func() {
-			box.SetPatch(patch)
-			host.Relayout()
-		})
-	}()
+		e.Patches[key] = patch
+	}
+	box.SetPatch(patch)
+	host.Relayout()
 }

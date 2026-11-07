@@ -29,10 +29,10 @@
 |                                        |
 |                                        |
 |                                        |
-|    A AA B                              |
+|    A AA A                              |
 |                                        |
 |                                        |
-|  CCCC CC CCCC CCCCC                    |
+|  BBBB BB BBBB BBBBB                    |
 |                                        |
 |                                        |
 |                                        |
@@ -84,7 +84,6 @@
 |                                        |
 === legend ===
 A #e6e6e6
-B #5a99c9
-C #707070
+B #707070
 ░ #232323 BoxBg
 ▒ #1f1f1f SurfaceRaised/SuccessSurface

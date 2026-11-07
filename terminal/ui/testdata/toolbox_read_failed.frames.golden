@@ -13,7 +13,7 @@
 |                                                            |
 |  BBBBBBB                                                   |
 |                                                            |
-|  BBB BBBBBB BBBBBCC                                        |
+|  BBB BBBBBB BBBBBBB                                        |
 |                                                            |
 |                                                            |
 === bg ===
@@ -37,5 +37,4 @@
 === legend ===
 A #707070
 B #e6e6e6
-C #aa77c6
 ░ #1f1f1f SurfaceRaised/SuccessSurface

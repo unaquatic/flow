@@ -180,8 +180,9 @@ func TestActiveSessionIDOffLoop(t *testing.T) {
 	}
 }
 
-// TestInitSessionNoticeFirst checks that a session opened at startup shows its
-// /status notice above its messages: loading them would replace the notice.
+// TestInitSessionNoticeFirst checks that a session opened at startup loads its
+// transcript in one event, which the UI builds the last rows of, with its
+// /status notice above its messages, and adds nothing to it after.
 func TestInitSessionNoticeFirst(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -202,19 +203,37 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 				storeMessage(t, a, id)
 			}
 
-			var got []string
+			var loads []EventSessionLoad
 			for _, ev := range s.InitSession(t.Context(), id) {
-				switch ev.(type) {
-				case EventToastShow:
-					got = append(got, "notice")
-				case EventMessageAdded:
-					got = append(got, "message")
+				switch ev := ev.(type) {
 				case EventSessionLoad:
-					got = append(got, "load")
+					loads = append(loads, ev)
+				case EventMessageAdded:
+					t.Errorf("startup added %+v to the transcript, want it in the load", ev.Msg)
+				}
+			}
+			if len(loads) != 1 {
+				t.Fatalf("startup loaded the transcript %d times, want once", len(loads))
+			}
+			var got []string
+			for _, m := range loads[0].Messages {
+				switch {
+				case m.Notice == nil:
+					got = append(got, "message")
+				case m.Notice.Surface != NoticeCanvas:
+					got = append(got, "notice")
 				}
 			}
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("transcript events = %q, want %q", got, tt.want)
+				t.Errorf("loaded transcript = %q, want %q", got, tt.want)
+			}
+			// A transcript built again from the state shows them in order too.
+			messages := false
+			for _, m := range s.state.Messages {
+				if m.Notice != nil && messages {
+					t.Errorf("notice %+v follows a message, want it above them all", *m.Notice)
+				}
+				messages = messages || m.Notice == nil
 			}
 			if id != "" && s.SessionID() != id {
 				t.Errorf("active session = %q, want %q", s.SessionID(), id)
@@ -234,7 +253,7 @@ func TestShowInfoIsSystemNotice(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("ShowInfo returned %d events, want the logo and the notice", len(events))
 	}
-	logo, ok := events[0].(EventCanvasShow)
+	logo, ok := canvasOf(events[0])
 	if !ok {
 		t.Fatalf("first event is %+v, want the logo on the canvas", events[0])
 	}
@@ -245,8 +264,8 @@ func TestShowInfoIsSystemNotice(t *testing.T) {
 	if want := strings.Split(product.Logo, "\n"); !slices.Equal(rows, want) {
 		t.Errorf("canvas rows = %q, want the logo %q", rows, want)
 	}
-	toast, ok := events[1].(EventToastShow)
-	if !ok || !toast.System {
+	toast, ok := toastOf(events[1])
+	if !ok || toast.Surface != NoticeSystem {
 		t.Fatalf("second event is %+v, want a system notice", events[1])
 	}
 	if len(toast.Lines) == 0 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Version") {
@@ -271,23 +290,23 @@ func TestClearMessagesShowsStatusFirst(t *testing.T) {
 	if cleared < 0 {
 		t.Fatalf("events = %+v, want the transcript cleared", out)
 	}
-	var toasts []EventToastShow
+	var toasts []Notice
 	for i, e := range out {
-		if toast, ok := e.(EventToastShow); ok {
+		if toast, ok := toastOf(e); ok {
 			if i < cleared {
 				t.Errorf("notice %+v comes before the transcript is cleared", toast)
 			}
 			toasts = append(toasts, toast)
 		}
 	}
-	if len(toasts) == 0 || !toasts[0].System {
+	if len(toasts) == 0 || toasts[0].Surface != NoticeSystem {
 		t.Fatalf("notices = %+v, want the /status notice first", toasts)
 	}
 	session := fmt.Sprintf("%-10s%s", "Session", s.SessionID())
 	if !slices.ContainsFunc(toasts[0].Lines, func(l style.StyledText) bool { return l.PlainText() == session }) {
 		t.Errorf("first notice = %+v, want the /status of session %s", toasts[0], s.SessionID())
 	}
-	if !slices.ContainsFunc(toasts[1:], func(n EventToastShow) bool { return n.Text == "Chat cleared" }) {
+	if !slices.ContainsFunc(toasts[1:], func(n Notice) bool { return n.Text == "Chat cleared" }) {
 		t.Errorf("notices = %+v, want the chat cleared after the /status notice", toasts)
 	}
 }
