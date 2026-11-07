@@ -183,7 +183,7 @@ func TestSetInlineMode_RebuildsCommittedRows(t *testing.T) {
 // notices of the transcript it replaces, which a rebuild would show again.
 func TestTranscriptResetsDropNotices(t *testing.T) {
 	s, a := newTestService(t)
-	id := storePrompts(t, a, "run the tests")
+	id := storePrompts(t, a, "Run the tests")
 	for _, tt := range []struct {
 		name  string
 		reset func()

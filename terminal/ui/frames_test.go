@@ -178,14 +178,14 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddNotice(Notice{Text: "Nothing to undo"})
 		}},
 		{name: "user_message", h: 4, add: func(ui *UI) {
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 		}},
 		{name: "user_then_notice", h: 7, add: func(ui *UI) {
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
 		{name: "transcript_surfaces", h: 20, add: func(ui *UI) {
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.AddMessage(ChatMessage{ID: "a1", ParentID: "a1", Role: message.RoleAgent,
 				Parts: []message.ContentPart{
@@ -312,13 +312,13 @@ func TestTranscriptFrames(t *testing.T) {
 		// With the prompt style a bar, a notice that would fill a box sits on
 		// the canvas as a prompt does, its first line marked in the tool name
 		// color as its header and the lines under it unmarked. A notice
-		// with a title, as the files a history move changed have, is headed
-		// by the title instead.
+		// with a title is headed by the title instead, as the files a history
+		// move changed are by the snapshot it checked out.
 		{name: "notice_bar", h: 14, add: func(ui *UI) {
 			ui.Apply(ui.service.SetPromptStyle(PromptBar))
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
-			ui.AddNotice(Notice{Lines: BuildDiffToastLines(movedFiles()[:2]), Title: ChangesTitle})
+			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
 		}},
 		// With the prompt style a bar, the session info under the logo is
 		// headed by a marked StatusTitle, its lines unmarked under it.
@@ -835,7 +835,7 @@ func TestResumeNoticeFrames(t *testing.T) {
 func TestQuitFrames(t *testing.T) {
 	ui := newInputTestUI(t)
 	ui.inline = true
-	ui.AddMessage(userText("u1", "run the tests"))
+	ui.AddMessage(userText("u1", "Run the tests"))
 	ui.AddMessage(agentText("a1", "All tests pass."))
 	// The second Ctrl+C quits while the input names the key that quits. The
 	// frame leaves the input box out, and ends with the transcript.
@@ -890,7 +890,7 @@ func TestIndicatorFrames(t *testing.T) {
 		}, show: WorkingIndicator(12*time.Second, false), working: true},
 		// A turn after a tool call is spaced from it once it shows something.
 		{name: "indicator_next_turn", h: 19, add: func(ui *UI) {
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
 				State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
 			next := agentParts("a2")
@@ -906,7 +906,7 @@ func TestIndicatorFrames(t *testing.T) {
 		// Ctrl+O says what it is doing while it lays out a long transcript
 		// again with every tool call expanded.
 		{name: "indicator_expanding_tools", h: 13, add: func(ui *UI) {
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
 				State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
 		}, show: EventIndicatorShow{Text: ExpandingToolsText}},
@@ -994,7 +994,7 @@ func TestWorkedFrames(t *testing.T) {
 		// A run's turn shows its footer once the run ends.
 		{name: "worked_run_ended", h: 8, add: func(ui *UI) {
 			prompt := message.Content{ID: "u1", Role: message.RoleUser,
-				Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "run the tests"}}}
+				Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "Run the tests"}}}
 			reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "provider/model"}
 			done := reply
 			done.Parts = []message.ContentPart{
@@ -1043,7 +1043,7 @@ func TestWorkedFrames(t *testing.T) {
 			second := modelD(agentText("a2", "All tests pass."))
 			second.Usage, second.Window = usage, 200_000
 			msgs := []ChatMessage{
-				userText("u1", "run the tests"),
+				userText("u1", "Run the tests"),
 				first,
 				second,
 				userText("u2", "commit it"),
@@ -1283,7 +1283,7 @@ func TestInlineMenuFrames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.inline = true
-			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddMessage(agentText("a1", "All tests pass."))
 			tt.open(t, ui)
 			rows := append(detachTranscript(ui), ui.inputWrapper)
@@ -1567,7 +1567,7 @@ func TestMenuFrames(t *testing.T) {
 			ui.Apply(ui.service.MoveTree(1))
 			for _, ev := range ui.service.ChooseTreeRow() {
 				if move, ok := ev.(EventTreeMoveRequested); ok {
-					ui.Apply(ui.service.CompleteTreeMove(move, nil, nil))
+					ui.Apply(ui.service.CompleteTreeMove(move, app.MoveResult{}, nil))
 					continue
 				}
 				ui.ProcessEvent(ev)

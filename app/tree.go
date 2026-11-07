@@ -48,23 +48,23 @@ var ErrAlreadyThere = errors.New("the session is already there")
 // a branch switch, and leaves nothing ahead. A move to where the session
 // already is changes nothing, and reports ErrAlreadyThere. An empty
 // messageID reports [session.ErrMessageNotFound].
-func (s Session) Navigate(messageID message.ID) ([]FileDiff, error) {
-	return s.change(func() ([]FileDiff, error) { return s.navigate(messageID) })
+func (s Session) Navigate(messageID message.ID) (MoveResult, error) {
+	return s.change(func() (MoveResult, error) { return s.navigate(messageID) })
 }
 
 // navigate makes the move Navigate describes.
-func (s Session) navigate(messageID message.ID) ([]FileDiff, error) {
+func (s Session) navigate(messageID message.ID) (MoveResult, error) {
 	if messageID == "" {
-		return nil, session.ErrMessageNotFound
+		return MoveResult{}, session.ErrMessageNotFound
 	}
 	v, err := s.branchView()
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	if !slices.ContainsFunc(v.Messages, sameID(messageID)) {
 		branch, _, err := s.branchThrough(messageID)
 		if err != nil {
-			return nil, err
+			return MoveResult{}, err
 		}
 		return s.moveTo(branch, session.Head{ID: messageID})
 	}
@@ -73,7 +73,7 @@ func (s Session) navigate(messageID message.ID) ([]FileDiff, error) {
 		h.Forward = v.Leaf()
 	}
 	if h == v.Head {
-		return nil, ErrAlreadyThere
+		return MoveResult{}, ErrAlreadyThere
 	}
 	return s.moveTo(v.Messages, h)
 }

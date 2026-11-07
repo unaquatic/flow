@@ -581,7 +581,7 @@ func TestCompleteTreeMove(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{state: &UIState{}}
-			if got := s.CompleteTreeMove(tt.event, nil, tt.err); !sameEvents(got, tt.want) {
+			if got := s.CompleteTreeMove(tt.event, app.MoveResult{}, tt.err); !sameEvents(got, tt.want) {
 				t.Errorf("events = %#v, want %#v", got, tt.want)
 			}
 			if s.Streaming() {

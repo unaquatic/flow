@@ -54,7 +54,7 @@ func TestSnapshotFrames(t *testing.T) {
 		// like a tool call's, on the canvas a blank row under the block of
 		// its text.
 		{name: "user_message_indexing", h: 6, add: func(u *ui.UI) {
-			msg := ui.UserText("u1", "run the tests")
+			msg := ui.UserText("u1", "Run the tests")
 			msg.Parts = append(msg.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
 			u.AddMessage(msg)
 		}},
@@ -62,7 +62,7 @@ func TestSnapshotFrames(t *testing.T) {
 		// prompt ends in the one blank row under its text's block, which
 		// parts it from the reply.
 		{name: "user_message_indexed", h: 5, add: func(u *ui.UI) {
-			prompt := ui.UserText("u1", "run the tests")
+			prompt := ui.UserText("u1", "Run the tests")
 			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
 			u.AddMessage(prompt)
 			taken := prompt
@@ -101,7 +101,7 @@ func TestSnapshotFrames(t *testing.T) {
 		{name: "user_messages_grouped_debug", h: 11, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetDebug(true))
 			for _, id := range []message.ID{"u1", "u2"} {
-				prompt := ui.UserText(id, "run the tests")
+				prompt := ui.UserText(id, "Run the tests")
 				prompt.ParentID = "u1"
 				prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: message.PartID(id + "-step"), Snapshot: ui.ToolTurnTree})
 				u.AddMessage(prompt)
@@ -111,7 +111,7 @@ func TestSnapshotFrames(t *testing.T) {
 		// that shows its hash, under the prompt and under the reply's call.
 		{name: "agent_indexed_debug", h: 12, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetDebug(true))
-			prompt := ui.UserText("u1", "run the tests")
+			prompt := ui.UserText("u1", "Run the tests")
 			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Snapshot: ui.ToolTurnTree})
 			u.AddMessage(prompt)
 			text := message.TextPart{ID: "a1-text", Text: "Running the tests."}
@@ -134,10 +134,35 @@ func TestSnapshotFrames(t *testing.T) {
 			reply.Usage, reply.Worked = message.Usage{InputTokens: 12}, 3*time.Second
 			u.AddMessage(reply)
 		}},
-		// A step's changes start collapsed to a header like a tool call's: the
+		// A step's changes start collapsed to a row like a tool call's: the
 		// name, and the files counted as an undo notice counts them.
 		{name: "agent_patch", h: 8, add: patchTurn},
+		// Expanded, the header is the name alone, with the count under it
+		// over the diff.
 		{name: "agent_patch_expanded", h: 15, add: func(u *ui.UI) {
+			patchTurn(u)
+			ui.ExpandTools(u)
+		}},
+		// The row takes the marker of the tool calls while /settings shows
+		// it, and keeps it expanded plain, as a tool call does.
+		{name: "agent_patch_marker", h: 8, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetToolMarkers(true))
+			patchTurn(u)
+		}},
+		// Each file a step changed shows its path and counts, and right under
+		// them its hunks, without Git's headers, a blank row under the file
+		// above.
+		{name: "agent_patch_files_expanded", h: 18, add: func(u *ui.UI) {
+			u.AddMessage(ui.AgentText("a1", "Updated the calculator."))
+			patchBox(u, "a1").SetPatch(
+				"diff --git a/calc.go b/calc.go\nindex ec677425..8586c259 100644\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n" +
+					"diff --git a/old.go b/old.go\ndeleted file mode 100644\n--- a/old.go\n+++ /dev/null\n@@ -1 +0,0 @@\n-package calc\n")
+			u.Bubble("a1").SyncRows()
+			ui.ExpandTools(u)
+		}},
+		{name: "agent_patch_expanded_plain_marker", h: 15, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetToolMarkers(true))
+			u.Apply(u.Service().SetExpandStyle(ui.ExpandedPlain))
 			patchTurn(u)
 			ui.ExpandTools(u)
 		}},
@@ -171,7 +196,7 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := ui.NewInputTestUI(t, snapshotViews())
-			prompt := ui.UserText("u1", "run the tests")
+			prompt := ui.UserText("u1", "Run the tests")
 			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
 			u.AddMessage(prompt)
 			u.AddMessage(ui.AgentText("a1", "one\n\ntwo\n\nthree\n\nfour\n\nfive\n\nsix\n\nseven\n\neight"))
@@ -187,7 +212,7 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 func TestPromptPinsWithoutItsSnapshot(t *testing.T) {
 	u := ui.NewInputTestUI(t, snapshotViews())
 	for _, n := range []string{"1", "2"} {
-		prompt := ui.UserText(message.ID("u"+n), "run the tests")
+		prompt := ui.UserText(message.ID("u"+n), "Run the tests")
 		prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: message.PartID("u" + n + "-step"), Pending: true})
 		u.AddMessage(prompt)
 		u.AddMessage(ui.AgentText(message.ID("a"+n), "one\n\ntwo\n\nthree\n\nfour\n\nfive\n\nsix"))
@@ -231,7 +256,7 @@ func TestPromptPinsWithoutItsSnapshot(t *testing.T) {
 func TestPromptsDoNotShareABubble(t *testing.T) {
 	u := ui.NewInlineTestUI(t, snapshotViews())
 	for _, id := range []message.ID{"u1", "u2"} {
-		prompt := ui.UserText(id, "run the tests")
+		prompt := ui.UserText(id, "Run the tests")
 		prompt.ParentID = "u1"
 		u.AddMessage(prompt)
 	}
@@ -275,7 +300,7 @@ func TestSnapshotDebugSet(t *testing.T) {
 	step := func(id message.PartID) message.ContentPart {
 		return snapshot.StepPart{ID: id, Snapshot: ui.ToolTurnTree}
 	}
-	prompt := ui.UserText("u1", "run the tests")
+	prompt := ui.UserText("u1", "Run the tests")
 	prompt.Parts = append(prompt.Parts, step("u1-step"))
 	u.AddMessage(prompt)
 	u.AddMessage(ui.AgentParts("a1", message.TextPart{ID: "a1-text", Text: "Done."}, step("a1-step")))

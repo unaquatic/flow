@@ -108,7 +108,7 @@ func TestMessageUpdatesKeepOneWidgetPerPart(t *testing.T) {
 // none.
 func TestMessagesHoldThePartsBefore(t *testing.T) {
 	prompt := ChatMessage{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{
-		message.TextPart{ID: "u1-text", Text: "run the tests"}, snapshot.StepPart{ID: "u1-step", Snapshot: toolTurnBase},
+		message.TextPart{ID: "u1-text", Text: "Run the tests"}, snapshot.StepPart{ID: "u1-step", Snapshot: toolTurnBase},
 	}}
 	first := ChatMessage{ID: "a1", Role: message.RoleAgent, Parts: []message.ContentPart{snapshot.StepPart{ID: "a1-step", Snapshot: toolTurnTree}}}
 	second := ChatMessage{ID: "a2", Role: message.RoleAgent}
@@ -141,7 +141,7 @@ func TestPromptStartedAndEnded(t *testing.T) {
 	prompt := app.Message{
 		ID:    "u1",
 		Role:  message.RoleUser,
-		Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "run the tests"}},
+		Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "Run the tests"}},
 	}
 	ui.Apply(ui.service.ApplyAgentEvent(app.EventMessageStarted{Message: prompt}))
 	ui.Apply(ui.service.ApplyAgentEvent(app.EventMessageEnded{Message: prompt}))
@@ -152,7 +152,7 @@ func TestPromptStartedAndEnded(t *testing.T) {
 			texts = append(texts, view.Content())
 		}
 	}
-	if want := []string{"run the tests"}; !slices.Equal(texts, want) {
+	if want := []string{"Run the tests"}; !slices.Equal(texts, want) {
 		t.Errorf("prompt shows %q, want %q", texts, want)
 	}
 }
@@ -280,7 +280,7 @@ func TestClickKeepsHeaderInPlace(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.Apply(ui.service.SetExpandStyle(tt.style))
 			for i := range 4 {
-				ui.AddMessage(userText(message.ID(fmt.Sprintf("u%d", i)), "run the tests"))
+				ui.AddMessage(userText(message.ID(fmt.Sprintf("u%d", i)), "Run the tests"))
 			}
 			ui.AddMessage(agentParts("a1", message.ToolPart{ID: "a1-tool", CallID: "c1", Name: "bash",
 				State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
@@ -391,7 +391,7 @@ func TestCacheRowUnderReply(t *testing.T) {
 		t.Errorf("cache row after the call = %q, shown %v; want %q, shown", got, seg.Cache.Visible(), row)
 	}
 
-	prompt := userText("u1", "run the tests")
+	prompt := userText("u1", "Run the tests")
 	prompt.Usage = usage
 	ui.AddMessage(prompt)
 	if ui.messageWidgets["u1"].SegmentFor("u1").Cache.Visible() {

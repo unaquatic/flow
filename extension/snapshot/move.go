@@ -11,7 +11,8 @@ import (
 )
 
 // OnMove resets the workspace to the tree recorded for m.Head, and reports the
-// files the move changed. The tree comes from the transcript, so the result
+// files the move changed and the hash of that tree, as the Checkout of its
+// result. The tree comes from the transcript, so the result
 // depends only on the destination and never on the point being left: undo,
 // redo, and a branch switch are this one operation.
 //
@@ -36,7 +37,7 @@ func (e *Extension) OnMove(ctx context.Context, m extension.Move) (extension.Mov
 	if err != nil {
 		slog.Warn("track snapshot after checkout", "err", err)
 	}
-	return extension.MoveResult{Files: e.fileDiffs(ctx, before, after)}, nil
+	return extension.MoveResult{Files: e.fileDiffs(ctx, before, after), Checkout: tree.String()}, nil
 }
 
 // TreeAt returns the workspace tree recorded for head, a message of branch.

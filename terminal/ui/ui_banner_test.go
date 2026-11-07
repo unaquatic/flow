@@ -242,7 +242,7 @@ func TestCtrlCClosesPages(t *testing.T) {
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}, panel: func(ui *UI) render.Renderable { return ui.bannerPanel }},
 		{name: "resume", open: func(t *testing.T, ui *UI) {
-			storePrompts(t, ui.service.app, "run the tests")
+			storePrompts(t, ui.service.app, "Run the tests")
 			ui.Apply(ui.service.HandleSubmit("/resume"))
 		}, panel: func(ui *UI) render.Renderable { return ui.sessionPanel }},
 	}

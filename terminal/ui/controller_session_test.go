@@ -128,13 +128,13 @@ func TestPrompts(t *testing.T) {
 		return message.Content{Role: role, Parts: []message.ContentPart{message.TextPart{Text: s}}}
 	}
 	msgs := []message.Content{
-		text(message.RoleUser, "  run   the\ttests\n"),
+		text(message.RoleUser, "  Run   the\ttests\n"),
 		text(message.RoleAgent, "All tests pass."),
 		// A prompt without text has nothing to preview.
 		text(message.RoleUser, " \n "),
 		text(message.RoleUser, "commit it"),
 	}
-	want := []string{"run the tests", "commit it"}
+	want := []string{"Run the tests", "commit it"}
 	if got := slices.Collect(Prompts(msgs)); !slices.Equal(got, want) {
 		t.Errorf("prompts = %q, want %q", got, want)
 	}

@@ -1,8 +1,8 @@
 === text ===
 |  Updated the calculator.               |
 |                                        |
+|  Diff 1 file  +2 -0                    |
 |                                        |
-|  changes 1 file  +2 -0                 |
 |                                        |
 |                                        |
 |                                        |
@@ -10,18 +10,9 @@
 === fg ===
 |  AAAAAAA AAA AAAAAAAAAAA               |
 |                                        |
-|                                        |
-|  AAAAAAA A AAAA  BB CC                 |
-|                                        |
+|  AAAA A AAAA  BB CC                    |
 |                                        |
 |                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 |                                        |
 |                                        |
@@ -29,4 +20,3 @@
 A #e6e6e6
 B #5fc882
 C #dc646e
-░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -59,8 +59,8 @@ func (s Session) Branches() (Fork, error) {
 }
 
 // SwitchBranch moves the session onto the branch opened by messageID.
-func (s Session) SwitchBranch(messageID message.ID) ([]FileDiff, error) {
-	return s.change(func() ([]FileDiff, error) { return s.switchBranch(messageID) })
+func (s Session) SwitchBranch(messageID message.ID) (MoveResult, error) {
+	return s.change(func() (MoveResult, error) { return s.switchBranch(messageID) })
 }
 
 // forkOn returns the newest fork among the messages of one branch.

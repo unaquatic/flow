@@ -23,12 +23,12 @@ func (ui *UI) RequestRedo() {
 // off the event loop for the reason given on RequestUndo: before a chosen
 // prompt, and to any other message.
 func (ui *UI) RequestTreeMove(e EventTreeMoveRequested) {
-	run := func(s app.Session) ([]app.FileDiff, error) { return s.Navigate(e.MessageID) }
+	run := func(s app.Session) (app.MoveResult, error) { return s.Navigate(e.MessageID) }
 	if e.Edit {
-		run = func(s app.Session) ([]app.FileDiff, error) { return s.Checkout(e.MessageID) }
+		run = func(s app.Session) (app.MoveResult, error) { return s.Checkout(e.MessageID) }
 	}
-	ui.move(run, func(files []app.FileDiff, err error) []UIEvent {
-		return ui.service.CompleteTreeMove(e, files, err)
+	ui.move(run, func(moved app.MoveResult, err error) []UIEvent {
+		return ui.service.CompleteTreeMove(e, moved, err)
 	})
 }
 
@@ -41,8 +41,8 @@ func (ui *UI) RequestTreeMove(e EventTreeMoveRequested) {
 // clears every row, notices included. report is applied behind it, so that
 // the notice it shows, such as the files the move changed, stays.
 func (ui *UI) move(
-	run func(app.Session) ([]app.FileDiff, error),
-	report func([]app.FileDiff, error) []UIEvent,
+	run func(app.Session) (app.MoveResult, error),
+	report func(app.MoveResult, error) []UIEvent,
 ) {
 	sess, ok := ui.service.ActiveSession()
 	if !ok {
@@ -54,9 +54,9 @@ func (ui *UI) move(
 			ui.renderer.Enqueue(func() { ui.Apply(ui.service.EndMove()) })
 			return
 		}
-		files, err := run(sess)
+		moved, err := run(sess)
 		ui.appEvents.After(func() {
-			ui.Apply(report(files, err))
+			ui.Apply(report(moved, err))
 			ui.Apply(ui.service.EndMove())
 		})
 	}()

@@ -124,7 +124,8 @@ func TestNavigate_OntoAnotherBranch(t *testing.T) {
 func TestNavigate_ToTheHeadChangesNothing(t *testing.T) {
 	w, worktree, ids := forkedSession(t, "ses_nav_here")
 
-	files, err := w.navigate(ids[5])
+	moved, err := w.navigate(ids[5])
+	files := moved.Files
 	if !errors.Is(err, ErrAlreadyThere) {
 		t.Fatalf("navigate to the head = %v, want ErrAlreadyThere", err)
 	}

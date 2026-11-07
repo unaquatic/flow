@@ -35,20 +35,20 @@ func (s *Service) HandleRedo() []UIEvent {
 	return []UIEvent{EventRedoRequested{}}
 }
 
-// CompleteUndo reports the files a finished undo changed.
-func (s *Service) CompleteUndo(files []app.FileDiff, err error) []UIEvent {
+// CompleteUndo reports what a finished undo checked out and changed.
+func (s *Service) CompleteUndo(moved app.MoveResult, err error) []UIEvent {
 	if err != nil {
 		return s.ShowToast(UndoErrorMessage(err))
 	}
-	return s.ShowDiffToast(files)
+	return s.ShowDiffToast(moved)
 }
 
-// CompleteRedo reports the files a finished redo changed.
-func (s *Service) CompleteRedo(files []app.FileDiff, err error) []UIEvent {
+// CompleteRedo reports what a finished redo checked out and changed.
+func (s *Service) CompleteRedo(moved app.MoveResult, err error) []UIEvent {
 	if err != nil {
 		return s.ShowToast(RedoErrorMessage(err))
 	}
-	return s.ShowDiffToast(files)
+	return s.ShowDiffToast(moved)
 }
 
 // UndoErrorMessage returns the toast text of a failed undo.
@@ -97,16 +97,37 @@ func (s *Service) ShowKeywordToast(before, keyword, after string) []UIEvent {
 const NoFileChangesText = "No file changes"
 
 // ChangesTitle heads the summary of the files a history move changed while
-// prompts show in PromptBar.
+// prompts show in PromptBar, when the move checked nothing out.
 const ChangesTitle = "Changes"
 
-// ShowDiffToast returns a transcript notice summarizing the files a history
-// move changed, titled ChangesTitle, or saying that it changed none.
-func (s *Service) ShowDiffToast(files []app.FileDiff) []UIEvent {
-	if len(files) == 0 {
-		return s.ShowToast(NoFileChangesText)
+// ShortRefLen is how many characters of what a history move checked out,
+// such as a snapshot's hash, CheckoutTitle shows.
+const ShortRefLen = 8
+
+// CheckoutTitle returns the title of the notice of a history move that
+// checked out ref, the first ShortRefLen characters of it in brackets after
+// "Checkout", such as "Checkout [c1d2e3f4]", or ChangesTitle when ref is
+// empty.
+func CheckoutTitle(ref string) string {
+	if ref == "" {
+		return ChangesTitle
 	}
-	return s.AddNotice(Notice{Lines: BuildDiffToastLines(files), Title: ChangesTitle})
+	return "Checkout [" + ref[:min(len(ref), ShortRefLen)] + "]"
+}
+
+// ShowDiffToast returns a transcript notice summarizing the files a history
+// move changed, titled CheckoutTitle of what it checked out, or saying that
+// it changed none: a single line when it checked nothing out either, and
+// under the title otherwise.
+func (s *Service) ShowDiffToast(moved app.MoveResult) []UIEvent {
+	title := CheckoutTitle(moved.Checkout)
+	switch {
+	case len(moved.Files) > 0:
+		return s.AddNotice(Notice{Lines: BuildDiffToastLines(moved.Files), Title: title})
+	case moved.Checkout != "":
+		return s.AddNotice(Notice{Text: NoFileChangesText, Title: title})
+	}
+	return s.ShowToast(NoFileChangesText)
 }
 
 // DiffAddFg and DiffDelFg color the counts of added and deleted lines in a

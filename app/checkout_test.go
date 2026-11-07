@@ -231,7 +231,8 @@ func TestUndo_RewindsLastTurnFiles(t *testing.T) {
 		t.Fatalf("setup: a.txt = %q, want v2", got)
 	}
 
-	files, err := w.undo()
+	moved, err := w.undo()
+	files := moved.Files
 	if err != nil {
 		t.Fatalf("undo: %v", err)
 	}
@@ -251,6 +252,13 @@ func TestUndo_RewindsLastTurnFiles(t *testing.T) {
 	sess := storedSession(t, w.app.sessions, w.id)
 	if sess == nil || !sess.Head.MovedBack() {
 		t.Fatal("expected the head to be parked behind a branch it can return to")
+	}
+	branch, err := w.app.sessions.Branch(t.Context(), w.id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tree, err := snapshot.TreeAt(branch, sess.Head.ID); err != nil || moved.Checkout != tree.String() {
+		t.Errorf("undo checked out %q, want the tree of the first turn, %s (%v)", moved.Checkout, tree, err)
 	}
 }
 
@@ -473,7 +481,8 @@ func TestCheckout_ExportedRejectsUnknownMessage(t *testing.T) {
 	w, worktree := newTestSession(t, "ses_queue_err")
 	seedTurn(t, w, worktree, "first", map[string]string{"a.txt": "v1"})
 
-	files, err := w.Checkout("msg_nonexistent")
+	moved, err := w.Checkout("msg_nonexistent")
+	files := moved.Files
 	if !errors.Is(err, session.ErrMessageNotFound) {
 		t.Fatalf("Checkout = %v, want ErrMessageNotFound", err)
 	}
@@ -545,7 +554,8 @@ func TestMove_WithoutMoveHooks(t *testing.T) {
 	w, worktree := newTestSession(t, "ses_nohooks")
 	seedTurn(t, w, worktree, "first", map[string]string{"a.txt": "v1"})
 	w.app.extensions = nil
-	files, err := w.undo()
+	moved, err := w.undo()
+	files := moved.Files
 	if err != nil || files != nil {
 		t.Fatalf("undo = %v, %v; want no files and no error", files, err)
 	}

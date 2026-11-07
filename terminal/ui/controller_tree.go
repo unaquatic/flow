@@ -124,21 +124,21 @@ func (s *Service) ChooseTreeRow() []UIEvent {
 	})
 }
 
-// CompleteTreeMove reports the files a finished move to a message chosen in
-// the session tree changed. A move before a prompt also puts the prompt's
+// CompleteTreeMove reports what a finished move to a message chosen in the
+// session tree checked out and changed. A move before a prompt also puts the prompt's
 // text in the input; a move to a reply the transcript already ended at needs
 // no report.
 //
 // A failed move reports why and leaves the input alone, so that a prompt
 // sent from it does not land where it was not meant to.
-func (s *Service) CompleteTreeMove(e EventTreeMoveRequested, files []app.FileDiff, err error) []UIEvent {
+func (s *Service) CompleteTreeMove(e EventTreeMoveRequested, moved app.MoveResult, err error) []UIEvent {
 	switch {
 	case err != nil && !errors.Is(err, app.ErrAlreadyThere):
 		return s.ShowToast(checkoutErrorMessage("tree move", err))
 	case e.Edit:
-		return slices.Concat(s.ShowDiffToast(files), s.SetInput(e.Prompt))
+		return slices.Concat(s.ShowDiffToast(moved), s.SetInput(e.Prompt))
 	case err != nil:
 		return nil
 	}
-	return s.ShowDiffToast(files)
+	return s.ShowDiffToast(moved)
 }

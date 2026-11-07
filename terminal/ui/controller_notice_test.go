@@ -84,7 +84,7 @@ func TestToolsToggleText(t *testing.T) {
 func TestSessionSelectSettlesIndicator(t *testing.T) {
 	s, a := newTestService(t)
 	s.InitSession(t.Context(), "")
-	id := storePrompts(t, a, "run the tests")
+	id := storePrompts(t, a, "Run the tests")
 	s.state.Running = true
 	s.ShowIndicator("")
 

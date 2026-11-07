@@ -209,7 +209,7 @@ func TestAssignWorked(t *testing.T) {
 // from when their prompt and last reply were stored.
 func TestOpenSessionTimesTurns(t *testing.T) {
 	s, a := newTestService(t)
-	id := storePrompts(t, a, "run the tests", "commit it")
+	id := storePrompts(t, a, "Run the tests", "commit it")
 	if err := s.OpenSession(id); err != nil {
 		t.Fatal(err)
 	}

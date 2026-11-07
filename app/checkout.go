@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"errors"
 	"io/fs"
 	"slices"
@@ -52,14 +53,14 @@ func (v branchView) Visible() []message.Content {
 }
 
 // undo moves the session to the state before its newest visible prompt.
-func (s Session) undo() ([]FileDiff, error) {
+func (s Session) undo() (MoveResult, error) {
 	v, err := s.branchView()
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	target, ok := undoTarget(v.Visible())
 	if !ok {
-		return nil, ErrNothingToUndo
+		return MoveResult{}, ErrNothingToUndo
 	}
 	return s.moveTo(v.Messages, session.Head{ID: target, Forward: v.Leaf()})
 }
@@ -67,17 +68,17 @@ func (s Session) undo() ([]FileDiff, error) {
 // redo moves the session forward by one prompt and its run, towards the branch
 // leaf it was last moved back from. Reaching the leaf leaves nothing further
 // ahead.
-func (s Session) redo() ([]FileDiff, error) {
+func (s Session) redo() (MoveResult, error) {
 	v, err := s.branchView()
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	if !v.Head.MovedBack() {
-		return nil, ErrNothingToRedo
+		return MoveResult{}, ErrNothingToRedo
 	}
 	target, ok := redoTarget(v.Messages, v.Head.ID)
 	if !ok {
-		return nil, ErrNothingToRedo
+		return MoveResult{}, ErrNothingToRedo
 	}
 	h := session.Head{ID: target}
 	if target != v.Leaf() {
@@ -88,14 +89,14 @@ func (s Session) redo() ([]FileDiff, error) {
 
 // checkoutAt moves the session to the state before messageID. An empty
 // messageID returns to the latest state.
-func (s Session) checkoutAt(messageID message.ID) ([]FileDiff, error) {
+func (s Session) checkoutAt(messageID message.ID) (MoveResult, error) {
 	v, err := s.branchView()
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	if messageID == "" {
 		if !v.Head.MovedBack() {
-			return nil, ErrNothingToRedo
+			return MoveResult{}, ErrNothingToRedo
 		}
 		return s.moveTo(v.Messages, session.Head{ID: v.Head.Forward})
 	}
@@ -108,14 +109,14 @@ func (s Session) checkoutAt(messageID message.ID) ([]FileDiff, error) {
 // checkoutOffBranch moves to a point on a branch the session is not currently
 // on. Like a branch switch the move is sideways, so it leaves nothing ahead to
 // redo: the branch being left stays reachable by name.
-func (s Session) checkoutOffBranch(messageID message.ID) ([]FileDiff, error) {
+func (s Session) checkoutOffBranch(messageID message.ID) (MoveResult, error) {
 	branch, _, err := s.branchThrough(messageID)
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	idx := slices.IndexFunc(branch, sameID(messageID))
 	if idx < 0 {
-		return nil, session.ErrMessageNotFound
+		return MoveResult{}, session.ErrMessageNotFound
 	}
 	return s.moveTo(branch, session.Head{ID: precedes(branch, idx)})
 }
@@ -138,10 +139,10 @@ func sameID(id message.ID) func(message.Content) bool {
 //
 // The move is sideways rather than backwards, so it leaves nothing ahead to
 // redo: the branch being left stays reachable by switching back to it.
-func (s Session) switchBranch(messageID message.ID) ([]FileDiff, error) {
+func (s Session) switchBranch(messageID message.ID) (MoveResult, error) {
 	branch, leaf, err := s.branchThrough(messageID)
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	return s.moveTo(branch, session.Head{ID: leaf})
 }
@@ -190,28 +191,30 @@ func (s Session) head() (session.Head, error) {
 
 // moveTo lets the extension.MoveHook of each extension bring what it keeps in step
 // with the session, such as the workspace, to h, records h, and reports the
-// files the move changed. branch must contain h.ID. A hook that fails, or
-// refuses the move, leaves the head where it was.
+// files the move changed and what the hooks checked out: that of the last
+// hook to check out anything. branch must contain h.ID. A hook that fails,
+// or refuses the move, leaves the head where it was.
 //
 // The hooks are given the destination alone, never the point being left:
 // undo, redo, and a branch switch are this one operation.
-func (s Session) moveTo(branch []message.Content, h session.Head) ([]FileDiff, error) {
+func (s Session) moveTo(branch []message.Content, h session.Head) (MoveResult, error) {
 	if h.ID != "" && !slices.ContainsFunc(branch, sameID(h.ID)) {
-		return nil, session.ErrMessageNotFound
+		return MoveResult{}, session.ErrMessageNotFound
 	}
 	m := extension.Move{SessionID: s.id, Branch: branch, Head: h.ID}
-	var files []FileDiff
+	var moved MoveResult
 	for hook := range extension.Hooks[extension.MoveHook](s.app.extensions) {
 		res, err := hook.OnMove(s.ctx, m)
 		if err != nil {
-			return nil, err
+			return MoveResult{}, err
 		}
-		files = append(files, res.Files...)
+		moved.Files = append(moved.Files, res.Files...)
+		moved.Checkout = cmp.Or(res.Checkout, moved.Checkout)
 	}
 	if err := s.app.sessions.SetHead(s.ctx, s.id, h); err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
-	return files, nil
+	return moved, nil
 }
 
 // undoTarget returns the message a rewound session should end at, which is the

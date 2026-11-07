@@ -1,27 +1,27 @@
 === text ===
 |                                        |
-|  run the tests                         |
+|  Run the tests                         |
 |                                        |
 |                                        |
-|  Snapshot c1d2e3f4                     |
+|  Snapshot [c1d2e3f4]                   |
 |                                        |
 |                                        |
-|  run the tests                         |
+|  Run the tests                         |
 |                                        |
 |                                        |
-|  Snapshot c1d2e3f4                     |
+|  Snapshot [c1d2e3f4]                   |
 === fg ===
 |                                        |
 |  AAA AAA AAAAA                         |
 |                                        |
 |                                        |
-|  BBBBBBBB BBBBBBBB                     |
+|  BBBBBBBB BBBBBBBBBB                   |
 |                                        |
 |                                        |
 |  AAA AAA AAAAA                         |
 |                                        |
 |                                        |
-|  BBBBBBBB BBBBBBBB                     |
+|  BBBBBBBB BBBBBBBBBB                   |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
