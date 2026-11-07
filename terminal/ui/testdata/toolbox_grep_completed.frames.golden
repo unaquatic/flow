@@ -1,8 +1,8 @@
 === text ===
 |                                                            |
-|  Grep [2 matches]                                          |
+|  Grep TODO [2 matches]                                     |
 |                                                            |
-|  TODO [path calculator] [include *.go]                     |
+|  [path calculator] [include *.go]                          |
 |                                                            |
 |  calculator/calc.go:3:// TODO: handle overflow             |
 |  calculator/calc_test.go:9:// TODO: test Divide            |
@@ -10,12 +10,12 @@
 |                                                            |
 === fg ===
 |                                                            |
-|  AAAA AA AAAAAAAA                                          |
+|  AAAA AAAA AA AAAAAAAA                                     |
 |                                                            |
-|  BBBB CCCCC CCCCCCCCCCC CCCCCCCC CCCCC                     |
+|  BBBBB BBBBBBBBBBB BBBBBBBB BBBBB                          |
 |                                                            |
-|  BBBBBBBBBBBBBBBBBBBBBBB BBBBB BBBBBB BBBBBBBB             |
-|  BBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBB BBBB BBBBBB            |
+|  CCCCCCCCCCCCCCCCCCCCCCC CCCCC CCCCCC CCCCCCCC             |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCC CCCCC CCCC CCCCCC            |
 |                                                            |
 |                                                            |
 === bg ===
@@ -28,18 +28,8 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                            |
-=== attrs ===
-|                                                            |
-|  BBBB                                                      |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
 === legend ===
-A #707070
-B #e6e6e6
-C #8a8a8a
+A #8c8c8c
+B #8a8a8a
+C #e6e6e6
 ░ #1f1f1f SurfaceRaised/SuccessSurface

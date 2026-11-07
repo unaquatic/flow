@@ -1,24 +1,24 @@
 === text ===
 |                                                            |
-|  Read                                                      |
-|                                                            |
-|  calc.go [8-9]                                             |
+|  Read calc.go [8-9]                                        |
 |                                                            |
 |  // Divide returns the quotient.                           |
 |  func (c *Calculator) Divide(a, b float64) float64 {       |
 |                                                            |
 |  [showing lines 8-9 of 29]                                 |
 |                                                            |
+|                                                            |
+|                                                            |
 === fg ===
 |                                                            |
-|  AAAA                                                      |
+|  AAAA AAAAAAA AAAAA                                        |
 |                                                            |
-|  BBBBBBB CCCCC                                             |
+|  BB BBBBBB BBBBBBB BBB BBBBBBBBB                           |
+|  CCCC DD DDDDDDDDDDDD EEEEEEDDD D CCCCCCCD CCCCCCC D       |
 |                                                            |
-|  CC CCCCCC CCCCCCC CCC CCCCCCCCC                           |
-|  DDDD BB BBBBBBBBBBBB EEEEEEBBB B DDDDDDDB DDDDDDD B       |
+|  DDDDDDDD DDDDD DDD DD DDD                                 |
 |                                                            |
-|  BBBBBBBB BBBBB BBB BB BBB                                 |
+|                                                            |
 |                                                            |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -29,11 +29,9 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-=== attrs ===
 |                                                            |
-|  BBBB                                                      |
+|                                                            |
+=== attrs ===
 |                                                            |
 |                                                            |
 |                                                            |
@@ -42,10 +40,12 @@
 |                                                            |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 === legend ===
-A #707070
-B #e6e6e6
-C #8a8a8a
-D #eb7513
+A #8c8c8c
+B #8a8a8a
+C #eb7513
+D #e6e6e6
 E #ffb642
 ░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -239,23 +239,27 @@ const NoMatchesText = "[no matches]"
 
 // The names of the /settings rows, capitalized as a menu's words are:
 // fullscreenSetting names the row that switches fullscreen and inline mode,
-// cacheUsageSetting the row that sets the CacheMode, toolCallsSetting the row
-// that sets the ToolCallStyle, toolMarkerSetting the row that shows or hides
-// ToolMarker, toolColorSetting the row that sets the ToolNameColor,
+// cacheUsageSetting the row that sets the CacheMode, expandedSetting the row
+// that sets the ExpandedStyle of expanded tool calls, toolMarkerSetting the row that shows or hides
+// ToolMarker, markerShapeSetting the row that sets its MarkerShape,
+// toolColorSetting the row that sets the ToolNameColor,
 // keyHintsSetting the row that sets the KeyHintsMode,
 // listCountSetting the row that sets the CountPlace, selectionSetting the
-// row that sets the SelectionStyle, and debugSetting the row that switches
+// row that sets the SelectionStyle, promptSetting the row that sets the
+// PromptStyle, and debugSetting the row that switches
 // Debug.
 const (
-	fullscreenSetting = "Fullscreen"
-	cacheUsageSetting = "Cache usage"
-	toolCallsSetting  = "Tool calls"
-	toolMarkerSetting = "Tool marker"
-	toolColorSetting  = "Tool name color"
-	keyHintsSetting   = "Key hints"
-	listCountSetting  = "List count"
-	selectionSetting  = "Selection"
-	debugSetting      = "Debug"
+	fullscreenSetting  = "Fullscreen"
+	cacheUsageSetting  = "Cache usage"
+	expandedSetting    = "Expanded tools"
+	toolMarkerSetting  = "Tool marker"
+	markerShapeSetting = "Marker shape"
+	toolColorSetting   = "Tool name color"
+	keyHintsSetting    = "Key hints"
+	listCountSetting   = "List count"
+	selectionSetting   = "Selection"
+	promptSetting      = "Prompt style"
+	debugSetting       = "Debug"
 )
 
 // ShowSettingsMenu lists the settings with their values, searched from the
@@ -263,8 +267,9 @@ const (
 // so that the terminal starts with it next time. Choosing one moves it to its next value, after the last back to the
 // first, and ←/→ move it back and forth; the menu stays open with the same
 // search, on the setting. Fullscreen is on or off, cache usage one of
-// CacheModes, tool calls one of ToolCallStyles, the tool marker on or off,
-// the tool name color one of ToolNameColors, key hints one of KeyHintsModes,
+// CacheModes, expanded tools one of ExpandedStyles, the tool marker on or off,
+// the marker shape one of MarkerShapes, the tool name color one of
+// ToolNameColors, key hints one of KeyHintsModes,
 // list count one of CountPlaces, selection one of SelectionStyles, in their
 // order, and debug on or off.
 func (s *Service) ShowSettingsMenu() []UIEvent {
@@ -279,11 +284,14 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			setting(cacheUsageSetting, s.state.CacheMode.String(), func(step int) []UIEvent {
 				return s.SetCacheMode(s.state.CacheMode.Next(step))
 			}),
-			setting(toolCallsSetting, s.state.ToolStyle.String(), func(step int) []UIEvent {
-				return s.SetToolStyle(s.state.ToolStyle.Next(step))
+			setting(expandedSetting, s.state.ExpandStyle.String(), func(step int) []UIEvent {
+				return s.SetExpandStyle(s.state.ExpandStyle.Next(step))
 			}),
 			setting(toolMarkerSetting, onOff(s.state.ToolMarkers), func(int) []UIEvent {
 				return s.SetToolMarkers(!s.state.ToolMarkers)
+			}),
+			setting(markerShapeSetting, s.state.MarkerShape.String(), func(step int) []UIEvent {
+				return s.SetMarkerShape(s.state.MarkerShape.Next(step))
 			}),
 			setting(toolColorSetting, s.state.ToolColor.String(), func(step int) []UIEvent {
 				return s.SetToolColor(s.state.ToolColor.Next(step))
@@ -296,6 +304,9 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			}),
 			setting(selectionSetting, s.state.Selection.String(), func(step int) []UIEvent {
 				return s.SetSelectionStyle(s.state.Selection.Next(step))
+			}),
+			setting(promptSetting, s.state.PromptStyle.String(), func(step int) []UIEvent {
+				return s.SetPromptStyle(s.state.PromptStyle.Next(step))
 			}),
 			setting(debugSetting, onOff(s.state.Debug), func(int) []UIEvent {
 				return s.SetDebug(!s.state.Debug)
@@ -312,11 +323,11 @@ func (s *Service) SetCacheMode(mode CacheMode) []UIEvent {
 	return append([]UIEvent{EventCacheModeSet{Mode: mode}}, s.PersistTerminal()...)
 }
 
-// SetToolStyle shows every collapsed tool call in the transcript and the
+// SetExpandStyle shows every expanded tool call in the transcript and the
 // session preview, and those added later, as ts says.
-func (s *Service) SetToolStyle(ts ToolCallStyle) []UIEvent {
-	s.state.ToolStyle = ts
-	return append([]UIEvent{EventToolStyleSet{Style: ts}}, s.PersistTerminal()...)
+func (s *Service) SetExpandStyle(ts ExpandedStyle) []UIEvent {
+	s.state.ExpandStyle = ts
+	return append([]UIEvent{EventExpandStyleSet{Style: ts}}, s.PersistTerminal()...)
 }
 
 // SetToolMarkers shows ToolMarker before the name of every tool call in the
@@ -325,6 +336,13 @@ func (s *Service) SetToolStyle(ts ToolCallStyle) []UIEvent {
 func (s *Service) SetToolMarkers(show bool) []UIEvent {
 	s.state.ToolMarkers = show
 	return append([]UIEvent{EventToolMarkersSet{Show: show}}, s.PersistTerminal()...)
+}
+
+// SetMarkerShape shows the marker of every tool call in the transcript and
+// the session preview, and of those added later, in m.
+func (s *Service) SetMarkerShape(m MarkerShape) []UIEvent {
+	s.state.MarkerShape = m
+	return append([]UIEvent{EventMarkerShapeSet{Shape: m}}, s.PersistTerminal()...)
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
@@ -347,6 +365,14 @@ func (s *Service) SetKeyHintsMode(mode KeyHintsMode) []UIEvent {
 func (s *Service) SetCountPlace(place CountPlace) []UIEvent {
 	s.state.Count = place
 	return append([]UIEvent{EventCountPlaceSet{Place: place}}, s.PersistTerminal()...)
+}
+
+// SetPromptStyle shows every prompt in the transcript, and those added
+// later, as style says: on the box background, or with a bar of the
+// primary color at its left edge.
+func (s *Service) SetPromptStyle(style PromptStyle) []UIEvent {
+	s.state.PromptStyle = style
+	return append([]UIEvent{EventPromptStyleSet{Style: style}}, s.PersistTerminal()...)
 }
 
 // SetSelectionStyle marks the selected row of every menu as style says: with

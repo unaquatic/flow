@@ -42,8 +42,8 @@ func TestTickIndicatorCounts(t *testing.T) {
 		ui.Apply(ui.service.ApplyAgentEvent(app.EventMessageStarted{EventBase: now(),
 			Message: app.Message{ID: "u1", Role: message.RoleUser}}))
 		for _, want := range []string{
-			"Worked for 1s [esc cancel] [ctrl+o expand]",
-			"Worked for 2s [esc cancel] [ctrl+o expand]",
+			"Working [1s] [esc cancel] [ctrl+o expand]",
+			"Working [2s] [esc cancel] [ctrl+o expand]",
 		} {
 			(<-work)()
 			if got := ui.indicatorLabel.PlainText(); got != want || !ui.indicatorBox.Visible() {
@@ -178,14 +178,15 @@ func TestShimmerSkipsOtherText(t *testing.T) {
 // TestToolRowShimmers checks that the shimmer's band sweeps across the row of
 // a collapsed compact call while the call executes and the band sweeps the
 // indicator's time, and across no other call: not a queued or ended one, not
-// a boxed or expanded one, and not one without a shimmer.
+// an expanded one, and not one without a shimmer. A row shimmers whichever
+// way expanded calls show.
 func TestToolRowShimmers(t *testing.T) {
 	input := json.RawMessage(`{"command":"go test ./..."}`)
 	running := message.ToolStateRunning{Input: input}
 	tests := []struct {
 		name     string
 		state    message.ToolState
-		style    ToolCallStyle
+		style    ExpandedStyle
 		expanded bool
 		// still leaves the band still, as between runs, and none leaves the
 		// call without a shimmer.
@@ -196,7 +197,7 @@ func TestToolRowShimmers(t *testing.T) {
 		{name: "queued", state: message.ToolStatePending{Input: input}},
 		{name: "completed", state: message.ToolStateCompleted{Input: input, Output: "ok"}},
 		{name: "failed", state: message.ToolStateError{Input: input, Error: "FAIL\n\n[exit 1]"}},
-		{name: "boxed", state: running, style: ToolCallsBoxed},
+		{name: "plain row", state: running, style: ExpandedPlain, want: true},
 		{name: "expanded", state: running, expanded: true},
 		{name: "band still", state: running, still: true},
 		{name: "no shimmer", state: running, none: true},
@@ -251,7 +252,7 @@ func TestToolRowShimmerRepaints(t *testing.T) {
 	box.SyncShimmer()
 	// label stands in for the indicator, which each step of the band
 	// repaints.
-	label := widget.NewText("Worked for 12s")
+	label := widget.NewText("Working [12s]")
 	root := terminal.NewRootRenderable(w, 2)
 	root.Add(box)
 	root.Add(label)

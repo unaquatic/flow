@@ -64,12 +64,13 @@ func (b *StepBox) SetPart(part message.ContentPart) {
 }
 
 // SetViewStyle shows the box as st says: the snapshot once taken while
-// st.Debug is on, the marker as tool calls show it, and the name in their
-// color.
+// st.Debug is on, the marker as tool calls show it, in their shape, and the
+// name in their color.
 func (b *StepBox) SetViewStyle(st ui.ViewStyle) {
 	b.SetShowDone(st.Debug)
 	b.SetMarker(st.ToolMarkers)
 	b.SetNameFg(st.NameFg)
+	b.SetMarkerShape(st.MarkerShape)
 }
 
 // Show shows part: the box while part is pending, and once it holds its tree
@@ -92,13 +93,13 @@ func (b *StepBox) SetShowDone(show bool) {
 	b.Show(b.Part)
 }
 
-// ShowHeader writes SnapshotLabel in bold and NameFg, then the part's status
-// in ui.PanelDimFg, as StepStatus gives it.
+// ShowHeader writes SnapshotLabel in NameFg, not bold, then the part's status
+// in ui.ToolFg, as StepStatus gives it.
 func (b *StepBox) ShowHeader() {
 	b.Header.SetStyledContent(style.NewStyledText(
-		style.TextChunk{Text: SnapshotLabel, Fg: b.NameFg, Attributes: style.AttrBold},
+		style.TextChunk{Text: SnapshotLabel, Fg: b.NameFg},
 		style.Plain(" "),
-		style.TextChunk{Text: StepStatus(b.Part), Fg: ui.PanelDimFg},
+		style.TextChunk{Text: StepStatus(b.Part), Fg: ui.ToolFg},
 	))
 }
 

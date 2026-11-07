@@ -9,6 +9,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/layout"
+	"github.com/unaquatic/fluid/render"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
@@ -27,6 +28,7 @@ func (ui *UI) ResetTranscript() {
 func (ui *UI) DropTranscript() {
 	ui.ClearTranscriptRows()
 	ui.messageWidgets = make(map[message.ID]*ChatMessageBox)
+	ui.noticeMarkers = nil
 	// The rows the shimmer tracks went with the transcript.
 	clear(ui.shimmer.Rows)
 	ui.committed = false
@@ -73,50 +75,94 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 
 // ChatMessageOptions returns bubble options for role.
 func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
-	// Agent prose sits on the canvas; that of other roles fills a block.
-	bg := ui.BoxBg()
-	if role == message.RoleAgent {
+	// Agent prose sits on the canvas; that of other roles fills a block,
+	// but for a prompt in PromptBar, which sits on the canvas by a bar.
+	bg, bar := ui.BoxBg(), style.ColorTransparent
+	switch {
+	case role == message.RoleAgent:
 		bg = style.ColorTransparent
+	case role == message.RoleUser && ui.service.state.PromptStyle == PromptBar:
+		bg, bar = style.ColorTransparent, productFg
 	}
 	return []ChatMessageOption{
 		ChatMessageWithTheme(ui.theme),
 		ChatMessageWithBg(bg),
+		ChatMessageWithBar(bar),
 		ChatMessageWithToolsExpanded(ui.service.state.ToolsExpanded),
-		ChatMessageWithToolStyle(ui.service.state.ToolStyle),
+		ChatMessageWithExpandStyle(ui.service.state.ExpandStyle),
 		ChatMessageWithToolMarkers(ui.service.state.ToolMarkers),
 		ChatMessageWithToolColor(ui.service.state.ToolColor),
+		ChatMessageWithMarkerShape(ui.service.state.MarkerShape),
 		ChatMessageWithDebug(ui.service.state.Debug),
 		ChatMessageWithCacheMode(ui.service.state.CacheMode),
 		ChatMessageWithExtensions(ui.extensions),
 	}
 }
 
-// SetToolStyle shows every collapsed tool call in the transcript and the
+// SetExpandStyle shows every expanded tool call in the transcript and the
 // session preview as ts says. Each of these settings reaches the committed
 // rows of the inline transcript as ReprintCommitted writes them again.
-func (ui *UI) SetToolStyle(ts ToolCallStyle) {
+func (ui *UI) SetExpandStyle(ts ExpandedStyle) {
 	for cm := range ui.Bubbles() {
-		cm.SetToolStyle(ts)
+		cm.SetExpandStyle(ts)
 	}
 	ui.ReprintCommitted()
 }
 
 // SetToolMarkers shows or hides ToolMarker before the name of every tool call
-// in the transcript and the session preview, as show says.
+// and every footer in the transcript and the session preview, and before the
+// title of the Usage box, as show says.
 func (ui *UI) SetToolMarkers(show bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolMarkers(show)
 	}
+	ui.ShowStatusMarker()
+	ui.ReprintCommitted()
+}
+
+// SetMarkerShape shows the marker of every tool call and footer in the
+// transcript and the session preview, of the Usage box, and of the
+// indicator, in m.
+func (ui *UI) SetMarkerShape(m MarkerShape) {
+	for cm := range ui.Bubbles() {
+		cm.SetMarkerShape(m)
+	}
+	if ui.indicatorMarker != nil {
+		StyleMarker(ui.indicatorMarker, m, indicatorHintFg)
+	}
+	for _, marker := range ui.noticeMarkers {
+		StyleMarker(marker, m, ui.service.state.ToolColor.Fg())
+	}
+	ui.ShowStatusMarker()
 	ui.ReprintCommitted()
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
-// transcript and the session preview in the color c names.
+// transcript and the session preview, and the marker of every notice in
+// PromptBar, in the color c names.
 func (ui *UI) SetToolColor(c ToolNameColor) {
 	for cm := range ui.Bubbles() {
 		cm.SetToolColor(c)
 	}
+	for _, marker := range ui.noticeMarkers {
+		StyleMarker(marker, ui.service.state.MarkerShape, c.Fg())
+	}
+	ui.ShowStatusMarker()
 	ui.ReprintCommitted()
+}
+
+// ShowStatusMarker shows the Usage box's row with the tool marker, while
+// /settings shows it, and in the tool name color, as a row with nothing to
+// expand shows them, whether tool calls are expanded or not.
+func (ui *UI) ShowStatusMarker() {
+	if ui.statusHeader == nil {
+		return // The UI was built without its input box.
+	}
+	st := ui.service.state
+	ui.statusRow.SetMarker(st.ToolMarkers)
+	ui.statusRow.SetNameFg(st.ToolColor.Fg())
+	ui.statusRow.SetMarkerShape(st.MarkerShape)
+	ui.SyncSlashStatus()
 }
 
 // SetDebug shows what helps debug flow in the transcript and the session
@@ -217,7 +263,8 @@ func (ui *UI) AddNotice(notices ...Notice) {
 // for a notice that shows nothing. Its rows are on the canvas, from its left
 // edge, or else in a box filled with its surface, padded by a row above and
 // below and by PaddingX at the sides, in textFg where they have no color of
-// their own.
+// their own. While prompts show in PromptBar, a notice that would show in a
+// box shows as a prompt does instead, as NewNoticeBarRow makes it.
 func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 	lines := n.Lines
 	if len(lines) == 0 && n.Text != "" {
@@ -235,6 +282,9 @@ func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 			widget.Children(widget.NewStyledText(content, widget.TextWithID(id+"-text"))),
 		)
 	}
+	if ui.service.state.PromptStyle == PromptBar {
+		return ui.NewNoticeBarRow(id, n, lines)
+	}
 	bg := ui.theme.SurfaceRaised
 	if n.Surface == NoticeSystem {
 		bg = ui.SystemBg()
@@ -250,6 +300,57 @@ func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 		),
 		widget.BoxWithBg(bg),
 		widget.Children(widget.NewStyledText(content, widget.TextWithID(id+"-text"), widget.TextWithFg(textFg))),
+	)
+}
+
+// NewNoticeBarRow returns the row, with id, that shows lines, those of n, as
+// PromptBar shows a prompt: on the canvas, with no padding above or below,
+// inset by PaddingX at the sides like the prose. Its header starts with a
+// marker in its left padding, in the marker shape /settings sets and the
+// tool name color, and then n's Title, or without one the first of lines.
+// The other lines follow under the header, unmarked. A blank row follows
+// it.
+func (ui *UI) NewNoticeBarRow(id string, n Notice, lines []style.StyledText) *widget.Box {
+	st := ui.service.state
+	header, body := style.NewStyledText(style.Plain(n.Title)), lines
+	if n.Title == "" {
+		header, body = lines[0], lines[1:]
+	}
+	marker := NewMarker(st.MarkerShape, st.ToolColor.Fg())
+	ui.noticeMarkers = append(ui.noticeMarkers, marker)
+	// The marker fills the left padding with the gap after it, so that the
+	// header starts where the lines under it do.
+	headerRow := widget.NewBox(
+		widget.BoxWithLayout(
+			layout.WithFlexDirection(layout.DirectionRow),
+			layout.WithGap(PaddingX-1),
+			layout.WithPaddingRight(layout.Points(PaddingX)),
+		),
+		widget.Children(marker, widget.NewStyledText(header,
+			widget.TextWithID(id+"-title"),
+			widget.TextWithFg(textFg),
+			widget.TextWithLayout(layout.WithFlexGrow(1), layout.WithFlexShrink(1)),
+		)),
+	)
+	children := []render.Renderable{headerRow}
+	if len(body) > 0 {
+		children = append(children, widget.NewBox(
+			widget.BoxWithLayout(
+				layout.WithPaddingLeft(layout.Points(PaddingX)),
+				layout.WithPaddingRight(layout.Points(PaddingX)),
+			),
+			widget.Children(widget.NewStyledText(JoinStyledLines(body), widget.TextWithID(id+"-text"), widget.TextWithFg(textFg))),
+		))
+	}
+	return widget.NewBox(
+		widget.BoxWithID(id),
+		widget.BoxWithLayout(
+			layout.WithFlexShrink(0),
+			layout.WithFlexDirection(layout.DirectionColumn),
+			layout.WithAlignItems(layout.AlignStretch),
+			layout.WithMarginBottom(layout.Points(1)),
+		),
+		widget.Children(children...),
 	)
 }
 

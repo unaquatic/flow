@@ -10,8 +10,9 @@ import (
 )
 
 // UsageBox is the PartBox of the token counts of a reply's request, which
-// its usage part records: a block whose header sums them up, and whose
-// details list them all. It is gone until shown: the counts already show as
+// its usage part records: a box like a tool call's, shown as /settings and
+// Ctrl+O show tool calls, with ToolMarker as they have it, whose header sums
+// the counts up and whose details list them all. It is gone until shown: the counts already show as
 // the reply's cache use and in the Usage box.
 type UsageBox struct {
 	*PartBox
@@ -23,19 +24,17 @@ type UsageBox struct {
 
 var _ BoxContent = (*UsageBox)(nil)
 
-// NewUsageBox creates a collapsed usage block on the theme's raised surface,
-// its header in the theme's muted text color, gone until SetGone(false) shows
-// it.
+// NewUsageBox creates a collapsed usage box, its header in the theme's muted
+// text color and its block on the theme's raised surface, gone until
+// SetGone(false) shows it.
 func NewUsageBox(part message.UsagePart, theme *style.Theme, fg style.Color) *UsageBox {
 	theme = themeOrDefault(theme)
 	surface := theme.ResolveSurfaceRaised()
 	b := &UsageBox{
 		PartBox: NewPartBox(theme, theme.TextMuted, surface),
-		Body:    NewToolBody(theme, fg, surface),
+		Body:    NewToolBody(theme, fg, style.ColorTransparent),
 	}
 	b.Content = b
-	b.Shape = ShapeBlock
-	b.Marked = false
 	b.Details.Add(b.Body)
 	b.SetGone(true)
 	b.SetPart(part)

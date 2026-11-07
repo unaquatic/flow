@@ -1,0 +1,30 @@
+=== text ===
+|  Divide needs a guard in calc.go.      |
+|                                        |
+|  I'll add the guard in calc.go.        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|  AAAAAA AAAAA A AAAAA AA BBBBBBBA      |
+|                                        |
+|  CCCC CCC CCC CCCCC CC DDDDDDDC        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== bg ===
+|                          ░░░░░░░       |
+|                                        |
+|                        ░░░░░░░         |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #8c8c8c
+B #7e965a
+C #e6e6e6
+D #91b557
+░ #1a1a1a Bg

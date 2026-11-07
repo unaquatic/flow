@@ -15,9 +15,8 @@ import (
 type BoxShape int
 
 const (
-	// ShapeByStyle shows the box as its Style says: as a row in
-	// ToolCallsCompact, and as a block in ToolCallsBoxed. A tool call shows
-	// so.
+	// ShapeByStyle shows the box as a row while it is collapsed, and as a
+	// block, as its Style says, while it is open. A tool call shows so.
 	ShapeByStyle BoxShape = iota
 	// ShapeRow always shows the box as a row, as a snapshot being taken
 	// shows.
@@ -68,16 +67,15 @@ type PartBox struct {
 	// after it fill, so that Header starts where the content does either
 	// way.
 	HeaderRow *widget.Box
-	// Marker shows ToolMarker before Header, in NameFg, while the box is
-	// Marked, collapsed, and SetMarker shows it.
+	// Marker shows its MarkerShape before Header, in NameFg, while the box is
+	// Marked, collapsed or open in ExpandedPlain, and SetMarker shows it.
 	Marker *widget.Text
 	// Header is the line the Content writes, such as a tool's name and a
 	// summary of its input. It fills no background of its own, so that the
 	// box's shows through it.
 	Header *widget.Text
 	// Status shows the content's status, such as "[queued]", right after
-	// Header, in PanelDimFg, the color of the keys a panel names after its
-	// title. It is gone while the status is empty.
+	// Header, in ToolFg. It is gone while the status is empty.
 	Status *widget.Text
 	// Details holds the widgets the Content shows while the box is Open.
 	Details *widget.Box
@@ -94,18 +92,20 @@ type PartBox struct {
 	// Marked reports whether the box shows Marker as /settings says, as a
 	// tool call does.
 	Marked bool
+	// MarkerShape is the symbol of Marker, as SetMarkerShape sets it.
+	MarkerShape MarkerShape
 	// MarkerOn reports that SetMarker shows Marker. It is off by default.
 	MarkerOn bool
 	// NameFg colors Marker, and the name the Content writes in Header, as
-	// SetNameFg sets it. It is PanelDimFg by default.
+	// SetNameFg sets it. It is ToolFg by default.
 	NameFg style.Color
 	// Shape is how the box shows while it is collapsed.
 	Shape BoxShape
-	// Style is how the box shows while collapsed when its Shape is
-	// ShapeByStyle.
-	Style ToolCallStyle
-	// Surface is the background a block fills, padding included. A row
-	// fills none, so that it sits on the canvas.
+	// Style is how the box shows as a block: on Surface, or on the canvas.
+	Style ExpandedStyle
+	// Surface is the background a block fills, padding included, in
+	// ExpandedBoxed. A row fills none, so that it sits on the canvas, and
+	// neither does a block in ExpandedPlain.
 	Surface style.Color
 	// Busy reports that the content is at work, as an executing tool call
 	// is, which the shimmer shows while the box is a row.
@@ -119,6 +119,9 @@ type PartBox struct {
 	Shimmering bool
 	// ShimmerPhase is where the band was when Header was last drawn with it.
 	ShimmerPhase float64
+	// MarkerHidden reports that Marker was last drawn hidden, as Blinks and
+	// the shimmer's MarkerOff hid it.
+	MarkerHidden bool
 	// OnShapeChange, when set, is called each time ShowShape lays the box
 	// out, as when it expands or its Style changes, so that the bubble that
 	// holds it can space it from the rows around it.
@@ -131,7 +134,7 @@ var _ Framed = (*PartBox)(nil)
 
 // NewPartBox creates a collapsed, expandable box, a block on surface, padded
 // by a row above and below and by PaddingX at the sides, whose Header is in
-// fg. Its Shape is ShapeByStyle and its Style ToolCallsCompact, so that it
+// fg. Its Shape is ShapeByStyle and its Style ExpandedBoxed, so that it
 // shows as a row until the caller says otherwise and calls ShowShape. The
 // caller sets Content before the box shows its header.
 func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
@@ -151,13 +154,10 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 		HeaderRow: widget.NewBox(
 			widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
 		),
-		Marker: widget.NewText(ToolMarker,
-			widget.TextWithFg(PanelDimFg),
-			widget.TextWithLayout(layout.WithFlexShrink(0)),
-		),
+		Marker: NewMarker(MarkerSquare, ToolFg),
 		Header: widget.NewText("", widget.TextWithFg(fg)),
 		Status: widget.NewText("",
-			widget.TextWithFg(PanelDimFg),
+			widget.TextWithFg(ToolFg),
 			widget.TextWithTruncate(true),
 			widget.TextWithLayout(layout.WithFlexShrink(0)),
 		),
@@ -170,12 +170,13 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 		),
 		Expandable: true,
 		Marked:     true,
-		NameFg:     PanelDimFg,
+		NameFg:     ToolFg,
 		Surface:    surface,
 	}
 	// Header shrinks, and Status does not, when the two do not fit.
 	b.Header.SetTruncate(true)
 	b.Header.RenderAfterHook = b.DrawShimmer
+	b.Marker.RenderBeforeHook, b.Marker.RenderAfterHook = BlinkHooks(b.Marker, b.HideMarker)
 	b.Header.OnMouseDownHandler = b.OnHeaderClick
 	b.HeaderRow.OnMouseDownHandler = b.OnHeaderClick
 	b.Add(b.HeaderRow)
@@ -207,7 +208,7 @@ func (b *PartBox) Open() bool { return b.Expanded && !b.Held }
 
 // Row reports whether the box shows as its header alone, one row on the
 // canvas: always when its Shape is ShapeRow, never when it is ShapeBlock,
-// and otherwise while it is not Open in ToolCallsCompact.
+// and otherwise while it is not Open.
 func (b *PartBox) Row() bool {
 	switch b.Shape {
 	case ShapeRow:
@@ -215,38 +216,50 @@ func (b *PartBox) Row() bool {
 	case ShapeBlock:
 		return false
 	}
-	return b.Style == ToolCallsCompact && !b.Open()
+	return !b.Open()
 }
 
-// SetStyle shows the box as ts says while it is collapsed.
-func (b *PartBox) SetStyle(ts ToolCallStyle) {
+// SetStyle shows the box as ts says while it is a block.
+func (b *PartBox) SetStyle(ts ExpandedStyle) {
 	if ts == b.Style {
 		return
 	}
 	b.Style = ts
+	b.ShowMarker()
 	b.ShowShape()
 }
 
 // SetMarker shows Marker at the left edge of a Marked box while it is
-// collapsed, or hides it, as show says.
+// collapsed, or open in ExpandedPlain, or hides it, as show says.
 func (b *PartBox) SetMarker(show bool) {
 	b.MarkerOn = show
 	b.ShowMarker()
 }
 
-// ShowMarker shows Marker while the box is Marked, not Open, and MarkerOn is
-// set, and hides it otherwise. Header stays where it is either way.
+// ShowMarker shows Marker while the box is Marked and MarkerOn is set, and
+// is collapsed, or open in ExpandedPlain, on the canvas as a row is, and
+// hides it otherwise. Header stays where it is either way.
 func (b *PartBox) ShowMarker() {
-	show := b.Marked && b.MarkerOn && !b.Open()
+	show := b.Marked && b.MarkerOn && (!b.Open() || b.Style == ExpandedPlain)
 	if b.Marker.Visible() == show {
 		return
 	}
 	b.Marker.SetGone(!show)
+	if !show {
+		// A gone marker draws nothing, so it is not hidden by the blink.
+		b.MarkerHidden = false
+	}
 	margin := 0
 	if show {
 		margin = -PaddingX
 	}
 	SetEdge(b.HeaderRow, &b.HeaderRow.LayoutNode().MarginLeft, margin)
+}
+
+// SetMarkerShape shows Marker in shape.
+func (b *PartBox) SetMarkerShape(shape MarkerShape) {
+	b.MarkerShape = shape
+	StyleMarker(b.Marker, shape, b.NameFg)
 }
 
 // SetNameFg colors Marker and the name the Content writes in Header fg.
@@ -255,7 +268,7 @@ func (b *PartBox) SetNameFg(fg style.Color) {
 		return
 	}
 	b.NameFg = fg
-	b.Marker.SetFg(fg)
+	StyleMarker(b.Marker, b.MarkerShape, fg)
 	b.ShowHeader()
 }
 
@@ -273,12 +286,12 @@ func (b *PartBox) SetSurface(bg style.Color) {
 }
 
 // ShowShape lays the box out as Row reports: as its header alone, with no
-// padding above or below it and no background, or as a block that fills
-// Surface and pads its content by a row above and below. Then it calls
-// OnShapeChange.
+// padding above or below it and no background, or as a block, which in
+// ExpandedBoxed fills Surface and pads its content by a row above and below,
+// and in ExpandedPlain does neither. Then it calls OnShapeChange.
 func (b *PartBox) ShowShape() {
 	bg, pad := b.Surface, 1
-	if b.Row() {
+	if b.Row() || b.Style == ExpandedPlain {
 		bg, pad = style.ColorTransparent, 0
 	}
 	if b.Bg() != bg {
@@ -370,20 +383,40 @@ func (b *PartBox) Shimmers() bool {
 	return b.Shimmer != nil && b.Shimmer.On.Load() && b.Row() && b.Busy
 }
 
+// Blinks reports whether Marker blinks: while it shows, the content is
+// Busy, and the shimmer runs, as the indicator's marker blinks beside the
+// run's time.
+func (b *PartBox) Blinks() bool {
+	return b.Shimmer != nil && b.Shimmer.On.Load() && b.Busy && b.Marker.Visible()
+}
+
+// HideMarker reports whether Marker is hidden now, while it Blinks and the
+// shimmer's MarkerOff hides it, and records that in MarkerHidden. It runs
+// as Marker draws itself.
+func (b *PartBox) HideMarker() bool {
+	b.MarkerHidden = b.Blinks() && b.Shimmer.MarkerOff
+	return b.MarkerHidden
+}
+
 // SyncShimmer repaints the header when the band it was last drawn with is
 // not the one it shows now, as Shimmers tells: when the band has moved, or
 // has started or stopped sweeping across it, as when the content stops
 // being busy or the box expands, so that the header rests in its own colors
-// once the band leaves it. Only colors change, so the layout stays as it is.
-// It keeps the box among the shimmer's Rows while the band may sweep across
-// it, or was drawn across it, so that the shimmer repaints it as the band
-// moves.
+// once the band leaves it. It repaints Marker in the same way when the blink
+// hides it otherwise than when it was drawn. Only colors and the marker
+// change, so the layout stays as it is. It keeps the box among the
+// shimmer's Rows while the band may sweep across it or its marker may
+// blink, or either was drawn so, so that the shimmer repaints it as the
+// band moves and the marker blinks.
 func (b *PartBox) SyncShimmer() {
 	if b.Shimmer == nil {
 		return
 	}
 	on := b.Shimmers()
-	b.Shimmer.Track(b, b.Busy && b.Row() || b.Shimmering)
+	b.Shimmer.Track(b, b.Busy && (b.Row() || b.Marker.Visible()) || b.Shimmering || b.MarkerHidden)
+	if hide := b.Blinks() && b.Shimmer.MarkerOff; hide != b.MarkerHidden {
+		b.Marker.RequestRender()
+	}
 	if on == b.Shimmering && (!on || b.ShimmerPhase == b.Shimmer.Phase) {
 		return
 	}
@@ -429,12 +462,33 @@ func EnclosingScrollBox(r render.Renderable) *widget.ScrollBox {
 }
 
 // ToolMarker marks the header of every tool call, at the left edge of its
-// box, before the tool's name, when /settings shows it.
-const ToolMarker = "■"
+// box, before the tool's name, when /settings shows it, in the symbol of the
+// default MarkerShape.
+var ToolMarker = MarkerSquare.Glyph()
 
-// TitleChunk returns title in bold and titleFg, as a panel shows its title,
-// for the label a patch's header starts with.
+// NewMarker returns a marker in shape, in c, which StyleMarker changes.
+func NewMarker(shape MarkerShape, c style.Color) *widget.Text {
+	m := widget.NewText("", widget.TextWithLayout(layout.WithFlexShrink(0)))
+	StyleMarker(m, shape, c)
+	return m
+}
+
+// StyleMarker shows m, a marker NewMarker made, in shape and c: its symbol
+// drawn in c, or for a filled shape a space filled with c.
+func StyleMarker(m *widget.Text, shape MarkerShape, c style.Color) {
+	m.SetContent(shape.Glyph())
+	if shape.Filled() {
+		m.SetFg(c)
+		m.SetBg(c)
+		return
+	}
+	m.SetFg(c)
+	m.SetBg(style.ColorTransparent)
+}
+
+// TitleChunk returns title in titleFg and not bold, as a panel shows its
+// title, for the label a patch's header starts with.
 func TitleChunk(title string) style.TextChunk {
 	fg := titleFg
-	return style.TextChunk{Text: title, Fg: fg, Attributes: style.AttrBold}
+	return style.TextChunk{Text: title, Fg: fg}
 }

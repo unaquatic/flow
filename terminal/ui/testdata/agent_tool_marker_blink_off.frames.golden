@@ -1,0 +1,12 @@
+=== text ===
+|  Bash go test ./... [executing]        |
+|■ Bash go vet ./...                     |
+|                                        |
+|                                        |
+=== fg ===
+|  AAAA AA AAAA AAAAA AAAAAAAAAAA        |
+|A AAAA AA AAA AAAAA                     |
+|                                        |
+|                                        |
+=== legend ===
+A #8c8c8c

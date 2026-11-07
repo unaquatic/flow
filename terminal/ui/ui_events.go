@@ -67,12 +67,14 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnTreeMoveRequested(e)
 	case EventToolsExpandedSet:
 		ui.OnToolsExpandedSet(e)
-	case EventToolStyleSet:
-		ui.OnToolStyleSet(e)
+	case EventExpandStyleSet:
+		ui.OnExpandStyleSet(e)
 	case EventToolMarkersSet:
 		ui.OnToolMarkersSet(e)
 	case EventToolColorSet:
 		ui.OnToolColorSet(e)
+	case EventMarkerShapeSet:
+		ui.OnMarkerShapeSet(e)
 	case EventDebugSet:
 		ui.OnDebugSet(e)
 	case EventCacheModeSet:
@@ -85,6 +87,8 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnCountPlaceSet(e)
 	case EventSelectionStyleSet:
 		ui.OnSelectionStyleSet(e)
+	case EventPromptStyleSet:
+		ui.OnPromptStyleSet(e)
 	case EventInputHintChanged:
 		ui.OnInputHintChanged(e)
 	}
@@ -96,11 +100,14 @@ func (ui *UI) OnInputHintChanged(EventInputHintChanged) { ui.SyncInputHint() }
 // OnCacheModeSet shows the cache use of every reply where e says.
 func (ui *UI) OnCacheModeSet(e EventCacheModeSet) { ui.SetCacheMode(e.Mode) }
 
-// OnToolStyleSet shows every collapsed tool call as e says.
-func (ui *UI) OnToolStyleSet(e EventToolStyleSet) { ui.SetToolStyle(e.Style) }
+// OnExpandStyleSet shows every expanded tool call as e says.
+func (ui *UI) OnExpandStyleSet(e EventExpandStyleSet) { ui.SetExpandStyle(e.Style) }
 
 // OnToolMarkersSet shows or hides the marker of every tool call as e says.
 func (ui *UI) OnToolMarkersSet(e EventToolMarkersSet) { ui.SetToolMarkers(e.Show) }
+
+// OnMarkerShapeSet shows the marker of every tool call in e's shape.
+func (ui *UI) OnMarkerShapeSet(e EventMarkerShapeSet) { ui.SetMarkerShape(e.Shape) }
 
 // OnToolColorSet colors the marker and the name of every tool call as e says.
 func (ui *UI) OnToolColorSet(e EventToolColorSet) { ui.SetToolColor(e.Color) }
@@ -113,6 +120,10 @@ func (ui *UI) OnKeyHintsModeSet(EventKeyHintsModeSet) { ui.SyncKeyHints() }
 
 // OnCountPlaceSet counts the rows of every list where the place now says.
 func (ui *UI) OnCountPlaceSet(EventCountPlaceSet) { ui.SyncCounts() }
+
+// OnPromptStyleSet shows every prompt as e says, building the transcript
+// again, since a prompt's background is set as it is built.
+func (ui *UI) OnPromptStyleSet(EventPromptStyleSet) { ui.RebuildTranscript() }
 
 // OnSelectionStyleSet redraws every menu, whose selected row MarkSelection
 // marks as the style now says, and the session tree, whose selected row
@@ -247,10 +258,7 @@ func (ui *UI) OnToolsExpandedSet(e EventToolsExpandedSet) {
 		ui.SetToolsExpanded(e.Expanded)
 		return
 	}
-	text := CollapsingToolsText
-	if e.Expanded {
-		text = ExpandingToolsText
-	}
+	text := ToolsToggleText(e.Expanded, ui.service.TurnElapsed())
 	ui.ShowIndicatorWhile(text, func() { ui.SetToolsExpanded(e.Expanded) })
 }
 

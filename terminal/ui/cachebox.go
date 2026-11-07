@@ -52,13 +52,13 @@ func (b *CacheBox) SetShown(show bool) {
 	}
 }
 
-// ShowHeader writes CacheLabel in bold and NameFg, then the counts of Usage in
-// PanelDimFg, as CacheCounts gives them.
+// ShowHeader writes CacheLabel in NameFg, not bold, then the counts of Usage in
+// ToolFg, as CacheCounts gives them.
 func (b *CacheBox) ShowHeader() {
 	b.Header.SetStyledContent(style.NewStyledText(
 		ToolNameChunk(CacheLabel, b.NameFg),
 		style.Plain(" "),
-		style.TextChunk{Text: CacheCounts(b.Usage), Fg: PanelDimFg},
+		style.TextChunk{Text: CacheCounts(b.Usage), Fg: ToolFg},
 	))
 }
 

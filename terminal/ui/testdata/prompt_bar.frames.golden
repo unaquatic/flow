@@ -1,0 +1,25 @@
+=== text ===
+|■ fix the divide test, then run the     |
+|■ calculator tests again                |
+|                                        |
+|  Fixed the divide-by-zero check.       |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A BBB BBB BBBBBB BBBBB BBBB BBB BBB     |
+|A BBBBBBBBBB BBBBB BBBBB                |
+|                                        |
+|  BBBBB BBB BBBBBBBBBBBBBB BBBBBB       |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #ff5f00
+B #e6e6e6

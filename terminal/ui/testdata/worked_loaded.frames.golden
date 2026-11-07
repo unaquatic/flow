@@ -10,7 +10,7 @@
 |                                                                                |
 |  Cache read 1.0K write 0.2K                                                    |
 |                                                                                |
-|  Worked for 42s                                                                |
+|  Done [42s]                                                                    |
 |                                                                                |
 |                                                                                |
 |  commit it                                                                     |
@@ -18,7 +18,7 @@
 |                                                                                |
 |  Committed.                                                                    |
 |                                                                                |
-|  Worked for 7s                                                                 |
+|  Done [7s]                                                                     |
 === fg ===
 |                                                                                |
 |  AAA AAA AAAAA                                                                 |
@@ -31,7 +31,7 @@
 |                                                                                |
 |  BBBBB BBBB BBBB BBBBB BBBB                                                    |
 |                                                                                |
-|  BBBBBB BBB BBB                                                                |
+|  BBBB BBBBB                                                                    |
 |                                                                                |
 |                                                                                |
 |  AAAAAA AA                                                                     |
@@ -39,7 +39,7 @@
 |                                                                                |
 |  AAAAAAAAAA                                                                    |
 |                                                                                |
-|  BBBBBB BBB BB                                                                 |
+|  BBBB BBBB                                                                     |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -61,28 +61,7 @@
 |                                                                                |
 |                                                                                |
 |                                                                                |
-=== attrs ===
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|  BBBB                                                                          |
-|  BBBBB                                                                         |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|  BBBBB                                                                         |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
 === legend ===
 A #e6e6e6
-B #707070
+B #8c8c8c
 ░ #232323 BoxBg

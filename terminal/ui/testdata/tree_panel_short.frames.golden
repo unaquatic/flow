@@ -3,11 +3,11 @@
 |  Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]    |
 |               [esc cancel]                                 |
 |                                                            |
-|  agent: I'll add Divide with a zero check.                 |
-|  ├─ user: also add tests                                   |
-|  │  agent: Added TestDivide.                               |
-|  └─ user: use table-driven tests instead                   |
-|  [4/7]                                                     |
+|  ├─ User also add tests                                    |
+|  │  Agent Added TestDivide.                                |
+|  │                                                         |
+|  └─ User use table-driven tests instead                    |
+|  [4/8]                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -18,10 +18,10 @@
 |  AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB    |
 |               BBBB BBBBBBB                                 |
 |                                                            |
-|  CCCCCC DDDD DDD DDDDDD DDDD D DDDD DDDDDD                 |
-|  BB EEEEE DDDD DDD DDDDD                                   |
-|  F  FFFFFF FFFFF FFFFFFFFFFF                               |
-|  BB BBBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                   |
+|  BB CCCC DDDD DDD DDDDD                                    |
+|  B  AAAAA DDDDD DDDDDDDDDDD                                |
+|  E                                                         |
+|  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                    |
 |  BBBBB                                                     |
 |                                                            |
 |                                                            |
@@ -43,27 +43,11 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                            |
 |                                                            |
-=== attrs ===
-|                                                            |
-|  BBBBBBBBBBBB                                              |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
 === legend ===
 A #e6e6e6
 B #707070
-C #91b557
+C #eb7513
 D #b4b4b4
-E #eb7513
-F #232323 BoxBg
+E #232323 BoxBg
 ░ #232323 BoxBg
 ▒ #ff5f00

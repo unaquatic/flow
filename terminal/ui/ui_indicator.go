@@ -56,6 +56,11 @@ type Shimmer struct {
 	// Phase is how far across its text the band is, from 0 to 1, as
 	// ShimmerFg takes it.
 	Phase float64
+	// MarkerOff reports that the markers that blink while the band sweeps
+	// are hidden, as BlinkOff tells from Start: the marker before the
+	// indicator's time, and those of the rows whose content is busy and of
+	// the text a reply is writing.
+	MarkerOff bool
 	// Rows are the rows the band may sweep across, or was last drawn
 	// across, as PartBox.SyncShimmer tracks them. SyncRows repaints
 	// them as the band moves, starts, or stops: a frame reaches only the
@@ -90,6 +95,7 @@ func (s *Shimmer) SyncRows() {
 func (ui *UI) ShowIndicator(e EventIndicatorShow) {
 	ui.indicatorLabel.SetStyledContent(IndicatorText(e))
 	ui.indicatorBox.SetGone(false)
+	ui.ShowIndicatorMarker()
 	ui.SyncShimmer()
 }
 
@@ -159,15 +165,51 @@ func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
 }
 
 // SyncShimmer runs the shimmer while the indicator shows the time of a run in
-// progress, its band entering at the left as it starts, and stops it
-// otherwise.
+// progress, its band entering at the left and the blinking markers shown as
+// it starts, and stops it otherwise, showing the markers again.
 func (ui *UI) SyncShimmer() {
 	on := ui.indicatorBox.Visible() && ui.service.state.Working
-	if on && !ui.shimmer.On.Load() {
+	was := ui.shimmer.On.Load()
+	if on && !was {
 		ui.shimmer.Start, ui.shimmer.Phase = time.Now(), 0
+	}
+	if on != was {
+		ui.shimmer.MarkerOff = false
+		ui.indicatorMarker.RequestRender()
+		ui.RepaintTextMarkers()
 	}
 	ui.shimmer.On.Store(on)
 	ui.shimmer.SyncRows()
+}
+
+// ShowIndicatorMarker shows the marker before the indicator's text while a
+// turn is in progress, in its left padding, as a tool call shows its marker,
+// and hides it otherwise. The text stays where it is either way.
+func (ui *UI) ShowIndicatorMarker() {
+	show := ui.service.state.Working
+	if ui.indicatorMarker.Visible() == show {
+		return
+	}
+	ui.indicatorMarker.SetGone(!show)
+	margin := 0
+	if show {
+		margin = -PaddingX
+	}
+	SetEdge(ui.indicatorRow, &ui.indicatorRow.LayoutNode().MarginLeft, margin)
+}
+
+// IndicatorMarkerHidden reports whether the marker before the indicator's
+// text is hidden: while the shimmer runs and blinks it off.
+func (ui *UI) IndicatorMarkerHidden() bool {
+	return ui.shimmer.On.Load() && ui.shimmer.MarkerOff
+}
+
+// RepaintTextMarkers repaints the text that every bubble is writing, so that
+// each draws its marker as the blink now shows it.
+func (ui *UI) RepaintTextMarkers() {
+	for cm := range ui.Bubbles() {
+		cm.RepaintWritingMarkers()
+	}
 }
 
 // AnimateShimmer moves the shimmer's band every ShimmerTick while the
@@ -192,19 +234,28 @@ func (ui *UI) AnimateShimmer(enqueue func(func()), done <-chan struct{}) {
 // StepShimmer moves the shimmer's band to where it is at now, and repaints
 // the indicator and the tool call rows the band sweeps when the band moved,
 // while the shimmer runs. During the pause after a sweep the band stays past
-// the right edge. The repaint leaves the layout as it is, since only colors
-// change.
+// the right edge. It also shows or hides the blinking markers as BlinkOff
+// tells, and repaints them when that changed. The repaint leaves the layout
+// as it is, since only colors and markers change.
 func (ui *UI) StepShimmer(now time.Time) {
 	if !ui.shimmer.On.Load() {
 		return
 	}
 	t := now.Sub(ui.shimmer.Start) % (shimmerSweep + shimmerPause)
 	phase := min(float64(t)/float64(shimmerSweep), 1)
-	if phase == ui.shimmer.Phase {
+	off := BlinkOff(ui.shimmer.Start, now)
+	moved, blinked := phase != ui.shimmer.Phase, off != ui.shimmer.MarkerOff
+	if !moved && !blinked {
 		return
 	}
-	ui.shimmer.Phase = phase
-	ui.indicatorLabel.RequestRender()
+	ui.shimmer.Phase, ui.shimmer.MarkerOff = phase, off
+	if moved {
+		ui.indicatorLabel.RequestRender()
+	}
+	if blinked {
+		ui.indicatorMarker.RequestRender()
+		ui.RepaintTextMarkers()
+	}
 	ui.shimmer.SyncRows()
 }
 

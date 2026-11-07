@@ -1,19 +1,19 @@
 === text ===
 |                                                            |
-|  Read [tool execution failed]                              |
-|                                                            |
-|  calc.go                                                   |
+|  Read calc.go [tool execution failed]                      |
 |                                                            |
 |  not found: calc.go                                        |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 === fg ===
 |                                                            |
-|  AAAA AAAAA AAAAAAAAA AAAAAAA                              |
-|                                                            |
-|  BBBBBBB                                                   |
+|  AAAA AAAAAAA AAAAA AAAAAAAAA AAAAAAA                      |
 |                                                            |
 |  BBB BBBBBB BBBBBBB                                        |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 === bg ===
@@ -22,19 +22,10 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                            |
-=== attrs ===
-|                                                            |
-|  BBBB                                                      |
-|                                                            |
-|                                                            |
-|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #707070
+A #8c8c8c
 B #e6e6e6
 ░ #1f1f1f SurfaceRaised/SuccessSurface

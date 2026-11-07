@@ -10,7 +10,7 @@
 |  Snapshot c1d2e3f4                     |
 |  Cache read 0K write 0K                |
 |                                        |
-|  Worked for 3s                         |
+|  Done [3s]                             |
 |                                        |
 === fg ===
 |                                        |
@@ -24,7 +24,7 @@
 |  BBBBBBBB BBBBBBBB                     |
 |  BBBBB BBBB BB BBBBB BB                |
 |                                        |
-|  BBBBBB BBB BB                         |
+|  BBBB BBBB                             |
 |                                        |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -40,21 +40,7 @@
 |                                        |
 |                                        |
 |                                        |
-=== attrs ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|  BBBBBBBB                              |
-|                                        |
-|                                        |
-|                                        |
-|  BBBBBBBB                              |
-|  BBBBB                                 |
-|                                        |
-|                                        |
-|                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8c8c8c
 ░ #232323 BoxBg

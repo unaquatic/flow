@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"testing/synctest"
 
@@ -97,6 +98,7 @@ func TestSessionTreeLayout(t *testing.T) {
 				"│  a2*",
 				"└─ u3",
 				"   a3",
+				"   a3",
 				"   a4",
 			},
 		},
@@ -108,6 +110,7 @@ func TestSessionTreeLayout(t *testing.T) {
 				"u1*",
 				"a1*",
 				"├─ u3*",
+				"│  a3*",
 				"│  a3*",
 				"│  a4*",
 				"└─ u2",
@@ -123,6 +126,7 @@ func TestSessionTreeLayout(t *testing.T) {
 				"├─ u2",
 				"│  a2",
 				"└─ u3",
+				"   a3",
 				"   a3",
 				"   a4",
 			},
@@ -195,7 +199,7 @@ func TestSessionTreeNarrowing(t *testing.T) {
 		// first match.
 		{name: "search", head: "a2", query: "TABLE", want: []string{"u3", "a4"}, selected: "u3"},
 		{name: "search every word", head: "a2", query: "tests table", want: []string{"u3", "a4"}, selected: "u3"},
-		{name: "search tool calls", head: "a2", query: "calc_test", want: []string{"a3"}, selected: "a3"},
+		{name: "search tool calls", head: "a2", query: "calc_test", want: []string{"a3", "a3"}, selected: "a3"},
 		// With their common ancestors unlisted, the matches are roots.
 		{name: "search roles", head: "a2", query: "user tests", want: []string{"├─ u2*", "└─ u3"}, selected: "u2"},
 		{name: "no match", head: "a2", query: "zzz", status: NoMatchesText},
@@ -206,7 +210,7 @@ func TestSessionTreeNarrowing(t *testing.T) {
 		},
 		{
 			name: "no tools keeps the head", head: "a3", filter: TreeFilterNoTools,
-			want:     []string{"u1*", "a1*", "├─ u3*", "│  a3*", "│  a4", "└─ u2", "   a2"},
+			want:     []string{"u1*", "a1*", "├─ u3*", "│  a3*", "│  a3*", "│  a4", "└─ u2", "   a2"},
 			selected: "a3", status: "[no-tools]",
 		},
 		{
@@ -401,7 +405,9 @@ func TestNewTreeEntry(t *testing.T) {
 }
 
 // TestTreeLinesDimOtherBranches checks that the transcript's rows keep their
-// colors, other branches' rows are dim, and the selected row never is.
+// colors, "User" in the accent and "Agent" in a reply's prose color, and
+// other branches' rows are dim, the selected one too, which the insert line
+// marks rather than its colors.
 func TestTreeLinesDimOtherBranches(t *testing.T) {
 	theme := DefaultTheme()
 	st := NewSessionTree(forkedTree("a2"))
@@ -409,17 +415,22 @@ func TestTreeLinesDimOtherBranches(t *testing.T) {
 	lines := TreeLines(st.View(treeMaxRows), theme)
 
 	// labelFg returns the color of the role label of the row of id, which
-	// follows the cursor and the prefix.
+	// follows the cursor and the prefix, past the insert line above it.
+	v := st.View(treeMaxRows)
 	labelFg := func(id message.ID) style.Color {
-		return lines[st.RowIndex[id]].Chunks[2].Fg
+		line := st.RowIndex[id]
+		if line >= v.InsertLine() {
+			line++
+		}
+		return lines[line].Chunks[2].Fg
 	}
 	tests := []struct {
 		id   message.ID
 		want style.Color
 	}{
 		{id: "u2", want: theme.Accent},
-		{id: "a2", want: theme.Success},
-		{id: "u3", want: theme.Accent},
+		{id: "a2", want: RoleFg(theme, message.RoleAgent)},
+		{id: "u3", want: PanelDimFg},
 		{id: "a4", want: PanelDimFg},
 	}
 	for _, tt := range tests {
@@ -627,4 +638,60 @@ func TestHandleContinue(t *testing.T) {
 		sess.Stop()
 		synctest.Wait()
 	})
+}
+
+// TestTreeInsertLine checks that the empty line that marks where the next
+// prompt goes opens under the selected row, a reply's, a tool call's, or a
+// prompt's, with the selected row's connectors running past it.
+func TestTreeInsertLine(t *testing.T) {
+	for _, tt := range []struct {
+		id   message.ID
+		want []string
+	}{
+		{id: "a1", want: []string{"  Agent I'll add Divide with a zero check.", "→", "  ├─ User also add tests"}},
+		{id: "u2", want: []string{"  ├─ User also add tests", "→ │", "  │  Agent Added TestDivide."}},
+		{id: "a2", want: []string{"  │  Agent Added TestDivide.", "→ │", "  └─ User use table-driven tests instead"}},
+	} {
+		t.Run(string(tt.id), func(t *testing.T) {
+			st := NewSessionTree(forkedTree("a2"))
+			selectID(t, st, tt.id)
+			v := st.View(treeMaxRows)
+			var lines []string
+			for _, line := range TreeLines(v, DefaultTheme()) {
+				lines = append(lines, strings.TrimRight(line.PlainText(), " "))
+			}
+			at := v.InsertLine()
+			if got := lines[at-1 : at+2]; !slices.Equal(got, tt.want) {
+				t.Errorf("lines around the insert line:\n%q\nwant:\n%q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestTreeLinesLabels checks that the tree labels its rows as the transcript
+// names them, "User", "Agent", or a tool's label, with no colon, and gives
+// each tool call of a message of calls alone a row of its own.
+func TestTreeLinesLabels(t *testing.T) {
+	st := NewSessionTree(forkedTree("a4"))
+	var got []string
+	for _, line := range TreeLines(st.View(treeMaxRows), DefaultTheme()) {
+		got = append(got, strings.TrimSpace(strings.TrimLeft(line.PlainText(), " →│├└─")))
+	}
+	// The insert line, under the head, is empty.
+	if i := slices.Index(got, ""); i >= 0 {
+		got = slices.Delete(got, i, i+1)
+	}
+	want := []string{
+		"User add a Divide method to the calculator",
+		"Agent I'll add Divide with a zero check.",
+		"User use table-driven tests instead",
+		"Read calc_test.go",
+		"Edit calc_test.go",
+		"Agent Rewrote the tests as a table.",
+		"User also add tests",
+		"Agent Added TestDivide.",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("rows:\n%q\nwant:\n%q", got, want)
+	}
 }

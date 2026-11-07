@@ -57,6 +57,8 @@ type StyledView interface {
 type ViewStyle struct {
 	// ToolMarkers shows ToolMarker before the name of each tool call.
 	ToolMarkers bool
+	// MarkerShape is the symbol of the marker.
+	MarkerShape MarkerShape
 	// NameFg colors the marker and the name of each tool call.
 	NameFg style.Color
 	// Debug shows what helps debug flow.
@@ -122,6 +124,10 @@ type ToolView struct {
 	// Shell shows Param as a command line, "$ command", highlighted as
 	// bash.
 	Shell bool
+	// ParamInHeader keeps the summary of the input, such as a path, after
+	// the tool's name in the header while the call is expanded, rather than
+	// showing it in the details, which then show only the notes.
+	ParamInHeader bool
 	// Notes follow Param, before the notes on the other params, such as a
 	// command's timeout.
 	Notes []string

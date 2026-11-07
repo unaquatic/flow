@@ -136,11 +136,17 @@ type Terminal struct {
 	// "off", "per_turn", or "per_message".
 	CacheUsage string `json:"cache_usage,omitempty"`
 
-	// ToolCalls is how collapsed tool calls show: "compact" or "boxed".
-	ToolCalls string `json:"tool_calls,omitempty"`
+	// ExpandedTools is how expanded tool calls show: "boxed", on a surface,
+	// or "plain", on the canvas.
+	ExpandedTools string `json:"expanded_tools,omitempty"`
 
 	// ToolMarker shows the marker before the name of each tool call.
 	ToolMarker bool `json:"tool_marker,omitempty"`
+
+	// ToolMarkerShape is the symbol of the marker: "square", "square_outline",
+	// "rounded_outline", "circle", "circle_outline", "diamond",
+	// "diamond_outline", or "block", a space filled with the marker's color.
+	ToolMarkerShape string `json:"tool_marker_shape,omitempty"`
 
 	// ToolNameColor is the color of each tool call's marker and name:
 	// "gray" or "white".
@@ -153,6 +159,10 @@ type Terminal struct {
 	// ListCount is where a list whose rows do not all fit counts them:
 	// "below" or "title".
 	ListCount string `json:"list_count,omitempty"`
+
+	// PromptStyle is how the transcript marks a prompt: "filled", on the box
+	// background, or "bar", with a primary color cell at its left edge.
+	PromptStyle string `json:"prompt_style,omitempty"`
 
 	// Selection is how the menus mark their selected row: "full_width",
 	// "fill", or "arrow".

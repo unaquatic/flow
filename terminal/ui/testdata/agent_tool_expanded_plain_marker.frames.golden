@@ -1,51 +1,50 @@
 === text ===
-|  Running the tests.                    |
+|■ Running the tests.                    |
+|                                        |
+|■ Bash [exit 1]                         |
+|                                        |
+|  $ go test ./...                       |
+|                                        |
+|  FAIL                                  |
+|                                        |
+|■ Read calc.go                          |
+|                                        |
+|  package calc                          |
+|                                        |
+|■ Grep Divide [1 match]                 |
+|                                        |
+|  calc.go:3:func Divide                 |
+|                                        |
+|■ Fixed the zero check.                 |
 |                                        |
 |                                        |
-|  Bash go test ./... [exit 1]           |
 |                                        |
 |                                        |
 |                                        |
-|  Read calc.go                          |
 |                                        |
-|                                        |
-|                                        |
-|  Grep Divide [1 match]                 |
-|                                        |
-|                                        |
-|  Fixed the zero check.                 |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAA                    |
+|A AAAAAAA AAA AAAAAA                    |
+|                                        |
+|B BBBB BBBBB BB                         |
+|                                        |
+|  A AA AAAA AAAAA                       |
+|                                        |
+|  AAAA                                  |
+|                                        |
+|B BBBB BBBBBBB                          |
+|                                        |
+|  CCCCCCC AAAA                          |
+|                                        |
+|B BBBB BBBBBB BB BBBBBB                 |
+|                                        |
+|  AAAAAAAAAAAAAA AAAAAA                 |
+|                                        |
+|A AAAAA AAA AAAA AAAAAA                 |
 |                                        |
 |                                        |
-|  BBBB BB BBBB BBBBB BBBBB BB           |
 |                                        |
 |                                        |
-|                                        |
-|  BBBB BBBBBBB                          |
-|                                        |
-|                                        |
-|                                        |
-|  BBBB BBBBBB BB BBBBBB                 |
-|                                        |
-|                                        |
-|  AAAAA AAA AAAA AAAAAA                 |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 |                                        |
 |                                        |
@@ -53,20 +52,28 @@
 |                                        |
 |                                        |
 |                                        |
-|  BBBB                                  |
 |                                        |
 |                                        |
 |                                        |
-|  BBBB                                  |
 |                                        |
 |                                        |
 |                                        |
-|  BBBB                                  |
+|                                        |
+|  BBBBBBB                               |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
 A #e6e6e6
-B #707070
-░ #1f1f1f SurfaceRaised/SuccessSurface
+B #8c8c8c
+C #eb7513

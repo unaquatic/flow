@@ -1,12 +1,12 @@
 === text ===
 |  Run this:                             |
 |                                        |
-|                                        |
-|    go test ./calculator/... -run       |
-|    TestDivide -count=1                 |
-|                                        |
+|  go test ./calculator/... -run         |
+|  TestDivide -count=1                   |
 |                                        |
 |  Then commit.                          |
+|                                        |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -14,23 +14,10 @@
 === fg ===
 |  AAA AAAAA                             |
 |                                        |
-|                                        |
-|    AA AAAA AAAAAAAAAAAAAAAA AAAA       |
-|    AAAAAAAAAA AAAAAAAA                 |
-|                                        |
+|  AA AAAA AAAAAAAAAAAAAAAA AAAA         |
+|  AAAAAAAAAA AAAAAAAA                   |
 |                                        |
 |  AAAA AAAAAAA                          |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  |
-|  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  |
-|  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  |
-|  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  |
 |                                        |
 |                                        |
 |                                        |
@@ -39,4 +26,3 @@
 |                                        |
 === legend ===
 A #e6e6e6
-░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -11,11 +11,18 @@ import (
 
 // FooterBox displays the footer of the reply that ends a turn as a single
 // row, cut short with an ellipsis when it does not fit: how long the turn
-// took, such as "Worked for 42s", and then, in the CachePerTurn mode, the
+// took, such as "Done [42s]", and then, in the CachePerTurn mode, the
 // cache use of its last request. It is hidden under the other replies, and
-// until the turn has ended.
+// until the turn has ended. While SetMarker shows it, ToolMarker starts the
+// row, in the box's left padding, as it starts a tool call's.
 type FooterBox struct {
 	*widget.Box
+	// Row lays out Marker and Text on one row.
+	Row *widget.Box
+	// Marker shows ToolMarker before Text while MarkerOn is set.
+	Marker *widget.Text
+	// MarkerOn reports that SetMarker shows Marker. It is off by default.
+	MarkerOn bool
 	// Text is the row's text.
 	Text *widget.Text
 	// Worked is how long the turn that the reply ends took, or zero when the
@@ -29,20 +36,48 @@ type FooterBox struct {
 // NewFooterBox creates the footer row of a reply that ends a turn that took
 // worked. The row is transparent and carries the prose inset so that it
 // lines up with the reply's text. It draws the time, and the cache use that
-// SetCache sets after it, in fg.
+// SetCache sets after it, in fg, and the marker SetMarker shows in fg too
+// until SetMarkerStyle styles it.
 func NewFooterBox(worked time.Duration, fg style.Color) *FooterBox {
 	text := widget.NewText("",
 		widget.TextWithFg(fg),
 		widget.TextWithBg(style.ColorTransparent),
-		widget.TextWithLayout(layout.WithHeight(layout.Points(1))),
+		widget.TextWithLayout(layout.WithHeight(layout.Points(1)), layout.WithFlexGrow(1)),
 		widget.TextWithTruncate(true),
+	)
+	marker := NewMarker(MarkerSquare, fg)
+	marker.SetGone(true)
+	row := widget.NewBox(
+		widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
+		widget.Children(marker, text),
 	)
 	// A leaf Text draws at its own origin, so a padded box insets it. Margins
 	// on the text would widen the bubble by their width instead of keeping
 	// the row inside it.
-	b := &FooterBox{Box: GutterRow(text), Text: text, Worked: worked}
+	b := &FooterBox{Box: GutterRow(row), Row: row, Marker: marker, Text: text, Worked: worked}
 	b.Sync()
 	return b
+}
+
+// SetMarker shows Marker before the text, in the box's left padding, as
+// show says, keeping the text where it is either way.
+func (b *FooterBox) SetMarker(show bool) {
+	if show == b.MarkerOn {
+		return
+	}
+	b.MarkerOn = show
+	b.Marker.SetGone(!show)
+	margin := 0
+	if show {
+		margin = -PaddingX
+	}
+	SetEdge(b.Row, &b.Row.LayoutNode().MarginLeft, margin)
+}
+
+// SetMarkerStyle shows Marker in shape and fg, as a tool call's marker
+// shows.
+func (b *FooterBox) SetMarkerStyle(shape MarkerShape, fg style.Color) {
+	StyleMarker(b.Marker, shape, fg)
 }
 
 // SetTurnEnd updates how long the turn that the reply ends took.
@@ -90,10 +125,17 @@ func FooterText(worked time.Duration, cache string) style.StyledText {
 }
 
 // FormatWorked returns the footer text for a turn that took d, as
-// FormatDuration gives it: "Worked for 42s", "Worked for 1m 05s", or "Worked
-// for 1h 02m 05s".
+// FormatDuration gives it: "Done [42s]", "Done [1m 05s]", or
+// "Done [1h 02m 05s]".
 func FormatWorked(d time.Duration) string {
-	return "Worked for " + FormatDuration(d)
+	return "Done [" + FormatDuration(d) + "]"
+}
+
+// FormatWorking returns the indicator text for a turn in progress that has
+// taken d so far, as FormatDuration gives it: "Working [12s]",
+// "Working [1m 05s]", or "Working [1h 02m 05s]".
+func FormatWorking(d time.Duration) string {
+	return "Working [" + FormatDuration(d) + "]"
 }
 
 // FormatDuration returns d rounded to the second, such as "42s", "1m 05s",

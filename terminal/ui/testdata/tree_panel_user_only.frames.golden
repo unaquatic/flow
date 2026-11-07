@@ -2,11 +2,11 @@
 |                                                                        |
 |  Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
 |                                                                        |
-|  user: add a Divide method to the calculator                           |
-|  ├─ user: also add tests                                               |
-|  └─ user: use table-driven tests instead                               |
+|  User add a Divide method to the calculator                            |
+|  ├─ User also add tests                                                |
+|  │                                                                     |
+|  └─ User use table-driven tests instead                                |
 |  [user]                                                                |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -15,16 +15,17 @@
 |                                                                        |
 |  AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
 |                                                                        |
-|  CCCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                           |
-|  EE EEEEE EEEE EEE EEEEE                                               |
-|  BB BBBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                               |
+|  CCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                            |
+|  BB CCCC DDDD DDD DDDDD                                                |
+|  E                                                                     |
+|  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                |
 |  BBBBBB                                                                |
 |                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -35,20 +36,6 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-=== attrs ===
-|                                                                        |
-|  BBBBBBBBBBBB                                                          |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 |                                                                        |
 === legend ===
 A #e6e6e6

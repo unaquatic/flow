@@ -84,9 +84,11 @@ func TestToolBox_ReadShowsContentOnCompletion(t *testing.T) {
 	}
 	box := newBox(pending)
 	code := box.Body
-	// Before it reads anything, the call shows its path alone.
-	if got := box.Params.PlainText(); got != "foo.go" || code.Visible() {
-		t.Fatalf("pending read: params %q, body shown %v; want foo.go and no body", got, code.Visible())
+	// Before it reads anything, the call shows its path alone, after its
+	// name in the header, whether expanded or not.
+	box.SetExpanded(true)
+	if got := box.Header.PlainText(); got != "Read foo.go" || box.Params.Visible() || code.Visible() {
+		t.Fatalf("pending read: header %q, params shown %v, body shown %v; want \"Read foo.go\" and neither", got, box.Params.Visible(), code.Visible())
 	}
 	box.SetTool(message.ToolPart{Name: "read", State: message.ToolStatePending{
 		Input: json.RawMessage(`{"path":"calc`),
@@ -119,7 +121,7 @@ func TestToolBox_ReadShowsContentOnCompletion(t *testing.T) {
 }
 
 // TestToolBox_BashHeaderAndCommand checks that a bash call's header reads its
-// bold tool name and the first line of its command, never its description,
+// tool name, not bold, and the first line of its command, never its description,
 // with the status apart from it in the color the key hints give what a key
 // does, and that its command line shows the timeout, in the muted text color,
 // only when it is not the default, and notes its other params but for its
@@ -192,8 +194,8 @@ func TestToolBox_BashHeaderAndCommand(t *testing.T) {
 			if got, want := box.Status.PlainText(), "[queued]"; got != want {
 				t.Errorf("status = %q; want %q", got, want)
 			}
-			if got := box.Status.Fg(); got != ui.PanelDimFg {
-				t.Errorf("status fg = %v; want PanelDimFg, as the key hints color what a key does", got)
+			if got := box.Status.Fg(); got != ui.ToolFg {
+				t.Errorf("status fg = %v; want ToolFg, as tool rows show their status", got)
 			}
 			if got := box.Params.PlainText(); got != tt.wantCommand {
 				t.Errorf("command = %q; want %q", got, tt.wantCommand)
@@ -201,8 +203,8 @@ func TestToolBox_BashHeaderAndCommand(t *testing.T) {
 			if got := box.Body.Content(); got != tt.wantBody {
 				t.Errorf("body = %q; want %q", got, tt.wantBody)
 			}
-			if label := box.Header.Content().Chunks[0]; label.Text != "Bash" || label.Attributes&style.AttrBold == 0 {
-				t.Errorf("label = %+v; want a bold, unbracketed Bash", label)
+			if label := box.Header.Content().Chunks[0]; label.Text != "Bash" || label.Attributes&style.AttrBold != 0 {
+				t.Errorf("label = %+v; want an unbracketed Bash, not bold", label)
 			}
 			for _, c := range box.Params.Content().Chunks {
 				if strings.HasPrefix(c.Text, "[") && (c.Fg != muted) {

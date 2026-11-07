@@ -96,13 +96,17 @@ func (s *Service) ShowKeywordToast(before, keyword, after string) []UIEvent {
 // NoFileChangesText is the notice of a history move that changed no file.
 const NoFileChangesText = "No file changes"
 
+// ChangesTitle heads the summary of the files a history move changed while
+// prompts show in PromptBar.
+const ChangesTitle = "Changes"
+
 // ShowDiffToast returns a transcript notice summarizing the files a history
-// move changed, or saying that it changed none.
+// move changed, titled ChangesTitle, or saying that it changed none.
 func (s *Service) ShowDiffToast(files []app.FileDiff) []UIEvent {
 	if len(files) == 0 {
 		return s.ShowToast(NoFileChangesText)
 	}
-	return s.AddNotice(Notice{Lines: BuildDiffToastLines(files)})
+	return s.AddNotice(Notice{Lines: BuildDiffToastLines(files), Title: ChangesTitle})
 }
 
 // DiffAddFg and DiffDelFg color the counts of added and deleted lines in a
@@ -186,9 +190,24 @@ func RelPathForToast(absPath string) string {
 // Ctrl+O lays the transcript out again with the details of every tool call,
 // and of the changes of every step, shown or hidden.
 const (
-	ExpandingToolsText  = "Expanding tool calls..."
-	CollapsingToolsText = "Collapsing tool calls..."
+	ExpandingToolsText  = "Expanding"
+	CollapsingToolsText = "Collapsing"
 )
+
+// ToolsToggleText returns the indicator text while Ctrl+O shows the details
+// of the tool calls, as expanded says, or hides them: ExpandingToolsText or
+// CollapsingToolsText, and then, while a turn is in progress, the time it has
+// taken in brackets, as FormatWorking shows it, such as "Expanding [12s]".
+func ToolsToggleText(expanded bool, elapsed time.Duration) string {
+	text := CollapsingToolsText
+	if expanded {
+		text = ExpandingToolsText
+	}
+	if elapsed <= 0 {
+		return text
+	}
+	return text + " [" + FormatDuration(elapsed) + "]"
+}
 
 // The keys that act on a run in progress, as the indicator names them after
 // the run's time: CancelHint names the key that cancels the run, and
@@ -201,15 +220,14 @@ const (
 )
 
 // WorkingIndicator returns the indicator of a run in progress whose turn has
-// taken elapsed: the time as the turn's footer will show it, such as "Worked
-// for 12s", and then CancelHint and ExpandHint, or CollapseHint once
-// expanded is set.
+// taken elapsed: FormatWorking of the time, such as "Working [12s]", and
+// then CancelHint and ExpandHint, or CollapseHint once expanded is set.
 func WorkingIndicator(elapsed time.Duration, expanded bool) EventIndicatorShow {
 	toggle := ExpandHint
 	if expanded {
 		toggle = CollapseHint
 	}
-	return EventIndicatorShow{Text: FormatWorked(elapsed), Hint: CancelHint + " " + toggle}
+	return EventIndicatorShow{Text: FormatWorking(elapsed), Hint: CancelHint + " " + toggle}
 }
 
 // ShowIndicator displays text, or when text is empty the WorkingIndicator of

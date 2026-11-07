@@ -217,13 +217,12 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "notice_diff_summary", h: 11, add: func(ui *UI) {
 			ui.AddNotice(Notice{Lines: BuildDiffToastLines(movedFiles())})
 		}},
-		// A code block is inset like the prose on both sides, and a line too
-		// wide for it wraps inside its background.
+		// A code block shows its lines alone, under the prose, and a
+		// line too wide for it wraps.
 		{name: "agent_code_block", h: 12, add: func(ui *UI) {
 			ui.AddMessage(agentText("a1", "Run this:\n\n```\ngo test ./calculator/... -run TestDivide -count=1\n```\n\nThen commit."))
 		}},
-		// A code block in a list item or a quote starts under its text, with
-		// the same padding on both sides and a blank row before and after it.
+		// A code block in a list item or a quote starts under its text.
 		// In a quote, the quote's border runs beside it.
 		{name: "agent_code_nested", h: 20, add: func(ui *UI) {
 			ui.AddMessage(agentText("a1", "1. Run it:\n\n   ```\n   go test ./...\n   ```\n\n- Or this:\n\n  ```\n  go vet ./...\n  ```\n\n> Quoted:\n>\n> ```\n> x := 1\n> ```"))
@@ -235,6 +234,14 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard."},
 				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
+			))
+		}},
+		// Inline code in reasoning is as bright as the reasoning around it,
+		// not as bright as the same code in the reply under it.
+		{name: "agent_reasoning_code", h: 7, add: func(ui *UI) {
+			ui.AddMessage(agentParts("a1",
+				message.ReasoningPart{ID: "a1-think", Text: "Divide needs a guard in `calc.go`."},
+				message.TextPart{ID: "a1-text", Text: "I'll add the guard in `calc.go`."},
 			))
 		}},
 		// Per message, a reply shows its cache use in a row under its text
@@ -279,11 +286,80 @@ func TestTranscriptFrames(t *testing.T) {
 			toolRowsTurn(ui)
 			ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 		}},
-		// Boxing the calls in /settings gives each its block back, a blank row
-		// apart from the next.
-		{name: "agent_tool_rows_boxed", h: 16, add: func(ui *UI) {
+		// Expanded plain, as /settings sets them, the calls show their
+		// details on the canvas, with no surface and no padding.
+		{name: "agent_tool_expanded_plain", h: 24, add: func(ui *UI) {
 			toolRowsTurn(ui)
-			ui.Apply(ui.service.SetToolStyle(ToolCallsBoxed))
+			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+			expandTools(ui)
+		}},
+		// With the prompt style a bar, a prompt sits on the canvas with the
+		// marker shape in the primary color at the left edge of each of its
+		// rows, ■ by default.
+		{name: "prompt_bar", h: 10, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
+			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
+		}},
+		// The block shape fills the bar's cells, and a shape set later
+		// reaches a prompt already shown.
+		{name: "prompt_bar_block", h: 10, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
+			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
+			ui.Apply(ui.service.SetMarkerShape(MarkerBlock))
+		}},
+		// With the prompt style a bar, a notice that would fill a box sits on
+		// the canvas as a prompt does, its first line marked in the tool name
+		// color as its header and the lines under it unmarked. A notice
+		// with a title, as the files a history move changed have, is headed
+		// by the title instead.
+		{name: "notice_bar", h: 14, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+			ui.AddMessage(userText("u1", "run the tests"))
+			ui.AddNotice(Notice{Text: "Chat cleared"})
+			ui.AddNotice(Notice{Lines: BuildDiffToastLines(movedFiles()[:2]), Title: ChangesTitle})
+		}},
+		// With the prompt style a bar, the session info under the logo is
+		// headed by a marked StatusTitle, its lines unmarked under it.
+		{name: "status_notice_bar", h: 18, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+			ui.AddNotice(StatusNotice(statusLines())...)
+		}},
+		// A marker shape and a tool name color set later reach a notice
+		// already shown.
+		{name: "notice_bar_restyled", h: 4, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+			ui.AddNotice(Notice{Text: "Chat cleared"})
+			ui.Apply(ui.service.SetMarkerShape(MarkerCircle))
+			ui.Apply(ui.service.SetToolColor(ToolNameWhite))
+		}},
+		// A reply's text starts with the marker on its first row alone, and
+		// a prompt shows none.
+		{name: "agent_text_marker", h: 10, add: func(ui *UI) {
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.AddMessage(userText("u1", "fix the divide test"))
+			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check.\n\nThe tests pass now."))
+		}},
+		// The marker shape set in /settings marks the calls, the cache rows,
+		// and the footer alike: here an unfilled circle.
+		{name: "agent_tool_rows_circle", h: 10, add: func(ui *UI) {
+			toolRowsTurn(ui)
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.Apply(ui.service.SetMarkerShape(MarkerCircleOutline))
+		}},
+		// Block fills a space with the marker's color.
+		{name: "agent_tool_rows_block", h: 10, add: func(ui *UI) {
+			toolRowsTurn(ui)
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.Apply(ui.service.SetMarkerShape(MarkerBlock))
+		}},
+		// Expanded plain, the calls keep the marker, as rows do.
+		{name: "agent_tool_expanded_plain_marker", h: 24, add: func(ui *UI) {
+			toolRowsTurn(ui)
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+			expandTools(ui)
 		}},
 		// Inline, text that streams shows its blocks once each is whole, and
 		// a row in place of the last until then, so that the rows above it
@@ -316,6 +392,32 @@ func TestTranscriptFrames(t *testing.T) {
 			msg.Live = []message.PartID{"a1-test"}
 			ui.AddMessage(msg)
 		}},
+		// While a run is in progress, the marker of a call that executes
+		// blinks, here hidden, and the call that has ended keeps its own.
+		{name: "agent_tool_marker_blink_off", h: 4, add: func(ui *UI) {
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.shimmer.On.Store(true)
+			ui.shimmer.MarkerOff = true
+			msg := agentParts("a1",
+				message.ToolPart{ID: "a1-test", CallID: "c1", Name: "bash", State: message.ToolStateRunning{
+					Input: json.RawMessage(`{"command":"go test ./..."}`)}},
+				message.ToolPart{ID: "a1-vet", CallID: "c2", Name: "bash", State: message.ToolStateCompleted{
+					Input: json.RawMessage(`{"command":"go vet ./..."}`), Output: "ok"}},
+			)
+			ui.AddMessage(msg)
+		}},
+		// Inline, the marker of the text a reply writes blinks, here hidden,
+		// while its first row is the one that stands for the block it holds
+		// back.
+		{name: "agent_text_marker_blink_off", h: 4, add: func(ui *UI) {
+			ui.inline = true
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.shimmer.On.Store(true)
+			ui.shimmer.MarkerOff = true
+			msg := agentText("a1", "Running the tests")
+			msg.Live = []message.PartID{"a1-text"}
+			ui.AddMessage(msg)
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -335,8 +437,8 @@ func TestToolBoxFrames(t *testing.T) {
 		tool message.ToolPart
 		// collapsed leaves the box collapsed to its header.
 		collapsed bool
-		// style is how the collapsed box shows.
-		style ToolCallStyle
+		// style is how the expanded box shows.
+		style ExpandedStyle
 	}{
 		// An expanded call shows its params under the header, which then holds
 		// the tool name alone: a bash call its command.
@@ -349,15 +451,11 @@ func TestToolBoxFrames(t *testing.T) {
 			State: message.ToolStatePending{Input: json.RawMessage(
 				`{"command":"go test ./calculator/...","description":"Run calculator tests","timeout_ms":120000}`)}}},
 		// A command wider than the box wraps on the command row, and in a
-		// collapsed box is cut off in the header, before the status, as it
-		// is in a row.
+		// collapsed box, a row, is cut off in the header, before the status.
 		{name: "toolbox_bash_wrapped", h: 7, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStatePending{Input: json.RawMessage(
 				`{"command":"go test ./calculator/... -run 'TestDivide|TestDivideByZero' -count=1 -v","description":"Run the divide tests","timeout_ms":120000}`)}}},
-		{name: "toolbox_bash_wrapped_collapsed", h: 4, collapsed: true, style: ToolCallsBoxed, tool: message.ToolPart{Name: "bash",
-			State: message.ToolStatePending{Input: json.RawMessage(
-				`{"command":"go test ./calculator/... -run 'TestDivide|TestDivideByZero' -count=1 -v","description":"Run the divide tests","timeout_ms":120000}`)}}},
-		// A compact call collapses to its header alone, on the canvas.
+		// A call collapses to its header alone, on the canvas.
 		{name: "toolbox_bash_wrapped_row", h: 2, collapsed: true, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStatePending{Input: json.RawMessage(
 				`{"command":"go test ./calculator/... -run 'TestDivide|TestDivideByZero' -count=1 -v","description":"Run the divide tests","timeout_ms":120000}`)}}},
@@ -375,12 +473,13 @@ func TestToolBoxFrames(t *testing.T) {
 			State: message.ToolStateError{Input: bashInput, Error: "--- FAIL: TestDivide (0.00s)\nFAIL\n\n[exit 1]"}}},
 		{name: "toolbox_bash_interrupted", h: 6, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStateError{Input: bashInput, Error: message.InterruptedError}}},
+		// Expanded plain, the call shows on the canvas, with no surface and
+		// no padding.
+		{name: "toolbox_bash_error_plain", h: 7, style: ExpandedPlain, tool: message.ToolPart{Name: "bash",
+			State: message.ToolStateError{Input: bashInput, Error: "--- FAIL: TestDivide (0.00s)\nFAIL\n\n[exit 1]"}}},
 		// A call interrupted before its output shows its input in its params,
 		// each param after the main one as a note in the muted text color.
 		{name: "toolbox_grep_interrupted", h: 6, tool: message.ToolPart{Name: "grep",
-			State: message.ToolStateError{Input: json.RawMessage(`{"pattern":"TODO","path":"calculator"}`),
-				Error: message.InterruptedError}}},
-		{name: "toolbox_grep_interrupted_collapsed", h: 4, collapsed: true, style: ToolCallsBoxed, tool: message.ToolPart{Name: "grep",
 			State: message.ToolStateError{Input: json.RawMessage(`{"pattern":"TODO","path":"calculator"}`),
 				Error: message.InterruptedError}}},
 		{name: "toolbox_grep_interrupted_row", h: 2, collapsed: true, tool: message.ToolPart{Name: "grep",
@@ -432,7 +531,7 @@ func TestToolBoxFrames(t *testing.T) {
 }
 
 // TestToolBoxHeaderFrames draws the collapsed headers of completed calls that
-// carry a result title, each boxed: the tool name in bold and then its path,
+// carry a result title, each a row: the tool name and then its path,
 // pattern, or command, never the title.
 func TestToolBoxHeaderFrames(t *testing.T) {
 	ui := newInlineTestUI(t)
@@ -440,10 +539,9 @@ func TestToolBoxHeaderFrames(t *testing.T) {
 		box := newTestToolBox(t, message.ToolPart{Name: name, State: message.ToolStateCompleted{
 			Input: json.RawMessage(input), Output: "ok", Title: title,
 		}}, ui.theme, ui.theme.ResolveTextBase())
-		box.SetStyle(ToolCallsBoxed)
 		return box
 	}
-	buf := renderFrames(60, 15,
+	buf := renderFrames(60, 5,
 		completed("glob", `{"pattern":"calculator/*.go"}`, "Find calculator files"),
 		completed("read", `{"path":"calculator/calc_test.go"}`, "Read calculator tests"),
 		completed("edit", `{"path":"calculator/calc.go","old_string":"a","new_string":"b"}`, "Add Calculator.Divide"),
@@ -453,9 +551,10 @@ func TestToolBoxHeaderFrames(t *testing.T) {
 	testutil.AssertGoldenFrames(t, "toolbox_headers_completed", buf, surfaceNames(ui))
 }
 
-// TestUsageBoxFrames draws a usage block once shown, which it is not by
-// default: collapsed to its header, the counts the Usage box shows, and
-// expanded to every count the provider reported.
+// TestUsageBoxFrames draws a usage box once shown, which it is not by
+// default, as /settings shows tool calls: collapsed to its header, a row,
+// with the marker when it is on, and expanded to every count the provider
+// reported, in a block on the surface, or on the canvas when plain.
 func TestUsageBoxFrames(t *testing.T) {
 	part := message.UsagePart{ID: "a1-usage", Usage: message.Usage{
 		InputTokens: 1200, CachedInputTokens: 1024, CacheCreationInputTokens: 176,
@@ -464,16 +563,22 @@ func TestUsageBoxFrames(t *testing.T) {
 	tests := []struct {
 		name     string
 		h        int
+		style    ExpandedStyle
+		marker   bool
 		expanded bool
 	}{
-		{name: "usagebox_collapsed", h: 3},
-		{name: "usagebox_expanded", h: 10, expanded: true},
+		{name: "usagebox_collapsed", h: 1},
+		{name: "usagebox_marker", h: 1, marker: true},
+		{name: "usagebox_plain", h: 8, style: ExpandedPlain, expanded: true},
+		{name: "usagebox_expanded", h: 10, marker: true, expanded: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInlineTestUI(t)
 			box := NewUsageBox(part, ui.theme, ui.theme.ResolveTextBase())
 			box.SetGone(false)
+			box.SetStyle(tt.style)
+			box.SetMarker(tt.marker)
 			box.SetExpanded(tt.expanded)
 			buf := renderFrames(60, tt.h, box)
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
@@ -492,11 +597,10 @@ func TestDemoToolFrames(t *testing.T) {
 		}
 		box := newTestToolBox(t, message.ToolPart{Name: seg.Tool.Name,
 			State: seg.Tool.State(time.Time{}, time.Time{})}, ui.theme, ui.theme.ResolveTextBase())
-		box.SetStyle(ToolCallsBoxed)
 		boxes = append(boxes, box)
 	}
-	// Each collapsed box is its header between two rows of padding.
-	buf := renderFrames(60, 3*len(boxes)+1, boxes...)
+	// Each collapsed box is its header alone, a row.
+	buf := renderFrames(60, len(boxes)+1, boxes...)
 	testutil.AssertGoldenFrames(t, "demo_tool_calls", buf, surfaceNames(ui))
 }
 
@@ -657,6 +761,10 @@ func TestSlashStatusFrames(t *testing.T) {
 		usage SessionUsage
 		// pinned pins the box and draws it with the slash menu closed.
 		pinned bool
+		// marker shows the tool marker, as /settings does.
+		marker bool
+		// expanded expands tool calls, as Ctrl+O does.
+		expanded bool
 	}{
 		{name: "slash_status", w: 84, usage: usage},
 		// A narrow terminal cuts the row off at its right end.
@@ -664,6 +772,12 @@ func TestSlashStatusFrames(t *testing.T) {
 		// Pinned, the box stays with the menu closed, and names no key, which
 		// the menu names while it is open.
 		{name: "slash_status_pinned", w: 84, usage: usage, pinned: true},
+		// Collapsed, the box is a row like a collapsed tool call's, with no
+		// background, and the marker before it while the tool marker is on.
+		{name: "slash_status_marker", w: 84, usage: usage, marker: true},
+		// With tool calls expanded, the box stays a row, with the marker, as
+		// a row with nothing to expand does.
+		{name: "slash_status_expanded", w: 84, usage: usage, marker: true, expanded: true},
 		// A nearly full context turns the danger color.
 		{name: "slash_status_context_full", w: 84, usage: SessionUsage{Input: 180_000, Output: 2_000,
 			Cost: 0.57, Context: 182_000, Window: 200_000}},
@@ -675,6 +789,12 @@ func TestSlashStatusFrames(t *testing.T) {
 			ui.SetModelLabel("provider-a/model-h:medium")
 			ui.SetUsage(tt.usage)
 			ui.service.state.Messages = []ChatMessage{{ID: "a1", Role: message.RoleAgent, Worked: 3*time.Minute + 12*time.Second}}
+			if tt.marker {
+				ui.Apply(ui.service.SetToolMarkers(true))
+			}
+			if tt.expanded {
+				ui.Apply(ui.service.SetToolsExpanded(true))
+			}
 			h := 15
 			if tt.pinned {
 				ui.Apply(ui.service.HandleCtrlU())
@@ -808,18 +928,21 @@ func TestIndicatorFrames(t *testing.T) {
 // TestShimmerFrames draws the indicator of a run in progress with the
 // shimmer's band across its time: the columns near the band's center are
 // lighter, the most at its center. The hint after the time stays dim
-// wherever the band is.
+// wherever the band is. The marker before the time blinks, and while it is
+// hidden the time stays where it is.
 func TestShimmerFrames(t *testing.T) {
-	// The time "Worked for 12s" is 14 columns wide.
-	const cols = 14
+	// The time "Working [12s]" is 13 columns wide.
+	const cols = 13
 	for _, tt := range []struct {
 		name  string
 		phase float64
+		off   bool
 	}{
 		{name: "indicator_shimmer", phase: 0.5},
 		// The band's center is on the time's last column, within reach of
 		// the hint.
 		{name: "indicator_shimmer_end", phase: float64(cols-1+shimmerReach) / float64(cols+2*shimmerReach)},
+		{name: "indicator_blink_off", phase: 0.5, off: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
@@ -827,6 +950,7 @@ func TestShimmerFrames(t *testing.T) {
 			ui.service.state.Working = true
 			ui.ShowIndicator(WorkingIndicator(12*time.Second, false))
 			ui.shimmer.Phase = tt.phase
+			ui.shimmer.MarkerOff = tt.off
 			buf := renderFrames(56, 2, detachFromRoot(ui, ui.indicatorBox))
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
 		})
@@ -968,7 +1092,7 @@ func cacheTurn(ui *UI) {
 }
 
 // TestCacheFrames draws the cache use of each reply as a row of its own under
-// the reply, like a collapsed tool call's: the bold name and the counts in the
+// the reply, like a collapsed tool call's: the name and the counts in the
 // muted text color. A reply's text and tool calls show as they do without it.
 // The row stacks under a tool call above it, and is parted by a blank row
 // from text, and the footer under the turn's last reply is parted from the row
@@ -986,7 +1110,8 @@ func TestCacheFrames(t *testing.T) {
 			ui.Apply(ui.service.SetCacheMode(CachePerTurn))
 			cacheTurn(ui)
 		}},
-		// The row starts with the marker, as tool calls do.
+		// The row starts with the marker, as tool calls do, and so does the
+		// footer.
 		{name: "cache_marker", w: 60, h: 15, add: func(ui *UI) {
 			ui.Apply(ui.service.SetToolMarkers(true))
 			cacheTurn(ui)

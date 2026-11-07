@@ -49,13 +49,32 @@ func TestTickIndicator(t *testing.T) {
 // its time, followed by the key that cancels it and what Ctrl+O does next to
 // the details of the tool calls.
 func TestWorkingIndicator(t *testing.T) {
-	want := EventIndicatorShow{Text: "Worked for 1m 05s", Hint: "[esc cancel] [ctrl+o expand]"}
+	want := EventIndicatorShow{Text: "Working [1m 05s]", Hint: "[esc cancel] [ctrl+o expand]"}
 	if got := WorkingIndicator(65*time.Second, false); got != want {
 		t.Errorf("WorkingIndicator(65s, false) = %+v, want %+v", got, want)
 	}
 	want.Hint = "[esc cancel] [ctrl+o collapse]"
 	if got := WorkingIndicator(65*time.Second, true); got != want {
 		t.Errorf("WorkingIndicator(65s, true) = %+v, want %+v", got, want)
+	}
+}
+
+// TestToolsToggleText checks that the indicator while Ctrl+O lays the
+// transcript out again names the toggle, and the time of a turn in progress.
+func TestToolsToggleText(t *testing.T) {
+	for _, tt := range []struct {
+		expanded bool
+		elapsed  time.Duration
+		want     string
+	}{
+		{expanded: true, want: "Expanding"},
+		{expanded: false, want: "Collapsing"},
+		{expanded: true, elapsed: 12 * time.Second, want: "Expanding [12s]"},
+		{expanded: false, elapsed: 65 * time.Second, want: "Collapsing [1m 05s]"},
+	} {
+		if got := ToolsToggleText(tt.expanded, tt.elapsed); got != tt.want {
+			t.Errorf("ToolsToggleText(%v, %v) = %q, want %q", tt.expanded, tt.elapsed, got, tt.want)
+		}
 	}
 }
 

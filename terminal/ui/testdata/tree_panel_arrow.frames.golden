@@ -2,15 +2,15 @@
 |                                                                        |
 |  Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
 |                                                                        |
-|  user: add a Divide method to the calculator                           |
-|  agent: I'll add Divide with a zero check.                             |
-|  ├─ user: also add tests                                               |
-|→ │  agent: Added TestDivide.                                           |
-|  └─ user: use table-driven tests instead                               |
-|     read: calc_test.go · edit: calc_test.go                            |
-|     agent: Rewrote the tests as a table.                               |
-|                                                                        |
-|                                                                        |
+|  User add a Divide method to the calculator                            |
+|  Agent I'll add Divide with a zero check.                              |
+|  ├─ User also add tests                                                |
+|  │  Agent Added TestDivide.                                            |
+|→ │                                                                     |
+|  └─ User use table-driven tests instead                                |
+|     Read calc_test.go                                                  |
+|     Edit calc_test.go                                                  |
+|     Agent Rewrote the tests as a table.                                |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -18,15 +18,15 @@
 |                                                                        |
 |  AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
 |                                                                        |
-|  CCCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                           |
-|  EEEEEE DDDD DDD DDDDDD DDDD D DDDD DDDDDD                             |
-|  BB CCCCC DDDD DDD DDDDD                                               |
-|F B  EEEEEE FFFFF FFFFFFFFFFF                                           |
-|  BB BBBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                               |
-|     BBBBB BBBBBBBBBBBB B BBBBB BBBBBBBBBBBB                            |
-|     BBBBBB BBBBBBB BBB BBBBB BB B BBBBBB                               |
-|                                                                        |
-|                                                                        |
+|  CCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                            |
+|  AAAAA DDDD DDD DDDDDD DDDD D DDDD DDDDDD                              |
+|  BB CCCC DDDD DDD DDDDD                                                |
+|  B  AAAAA DDDDD DDDDDDDDDDD                                            |
+|E B                                                                     |
+|  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                |
+|     BBBB BBBBBBBBBBBB                                                  |
+|     BBBB BBBBBBBBBBBB                                                  |
+|     BBBBB BBBBBBB BBB BBBBB BB B BBBBBB                                |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -44,29 +44,12 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-=== attrs ===
-|                                                                        |
-|  BBBBBBBBBBBB                                                          |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 === legend ===
 A #e6e6e6
 B #707070
 C #eb7513
 D #b4b4b4
-E #91b557
-F #ff5f00
+E #ff5f00
 ░ #232323 BoxBg

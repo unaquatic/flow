@@ -387,7 +387,7 @@ func TestKeyHintsViewLines(t *testing.T) {
 }
 
 // TestPanelHeaderCount checks that a header shows a menu's count after its
-// title, in the grey of what a key does and not bold like the title, and the
+// title, in the grey of what a key does, and neither of them bold, and the
 // title alone once the count is gone.
 func TestPanelHeaderCount(t *testing.T) {
 	ui := newBannerTestUI(t)
@@ -398,8 +398,8 @@ func TestPanelHeaderCount(t *testing.T) {
 	if got := h.Title.PlainText(); got != "Commands [3/13]" || len(chunks) != 2 {
 		t.Fatalf("title = %q in %d chunks, want \"Commands [3/13]\" in 2", got, len(chunks))
 	}
-	if chunks[0].Attributes&style.AttrBold == 0 {
-		t.Error("the title is not bold")
+	if chunks[0].Attributes&style.AttrBold != 0 {
+		t.Error("the title is bold")
 	}
 	if count := chunks[1]; count.Attributes&style.AttrBold != 0 || count.Fg != PanelDimFg {
 		t.Errorf("count = %+v, want it in PanelDimFg, not bold", count)
@@ -435,13 +435,13 @@ func TestPanelHeaderSubtitle(t *testing.T) {
 func TestIndicatorShowsRunKeys(t *testing.T) {
 	ui := newInputTestUI(t)
 	ui.Apply(ui.service.ShowIndicator(""))
-	const expand = "Worked for 0s [esc cancel] [ctrl+o expand]"
+	const expand = "Working [0s] [esc cancel] [ctrl+o expand]"
 	if got := ui.indicatorLabel.PlainText(); got != expand {
 		t.Errorf("working: indicator = %q, want %q", got, expand)
 	}
 
 	ui.Apply(ui.service.SetToolsExpanded(true))
-	const collapse = "Worked for 0s [esc cancel] [ctrl+o collapse]"
+	const collapse = "Working [0s] [esc cancel] [ctrl+o collapse]"
 	if got := ui.indicatorLabel.PlainText(); got != collapse {
 		t.Errorf("tools expanded: indicator = %q, want %q", got, collapse)
 	}

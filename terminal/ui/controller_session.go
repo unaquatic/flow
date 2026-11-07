@@ -25,12 +25,16 @@ func StatusNotice(lines []style.StyledText) []Notice {
 	return LogoNotice(slices.Collect(LogoLines()), lines)
 }
 
+// StatusTitle heads the session info while prompts show in PromptBar.
+const StatusTitle = "Status"
+
 // LogoNotice returns the notices that show logo on the canvas, from the
-// transcript's left edge, and under it lines on the system surface.
+// transcript's left edge, and under it lines on the system surface, titled
+// StatusTitle.
 func LogoNotice(logo, lines []style.StyledText) []Notice {
 	return []Notice{
 		{Lines: logo, Surface: NoticeCanvas},
-		{Lines: lines, Surface: NoticeSystem},
+		{Lines: lines, Surface: NoticeSystem, Title: StatusTitle},
 	}
 }
 

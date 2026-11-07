@@ -1,12 +1,12 @@
 === text ===
-|  Worked for 12s [esc cancel] [ctrl+o expand]           |
+|■ Working [12s] [esc cancel] [ctrl+o expand]            |
 |                                                        |
 === fg ===
-|  AAAABC DEC AAA AAAA AAAAAAA AAAAAAA AAAAAAA           |
+|A AAABCDE DCBAA AAAA AAAAAAA AAAAAAA AAAAAAA            |
 |                                                        |
 === legend ===
 A #707070
-B #818181
-C #ababab
-D #e6e6e6
-E #d4d4d4
+B #747474
+C #949494
+D #c1c1c1
+E #e1e1e1

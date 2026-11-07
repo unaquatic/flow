@@ -261,11 +261,11 @@ type EventToolsExpandedSet struct {
 	Expanded bool
 }
 
-// EventToolStyleSet shows every collapsed tool call in the transcript and the
+// EventExpandStyleSet shows every expanded tool call in the transcript and the
 // session preview, and those added later, as Style says.
-type EventToolStyleSet struct {
-	// Style is how the collapsed calls show.
-	Style ToolCallStyle
+type EventExpandStyleSet struct {
+	// Style is how the expanded calls show.
+	Style ExpandedStyle
 }
 
 // EventToolMarkersSet shows or hides ToolMarker before the name of every tool
@@ -273,6 +273,13 @@ type EventToolStyleSet struct {
 type EventToolMarkersSet struct {
 	// Show shows the marker when true and hides it when false.
 	Show bool
+}
+
+// EventMarkerShapeSet shows the marker of every tool call in the transcript
+// and the session preview, and of those added later, in Shape.
+type EventMarkerShapeSet struct {
+	// Shape is the marker's symbol.
+	Shape MarkerShape
 }
 
 // EventToolColorSet shows the marker and the name of every tool call in the
@@ -295,6 +302,13 @@ type EventDebugSet struct {
 type EventCountPlaceSet struct {
 	// Place is where the lists count their rows.
 	Place CountPlace
+}
+
+// EventPromptStyleSet shows every prompt in the transcript, and those added
+// later, as Style says.
+type EventPromptStyleSet struct {
+	// Style is how the transcript marks a prompt.
+	Style PromptStyle
 }
 
 // EventSelectionStyleSet marks the selected row of every menu as Style says.
@@ -359,13 +373,15 @@ func (EventRedoRequested) uiEvent()     {}
 func (EventTreeShow) uiEvent()          {}
 func (EventTreeMoveRequested) uiEvent() {}
 func (EventToolsExpandedSet) uiEvent()  {}
-func (EventToolStyleSet) uiEvent()      {}
+func (EventExpandStyleSet) uiEvent()    {}
 func (EventToolMarkersSet) uiEvent()    {}
 func (EventToolColorSet) uiEvent()      {}
+func (EventMarkerShapeSet) uiEvent()    {}
 func (EventDebugSet) uiEvent()          {}
 func (EventCacheModeSet) uiEvent()      {}
 func (EventKeyHintsModeSet) uiEvent()   {}
 func (EventUsagePinnedSet) uiEvent()    {}
 func (EventCountPlaceSet) uiEvent()     {}
 func (EventSelectionStyleSet) uiEvent() {}
+func (EventPromptStyleSet) uiEvent()    {}
 func (EventInputHintChanged) uiEvent()  {}

@@ -2,7 +2,7 @@
 |  Bash go test ./...                    |
 |  Cache read 0K write 0K                |
 |                                        |
-|  Worked for 3s                         |
+|  Done [3s]                             |
 |                                        |
 |                                        |
 |                                        |
@@ -11,19 +11,10 @@
 |  AAAA AA AAAA AAAAA                    |
 |  AAAAA AAAA AA AAAAA AA                |
 |                                        |
-|  AAAAAA AAA AA                         |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-=== attrs ===
-|  BBBB                                  |
-|  BBBBB                                 |
-|                                        |
-|                                        |
+|  AAAA AAAA                             |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #707070
+A #8c8c8c
