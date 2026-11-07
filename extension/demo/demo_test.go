@@ -3,6 +3,7 @@ package demo
 import (
 	"context"
 	"encoding/json"
+	"go/format"
 	"slices"
 	"strings"
 	"testing"
@@ -170,5 +171,35 @@ func TestTools(t *testing.T) {
 	}
 	if res := svc.Execute(t.Context(), agent.ToolCall{ID: "c1", Name: "webfetch"}); !res.IsError || !strings.HasPrefix(res.Content, agent.ErrToolNotFound.Error()) {
 		t.Errorf("webfetch call = %+v, want it not found", res)
+	}
+}
+
+// TestDemoSourcesAreFormatted checks that the Go files the demo writes and
+// shows read as gofmt writes them.
+func TestDemoSourcesAreFormatted(t *testing.T) {
+	for name, src := range map[string]string{
+		"divide_cases_test.go": DivideCasesSource(),
+		"calc.go":              finalSource,
+	} {
+		formatted, err := format.Source([]byte(src))
+		if err != nil {
+			t.Errorf("%s does not parse: %v", name, err)
+			continue
+		}
+		if string(formatted) != src {
+			t.Errorf("%s is not formatted; gofmt writes:\n%s", name, formatted)
+		}
+	}
+}
+
+// TestDivideCasesRun checks that the run of the demo's table-driven test
+// runs and passes each of DivideCases, by the name go test gives it.
+func TestDivideCasesRun(t *testing.T) {
+	run := DivideCasesRun()
+	for _, c := range DivideCases {
+		name := "TestDivideCases/" + strings.ReplaceAll(c.Name, " ", "_")
+		if !strings.Contains(run, "=== RUN   "+name+"\n") || !strings.Contains(run, "--- PASS: "+name+" ") {
+			t.Errorf("the run does not run and pass %s:\n%s", name, run)
+		}
 	}
 }

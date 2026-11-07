@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/fluid/style"
 )
@@ -66,9 +67,21 @@ func checkoutErrorMessage(verb string, err error) string {
 	return fmt.Sprintf("%s failed: %v", verb, err)
 }
 
-// ShowToast returns an event that appends a one-line transcript notice.
+// AddNotice adds notices to the transcript, under its messages, each in a
+// ChatMessage of its own, and returns the events that show them.
+func (s *Service) AddNotice(notices ...Notice) []UIEvent {
+	var out []UIEvent
+	for _, n := range notices {
+		msg := ChatMessage{ID: message.NewID(), Notice: &n}
+		s.state.Messages = append(s.state.Messages, msg)
+		out = append(out, EventMessageAdded{Msg: msg})
+	}
+	return out
+}
+
+// ShowToast adds a one-line notice to the transcript.
 func (s *Service) ShowToast(text string) []UIEvent {
-	return []UIEvent{EventToastShow{Text: text}}
+	return s.AddNotice(Notice{Text: text})
 }
 
 // ShowKeywordToast returns an event that appends a one-line transcript notice
@@ -77,7 +90,7 @@ func (s *Service) ShowToast(text string) []UIEvent {
 func (s *Service) ShowKeywordToast(before, keyword, after string) []UIEvent {
 	fg := productFg
 	line := style.NewStyledText(style.Plain(before), style.TextChunk{Text: keyword, Fg: fg}, style.Plain(after))
-	return []UIEvent{EventToastShow{Lines: []style.StyledText{line}}}
+	return s.AddNotice(Notice{Lines: []style.StyledText{line}})
 }
 
 // NoFileChangesText is the notice of a history move that changed no file.
@@ -87,9 +100,9 @@ const NoFileChangesText = "No file changes"
 // move changed, or saying that it changed none.
 func (s *Service) ShowDiffToast(files []app.FileDiff) []UIEvent {
 	if len(files) == 0 {
-		return []UIEvent{EventToastShow{Text: NoFileChangesText}}
+		return s.ShowToast(NoFileChangesText)
 	}
-	return []UIEvent{EventToastShow{Lines: BuildDiffToastLines(files)}}
+	return s.AddNotice(Notice{Lines: BuildDiffToastLines(files)})
 }
 
 // DiffAddFg and DiffDelFg color the counts of added and deleted lines in a

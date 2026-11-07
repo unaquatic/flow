@@ -157,10 +157,10 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 
 // ShowHeader writes the call's header: the tool's name and the summary of its
 // input, as ToolHeaderOutput gives them, with the input in the color of the
-// status, or the name alone while the box is expanded and Params shows the
+// status, or the name alone while the box is Open and Params shows the
 // input, which the summary repeats.
 func (b *ToolBox) ShowHeader() {
-	if b.Expanded && b.Params.Visible() {
+	if b.Open() && b.Params.Visible() {
 		b.Header.SetStyledContent(style.NewStyledText(ToolNameChunk(b.View.NameLabel(b.Tool.Name), b.NameFg)))
 		return
 	}

@@ -111,9 +111,11 @@ type EventSessionPrompts struct {
 	Prompts []string
 }
 
-// EventSessionLoad replaces the active transcript.
+// EventSessionLoad replaces the active transcript, as UI.LoadTranscript
+// replaces it: inline, with the rows of its last messages alone.
 type EventSessionLoad struct {
-	// Messages contains the active session transcript.
+	// Messages contains the active session transcript, its notices among
+	// its messages.
 	Messages []ChatMessage
 }
 
@@ -181,25 +183,6 @@ type EventBannerUpdate struct{ Text string }
 // EventBannerHide closes the active banner.
 type EventBannerHide struct{}
 
-// EventToastShow appends a notice to the transcript. Lines takes precedence
-// over Text when both are set.
-type EventToastShow struct {
-	// Text is an unstyled single-line notice.
-	Text string
-	// Lines contains styled notice rows.
-	Lines []style.StyledText
-	// System draws the notice on the system surface, as /status is drawn.
-	System bool
-}
-
-// EventCanvasShow appends rows to the transcript on the canvas, from its
-// left edge, with no box around them, followed by a blank row, such as the
-// logo over /status.
-type EventCanvasShow struct {
-	// Lines contains the styled rows.
-	Lines []style.StyledText
-}
-
 // EventIndicatorShow displays the indicator between the transcript and input.
 type EventIndicatorShow struct {
 	// Text is the line displayed, such as the time a run has taken or an
@@ -240,7 +223,7 @@ type EventProgressSet struct {
 }
 
 // EventUndoRequested asks the UI to move back one turn. The UI runs the move
-// off the event loop, so the result arrives as a later EventToastShow.
+// off the event loop, so the result arrives as a later notice.
 type EventUndoRequested struct{}
 
 // EventRedoRequested asks the UI to move forward one turn, with the same
@@ -363,8 +346,6 @@ func (EventSessionLoad) uiEvent()       {}
 func (EventBannerShow) uiEvent()        {}
 func (EventBannerUpdate) uiEvent()      {}
 func (EventBannerHide) uiEvent()        {}
-func (EventToastShow) uiEvent()         {}
-func (EventCanvasShow) uiEvent()        {}
 func (EventIndicatorShow) uiEvent()     {}
 func (EventIndicatorHide) uiEvent()     {}
 func (EventInlineModeSet) uiEvent()     {}

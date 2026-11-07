@@ -19,19 +19,18 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// StatusNotice returns the events that show lines as the session info does:
+// StatusNotice returns the notices that show lines as the session info does:
 // LogoNotice under the product logo.
-func StatusNotice(lines []style.StyledText) []UIEvent {
+func StatusNotice(lines []style.StyledText) []Notice {
 	return LogoNotice(slices.Collect(LogoLines()), lines)
 }
 
-// LogoNotice returns the events that show logo on the canvas, from the
-// transcript's left edge, and under it lines in a notice on the system
-// surface.
-func LogoNotice(logo, lines []style.StyledText) []UIEvent {
-	return []UIEvent{
-		EventCanvasShow{Lines: logo},
-		EventToastShow{Lines: lines, System: true},
+// LogoNotice returns the notices that show logo on the canvas, from the
+// transcript's left edge, and under it lines on the system surface.
+func LogoNotice(logo, lines []style.StyledText) []Notice {
+	return []Notice{
+		{Lines: logo, Surface: NoticeCanvas},
+		{Lines: lines, Surface: NoticeSystem},
 	}
 }
 
@@ -75,10 +74,10 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		}
 		add("Updated", stored.UpdatedAt.Local().Format(time.DateTime))
 	}
-	add("Messages", strconv.Itoa(len(s.state.Messages)))
+	add("Messages", strconv.Itoa(s.MessageCount()))
 	add("Model", s.state.Model)
 	add("Directory", s.app.WorkingDir())
-	return LogoNotice(logo, lines)
+	return s.AddNotice(LogoNotice(logo, lines)...)
 }
 
 // HandleSessionList displays the stored sessions, one row each, searched
@@ -291,27 +290,32 @@ func ChatMessageOf(m message.Content) ChatMessage {
 }
 
 // InitSession opens the initial session, the stored session id or a new one
-// when id is empty, and returns its /status notice followed by its messages,
-// and its terminal title. A stored session takes the model variant its
-// messages last ran, unless state.KeepModel keeps the terminal's. A stored
-// session that fails to load leaves the new session active.
+// when id is empty, and returns the load of its transcript, its /status
+// notice followed by its messages, and its terminal title. A stored session
+// takes the model variant its messages last ran, unless state.KeepModel keeps
+// the terminal's. A stored session that fails to load leaves the new session
+// active, and says so under the notice.
+//
+// The transcript is loaded whole, rather than a message at a time, so that
+// the UI builds the rows of the last messages alone, as BuildTranscript
+// builds them.
 func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent {
 	s.NewSession()
-	var failed, restored []UIEvent
+	var restored []UIEvent
 	if id != "" {
 		if err := s.OpenSession(id); err != nil {
-			failed = s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
+			// The service records each notice among the messages, which
+			// the load shows, so their events are not needed.
+			s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
 		} else if !s.state.KeepModel {
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The transcript starts empty, so the messages are appended below the
-	// notice; loading them would replace it.
-	out := slices.Concat(restored, s.ShowInfo(), failed)
-	for _, m := range s.state.Messages {
-		out = append(out, EventMessageAdded{Msg: m})
-	}
-	return slices.Concat(out, s.UpdateUsage(), s.UpdateTitle())
+	// The notices head the transcript, above the messages they follow in.
+	loaded := len(s.state.Messages)
+	s.ShowInfo()
+	s.state.Messages = slices.Concat(s.state.Messages[loaded:], s.state.Messages[:loaded])
+	return slices.Concat(restored, []UIEvent{EventSessionLoad{Messages: s.state.Messages}}, s.UpdateUsage(), s.UpdateTitle())
 }
 
 // ClearMessages stops the active run, empties the chat, and starts a fresh

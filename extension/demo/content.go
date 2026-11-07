@@ -1,6 +1,8 @@
 package demo
 
 import (
+	"bytes"
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -44,9 +46,21 @@ var Prompts = []string{
 // nonzero with and without output, times out, or is cancelled, a tool that
 // fails, a tool that is not found, and a call that is interrupted. Its bash
 // calls include a long command, a multi-line one, and one with a timeout; a
-// read call reads part of a file, and a grep call searches below a path. Its
-// last reply, summary, shows every kind of Markdown the chat renders.
+// read call reads part of a file, and a grep call searches below a path.
+// Its first reply streams a table, and near its end a reply streams a code
+// block taller than most screens, which inline mode shows, as every block of
+// a reply, once each is whole, a write call streams a long file, and a bash
+// call returns long output, which inline mode shows whole only once each
+// call has ended. Its last reply, summary, shows every kind of Markdown the
+// chat renders.
 var Segments = []Segment{
+	{
+		Text: "Division has to get these cases right:\n\n" + DivideCasesTable() + "\n\nI'll check which Go version the module targets.",
+		Tool: &Tool{
+			Name: "read", Input: json.RawMessage(`{"path":"go.mod"}`),
+			Output: "module example/calculator\n\ngo 1.27\n",
+		},
+	},
 	{
 		Text: "I'll inspect the calculator package, add division with an explicit error for a zero divisor, then write tests and run them.\n\n1. Find the source and tests.\n2. Read the existing implementation.\n3. Add the method and regression tests.\n4. Run the package tests.",
 		Tool: &Tool{
@@ -189,13 +203,131 @@ var Segments = []Segment{
 			Error:  agent.FailedToolRun(watchRun, "cancelled").Text,
 		},
 	},
+	{
+		Text: "The watcher was cancelled: it runs until it is stopped, and the tests already pass. Two tests leave most inputs unchecked, so I'll add a table of cases.",
+		Tool: &Tool{
+			Name: "write", Input: CallInput(struct {
+				Path    string `json:"path"`
+				Content string `json:"content"`
+			}{"calculator/divide_cases_test.go", DivideCasesSource()}),
+			Output: "Wrote calculator/divide_cases_test.go\n",
+		},
+	},
+	{
+		Text: "I'll run every case.",
+		Tool: &Tool{
+			Name: "bash", Input: json.RawMessage(`{"command":"go test ./calculator/... -run TestDivideCases -count=1 -v","description":"Run the division cases"}`),
+			Output: DivideCasesRun(),
+		},
+	},
+	{
+		Text: "Every case passes. Here is `calc.go` as it stands now:\n\n```go\n" + finalSource + "```\n\nI'll check that the tests cover every statement.",
+		Tool: &Tool{
+			Name: "bash", Input: json.RawMessage(`{"command":"go test ./calculator/... -cover","description":"Check test coverage"}`),
+			Output: "ok  \texample/calculator\t0.004s\tcoverage: 100.0% of statements\n",
+		},
+	},
 	{Text: summary},
+}
+
+// CallInput returns v as the JSON input of a call, its fields in the order
+// v lists them, and its text as written: with no character escaped for
+// HTML. It panics when v cannot be encoded, as the demo's content always
+// can.
+func CallInput(v any) json.RawMessage {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		panic(err)
+	}
+	return bytes.TrimSuffix(b.Bytes(), []byte("\n"))
+}
+
+// DivideCase is a case of the demo's table-driven test of Divide.
+type DivideCase struct {
+	// Name names the case.
+	Name string
+	// A and B are the dividend and the divisor, as Go writes them.
+	A, B string
+	// Want is the quotient, as Go writes it, or empty for the error of a
+	// zero divisor.
+	Want string
+}
+
+// DivideCases are the cases the demo's table-driven test of Divide checks,
+// the cases of a zero divisor last.
+var DivideCases = []DivideCase{
+	{"whole", "8", "2", "4"},
+	{"fraction", "7", "2", "3.5"},
+	{"negative divisor", "9", "-3", "-3"},
+	{"negative dividend", "-9", "3", "-3"},
+	{"both negative", "-9", "-3", "3"},
+	{"zero dividend", "0", "5", "0"},
+	{"less than one", "1", "4", "0.25"},
+	{"large", "1e12", "1e3", "1e9"},
+	{"zero divisor", "6", "0", ""},
+	{"zero by zero", "0", "0", ""},
+}
+
+// DivideCasesSource returns the file of the demo's table-driven test, which
+// checks each of DivideCases.
+func DivideCasesSource() string {
+	var cases strings.Builder
+	for _, c := range DivideCases {
+		fmt.Fprintf(&cases, "\t\t{%q, %s, %s, %s, %v},\n", c.Name, c.A, c.B, cmp.Or(c.Want, "0"), c.Want == "")
+	}
+	return "package calculator\n\nimport \"testing\"\n\n" +
+		"func TestDivideCases(t *testing.T) {\n" +
+		"\tcases := []struct {\n" +
+		"\t\tname    string\n" +
+		"\t\ta, b    float64\n" +
+		"\t\twant    float64\n" +
+		"\t\twantErr bool\n" +
+		"\t}{\n" +
+		cases.String() +
+		"\t}\n" +
+		"\tc := &Calculator{}\n" +
+		"\tfor _, tc := range cases {\n" +
+		"\t\tt.Run(tc.name, func(t *testing.T) {\n" +
+		"\t\t\tgot, err := c.Divide(tc.a, tc.b)\n" +
+		"\t\t\tif (err != nil) != tc.wantErr || got != tc.want {\n" +
+		"\t\t\t\tt.Fatalf(\"Divide(%v, %v) = %v, %v; want %v, error %v\", tc.a, tc.b, got, err, tc.want, tc.wantErr)\n" +
+		"\t\t\t}\n" +
+		"\t\t})\n" +
+		"\t}\n" +
+		"}\n"
+}
+
+// DivideCasesRun returns the verbose output of a run of the demo's
+// table-driven test, in which each of DivideCases passes.
+func DivideCasesRun() string {
+	var run, passed strings.Builder
+	for _, c := range DivideCases {
+		name := "TestDivideCases/" + strings.ReplaceAll(c.Name, " ", "_")
+		fmt.Fprintf(&run, "=== RUN   %s\n", name)
+		fmt.Fprintf(&passed, "    --- PASS: %s (0.00s)\n", name)
+	}
+	return "=== RUN   TestDivideCases\n" + run.String() +
+		"--- PASS: TestDivideCases (0.00s)\n" + passed.String() +
+		"PASS\nok  \texample/calculator\t0.004s\n"
+}
+
+// DivideCasesTable returns DivideCases as a Markdown table: each case, its
+// operands, and the quotient it expects, or the error of a zero divisor,
+// which widens the last column only in the table's last rows.
+func DivideCasesTable() string {
+	rows := []string{"| Case | a | b | Expected |", "|------|--:|--:|----------|"}
+	for _, c := range DivideCases {
+		rows = append(rows, fmt.Sprintf("| %s | %s | %s | %s |", c.Name, c.A, c.B, cmp.Or(c.Want, "error: `division by zero`")))
+	}
+	return strings.Join(rows, "\n")
 }
 
 // summary is the demo's last reply: a summary of the change, and then a
 // check that shows every kind of Markdown the chat renders.
 var summary = strings.Join([]string{
-	"The watcher was cancelled: it runs until it is stopped, and the tests already pass.",
+	"Every statement is covered.",
 	"",
 	"## Summary",
 	"",
@@ -203,6 +335,7 @@ var summary = strings.Join([]string{
 	"|------|--------|",
 	"| `calculator/calc.go` | Added division and zero-divisor handling |",
 	"| `calculator/divide_test.go` | Added success and error tests |",
+	"| `calculator/divide_cases_test.go` | Added a table of division cases |",
 	"",
 	"The existing methods are unchanged. This is demo data: no files were modified and no commands were executed.",
 	"",
@@ -257,13 +390,6 @@ var summary = strings.Join([]string{
 	"",
 	"    An indented code block.",
 	"",
-	"Divide",
-	": Returns the quotient of two numbers.",
-	": Fails when the divisor is zero.",
-	"",
-	"Zero divisor",
-	": Reported as an error rather than a panic.[^1]",
-	"",
 	"Wide characters join across line breaks: 割り算の",
 	"結果を返します。 Escaped spaces show nothing: **“強調”**\\ です。",
 	"",
@@ -272,8 +398,6 @@ var summary = strings.Join([]string{
 	"<details>",
 	"<summary>Raw HTML shows as text</summary>",
 	"</details>",
-	"",
-	"[^1]: Go reports such failures as an `error` value.",
 }, "\n")
 
 const calculatorSource = `package calculator
@@ -297,8 +421,41 @@ func (c *Calculator) Multiply(a, b float64) float64 {
 }
 `
 
+// finalSource is calc.go once the demo's edits have added the import and
+// Divide.
+const finalSource = `package calculator
+
+import "errors"
+
+// Calculator provides stateless arithmetic operations.
+type Calculator struct{}
+
+// Divide returns the quotient, or an error if b is zero.
+func (c *Calculator) Divide(a, b float64) (float64, error) {
+	if b == 0 {
+		return 0, errors.New("division by zero")
+	}
+	return a / b, nil
+}
+
+// Add returns the sum of a and b.
+func (c *Calculator) Add(a, b float64) float64 {
+	return a + b
+}
+
+// Subtract returns the difference of a and b.
+func (c *Calculator) Subtract(a, b float64) float64 {
+	return a - b
+}
+
+// Multiply returns the product of a and b.
+func (c *Calculator) Multiply(a, b float64) float64 {
+	return a * b
+}
+`
+
 // divideSource is calc.go's Divide method as read back after the edits,
-// lines 8 to 14 of 29.
+// lines 8 to 14 of 29, as finalSource holds them.
 const divideSource = `// Divide returns the quotient, or an error if b is zero.
 func (c *Calculator) Divide(a, b float64) (float64, error) {
 	if b == 0 {

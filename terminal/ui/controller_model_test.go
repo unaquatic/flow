@@ -213,7 +213,7 @@ func TestModelsListFailed(t *testing.T) {
 	s.OpenBanner(ModelBanner)
 	out := s.ModelsListFailed("boom")
 	if !slices.ContainsFunc(out, func(ev UIEvent) bool {
-		toast, ok := ev.(EventToastShow)
+		toast, ok := toastOf(ev)
 		return ok && toast.Text == "Listing models failed: boom"
 	}) {
 		t.Errorf("events = %v, want a toast with the reason", out)

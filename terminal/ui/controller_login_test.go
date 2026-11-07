@@ -230,11 +230,11 @@ func TestModelLabel(t *testing.T) {
 	s.InitSession(t.Context(), "")
 	id := addKey(t, a)
 	events := s.ShowInfo()
-	i := slices.IndexFunc(events, func(ev UIEvent) bool { _, ok := ev.(EventToastShow); return ok })
+	i := slices.IndexFunc(events, func(ev UIEvent) bool { _, ok := toastOf(ev); return ok })
 	if i < 0 {
 		t.Fatal("/status shows no notice")
 	}
-	status := events[i].(EventToastShow)
+	status, _ := toastOf(events[i])
 	if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == "Model     openai/model" }) {
 		t.Errorf("/status lines = %+v, want the model alone", status.Lines)
 	}
@@ -294,8 +294,8 @@ func TestSettleLogin(t *testing.T) {
 		if len(events) != 1 {
 			t.Fatalf("got %d events, want toast only", len(events))
 		}
-		if _, ok := events[0].(EventToastShow); !ok {
-			t.Fatalf("event is %T, want EventToastShow", events[0])
+		if _, ok := toastOf(events[0]); !ok {
+			t.Fatalf("event is %#v, want a toast", events[0])
 		}
 	})
 }

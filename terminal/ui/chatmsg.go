@@ -37,6 +37,10 @@ type MessageSegment struct {
 	// Parts maps each part ID to its widget.
 	Parts map[string]render.Renderable
 
+	// Live holds the IDs of the message's parts that have not taken their
+	// final form yet, as ChatMessage.Live does.
+	Live []message.PartID
+
 	// Usage is the token counts of the message's request, whose cache use
 	// SyncCache shows.
 	Usage message.Usage
@@ -52,11 +56,16 @@ type MessageSegment struct {
 // A bubble takes the rows Rows yields in the transcript. A prompt's takes two
 // so that its text pins to the top of the fullscreen transcript without the
 // rest of it: Box holds the text, and TailRow under it the other parts, such
-// as the snapshot, which scroll like the rows of a reply.
+// as the snapshot, which scroll like the rows of a reply. A reply's takes a
+// row for each of its segments, as SegmentRows says, and has no Box.
 type ChatMessageBox struct {
-	*widget.Box
+	// Box is the row of the transcript that holds the bubble's segments, or
+	// a prompt's text. It is nil for a reply's bubble, whose segments are
+	// rows of their own.
+	Box *widget.Box
 	// Frame pads the segment column with the blank row below it that parts
-	// the bubble from the row under it, as ChatMessageContainer says.
+	// the bubble from the row under it, as ChatMessageContainer says. It is
+	// nil for a reply's bubble, whose segments are rows of their own.
 	Frame     *widget.Box
 	middleCol *widget.Box
 	// TailRow is the row of the transcript under Box that holds the parts of
@@ -84,6 +93,12 @@ type ChatMessageBox struct {
 	// CacheMode is where the bubble's replies show the cache use of their
 	// requests.
 	CacheMode CacheMode
+	// Holds reports that the bubble holds back what of its parts may still
+	// change, as SyncHeld says, as inline mode needs.
+	Holds bool
+	// LivePart is the widget of the bubble's first live part, as SyncHeld
+	// finds it, or nil while none is live or the bubble does not Hold.
+	LivePart render.Renderable
 	// Extensions add the widgets of the parts they define, and of what they
 	// show under each message.
 	Extensions []Extension
@@ -159,6 +174,12 @@ func ChatMessageWithCacheMode(mode CacheMode) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.CacheMode = mode }
 }
 
+// ChatMessageWithHolds sets whether the bubble holds back what of its parts
+// may still change, as SyncHeld says. It does not by default.
+func ChatMessageWithHolds(holds bool) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.Holds = holds }
+}
+
 // ChatMessageWithExtensions sets the extensions whose widgets the bubble
 // shows.
 func ChatMessageWithExtensions(exts []Extension) ChatMessageOption {
@@ -203,15 +224,28 @@ func RoleFg(t *style.Theme, role message.Role) style.Color {
 // prompt's does, and so shows as blocks that pad themselves.
 func (cm *ChatMessageBox) Filled() bool { return !cm.bg.IsTransparent() }
 
-// build assembles the first segment and the bubble container.
+// SegmentRows reports whether each segment of the bubble takes a row of the
+// transcript of its own, as a reply's do, rather than all of them one row in
+// Box. A reply grows at its last segment while it streams, and a row that
+// grows repaints every row it covers: one for the whole reply would repaint
+// every step of a long turn on each change of its last.
+func (cm *ChatMessageBox) SegmentRows() bool { return cm.role == message.RoleAgent }
+
+// build assembles the first segment and, but for a reply, the bubble
+// container.
 func (cm *ChatMessageBox) build(msg ChatMessage) {
-	cm.Frame, cm.middleCol = ChatMessageContainer()
 	if msg.Role == message.RoleUser {
 		cm.TailRow = NewTailRow()
 	}
 
 	seg := cm.BuildSegment(msg)
 	cm.segments = append(cm.segments, seg)
+	if cm.SegmentRows() {
+		cm.SyncRows()
+		cm.SyncHeld()
+		return
+	}
+	cm.Frame, cm.middleCol = ChatMessageContainer()
 	cm.middleCol.Add(seg.Box)
 
 	// A bubble keeps its content height. Inline mode parents it to a root of
@@ -232,6 +266,7 @@ func (cm *ChatMessageBox) build(msg ChatMessage) {
 		cm.Box.LayoutNode().Sticky = layout.StickyTop
 	}
 	cm.SyncRows()
+	cm.SyncHeld()
 }
 
 // ChatMessageContainer returns the outer container, which pads its segment
@@ -266,13 +301,16 @@ func ChatMessageContainer() (*widget.Box, *widget.Box) {
 // the rows that meet: so rows stack under rows, across segments too, and
 // nothing stacks under a footer. An agent segment with nothing to show takes
 // no rows, and a bubble that shows none takes no rows at all, its blank row
-// below too. Other roles always show their segments, and the blank row below
-// them; a prompt's TailRow shows its blank row only while it shows a part, as
-// SyncTail says.
+// below too, which the last segment it shows takes when its segments are rows
+// of their own, as SegmentRows says. Other roles always show their segments,
+// and the blank row below them; a prompt's TailRow shows its blank row only
+// while it shows a part, as SyncTail says.
 func (cm *ChatMessageBox) SyncRows() {
 	agent := cm.role == message.RoleAgent
 	shown := 0
-	// above is the kind of the last row of the segments shown so far.
+	// lastShown is the last segment shown so far, and above the kind of its
+	// last row.
+	var lastShown *MessageSegment
 	above := KindBlock
 	for _, seg := range cm.segments {
 		rows := seg.Flow()
@@ -296,9 +334,16 @@ func (cm *ChatMessageBox) SyncRows() {
 		SetEdge(seg.Box, &seg.Box.LayoutNode().MarginTop, margin)
 		above = last
 		shown++
+		lastShown = seg
 	}
-	if agent {
-		SetEdge(cm.Frame, &cm.Frame.LayoutNode().PaddingBottom, min(shown, 1))
+	if cm.SegmentRows() {
+		for _, seg := range cm.segments {
+			blank := 0
+			if seg == lastShown {
+				blank = 1
+			}
+			SetEdge(seg.Box, &seg.Box.LayoutNode().MarginBottom, blank)
+		}
 	}
 	cm.SyncTail()
 }
@@ -358,11 +403,15 @@ func (cm *ChatMessageBox) BuildSegment(msg ChatMessage) *MessageSegment {
 		Cache:      cache,
 		Footer:     footer,
 		Parts:      make(map[string]render.Renderable),
+		Live:       slices.Clone(msg.Live),
 		Usage:      msg.Usage,
+		// A segment keeps its content height, as a bubble does, since a
+		// reply's is a row of the transcript, as SegmentRows says.
 		Box: widget.NewBox(
 			widget.BoxWithLayout(
 				layout.WithFlexDirection(layout.DirectionColumn),
 				layout.WithAlignItems(layout.AlignStretch),
+				layout.WithFlexShrink(0),
 			),
 			widget.Children(append(children, cache, footer)...),
 		),
@@ -421,12 +470,21 @@ func (cm *ChatMessageBox) TurnWorked(msg ChatMessage) time.Duration {
 }
 
 // AddSegment appends a message to the bubble, which SyncRows spaces from the
-// segments above it.
-func (cm *ChatMessageBox) AddSegment(msg ChatMessage) {
+// segments above it. When the segments are rows of their own, as SegmentRows
+// says, it returns the new segment's row and the bubble's last row above it,
+// for the caller to add the one under the other. Otherwise Box holds the new
+// segment, and both are nil.
+func (cm *ChatMessageBox) AddSegment(msg ChatMessage) (row, above *widget.Box) {
 	seg := cm.BuildSegment(msg)
+	if cm.SegmentRows() {
+		row, above = seg.Box, cm.segments[len(cm.segments)-1].Box
+	} else {
+		cm.middleCol.Add(seg.Box)
+	}
 	cm.segments = append(cm.segments, seg)
-	cm.middleCol.Add(seg.Box)
 	cm.SyncRows()
+	cm.SyncHeld()
+	return row, above
 }
 
 // SegmentFor returns the segment for msgID. It returns the last segment when
@@ -451,6 +509,120 @@ func (cm *ChatMessageBox) SetSegmentParts(msgID message.ID, parts []message.Cont
 	}
 }
 
+// Shown reports whether a row of the bubble is in the transcript: whether a
+// parent holds any of the rows Rows yields.
+func (cm *ChatMessageBox) Shown() bool {
+	for row := range cm.Rows() {
+		if row.Parent() != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// SetSegmentLive records live, the IDs of the parts of message msgID that
+// have not taken their final form yet, and shows the bubble as SyncHeld
+// says. An unknown message ID falls back to the last segment.
+func (cm *ChatMessageBox) SetSegmentLive(msgID message.ID, live []message.PartID) {
+	if seg := cm.SegmentFor(msgID); seg != nil {
+		seg.Live = slices.Clone(live)
+		cm.SyncHeld()
+	}
+}
+
+// SetHolds holds back what of the bubble's parts may still change, or shows
+// them whole, as holds says, as SyncHeld does.
+func (cm *ChatMessageBox) SetHolds(holds bool) {
+	if holds == cm.Holds {
+		return
+	}
+	cm.Holds = holds
+	cm.SyncHeld()
+}
+
+// SyncHeld shows each part of the bubble whole, or, while the bubble Holds,
+// holds back what of it may still change, as inline mode needs: the terminal
+// cannot redraw the rows that have scrolled into its scrollback, so a row
+// may change only while it stays on screen, at the bottom of the transcript.
+//
+// A live part, one of its segment's Live, is held: a tool call, or the box
+// of another part, shows collapsed, as PartBox.SetHeld says, and text holds
+// back its last block until it is whole, as widget.StreamMarkdown's
+// SetStreaming says. Text is live only while it is its message's last part,
+// since a part after it ends it, and a gone part, as a reply's usage is,
+// never is, since it takes no rows to change. Every part after a live one
+// is held too, as are the views and the cache row of their segments, since
+// they move as the live part changes. A part shows whole once nothing above
+// it is live. It records the first live part in LivePart.
+func (cm *ChatMessageBox) SyncHeld() {
+	held := false
+	cm.LivePart = nil
+	for _, seg := range cm.segments {
+		var live map[render.Renderable]bool
+		if cm.Holds && len(seg.Live) > 0 {
+			live = make(map[render.Renderable]bool, len(seg.Live))
+			for _, id := range seg.Live {
+				if w, ok := seg.Parts[string(id)]; ok {
+					live[w] = true
+				}
+			}
+		}
+		parts := seg.ContentBox.ChildrenRaw()
+		for i, w := range parts {
+			isLive := live[w] && w.LayoutNode().Visibility != layout.Gone
+			switch w := w.(type) {
+			case *widget.StreamMarkdown:
+				isLive = isLive && i == len(parts)-1
+				w.SetStreaming(held || isLive)
+			case *ReasoningBox:
+				isLive = isLive && i == len(parts)-1
+				w.Body.SetStreaming(held || isLive)
+			case Framed:
+				w.Frame().SetHeld(held || isLive)
+			}
+			if isLive && cm.LivePart == nil {
+				cm.LivePart = w
+			}
+			held = held || isLive
+		}
+		for _, v := range seg.Views {
+			if f, ok := v.(Framed); ok {
+				f.Frame().SetHeld(held)
+			}
+		}
+		seg.Cache.SetHeld(held)
+	}
+}
+
+// LiveRow returns the first row of the bubble that may still change, as
+// last laid out, and reports whether there is one: the first row of
+// LivePart, or for text, of the row that stands for the block it holds
+// back, as PendingTop finds it, since the blocks above it are whole.
+func (cm *ChatMessageBox) LiveRow() (int, bool) {
+	switch w := cm.LivePart.(type) {
+	case nil:
+		return 0, false
+	case *widget.StreamMarkdown:
+		return PendingTop(w), true
+	case *ReasoningBox:
+		return PendingTop(w.Body), true
+	default:
+		return w.LayoutNode().Computed.Y, true
+	}
+}
+
+// PendingTop returns the first row, as last laid out, of the row that
+// stands for the block sm holds back while it streams: that of its last
+// child that takes rows, or sm's own when none does.
+func PendingTop(sm *widget.StreamMarkdown) int {
+	for _, c := range slices.Backward(sm.Children()) {
+		if n := c.LayoutNode(); c.Visible() && n.Computed.Height > 0 {
+			return n.Computed.Y
+		}
+	}
+	return sm.LayoutNode().Computed.Y
+}
+
 // UpsertContentPart updates the widget that seg keys by id, or adds one
 // when there is none. An empty id always adds a widget.
 func (cm *ChatMessageBox) UpsertContentPart(seg *MessageSegment, id string, part message.ContentPart) {
@@ -472,6 +644,13 @@ const codeBlockPaddingY = 1
 // proseBlockPaddingY is the number of blank rows above and below the prose of
 // a Filled bubble, such as a prompt's text, inside its background.
 const proseBlockPaddingY = 1
+
+// WritingRow returns the row that stands for the block that streaming text
+// holds back until it is whole, as widget.StreamMarkdown's SetStreaming
+// describes: "Writing…" in PanelDimFg.
+func WritingRow() style.StyledText {
+	return style.NewStyledText(style.TextChunk{Text: "Writing…", Fg: PanelDimFg})
+}
 
 // NewContentPart creates the widget for a content part.
 func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Renderable {
@@ -514,6 +693,7 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		widget.StreamMarkdownWithCodeBlockMargin(PaddingX),
 		widget.StreamMarkdownWithCodeBlockFit(true),
 		widget.StreamMarkdownWithProsePadding(PaddingX),
+		widget.StreamMarkdownWithPending(WritingRow()),
 		widget.StreamMarkdownWithLayout(layout.WithWidth(layout.Percent(100))),
 	)
 	if cm.Filled() {

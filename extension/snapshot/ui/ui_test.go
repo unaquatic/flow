@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -114,6 +116,75 @@ func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 	prompt.SetMessage(ui.ChatMessage{ID: "u2", Role: message.RoleUser,
 		Prev:  []message.ContentPart{snapshot.StepPart{Snapshot: base}},
 		Parts: []message.ContentPart{snapshot.StepPart{Snapshot: tree}}})
+}
+
+// readPatches returns an Extension whose patches are patch, or err, and the
+// number of patches it read so far.
+func readPatches(patch string, err error) (*Extension, *int) {
+	reads := 0
+	e := &Extension{
+		ReadPatch: func(context.Context, snapshot.Hash, snapshot.Hash) (string, error) {
+			reads++
+			return patch, err
+		},
+		Patches: make(map[[2]snapshot.Hash]string),
+		ctx:     context.Background(),
+	}
+	return e, &reads
+}
+
+// stepPatch is the patch of a step that changed one line of one file.
+const stepPatch = "diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -1 +1 @@\n-a\n+b\n"
+
+// TestNewSegmentView_ShowsThePatchAtOnce checks that the changes of a reply
+// show as its view is made, rather than once a patch read later arrives,
+// which could change a row already in the scrollback.
+func TestNewSegmentView_ShowsThePatchAtOnce(t *testing.T) {
+	e, _ := readPatches(stepPatch, nil)
+	relayouts := 0
+	host := ui.ViewHost{Enqueue: func(func()) {}, Relayout: func() { relayouts++ }}
+	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
+		Prev:  []message.ContentPart{snapshot.StepPart{Snapshot: base}},
+		Parts: []message.ContentPart{snapshot.StepPart{Snapshot: tree}}}
+
+	box := e.NewSegmentView(reply, host).(*PatchBox)
+
+	if box.Patch != stepPatch || !box.Visible() {
+		t.Errorf("the view shows patch %q, visible %v, want the step's patch shown", box.Patch, box.Visible())
+	}
+	if relayouts != 1 {
+		t.Errorf("the bubble was laid out again %d times, want once", relayouts)
+	}
+}
+
+// TestLoadPatch_ReadsOnce checks that a patch read once shows again without
+// being read again, as when the transcript is built again, and that one that
+// fails to read keeps its box hidden and is read again next time.
+func TestLoadPatch_ReadsOnce(t *testing.T) {
+	host := ui.ViewHost{Relayout: func() {}}
+	e, reads := readPatches(stepPatch, nil)
+	for range 2 {
+		box := NewPatchBox(nil, style.Color{})
+		e.LoadPatch(box, base, tree, host)
+		if box.Patch != stepPatch {
+			t.Errorf("the box shows %q, want the patch", box.Patch)
+		}
+	}
+	if *reads != 1 {
+		t.Errorf("read %d patches, want 1", *reads)
+	}
+
+	failing, reads := readPatches("", errors.New("disk full"))
+	for range 2 {
+		box := NewPatchBox(nil, style.Color{})
+		failing.LoadPatch(box, base, tree, host)
+		if box.Visible() {
+			t.Error("a box whose patch failed to read shows")
+		}
+	}
+	if *reads != 2 {
+		t.Errorf("read %d patches, want a failed one read again", *reads)
+	}
 }
 
 // TestPatchHeader checks that a step's changes are headed like a tool call,

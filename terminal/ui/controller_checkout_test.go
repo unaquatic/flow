@@ -67,14 +67,14 @@ func TestCompleteUndoRedo(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			s := &Service{state: &UIState{}}
 			out := complete(s, files, nil)
-			toast, ok := out[0].(EventToastShow)
+			toast, ok := toastOf(out[0])
 			if len(out) != 1 || !ok || len(toast.Lines) == 0 {
 				t.Fatalf("events = %#v, want one file summary", out)
 			}
 			if got, want := toast.Lines[0].PlainText(), "1 file  +205 -0"; got != want {
 				t.Errorf("summary = %q, want %q", got, want)
 			}
-			if got := complete(s, nil, nil); !sameEvents(got, []UIEvent{EventToastShow{Text: NoFileChangesText}}) {
+			if got := complete(s, nil, nil); !sameEvents(got, []UIEvent{noticeAdded(Notice{Text: NoFileChangesText})}) {
 				t.Errorf("no files = %#v, want %q", got, NoFileChangesText)
 			}
 		})

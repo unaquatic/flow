@@ -27,6 +27,36 @@ var BuiltinExtensions []Extension
 
 // builtinExtensions returns BuiltinExtensions, failing the test when
 // builtin_test.go has not set them.
+// noticeOf returns the notice ev adds to the transcript, and reports whether
+// ev adds one.
+func noticeOf(ev UIEvent) (Notice, bool) {
+	e, ok := ev.(EventMessageAdded)
+	if !ok || e.Msg.Notice == nil {
+		return Notice{}, false
+	}
+	return *e.Msg.Notice, true
+}
+
+// toastOf returns the notice ev adds in a box, as a toast or the session info
+// is, and reports whether ev adds one.
+func toastOf(ev UIEvent) (Notice, bool) {
+	n, ok := noticeOf(ev)
+	return n, ok && n.Surface != NoticeCanvas
+}
+
+// canvasOf returns the notice ev adds on the canvas, as the logo is, and
+// reports whether ev adds one.
+func canvasOf(ev UIEvent) (Notice, bool) {
+	n, ok := noticeOf(ev)
+	return n, ok && n.Surface == NoticeCanvas
+}
+
+// noticeAdded returns the event that adds n to the transcript, which
+// sameEvents compares by n alone, as each notice takes an ID of its own.
+func noticeAdded(n Notice) UIEvent {
+	return EventMessageAdded{Msg: ChatMessage{Notice: &n}}
+}
+
 func builtinExtensions(t *testing.T) []Extension {
 	t.Helper()
 	if len(BuiltinExtensions) == 0 {

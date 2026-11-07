@@ -167,26 +167,26 @@ func TestTranscriptFrames(t *testing.T) {
 		add  func(ui *UI)
 	}{
 		{name: "notice_single", h: 4, add: func(ui *UI) {
-			ui.AppendToast(EventToastShow{Text: "Chat cleared"})
+			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
 		// A notice that names a model draws it in the primary color.
 		{name: "notice_keyword", h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "openai/gpt-5.6-fast:high", ""))
 		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
-			ui.AppendToast(EventToastShow{Text: "Chat cleared"})
-			ui.AppendToast(EventToastShow{Text: "Nothing to undo"})
+			ui.AddNotice(Notice{Text: "Chat cleared"})
+			ui.AddNotice(Notice{Text: "Nothing to undo"})
 		}},
 		{name: "user_message", h: 4, add: func(ui *UI) {
 			ui.AddMessage(userText("u1", "run the tests"))
 		}},
 		{name: "user_then_notice", h: 7, add: func(ui *UI) {
 			ui.AddMessage(userText("u1", "run the tests"))
-			ui.AppendToast(EventToastShow{Text: "Chat cleared"})
+			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
 		{name: "transcript_surfaces", h: 20, add: func(ui *UI) {
 			ui.AddMessage(userText("u1", "run the tests"))
-			ui.AppendToast(EventToastShow{Text: "Chat cleared"})
+			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.AddMessage(ChatMessage{ID: "a1", ParentID: "a1", Role: message.RoleAgent,
 				Parts: []message.ContentPart{
 					message.TextPart{ID: "a1-text", Text: "```go\nx := 1\n```"},
@@ -196,26 +196,26 @@ func TestTranscriptFrames(t *testing.T) {
 				}})
 		}},
 		{name: "notice_multiline", h: 7, add: func(ui *UI) {
-			ui.AppendToast(EventToastShow{Lines: statusLines()})
+			ui.AddNotice(Notice{Lines: statusLines()})
 		}},
 		// /status is a system notice under the logo, which sits on the canvas
 		// from the left edge, a blank row above the notice.
 		{name: "status_notice", h: 16, add: func(ui *UI) {
-			ui.Apply(StatusNotice(statusLines()))
+			ui.AddNotice(StatusNotice(statusLines())...)
 		}},
 		// /status draws the logo in the primary color alone, then in pairs of
 		// colors made from it, each over the line of Go that sets its color,
 		// its const keyword in that color.
 		{name: "status_logo_colors", w: 72, h: 77, add: func(ui *UI) {
-			ui.Apply(LogoNotice(LogoColorLines(LogoColorRows(product.LogoInitialColor)), statusLines()))
+			ui.AddNotice(LogoNotice(LogoColorLines(LogoColorRows(product.LogoInitialColor)), statusLines())...)
 		}},
 		// /new heads the emptied transcript with the new session's /status.
 		{name: "new_chat", h: 20, add: func(ui *UI) {
-			ui.Apply(StatusNotice(statusLines()))
-			ui.AppendToast(EventToastShow{Text: "Chat cleared"})
+			ui.AddNotice(StatusNotice(statusLines())...)
+			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
 		{name: "notice_diff_summary", h: 11, add: func(ui *UI) {
-			ui.AppendToast(EventToastShow{Lines: BuildDiffToastLines(movedFiles())})
+			ui.AddNotice(Notice{Lines: BuildDiffToastLines(movedFiles())})
 		}},
 		// A code block is inset like the prose on both sides, and a line too
 		// wide for it wraps inside its background.
@@ -284,6 +284,37 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_tool_rows_boxed", h: 16, add: func(ui *UI) {
 			toolRowsTurn(ui)
 			ui.Apply(ui.service.SetToolStyle(ToolCallsBoxed))
+		}},
+		// Inline, text that streams shows its blocks once each is whole, and
+		// a row in place of the last until then, so that the rows above it
+		// never change.
+		{name: "agent_text_streaming", h: 4, add: func(ui *UI) {
+			ui.inline = true
+			msg := agentText("a1", "Line counts:\n\n| file | lines |\n|---|---|\n| calc.go | 12 |")
+			msg.Live = []message.PartID{"a1-text"}
+			ui.AddMessage(msg)
+		}},
+		// Inline, a long session loads the rows of its last messages alone:
+		// from the first row that leaves TailRows rows under it, though it is
+		// a reply's step, without the prompt above it.
+		{name: "transcript_tail", w: 80, h: 8, add: func(ui *UI) {
+			ui.inline = true
+			ui.LoadTranscript(longSession(200, 4))
+		}},
+		// Inline, a call that runs shows as its row though Ctrl+O expanded
+		// the calls, and so does the call under it that has ended, until the
+		// call above it ends too.
+		{name: "agent_tool_running_held", h: 4, add: func(ui *UI) {
+			ui.inline = true
+			expandTools(ui)
+			msg := agentParts("a1",
+				message.ToolPart{ID: "a1-test", CallID: "c1", Name: "bash", State: message.ToolStateRunning{
+					Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok  \tcalc"}},
+				message.ToolPart{ID: "a1-vet", CallID: "c2", Name: "bash", State: message.ToolStateCompleted{
+					Input: json.RawMessage(`{"command":"go vet ./..."}`), Output: "ok"}},
+			)
+			msg.Live = []message.PartID{"a1-test"}
+			ui.AddMessage(msg)
 		}},
 	}
 	for _, tt := range tests {
@@ -686,8 +717,8 @@ func TestQuitFrames(t *testing.T) {
 	ui.inline = true
 	ui.AddMessage(userText("u1", "run the tests"))
 	ui.AddMessage(agentText("a1", "All tests pass."))
-	// The second Ctrl+C quits while the input names the key that quits,
-	// which the frame then leaves out.
+	// The second Ctrl+C quits while the input names the key that quits. The
+	// frame leaves the input box out, and ends with the transcript.
 	ui.service.state.LastCtrlCTime = time.Now()
 	ui.SyncInputHint()
 	ui.PrepareInlineQuit()
@@ -1196,8 +1227,8 @@ func TestFullscreenFrames(t *testing.T) {
 		// The transcript overflows and follows its bottom edge, which keeps the
 		// blank row under the last notice above the input.
 		{name: "fullscreen_notice_above_input", h: 10, add: func(ui *UI) {
-			ui.AppendToast(EventToastShow{Text: "Chat cleared"})
-			ui.AppendToast(EventToastShow{Text: "Nothing to undo"})
+			ui.AddNotice(Notice{Text: "Chat cleared"})
+			ui.AddNotice(Notice{Text: "Nothing to undo"})
 		}},
 	}
 	for _, tt := range tests {

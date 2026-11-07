@@ -207,12 +207,13 @@ func TestSetInlineModeIgnoresUnchangedMode(t *testing.T) {
 	}
 }
 
-// TestQuitKeepsTheInputBox checks that quitting keeps the input box and the
-// blank row of the footer under it, and that quitting inline hides the
-// input's cursor before the renderer is torn down, so the output left in the
-// terminal ends with the transcript and the input box. The alternate screen
-// leaves nothing behind, so a fullscreen quit keeps the cursor.
-func TestQuitKeepsTheInputBox(t *testing.T) {
+// TestQuitDropsTheInputBox checks that quitting inline leaves the input box
+// and the indicator out of the last frame, so that the output left in the
+// terminal ends with the transcript, and that the live area then starts under
+// the transcript, where the box would. It hides the input's cursor before the
+// renderer is torn down. The alternate screen leaves nothing behind, so a
+// fullscreen quit keeps the box and the cursor.
+func TestQuitDropsTheInputBox(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
 		inline bool
@@ -222,15 +223,17 @@ func TestQuitKeepsTheInputBox(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newBuiltTestUI(t, tt.inline)
+			ui.AddMessage(userText("u1", "Run the tests"))
+			ui.ShowIndicator(EventIndicatorShow{Text: "Request failed"})
 			ui.renderer.FocusRenderable(ui.input)
 
 			ui.ProcessEvent(EventQuit{})
 
-			if !ui.inputWrapper.Visible() {
-				t.Error("input box hidden, want it kept")
+			if ui.inputWrapper.Visible() == tt.inline {
+				t.Errorf("input box shown %v, want %v", ui.inputWrapper.Visible(), !tt.inline)
 			}
-			if ui.inputFooter.Gone() {
-				t.Error("input footer gave up its row, want it kept blank")
+			if tt.inline && ui.indicatorBox.Visible() {
+				t.Error("indicator shown in the last frame, want it left out")
 			}
 			if tt.inline && ui.input.Focused() {
 				t.Error("input kept the focus, which would draw its cursor in the last frame")
@@ -239,6 +242,21 @@ func TestQuitKeepsTheInputBox(t *testing.T) {
 				t.Error("expected the renderer to be destroyed")
 			}
 		})
+	}
+}
+
+// TestQuitLiveTop checks that once an inline quit drops the input box, the
+// live area starts under the transcript and the blank row that ends it,
+// where the box would have started.
+func TestQuitLiveTop(t *testing.T) {
+	ui := newBuiltTestUI(t, true)
+	ui.AddMessage(userText("u1", "Run the tests"))
+	ui.renderer.Root().CalculateLayout()
+	want := ui.InputBoxTop()
+	ui.PrepareInlineQuit()
+	ui.renderer.Root().CalculateLayout()
+	if got := ui.InputBoxTop(); got != want || got == 0 {
+		t.Errorf("live area starts at row %d, want %d, where the input box started", got, want)
 	}
 }
 
@@ -328,7 +346,7 @@ func TestTranscriptWheelAccelerates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			for i := range 30 {
-				ui.AppendToast(EventToastShow{Text: fmt.Sprintf("Notice %d", i)})
+				ui.AddNotice(Notice{Text: fmt.Sprintf("Notice %d", i)})
 			}
 			DrawFullscreen(ui, 40, 10, 0)
 			synctest.Test(t, func(t *testing.T) {
@@ -427,3 +445,80 @@ func TestToolsExpandedSet(t *testing.T) {
 }
 
 var _ render.Renderable = (*widget.Box)(nil)
+
+// TestReplyStepsTakeRowsUnderTheirReply checks that each step of a reply is
+// a row of the transcript of its own, so that the step that streams repaints
+// alone, and that a step added once a notice follows the reply goes under
+// the reply's rows, above the notice, in either mode and across a switch.
+func TestReplyStepsTakeRowsUnderTheirReply(t *testing.T) {
+	for _, inline := range []bool{false, true} {
+		t.Run(fmt.Sprintf("inline=%v", inline), func(t *testing.T) {
+			ui := newBuiltTestUI(t, inline)
+			ui.AddMessage(agentText("a1", "first"))
+			ui.AddNotice(Notice{Text: "notice"})
+			notice := ui.transcriptRows[len(ui.transcriptRows)-1]
+			second := agentText("a2", "second")
+			second.ParentID = "a1"
+			ui.AddMessage(second)
+
+			steps := slices.Collect(ui.messageWidgets["a1"].Rows())
+			if len(steps) != 2 {
+				t.Fatalf("the reply takes %d rows, want one for each of its 2 steps", len(steps))
+			}
+			want := append(steps, notice)
+			assertTranscriptRows(t, ui, want)
+
+			ui.SetInlineMode(EventInlineModeSet{Inline: !inline})
+			assertTranscriptRows(t, ui, want)
+		})
+	}
+}
+
+// assertTranscriptRows fails the test unless the transcript of ui is rows,
+// in order, and their container holds them in that order, one after another.
+func assertTranscriptRows(t *testing.T, ui *UI, rows []*widget.Box) {
+	t.Helper()
+	if !slices.Equal(ui.transcriptRows, rows) {
+		t.Fatalf("transcript rows are %v, want %v", boxIDs(ui.transcriptRows), boxIDs(rows))
+	}
+	children := rows[0].Parent().ChildrenRaw()
+	first := slices.Index(children, render.Renderable(rows[0]))
+	for i, row := range rows {
+		if got := slices.Index(children, render.Renderable(row)); got != first+i {
+			t.Errorf("row %q is child %d of its container, want %d", row.ID(), got, first+i)
+		}
+	}
+}
+
+// boxIDs returns the IDs of boxes, in order.
+func boxIDs(boxes []*widget.Box) []string {
+	ids := make([]string, len(boxes))
+	for i, b := range boxes {
+		ids[i] = b.ID()
+	}
+	return ids
+}
+
+// TestPreviewReplyStepsTakeRowsUnderTheirReply checks that the session
+// preview shows each step of a reply in a row of its own, under the reply's
+// rows above it, as the transcript does, though another reply follows it.
+func TestPreviewReplyStepsTakeRowsUnderTheirReply(t *testing.T) {
+	ui := newBuiltTestUI(t, false)
+	second := agentText("a2", "second")
+	second.ParentID = "a1"
+	ui.LoadPreview([]ChatMessage{agentText("a1", "first"), agentText("a3", "third"), second})
+
+	want := slices.Concat(slices.Collect(ui.previewWidgets["a1"].Rows()), slices.Collect(ui.previewWidgets["a3"].Rows()))
+	if len(want) != 3 {
+		t.Fatalf("the replies take %d rows, want 3: one for each step", len(want))
+	}
+	got := make([]*widget.Box, 0, len(want))
+	for _, c := range ui.previewMessageBox.ChildrenRaw() {
+		if b, ok := c.(*widget.Box); ok {
+			got = append(got, b)
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("preview rows are %v, want %v", boxIDs(got), boxIDs(want))
+	}
+}

@@ -395,5 +395,5 @@ func (s *Service) ShowGraphemeReport() []UIEvent {
 // ShowPalette appends the fixed entries of the xterm 256-color palette to the
 // transcript, each labeled with its index.
 func (s *Service) ShowPalette() []UIEvent {
-	return []UIEvent{EventToastShow{Lines: PaletteLines()}}
+	return s.AddNotice(Notice{Lines: PaletteLines()})
 }

@@ -20,6 +20,11 @@ type ChatMessage struct {
 	Role message.Role
 	// Parts contains the message content in display order.
 	Parts []message.ContentPart
+	// Live holds the IDs of the parts that have not taken their final form
+	// yet: those a part event started and none ended, such as text that
+	// still streams or a tool call that still runs. A message that ended,
+	// or that a session loaded, has none.
+	Live []message.PartID
 	// Prev holds the parts of the message before this one in the
 	// transcript, which the views of an extension may show this one
 	// against, as a reply's changes are those from the workspace the message
@@ -48,7 +53,40 @@ type ChatMessage struct {
 	// context as a share of. It is zero for a reply without usage, and when
 	// the catalog does not list the model.
 	Window int
+	// Notice, when set, makes the entry a notice of the transcript, as
+	// UI.NewNoticeRow shows it, rather than a message: it has no role, parts,
+	// or usage, and takes no part in the conversation, as LastMessage skips
+	// it.
+	Notice *Notice
 }
+
+// Notice is a notice of the transcript, such as the session info under the
+// logo or the files a history move changed, as UI.NewNoticeRow shows it. The
+// transcript holds it among its messages, in a ChatMessage of its own, and
+// unlike a message it never changes once shown.
+type Notice struct {
+	// Text is an unstyled single-line notice.
+	Text string
+	// Lines are styled rows, which take precedence over Text.
+	Lines []style.StyledText
+	// Surface is what the notice shows on.
+	Surface NoticeSurface
+}
+
+// NoticeSurface is what a notice shows on.
+type NoticeSurface int
+
+const (
+	// NoticeRaised shows a notice in a box on the raised surface. It is the
+	// default.
+	NoticeRaised NoticeSurface = iota
+	// NoticeSystem shows a notice in a box on the system surface, as the
+	// session info is.
+	NoticeSystem
+	// NoticeCanvas shows a notice's rows on the canvas, from the transcript's
+	// left edge, with no box around them, as the logo is.
+	NoticeCanvas
+)
 
 // HasParent reports whether the message belongs to another message's bubble.
 func (m ChatMessage) HasParent() bool {
@@ -354,7 +392,8 @@ func (s SelectionStyle) FillInset() (int, bool) {
 
 // UIState contains the terminal state read and updated by Service.
 type UIState struct {
-	// Messages contains the active transcript.
+	// Messages contains the active transcript: its messages, and the notices
+	// shown among them, as ChatMessage.Notice marks them.
 	Messages []ChatMessage
 	// Session is the active persisted session.
 	Session *session.Session

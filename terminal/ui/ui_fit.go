@@ -86,24 +86,42 @@ func (ui *UI) KeepInputBoxInView() {
 	ui.FitInputBox(height)
 }
 
-// FitInputBox keeps the input box, with the indicator above it, within one
-// row less than height, the terminal's height. It bounds the open list
-// first, then the banner text, the queue, and the input text, and gives rows
-// back in the reverse order as room returns.
+// FitInputBox keeps the input box, with the indicator above it, within the
+// rows of height, the terminal's height, that the live rows of the
+// transcript, as ReserveLiveRows keeps them, and a spare row leave it. It
+// bounds the open list first, then the banner text, the queue, and the
+// input text, and gives rows back in the reverse order as room returns.
 //
-// Inline mode needs the box on screen. The terminal scrolls the rows above
-// its screen into the scrollback, where they cannot be redrawn, so a box
-// taller than the screen could not be redrawn in place as it changes. The
-// spare row keeps the transcript's last row in view above the box.
+// Inline mode needs the live area on screen. The terminal scrolls the rows
+// above its screen into the scrollback, where they cannot be redrawn, so a
+// box taller than the screen, or one that pushed a running call or the
+// "Writing…" row above it, could not be redrawn in place as they change.
+// The spare row is where the renderer scrolls the rows the transcript gains
+// in, above the live area, without redrawing it.
 func (ui *UI) FitInputBox(height int) {
-	budget := max(height-1, 1)
 	root := ui.renderer.Root()
 	for range fitPasses {
 		root.CalculateLayout()
+		budget := max(height-1-ui.ReserveLiveRows(), 1)
 		if !ui.Refit(budget - ui.InputBoxHeight()) {
 			return
 		}
 	}
+}
+
+// ReserveLiveRows returns the rows FitInputBox keeps for the live rows of
+// the transcript: those LiveRows counts, and while a run goes on, the most
+// it has counted since the run began. Each step of a run brings live rows
+// and ends them, as a reply's "Writing…" row and a call that runs, and
+// keeping their rows for the whole run keeps the input box from growing and
+// shrinking, and its text from moving, at every step.
+func (ui *UI) ReserveLiveRows() int {
+	rows := ui.LiveRows()
+	if ui.service.state.Running {
+		rows = max(rows, ui.liveReserve)
+	}
+	ui.liveReserve = rows
+	return rows
 }
 
 // InputBoxHeight returns the rows the input box and its footer take, with the
