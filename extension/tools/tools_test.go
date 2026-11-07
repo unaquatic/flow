@@ -1,14 +1,15 @@
 package tools
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/extension"
 )
 
-// TestLoad checks that the extension loads with bash, the one tool flow
-// offers the model, as a tool hook.
+// TestLoad checks that the extension loads, as a tool hook, with the tools
+// flow offers the model: read, write, edit, and bash.
 func TestLoad(t *testing.T) {
 	e, err := Load(t.Context(), extension.Host{})
 	if err != nil {
@@ -22,8 +23,8 @@ func TestLoad(t *testing.T) {
 	for _, tl := range h.Tools() {
 		names = append(names, tl.Name)
 	}
-	if len(names) != 1 || names[0] != "bash" {
-		t.Errorf("tools = %v, want [bash]", names)
+	if want := []string{"read", "write", "edit", "bash"}; !slices.Equal(names, want) {
+		t.Errorf("tools = %v, want %v", names, want)
 	}
 }
 

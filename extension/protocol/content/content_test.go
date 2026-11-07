@@ -216,3 +216,35 @@ func TestStreamFailures(t *testing.T) {
 		t.Errorf("MAX_TOKENS: %+v, %v", r, err)
 	}
 }
+
+// TestToContents_ToolResultAttachments checks that the attachments of a
+// tool result go in its function response's parts, named, to a model of
+// version 3 and later, and, to a model before it, in a user turn after the
+// turn of the function responses, after a line that names the call.
+func TestToContents_ToolResultAttachments(t *testing.T) {
+	result := message.ToolResultPart{ToolUseID: "c1", Name: "read", Text: "Read image shot.png", Attachments: []message.FilePart{
+		{Data: "aW1n", MediaType: "image/png", Filename: "shot.png"},
+	}}
+	msgs := []agent.Message{{Role: message.RoleUser, Content: []message.ContentPart{result}}}
+	encode := func(model string) string {
+		t.Helper()
+		_, out := ToContents(msgs, model)
+		data, err := json.Marshal(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	want := `[{"role":"user","parts":[{"functionResponse":{"id":"c1","name":"read","response":{"output":"Read image shot.png"},` +
+		`"parts":[{"inlineData":{"mimeType":"image/png","data":"aW1n","displayName":"shot.png"}}]}}]}]`
+	if got := encode("model-x-3"); got != want {
+		t.Errorf("version 3 contents =\n%s\nwant\n%s", got, want)
+	}
+
+	want = `[{"role":"user","parts":[{"functionResponse":{"name":"read","response":{"output":"Read image shot.png"}}}]},` +
+		`{"role":"user","parts":[{"text":"Attachments of the read call:"},{"inlineData":{"mimeType":"image/png","data":"aW1n"}}]}]`
+	if got := encode(LegacyFamily + "-2.5-flash"); got != want {
+		t.Errorf("legacy contents =\n%s\nwant\n%s", got, want)
+	}
+}

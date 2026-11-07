@@ -293,11 +293,12 @@ func ToolStateFor(res ToolResult, input json.RawMessage, started time.Time) mess
 		}
 	}
 	return message.ToolStateCompleted{
-		Input:     input,
-		Output:    res.Content,
-		Title:     res.Title,
-		StartedAt: started,
-		EndedAt:   ended,
+		Input:       input,
+		Output:      res.Content,
+		Title:       res.Title,
+		Attachments: res.Attachments,
+		StartedAt:   started,
+		EndedAt:     ended,
 	}
 }
 

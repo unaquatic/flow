@@ -12,6 +12,7 @@ import (
 
 	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/agent/message"
 )
 
 // eventBody returns server-sent events, each a pair of event type and data. An
@@ -348,5 +349,27 @@ func TestStream_OtherOAuth(t *testing.T) {
 	resp.Collect()
 	if path != "/v1/endpoints/openapi/chat/completions" || auth != "Bearer ya29" {
 		t.Errorf("request to %s with %q, want the provider's chat completions with the token", path, auth)
+	}
+}
+
+// TestToMessages_ToolResultAttachments checks that each tool result is a
+// tool message of its text, and that the attachments of a message's tool
+// results follow its tool messages in a user message, each after a line
+// that names its call, since a tool message holds text alone.
+func TestToMessages_ToolResultAttachments(t *testing.T) {
+	result := message.ToolResultPart{ToolUseID: "c1", Text: "Read image shot.png", Attachments: []message.FilePart{
+		{Data: "aW1n", MediaType: "image/png", Filename: "shot.png"},
+	}}
+	plain := message.ToolResultPart{ToolUseID: "c2", Text: "ok"}
+	got, err := json.Marshal(ToMessages([]agent.Message{{Role: message.RoleUser, Content: []message.ContentPart{result, plain}}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"role":"tool","content":"Read image shot.png","tool_call_id":"c1"},` +
+		`{"role":"tool","content":"ok","tool_call_id":"c2"},` +
+		`{"role":"user","content":[{"type":"text","text":"Attachments of tool call c1:"},` +
+		`{"type":"image_url","image_url":{"url":"data:image/png;base64,aW1n"}}]}]`
+	if string(got) != want {
+		t.Errorf("messages =\n%s\nwant\n%s", got, want)
 	}
 }

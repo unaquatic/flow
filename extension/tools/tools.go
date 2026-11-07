@@ -33,10 +33,11 @@ var _ extension.ToolHook = (*Extension)(nil)
 // New returns the extension over ts.
 func New(ts ...agent.Tool) *Extension { return &Extension{Toolset: ts} }
 
-// Load loads the extension with the tools flow offers the model: bash,
-// which finds the installed shells as it loads.
+// Load loads the extension with the tools flow offers the model: read,
+// write, and edit, which work on the files of the working directory, and
+// bash, which finds the installed shells as it loads.
 func Load(context.Context, extension.Host) (extension.Extension, error) {
-	return New(builtin.Bash()), nil
+	return New(builtin.Read(), builtin.Write(), builtin.Edit(), builtin.Bash()), nil
 }
 
 // All returns every built-in tool, in a stable order, whether or not Load

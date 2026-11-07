@@ -105,6 +105,9 @@ type ToolResultPart struct {
 	Text string `json:"text"`
 	// IsError reports whether Text describes a failure.
 	IsError bool `json:"is_error,omitempty"`
+	// Attachments are files the tool returned for the model to see beside
+	// Text, such as an image, which each provider format sends as it can.
+	Attachments []FilePart `json:"attachments,omitempty"`
 	// CacheControl contains provider prompt-cache hints.
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
@@ -217,6 +220,8 @@ type PartJSON struct {
 	ToolUseID string `json:"tool_use_id,omitempty"`
 	// IsError marks tool-result failures.
 	IsError bool `json:"is_error,omitempty"`
+	// Attachments are the files a tool result carries beside its text.
+	Attachments []FilePart `json:"attachments,omitempty"`
 	// CallID is the provider-assigned tool-call identifier.
 	CallID string `json:"call_id,omitempty"`
 	// State contains a fused tool lifecycle state.
@@ -265,6 +270,7 @@ func PartToJSON(p ContentPart) PartJSON {
 		j.Name = v.Name
 		j.Text = v.Text
 		j.IsError = v.IsError
+		j.Attachments = v.Attachments
 		j.CacheControl = v.CacheControl
 	case ToolPart:
 		j.PartID = ensurePartID(v.ID)
@@ -320,7 +326,7 @@ func PartFromJSON(j PartJSON) ContentPart {
 	case TypeToolUse:
 		return ToolUsePart{ID: id, CallID: j.CallID, Name: j.Name, Input: j.Input, CacheControl: j.CacheControl}
 	case TypeToolResult:
-		return ToolResultPart{ID: id, ToolUseID: j.ToolUseID, Name: j.Name, Text: j.Text, IsError: j.IsError, CacheControl: j.CacheControl}
+		return ToolResultPart{ID: id, ToolUseID: j.ToolUseID, Name: j.Name, Text: j.Text, IsError: j.IsError, Attachments: j.Attachments, CacheControl: j.CacheControl}
 	case TypeImage:
 		return ImagePart{ID: id, Source: j.Source, CacheControl: j.CacheControl}
 	case TypeFile:

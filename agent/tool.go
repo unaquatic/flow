@@ -3,6 +3,8 @@ package agent
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/unaquatic/flow/agent/message"
 )
 
 // ToolDefinition is a model-visible tool definition without a local executor,
@@ -62,6 +64,10 @@ type ToolOutput struct {
 	// IsError reports whether the run failed. Text then describes the
 	// failure along with any output produced before it.
 	IsError bool
+	// Attachments are files the run returns for the model to see beside
+	// Text, such as the image a read of an image file returns. A failed
+	// run's are dropped.
+	Attachments []message.FilePart
 }
 
 // WireTool returns the model-visible definition without the local executor.
@@ -93,4 +99,6 @@ type ToolResult struct {
 	Title string
 	// IsError reports whether Content contains an error message.
 	IsError bool
+	// Attachments are the files the tool returned beside Content.
+	Attachments []message.FilePart
 }
