@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"sync/atomic"
+	"time"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
@@ -357,6 +358,13 @@ func (ui *UI) BuildUI() {
 		),
 		widget.ScrollBoxWithAutoScroll(widget.AutoScrollBottom),
 		widget.ScrollBoxWithAnchorScroll(true),
+		// A slow turn of the wheel moves one row per event, and a fast one
+		// up to eight.
+		widget.ScrollBoxWithScrollAccel(&widget.ScrollAccel{
+			Window: 50 * time.Millisecond,
+			Step:   0.5,
+			Max:    8,
+		}),
 	)
 	// Inline mode parents transcript rows to the root, leaving this unused.
 	ui.messageBox.SetGone(ui.inline)

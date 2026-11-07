@@ -2,9 +2,11 @@ package ui
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"slices"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -306,6 +308,43 @@ func TestScrollTranscriptSkippedInline(t *testing.T) {
 
 	if ui.ScrollTranscript(key) {
 		t.Error("inline mode should leave scrolling to the terminal")
+	}
+}
+
+// TestTranscriptWheelAccelerates sends five wheel events, gap apart on
+// synctest's clock, to the fullscreen transcript scrolled to its top, and
+// checks how far they scroll it.
+func TestTranscriptWheelAccelerates(t *testing.T) {
+	tests := []struct {
+		name string
+		gap  time.Duration
+		want int
+	}{
+		{name: "slow events move one row each", gap: 100 * time.Millisecond, want: 5},
+		// The events move 1, 1, 2, 3, and 3 rows.
+		{name: "fast events accelerate", gap: 10 * time.Millisecond, want: 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ui := newInputTestUI(t)
+			for i := range 30 {
+				ui.AppendToast(EventToastShow{Text: fmt.Sprintf("Notice %d", i)})
+			}
+			DrawFullscreen(ui, 40, 10, 0)
+			synctest.Test(t, func(t *testing.T) {
+				for range 5 {
+					time.Sleep(tt.gap)
+					ui.messageBox.OnMouseScrollHandler(&input.MouseEvent{
+						Type:   input.MouseScroll,
+						Button: input.ButtonNone,
+						Scroll: &input.ScrollInfo{DeltaY: 1},
+					})
+				}
+			})
+			if got := ui.messageBox.ScrollY(); got != tt.want {
+				t.Errorf("scrollY = %d after 5 wheel events %v apart, want %d", got, tt.gap, tt.want)
+			}
+		})
 	}
 }
 
