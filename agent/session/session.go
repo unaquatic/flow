@@ -32,6 +32,10 @@ const Name = "session"
 // ErrMessageNotFound reports a message that a session does not hold.
 var ErrMessageNotFound = errors.New("no such message in this session")
 
+// ErrMessageType reports a message stored where its type does not belong:
+// one that is not chat in the conversation, or a chat one in a fork.
+var ErrMessageType = errors.New("message of the wrong type")
+
 // Open creates the session tables of db, which must have been opened by
 // [database.Open], or brings them up to date with [Migrations], and returns
 // a store working on behalf of project in it. Closing db is up to the

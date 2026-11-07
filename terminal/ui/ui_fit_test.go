@@ -188,7 +188,7 @@ func TestFitInputBoxBoundsSessionPrompts(t *testing.T) {
 		rows[i] = widget.SelectItem{Name: fmt.Sprintf("session %d", i+1), Value: "s"}
 	}
 	ui.ShowSessionMenu(EventSessionMenuShow{Items: rows})
-	ui.sessionPrompts.Set([]string{"one", "two", "three"})
+	ui.sessionPrompts.Set([]string{"one", "two", "three"}, 0)
 	prompts := ui.sessionPrompts
 
 	full := fitInputBox(ui, 60)
@@ -242,7 +242,7 @@ func TestFitInputBoxSessionPromptsFillTheWindow(t *testing.T) {
 	for i := range prompts {
 		prompts[i] = fmt.Sprintf("prompt %d", i+1)
 	}
-	ui.sessionPrompts.Set(prompts)
+	ui.sessionPrompts.Set(prompts, 0)
 	preview := ui.sessionPrompts
 
 	if got := fitInputBox(ui, 30); got != 29 {
@@ -255,7 +255,7 @@ func TestFitInputBoxSessionPromptsFillTheWindow(t *testing.T) {
 	lines := strings.Split(preview.Text.PlainText(), "\n")
 	// The divider takes a row, and the count another.
 	earlier := fmt.Sprintf("  [%d earlier]", len(prompts)-(shown-2))
-	if len(lines) != shown-1 || lines[0] != earlier || lines[len(lines)-1] != "  user: prompt 40" {
+	if len(lines) != shown-1 || lines[0] != earlier || lines[len(lines)-1] != "  User prompt 40" {
 		t.Errorf("rows = %q, want %d rows from %q to the latest prompt", lines, shown-1, earlier)
 	}
 	if ui.service.state.MenuRows != 0 {
@@ -265,6 +265,15 @@ func TestFitInputBoxSessionPromptsFillTheWindow(t *testing.T) {
 	fitInputBox(ui, 80)
 	if got, want := preview.Shown(), 1+len(prompts); got != want {
 		t.Errorf("preview shows %d rows on an 80-row terminal, want all %d", got, want)
+	}
+
+	// Prompts left unloaded are counted on a row of their own, though every
+	// prompt loaded fits.
+	preview.Set(prompts[30:], 30)
+	fitInputBox(ui, 80)
+	lines = strings.Split(preview.Text.PlainText(), "\n")
+	if got, want := preview.Shown(), 2+10; got != want || lines[0] != "  [30 earlier]" {
+		t.Errorf("preview shows %d rows from %q, want %d from the count of the 30 unloaded", got, lines[0], want)
 	}
 }
 

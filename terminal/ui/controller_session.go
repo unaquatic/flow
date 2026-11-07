@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -16,6 +17,7 @@ import (
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
+	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
 )
 
@@ -181,13 +183,14 @@ func (s *Service) FilterSessions(query string) []UIEvent {
 // CurrentHint follows the active session's row in the session list.
 const CurrentHint = "[current]"
 
-// SessionRows returns a row for each listed session, marking the active
-// session's row with CurrentHint after its name, which the search leaves
-// out.
+// SessionRows returns a row for each listed session, as SessionRowNames
+// names them, marking the active session's row with CurrentHint after its
+// name, which the search leaves out.
 func (s *Service) SessionRows() []widget.SelectItem {
+	names := SessionRowNames(s.state.SessionChoices)
 	items := make([]widget.SelectItem, 0, len(s.state.SessionChoices))
-	for _, sess := range s.state.SessionChoices {
-		item := widget.SelectItem{Name: SessionRow(sess), Value: sess.ID}
+	for i, sess := range s.state.SessionChoices {
+		item := widget.SelectItem{Name: names[i], Value: sess.ID}
 		if s.state.Session != nil && sess.ID == s.state.Session.ID {
 			item.Hint = CurrentHint
 		}
@@ -196,11 +199,63 @@ func (s *Service) SessionRows() []widget.SelectItem {
 	return items
 }
 
-// SessionRow returns the text of sess's row in the session list: its ID, and
-// when it was last updated, in local time. Session IDs are UUIDs of one
-// width, so the times line up in a column.
-func SessionRow(sess session.Session) string {
-	return string(sess.ID) + "  " + sess.UpdatedAt.Local().Format(time.DateTime)
+// UntitledName names a session that has no title, in the session list and
+// the terminal title.
+const UntitledName = "Untitled"
+
+// sessionTitleMax is the most cells a title takes in the session list,
+// which cuts a longer one, so that the IDs stay in view.
+const sessionTitleMax = 32
+
+// sessionColumnGap is the space between the session list's columns.
+const sessionColumnGap = "  "
+
+// SessionRowNames returns the text of each session's row in the session
+// list: its title, or UntitledName, in a column as wide as the widest of
+// them, cut to sessionTitleMax cells, then its ID, and when it was last
+// updated, in local time. Session IDs are UUIDs of one width, so the times
+// line up in a column too.
+func SessionRowNames(sessions []session.Session) []string {
+	titles := make([]string, len(sessions))
+	width := 0
+	for i, sess := range sessions {
+		titles[i] = TruncateWidth(SessionTitle(sess.Title), sessionTitleMax)
+		width = max(width, textbuf.StringWidth(titles[i]))
+	}
+	names := make([]string, len(sessions))
+	for i, sess := range sessions {
+		pad := strings.Repeat(" ", width-textbuf.StringWidth(titles[i]))
+		names[i] = titles[i] + pad + sessionColumnGap + string(sess.ID) + sessionColumnGap + sess.UpdatedAt.Local().Format(time.DateTime)
+	}
+	return names
+}
+
+// SessionTitle returns title, a session's title on one line, or
+// UntitledName when it has none.
+func SessionTitle(title string) string {
+	if title = OneLine(title); title == "" {
+		return UntitledName
+	}
+	return title
+}
+
+// TruncateWidth returns s cut to at most n cells, as the terminal draws
+// them, with an ellipsis in the last cell when it is cut.
+func TruncateWidth(s string, n int) string {
+	if textbuf.StringWidth(s) <= n {
+		return s
+	}
+	var b strings.Builder
+	used := 0
+	for _, r := range s {
+		w := textbuf.RuneWidth(r)
+		if used+w > n-1 {
+			break
+		}
+		b.WriteRune(r)
+		used += w
+	}
+	return b.String() + "…"
 }
 
 // HideSessionMenu dismisses the session list.
@@ -210,43 +265,21 @@ func (s *Service) HideSessionMenu() []UIEvent {
 	return []UIEvent{EventSessionMenuHide{}}
 }
 
-// PreviewSession loads a session's active branch for preview without changing
-// the active session.
-func (s *Service) PreviewSession(sessionID message.SessionID) []UIEvent {
-	msgs, err := s.app.Sessions().Branch(s.ctx, sessionID)
-	if err != nil {
-		slog.Warn("session preview", "session", sessionID, "err", err)
-		return nil
-	}
-	var chatMsgs []ChatMessage
-	for _, m := range msgs {
-		// Preserve logged tool states in the preview.
-		chatMsgs = append(chatMsgs, ChatMessage{
-			ID:        m.ID,
-			Role:      m.Role,
-			Parts:     m.Parts,
-			Model:     m.Model,
-			Usage:     m.Usage(),
-			CreatedAt: m.CreatedAt,
-		})
-	}
-	AssignParents(chatMsgs)
-	AssignPrev(chatMsgs)
-	AssignWorked(chatMsgs)
-	s.AssignWindows(chatMsgs)
-	return []UIEvent{EventSessionPreview{Messages: chatMsgs}}
-}
-
-// SessionPrompts loads the prompts on a session's active branch for the
-// session list's inline preview, without changing the active session. A
+// SessionPrompts loads the latest limit prompts on a session's active branch
+// for the session list's preview, without changing the active session or
+// reading its state, so that it can run off the event loop, until ctx is
+// done, and counts the earlier ones it leaves unread. It reads none of the session's
+// replies, so that moving through the list of long sessions stays quick. A
 // session that fails to load previews no prompts.
-func (s *Service) SessionPrompts(sessionID message.SessionID) []UIEvent {
-	msgs, err := s.app.Sessions().Branch(s.ctx, sessionID)
+func (s *Service) SessionPrompts(ctx context.Context, sessionID message.SessionID, limit int) []UIEvent {
+	msgs, total, err := s.app.Sessions().Prompts(ctx, sessionID, limit)
 	if err != nil {
-		slog.Warn("session prompts", "session", sessionID, "err", err)
+		if ctx.Err() == nil {
+			slog.Warn("session prompts", "session", sessionID, "err", err)
+		}
 		return []UIEvent{EventSessionPrompts{}}
 	}
-	return []UIEvent{EventSessionPrompts{Prompts: slices.Collect(Prompts(msgs))}}
+	return []UIEvent{EventSessionPrompts{Prompts: slices.Collect(Prompts(msgs)), Earlier: total - len(msgs)}}
 }
 
 // Prompts yields the text of each prompt in msgs on one line, as a session

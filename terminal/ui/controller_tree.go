@@ -92,6 +92,12 @@ func (s *Service) CycleTreeFilter() []UIEvent {
 	return s.UpdateTree((*SessionTree).CycleFilter)
 }
 
+// ToggleTreeHidden shows or hides the forks off the conversation in the open
+// session tree, such as the exchanges that titled the session.
+func (s *Service) ToggleTreeHidden() []UIEvent {
+	return s.UpdateTree((*SessionTree).ToggleHidden)
+}
+
 // ChooseTreeRow closes the session tree and moves the session to the
 // selected message, as pi's /tree does:
 //
@@ -101,6 +107,10 @@ func (s *Service) CycleTreeFilter() []UIEvent {
 //     share a parent.
 //   - A reply or its tool calls end the transcript at them, for /continue to
 //     pick the work up from there.
+//
+// A message of a fork off the conversation, which the tree shows while its
+// hidden messages are, is not one the transcript can end at: choosing it
+// says so and leaves the tree open.
 //
 // The move stops the active run first and runs off the event loop, so its
 // result arrives later. The app resolves the move at that point, so a run
@@ -113,6 +123,9 @@ func (s *Service) ChooseTreeRow() []UIEvent {
 	row, ok := t.SelectedRow()
 	if !ok {
 		return nil
+	}
+	if row.Entry.Hidden() {
+		return s.ShowToast(fmt.Sprintf("A %s message is not part of the conversation", row.Entry.Type))
 	}
 	closed := s.CancelBanner()
 	s.Stop()

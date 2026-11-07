@@ -12,8 +12,8 @@
 |     Agent Rewrote the tests as a table.                                |
 |                                                                        |
 |■                                                                       |
-|  esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  type search        |
-|                                                                        |
+|  esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  ctrl+t hidden      |
+|  type search                                                           |
 === fg ===
 |A AAAAAAA AAAA                                                          |
 |                                                                        |
@@ -28,8 +28,8 @@
 |     DDDDD DDDDDDD DDD DDDDD DD D DDDDDD                                |
 |                                                                        |
 |F                                                                       |
-|  CCC DDDDDD  CCC DDDD  CCCCCCC DDDD  CCCCCC DDDDDD  CCCC DDDDDD        |
-|                                                                        |
+|  CCC DDDDDD  CCC DDDD  CCCCCCC DDDD  CCCCCC DDDDDD  CCCCCC DDDDDD      |
+|  CCCC DDDDDD                                                           |
 === bg ===
 |                                                                        |
 |                                                                        |

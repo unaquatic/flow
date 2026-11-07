@@ -192,6 +192,10 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 	case app.EventSessionLoaded:
 		out = slices.Concat(s.LoadMessages(e.Messages), s.UpdateUsage())
 
+	case app.EventSessionUpdated:
+		// Such as when an extension titles the session.
+		out = s.ShowTitle(e.Title)
+
 	case app.EventLoginPrompt:
 		if e.State != nil {
 			out = s.AskLoginCode(e)

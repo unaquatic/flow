@@ -1,5 +1,6 @@
 === text ===
-|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
+|               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
 |  Agent message 20                                                      |
 |  User message 21                                                       |
@@ -19,9 +20,9 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === fg ===
-|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
 |  AAAAA CCCCCCC CC                                                      |
 |  DDDD CCCCCCC CC                                                       |
@@ -41,7 +42,6 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
@@ -56,8 +56,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
 |                                                                        |
 |                                                                        |

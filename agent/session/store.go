@@ -1,6 +1,7 @@
 package session
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -150,8 +151,13 @@ func (s *Store) DeleteSession(ctx context.Context, id message.SessionID) error {
 // below the session's head, in one transaction, and moves the head onto it.
 // Appending while the head sits mid-tree starts a new branch. A stored
 // message is not changed afterwards. Appending to a deleted session fails
-// with an error wrapping [fs.ErrNotExist], since its ID stays taken.
+// with an error wrapping [fs.ErrNotExist], since its ID stays taken, and
+// appending a message that is not chat, which AppendFork stores, with
+// [ErrMessageType].
 func (s *Store) AppendMessage(ctx context.Context, sessionID message.SessionID, msg *message.Content) error {
+	if !msg.Type.IsChat() {
+		return fmt.Errorf("%w: append a %s message to the conversation", ErrMessageType, msg.Type)
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -181,6 +187,66 @@ func (s *Store) AppendMessage(ctx context.Context, sessionID message.SessionID, 
 		return err
 	}
 	msg.ParentID, msg.CreatedAt = stored.ParentID, stored.CreatedAt
+	return nil
+}
+
+// AppendFork stores msgs as a fork below parent, a message of the session,
+// each below the one before it, in one transaction, and sets each one's
+// parent and creation time. A fork records an exchange that branched off
+// the conversation, such as the request that titled the session and its
+// reply, and its messages are of a type other than chat, which says what
+// it is for: the head does not move onto it, the session's update time
+// stays, and the reads of the conversation leave it out, as Branch,
+// Children, Forks, Leaf, Messages and Size do. ForkChildren and Path read
+// it. Deleting parent deletes it too. It fails with [ErrMessageType] when a
+// message of msgs is chat, with [ErrMessageNotFound] when the session holds
+// no parent, as one not stored holds none, and with an error wrapping
+// [fs.ErrNotExist] when the session is deleted.
+func (s *Store) AppendFork(ctx context.Context, sessionID message.SessionID, parent message.ID, msgs ...*message.Content) error {
+	for _, msg := range msgs {
+		if msg.Type.IsChat() {
+			return fmt.Errorf("%w: fork the conversation with a chat message", ErrMessageType)
+		}
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := currentHead(ctx, tx, sessionID); err != nil {
+		return err
+	}
+	var found bool
+	if err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS (SELECT 1 FROM messages WHERE session_id = ? AND id = ?)`,
+		sessionID, string(parent)).Scan(&found); err != nil {
+		return err
+	}
+	if !found {
+		return ErrMessageNotFound
+	}
+	stored := make([]message.Content, len(msgs))
+	above := parent
+	for i, msg := range msgs {
+		stored[i] = *msg
+		stored[i].ParentID = optionalID(above)
+		stored[i].CreatedAt = time.Now().UTC()
+		seq, err := insertMessage(ctx, tx, sessionID, &stored[i])
+		if err != nil {
+			return err
+		}
+		if err := insertParts(ctx, tx, seq, msg.Parts); err != nil {
+			return err
+		}
+		above = msg.ID
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	for i, msg := range msgs {
+		msg.ParentID, msg.CreatedAt = stored[i].ParentID, stored[i].CreatedAt
+	}
 	return nil
 }
 
@@ -279,11 +345,12 @@ func insertMessage(ctx context.Context, tx *sql.Tx, sessionID message.SessionID,
 	if msg.ParentID != nil {
 		parent = *msg.ParentID
 	}
+	created := encodeTime(msg.CreatedAt)
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO messages (session_id, id, parent_id, role, model, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		sessionID, string(msg.ID), nullableID(parent),
-		msg.Role.String(), msg.Model, encodeTime(msg.CreatedAt))
+		INSERT INTO messages (session_id, id, parent_id, type, role, model, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		sessionID, string(msg.ID), nullableID(parent), string(cmp.Or(msg.Type, message.TypeChat)),
+		msg.Role.String(), msg.Model, created, created)
 	if err != nil {
 		return 0, err
 	}

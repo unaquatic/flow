@@ -346,37 +346,37 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 	return s.ShowSearchMenu(menu)
 }
 
-// SetCacheMode shows the cache use of every reply in the transcript and the
-// session preview, and of those added later, where mode says.
+// SetCacheMode shows the cache use of every reply in the transcript, and of
+// those added later, where mode says.
 func (s *Service) SetCacheMode(mode CacheMode) []UIEvent {
 	s.state.CacheMode = mode
 	return append([]UIEvent{EventCacheModeSet{Mode: mode}}, s.PersistTerminal()...)
 }
 
-// SetExpandStyle shows every expanded tool call in the transcript and the
-// session preview, and those added later, as ts says.
+// SetExpandStyle shows every expanded tool call in the transcript, and those
+// added later, as ts says.
 func (s *Service) SetExpandStyle(ts ExpandedStyle) []UIEvent {
 	s.state.ExpandStyle = ts
 	return append([]UIEvent{EventExpandStyleSet{Style: ts}}, s.PersistTerminal()...)
 }
 
 // SetToolMarkers shows ToolMarker before the name of every tool call in the
-// transcript and the session preview, and of those added later, or hides it,
+// transcript, and of those added later, or hides it,
 // as show says.
 func (s *Service) SetToolMarkers(show bool) []UIEvent {
 	s.state.ToolMarkers = show
 	return append([]UIEvent{EventToolMarkersSet{Show: show}}, s.PersistTerminal()...)
 }
 
-// SetMarkerShape shows the marker of every tool call in the transcript and
-// the session preview, and of those added later, in m.
+// SetMarkerShape shows the marker of every tool call in the transcript, and
+// of those added later, in m.
 func (s *Service) SetMarkerShape(m MarkerShape) []UIEvent {
 	s.state.MarkerShape = m
 	return append([]UIEvent{EventMarkerShapeSet{Shape: m}}, s.PersistTerminal()...)
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
-// transcript and the session preview, and of those added later, in the color
+// transcript, and of those added later, in the color
 // c names.
 func (s *Service) SetToolColor(c ToolNameColor) []UIEvent {
 	s.state.ToolColor = c
@@ -421,8 +421,8 @@ func (s *Service) SetSelectionStyle(style SelectionStyle) []UIEvent {
 	return append([]UIEvent{EventSelectionStyleSet{Style: style}}, s.PersistTerminal()...)
 }
 
-// SetDebug shows what helps debug flow, in the transcript and the session
-// preview and in what is added to them later, or hides it, as on says: the
+// SetDebug shows what helps debug flow, in the transcript and in what is
+// added to it later, or hides it, as on says: the
 // snapshot each prompt and reply ends with, by its hash, once taken.
 func (s *Service) SetDebug(on bool) []UIEvent {
 	s.state.Debug = on

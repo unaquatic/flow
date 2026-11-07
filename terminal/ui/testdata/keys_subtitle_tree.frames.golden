@@ -1,6 +1,7 @@
 === text ===
 |■ Session tree                                                          |
-|  esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  type search        |
+|  esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  ctrl+t hidden      |
+|  type search                                                           |
 |                                                                        |
 |  User add a Divide method to the calculator                            |
 |  Agent I'll add Divide with a zero check.                              |
@@ -14,10 +15,10 @@
 |                                                                        |
 |■                                                                       |
 |                                                                        |
-|                                                                        |
 === fg ===
 |A AAAAAAA AAAA                                                          |
-|  BBB CCCCCC  BBB CCCC  BBBBBBB CCCC  BBBBBB CCCCCC  BBBB CCCCCC        |
+|  BBB CCCCCC  BBB CCCC  BBBBBBB CCCC  BBBBBB CCCCCC  BBBBBB CCCCCC      |
+|  BBBB CCCCCC                                                           |
 |                                                                        |
 |  DDDD BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
 |  AAAAA BBBB BBB BBBBBB BBBB B BBBB BBBBBB                              |
@@ -31,7 +32,6 @@
 |                                                                        |
 |F                                                                       |
 |                                                                        |
-|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
@@ -40,8 +40,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                        |
 |                                                                        |
 |                                                                        |

@@ -15,13 +15,20 @@ type Tree struct {
 	// order they were stored. Each names the message it continues, which
 	// precedes it.
 	Messages []message.Content
+	// Forks are the messages of the exchanges that forked off the session's
+	// conversation, such as those that titled it, each of a type other than
+	// chat, in the order they were stored. Each continues a message of
+	// Messages, or the one before it in its fork, which precedes it. The
+	// transcript never ends at one.
+	Forks []message.Content
 	// Head is the last message the session's transcript shows, or empty when
 	// it shows none.
 	Head message.ID
 }
 
-// Tree returns the session's whole history. Like Branches, it reads without
-// holding the session, so it stays answerable while a run is in progress.
+// Tree returns the session's whole history, its forks included. Like
+// Branches, it reads without holding the session, so it stays answerable
+// while a run is in progress.
 func (s Session) Tree() (Tree, error) {
 	// The head comes first, so the messages read next include it even when a
 	// run appends meanwhile.
@@ -33,7 +40,11 @@ func (s Session) Tree() (Tree, error) {
 	if err != nil {
 		return Tree{}, err
 	}
-	return Tree{Messages: msgs, Head: h.ID}, nil
+	forks, err := s.app.sessions.ForkMessages(s.ctx, s.id)
+	if err != nil {
+		return Tree{}, err
+	}
+	return Tree{Messages: msgs, Forks: forks, Head: h.ID}, nil
 }
 
 // ErrAlreadyThere reports that a move would leave the session where it is.

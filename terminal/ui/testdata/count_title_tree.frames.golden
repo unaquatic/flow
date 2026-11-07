@@ -1,6 +1,6 @@
 === text ===
 |■ Session tree [30/30] [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]        |
-|                       [esc cancel]                                     |
+|                       [ctrl+t hidden] [esc cancel]                     |
 |                                                                        |
 |  User message 20                                                       |
 |  User message 21                                                       |
@@ -22,7 +22,7 @@
 |                                                                        |
 === fg ===
 |A AAAAAAA AAAA BBBBBBB BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB        |
-|                       BBBB BBBBBBB                                     |
+|                       BBBBBBB BBBBBBB BBBB BBBBBBB                     |
 |                                                                        |
 |  CCCC DDDDDDD DD                                                       |
 |  CCCC DDDDDDD DD                                                       |

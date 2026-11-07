@@ -7,6 +7,7 @@ package agenttest
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/unaquatic/catalog/gateway"
@@ -28,15 +29,22 @@ type Gateway struct {
 	StreamModels []string
 	// StreamCacheKeys records the cache key of each request.
 	StreamCacheKeys []string
+
+	// mu guards the records, which requests sent at once, such as a run's
+	// and a session title's, append to together. A test reads them once
+	// the requests are done.
+	mu sync.Mutex
 }
 
 // Stream records a request of model of provider pt, and returns the response
-// StreamFunc gives.
+// StreamFunc gives. It is safe to call from several goroutines at once.
 func (g *Gateway) Stream(_ context.Context, pt agent.ProviderID, model string, req agent.Request) (agent.StreamResponse, error) {
+	g.mu.Lock()
 	g.StreamCalls = append(g.StreamCalls, req.Messages)
 	g.StreamProviders = append(g.StreamProviders, pt)
 	g.StreamModels = append(g.StreamModels, model)
 	g.StreamCacheKeys = append(g.StreamCacheKeys, req.CacheKey)
+	g.mu.Unlock()
 	return g.StreamFunc()
 }
 

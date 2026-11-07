@@ -73,7 +73,7 @@ func (ui *UI) SyncInputGap() {
 
 // AboveInputEndsBlank reports whether what shows right above the input box
 // ends with a blank row: the indicator, or else the last row of the
-// transcript or of the session preview, which a blank row ends as a margin.
+// transcript, which a blank row ends as a margin.
 // Nothing above the box, as an empty transcript, needs no blank row either.
 // A fullscreen transcript, or preview, ends with its last row only while it
 // is scrolled to its bottom; scrolled anywhere else, as when it keeps its
@@ -86,9 +86,6 @@ func (ui *UI) AboveInputEndsBlank() bool {
 	var rows []render.Renderable
 	scroll := ui.messageBox
 	switch {
-	case ui.previewMessageBox.Visible():
-		scroll = ui.previewMessageBox
-		rows = scroll.Children()
 	case ui.inline:
 		scroll = nil
 		for _, row := range ui.transcriptRows {

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -128,20 +129,13 @@ func (ui *UI) HideSlashMenu() {
 }
 
 // ShowSessionMenu opens the session list at the top of the input box, like
-// every other menu, with the input below it holding its query. In fullscreen
-// mode a preview of the selected session takes the transcript's place above
-// it. Inline mode leaves the transcript as it is: its rows are the terminal's
-// own lines, and hiding them would collapse the screen. It lists the selected
-// session's prompts under the rows instead.
+// every other menu, with the input below it holding its query, and lists the
+// selected session's prompts under the rows, in inline and fullscreen mode
+// alike. The transcript stays as it is.
 //
 // It also refreshes an open list as its search changes, selecting the first
 // row. The event's text replaces the rows when there are none.
 func (ui *UI) ShowSessionMenu(e EventSessionMenuShow) {
-	if !ui.inline {
-		ui.messageBox.SetGone(true)
-		ui.previewMessageBox.SetGone(false)
-	}
-
 	ui.sessionMenu.SetItems(e.Items)
 	// Set the viewport before selecting a row so scrolling can be calculated.
 	ui.sessionMenu.SetHeight(layout.Points(ui.SessionRows()))
@@ -173,53 +167,57 @@ func (ui *UI) SyncSessionCount() {
 	ui.ShowCount(ui.sessionHeader, ui.sessionCount, TitleCount(ui.sessionMenu.SelectedIndex(), ui.sessionMenu.ItemCount(), ui.SessionRows()))
 }
 
-// HideSessionMenu closes the session list, empties its query from the input,
-// and in fullscreen mode puts the transcript back in place of the preview.
+// HideSessionMenu closes the session list, its prompt preview, and empties
+// its query from the input.
 func (ui *UI) HideSessionMenu() {
-	ui.previewMessageBox.SetGone(true)
-	// Inline mode never shows the scroll container: its rows are the root's.
-	ui.messageBox.SetGone(ui.inline)
-	ui.ResetPreview()
+	ui.promptLoader.Reset()
+	ui.sessionPrompts.Set(nil, 0)
 
 	ui.sessionPanel.SetGone(true)
 	ui.SyncFooter()
 	ui.SetQuery("")
 }
 
-// PreviewSelectedSession loads the selected session into the preview pane, or
-// empties the pane when no row is selected.
+// PreviewSelectedSession lists the selected session's prompts under the
+// session list, or none when no row is selected.
 func (ui *UI) PreviewSelectedSession() {
 	item := ui.sessionMenu.SelectedItem()
 	if item == nil {
-		ui.ResetPreview()
+		ui.promptLoader.Stop()
+		ui.sessionPrompts.Set(nil, 0)
 		return
 	}
 	ui.PreviewSession(item.Value)
 }
 
-// PreviewSession previews the session identified by value: fullscreen mode
-// loads its transcript into the preview pane, and inline mode, which leaves
-// the transcript on screen, lists its prompts under the session list.
+// promptLoadLeast is the fewest prompts PreviewSession loads, as on a
+// terminal whose size is not known yet.
+const promptLoadLeast = 24
+
+// PreviewSession lists the prompts of the session identified by value under
+// the session list, as promptLoader loads them off the event loop, with
+// LoadingText in their place until they come.
 func (ui *UI) PreviewSession(value any) {
-	id, ok := value.(message.SessionID)
-	switch {
-	case !ok:
-		return
-	case ui.inline:
-		ui.Apply(ui.service.SessionPrompts(id))
-	default:
-		ui.Apply(ui.service.PreviewSession(id))
+	if id, ok := value.(message.SessionID); ok {
+		ui.promptLoader.Request(id)
 	}
+}
+
+// LoadSessionPrompts reads the preview of session id, off the event loop: as
+// many of its latest prompts as the terminal has rows for, since the preview
+// shows no more, with the rest counted.
+func (ui *UI) LoadSessionPrompts(ctx context.Context, id message.SessionID) []UIEvent {
+	return ui.service.SessionPrompts(ctx, id, max(ui.renderer.Height(), promptLoadLeast))
 }
 
 // promptLeastRows is the fewest rows the prompt preview shows when it shows
 // any: its divider and one row of prompts.
 const promptLeastRows = 2
 
-// PromptPreview lists the selected session's prompts under the session list
-// in inline mode: a divider, then a row for each prompt, oldest first. On a
+// PromptPreview lists the selected session's prompts under the session list:
+// a divider, then a row for each prompt, oldest first. On a
 // terminal too short for them all it lists the latest that fit, after a count
-// of the earlier ones.
+// of the earlier ones. While they load, it shows LoadingText in their place.
 type PromptPreview struct {
 	// Box holds the divider and Text. It is gone while no prompt shows.
 	Box *widget.Box
@@ -227,9 +225,15 @@ type PromptPreview struct {
 	Text *widget.Text
 	// Theme colors the rows.
 	Theme *style.Theme
-	// Prompts are the selected session's prompts, oldest first, on one line
-	// each.
+	// Prompts are the latest of the selected session's prompts, oldest
+	// first, on one line each.
 	Prompts []string
+	// Earlier counts the session's prompts before Prompts, which were not
+	// loaded.
+	Earlier int
+	// Loading reports that the selected session's prompts are loading, as
+	// SetLoading shows.
+	Loading bool
 	// Rows is the most rows Box takes, its divider included, while Bounded
 	// holds, so that the input box fits the terminal.
 	Rows int
@@ -254,19 +258,39 @@ func NewPromptPreview(borderFg, bg style.Color, theme *style.Theme) *PromptPrevi
 	return p
 }
 
-// Set replaces the prompts and redraws the preview.
-func (p *PromptPreview) Set(prompts []string) {
-	p.Prompts = prompts
+// LoadingText takes the place of the prompts while they load.
+const LoadingText = "[loading]"
+
+// Set replaces the prompts, and the count of the earlier ones not loaded,
+// ends a load SetLoading showed, and redraws the preview.
+func (p *PromptPreview) Set(prompts []string, earlier int) {
+	p.Prompts, p.Earlier, p.Loading = prompts, earlier, false
 	p.Draw()
 }
 
-// Want returns the rows the preview takes without a bound: none without
-// prompts, and otherwise its divider and a row for each prompt.
+// SetLoading shows LoadingText in place of the prompts, rather than leave
+// those of the session selected before, until Set replaces them.
+func (p *PromptPreview) SetLoading() {
+	p.Prompts, p.Earlier, p.Loading = nil, 0, true
+	p.Draw()
+}
+
+// Want returns the rows the preview takes without a bound: its divider and
+// LoadingText while the prompts load, none without prompts, and otherwise
+// its divider, a row for each prompt, and a row for the count of the earlier
+// ones when some were not loaded.
 func (p *PromptPreview) Want() int {
+	if p.Loading {
+		return promptLeastRows
+	}
 	if len(p.Prompts) == 0 {
 		return 0
 	}
-	return 1 + len(p.Prompts)
+	rows := 1 + len(p.Prompts)
+	if p.Earlier > 0 {
+		rows++
+	}
+	return rows
 }
 
 // Shown returns the rows the preview takes within its bound: none when the
@@ -287,8 +311,11 @@ func (p *PromptPreview) Shown() int {
 func (p *PromptPreview) Draw() {
 	rows := p.Shown()
 	p.Box.SetGone(rows == 0)
-	if rows > 0 {
-		p.Text.SetStyledContent(JoinStyledLines(PromptLines(p.Prompts, rows-1, p.Theme)))
+	switch {
+	case rows > 0 && p.Loading:
+		p.Text.SetStyledContent(style.NewStyledText(style.New().WithFg(PanelDimFg).Func()("  " + LoadingText)))
+	case rows > 0:
+		p.Text.SetStyledContent(JoinStyledLines(PromptLines(p.Prompts, p.Earlier, rows-1, p.Theme)))
 	}
 }
 
@@ -311,12 +338,13 @@ func (p *PromptPreview) Part() (FitPart, bool) {
 }
 
 // PromptLines returns at most n rows previewing prompts, which are oldest
-// first: every prompt when they all fit, and otherwise a count of the earlier
-// prompts, such as "[31 earlier]", above the latest n-1, or the latest alone
-// in a single row. Each
-// prompt follows a colored "user:" label, as in the session tree, and every
-// row lines up with the session list's text, past its arrow.
-func PromptLines(prompts []string, n int, theme *style.Theme) []style.StyledText {
+// first and follow earlier prompts not given: every prompt when they all fit
+// and none came before, and otherwise a count of the earlier prompts, those
+// not given among them, such as "[31 earlier]", above the latest that fit
+// in the other rows, or the latest alone in a single row. Each prompt follows a "User" label in the theme's accent,
+// as the session tree labels prompts, and every row lines up with the
+// session list's text, past its arrow.
+func PromptLines(prompts []string, earlier, n int, theme *style.Theme) []style.StyledText {
 	if n <= 0 || len(prompts) == 0 {
 		return nil
 	}
@@ -326,16 +354,18 @@ func PromptLines(prompts []string, n int, theme *style.Theme) []style.StyledText
 
 	var lines []style.StyledText
 	shown := prompts
-	if len(prompts) > n {
+	if earlier > 0 || len(prompts) > n {
 		if n > 1 {
-			earlier := len(prompts) - (n - 1)
-			lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("  [%d earlier]", earlier))))
 			n--
+			shown = prompts[len(prompts)-min(n, len(prompts)):]
+			hidden := earlier + len(prompts) - len(shown)
+			lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("  [%d earlier]", hidden))))
+		} else {
+			shown = prompts[len(prompts)-1:]
 		}
-		shown = prompts[len(prompts)-n:]
 	}
 	for _, prompt := range shown {
-		lines = append(lines, style.NewStyledText(text("  "), accent("user: "), text(prompt)))
+		lines = append(lines, style.NewStyledText(text("  "), accent("User "), text(prompt)))
 	}
 	return lines
 }

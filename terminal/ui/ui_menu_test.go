@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -59,23 +60,28 @@ func TestSessionMenuSearchesFromTheInput(t *testing.T) {
 func TestPromptLines(t *testing.T) {
 	prompts := []string{"one", "two", "three", "four"}
 	tests := []struct {
-		name string
-		n    int
-		want []string
+		name    string
+		earlier int
+		n       int
+		want    []string
 	}{
-		{name: "all fit", n: 4, want: []string{"  user: one", "  user: two", "  user: three", "  user: four"}},
-		{name: "roomy", n: 5, want: []string{"  user: one", "  user: two", "  user: three", "  user: four"}},
+		{name: "all fit", n: 4, want: []string{"  User one", "  User two", "  User three", "  User four"}},
+		{name: "roomy", n: 5, want: []string{"  User one", "  User two", "  User three", "  User four"}},
 		// The count of the earlier prompts takes a row.
-		{name: "earlier counted", n: 3, want: []string{"  [2 earlier]", "  user: three", "  user: four"}},
-		{name: "count and latest", n: 2, want: []string{"  [3 earlier]", "  user: four"}},
+		{name: "earlier counted", n: 3, want: []string{"  [2 earlier]", "  User three", "  User four"}},
+		{name: "count and latest", n: 2, want: []string{"  [3 earlier]", "  User four"}},
 		// A single row shows the latest prompt rather than a count alone.
-		{name: "latest alone", n: 1, want: []string{"  user: four"}},
+		{name: "latest alone", n: 1, want: []string{"  User four"}},
 		{name: "no rows", n: 0},
+		// Prompts not loaded are counted with those that do not fit.
+		{name: "unloaded counted", earlier: 5, n: 6, want: []string{"  [5 earlier]", "  User one", "  User two", "  User three", "  User four"}},
+		{name: "unloaded and cut", earlier: 5, n: 3, want: []string{"  [7 earlier]", "  User three", "  User four"}},
+		{name: "unloaded latest alone", earlier: 5, n: 1, want: []string{"  User four"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var got []string
-			for _, line := range PromptLines(prompts, tt.n, nil) {
+			for _, line := range PromptLines(prompts, tt.earlier, tt.n, nil) {
 				got = append(got, line.PlainText())
 			}
 			if !slices.Equal(got, tt.want) {
@@ -85,12 +91,18 @@ func TestPromptLines(t *testing.T) {
 	}
 }
 
-// TestSessionMenuPrompts checks that inline mode lists the selected session's
-// prompts under the session list, follows the selection, and clears them as
-// the list closes, and that fullscreen mode previews the transcript instead.
+// TestSessionMenuPrompts checks that the session list lists the selected
+// session's prompts under its rows, in inline and fullscreen mode alike,
+// follows the selection, and clears them as the list closes.
 func TestSessionMenuPrompts(t *testing.T) {
+	for _, inline := range []bool{true, false} {
+		t.Run(fmt.Sprintf("inline=%t", inline), func(t *testing.T) { testSessionMenuPrompts(t, inline) })
+	}
+}
+
+func testSessionMenuPrompts(t *testing.T, inline bool) {
 	ui := newInputTestUI(t)
-	ui.inline = true
+	ui.inline = inline
 	a := ui.service.app
 	first := storePrompts(t, a, "add a Divide method to the calculator", "also add tests")
 	second := storePrompts(t, a, "fix the flaky login test")
@@ -109,27 +121,121 @@ func TestSessionMenuPrompts(t *testing.T) {
 		}
 	}
 
+	loaded := awaitPrompts(t, ui)
 	ui.ShowSessionMenu(EventSessionMenuShow{Items: rows})
+	loaded()
 	check("add a Divide method to the calculator", "also add tests")
+	// The next session's prompts load in place of the first's.
 	ui.sessionMenu.MoveDown()
+	if !prompts.Loading || len(prompts.Prompts) != 0 || prompts.Text.PlainText() != "  "+LoadingText {
+		t.Errorf("while loading, preview shows %q, want %q alone", prompts.Text.PlainText(), LoadingText)
+	}
+	loaded()
 	check("fix the flaky login test")
 	ui.ShowSessionMenu(EventSessionMenuShow{Text: NoMatchesText, Query: "zzz"})
 	check()
+	// A session loaded before shows at once.
 	ui.ShowSessionMenu(EventSessionMenuShow{Items: rows})
+	check("add a Divide method to the calculator", "also add tests")
+	if prompts.Loading {
+		t.Error("a session loaded before shows as loading")
+	}
 	ui.HideSessionMenu()
 	check()
+}
 
-	ui.inline = false
-	ui.ShowSessionMenu(EventSessionMenuShow{Items: rows})
-	check()
-	if len(ui.previewMessageBox.Children()) == 0 {
-		t.Error("fullscreen mode previews no transcript")
+// awaitPrompts makes ui's prompt loader load without delay and hand what it
+// loaded to the returned function, which applies it, as the event loop
+// would, once it comes.
+func awaitPrompts(t *testing.T, ui *UI) func() {
+	t.Helper()
+	loaded := make(chan func(), 8)
+	ui.promptLoader.Delay = 0
+	ui.promptLoader.Enqueue = func(fn func()) { loaded <- fn }
+	return func() {
+		t.Helper()
+		select {
+		case fn := <-loaded:
+			fn()
+		case <-time.After(5 * time.Second):
+			t.Fatal("the prompts never loaded")
+		}
 	}
 }
 
-// TestSessionMenuTranscript checks that inline mode opens the session list
-// like any other menu, leaving the transcript on screen, and that fullscreen
-// mode shows the preview in the transcript's place until the list closes.
+// TestPromptLoaderKeepsUpWithTheSelection checks that the prompt loader
+// loads only the session selected last when the selection moves on before a
+// load starts or ends, cancelling the others, and shows a session it loaded
+// before at once.
+func TestPromptLoaderKeepsUpWithTheSelection(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var (
+			started []message.SessionID
+			shown   []message.SessionID
+			queue   []func()
+		)
+		block := make(chan struct{})
+		l := &PromptLoader{
+			Load: func(ctx context.Context, id message.SessionID) []UIEvent {
+				started = append(started, id)
+				if id == "slow" {
+					select {
+					case <-block:
+					case <-ctx.Done():
+					}
+				}
+				return []UIEvent{EventSessionPrompts{Prompts: []string{string(id)}}}
+			},
+			Enqueue: func(fn func()) { queue = append(queue, fn) },
+			Apply: func(events []UIEvent) {
+				shown = append(shown, message.SessionID(events[0].(EventSessionPrompts).Prompts[0]))
+			},
+			Delay: PromptLoadDelay,
+		}
+		run := func() {
+			synctest.Wait()
+			for _, fn := range queue {
+				fn()
+			}
+			queue = nil
+		}
+
+		// Moving through a, b and c faster than the delay loads c alone.
+		for _, id := range []message.SessionID{"a", "b", "c"} {
+			l.Request(id)
+			time.Sleep(PromptLoadDelay / 4)
+		}
+		time.Sleep(PromptLoadDelay)
+		run()
+		if !slices.Equal(started, []message.SessionID{"c"}) || !slices.Equal(shown, []message.SessionID{"c"}) {
+			t.Fatalf("loaded %v and showed %v, want c alone", started, shown)
+		}
+
+		// A load in progress is cancelled when the selection moves on, and
+		// what it read is dropped.
+		l.Request("slow")
+		time.Sleep(PromptLoadDelay)
+		synctest.Wait()
+		l.Request("d")
+		time.Sleep(PromptLoadDelay)
+		run()
+		if want := []message.SessionID{"c", "d"}; !slices.Equal(shown, want) {
+			t.Errorf("showed %v, want %v: the slow session dropped", shown, want)
+		}
+
+		// A session loaded before shows at once, without a load.
+		l.Request("c")
+		if want := []message.SessionID{"c", "d", "c"}; !slices.Equal(shown, want) || len(started) != 3 {
+			t.Errorf("showed %v after %d loads, want %v after 3", shown, len(started), want)
+		}
+		l.Reset()
+		close(block)
+	})
+}
+
+// TestSessionMenuTranscript checks that the session list opens like any
+// other menu, leaving the transcript on screen in inline and fullscreen mode
+// alike.
 func TestSessionMenuTranscript(t *testing.T) {
 	// A value that is not a message.SessionID previews nothing, so nothing is read.
 	rows := []widget.SelectItem{{Name: "0199bbbb-2222  2026-09-27 14:03:11", Value: "s1"}}
@@ -142,8 +248,8 @@ func TestSessionMenuTranscript(t *testing.T) {
 		}
 
 		ui.ShowSessionMenu(EventSessionMenuShow{Items: rows})
-		if !visible() || ui.previewMessageBox.Visible() {
-			t.Error("opening the list hid the inline transcript or showed a preview")
+		if !visible() {
+			t.Error("opening the list hid the inline transcript")
 		}
 		ui.HideSessionMenu()
 		if !visible() || ui.messageBox.Visible() {
@@ -154,12 +260,12 @@ func TestSessionMenuTranscript(t *testing.T) {
 		ui := newBuiltTestUI(t, false)
 
 		ui.ShowSessionMenu(EventSessionMenuShow{Items: rows})
-		if ui.messageBox.Visible() || !ui.previewMessageBox.Visible() {
-			t.Error("the preview did not take the transcript's place")
+		if !ui.messageBox.Visible() {
+			t.Error("opening the list hid the transcript")
 		}
 		ui.HideSessionMenu()
-		if !ui.messageBox.Visible() || ui.previewMessageBox.Visible() {
-			t.Error("closing the list did not put the transcript back")
+		if !ui.messageBox.Visible() {
+			t.Error("closing the list hid the transcript")
 		}
 	})
 }

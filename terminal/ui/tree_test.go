@@ -695,3 +695,158 @@ func TestTreeLinesLabels(t *testing.T) {
 		t.Errorf("rows:\n%q\nwant:\n%q", got, want)
 	}
 }
+
+// titledTree returns forkedTree with the exchange that titled the session
+// after its prompt u2 forked below it: t1, the request, and t2, the title.
+func titledTree(head message.ID) app.Tree {
+	tree := forkedTree(head)
+	t1 := treeMsg("t1", "u2", message.RoleUser, "Summarize the user request in this session")
+	t2 := treeMsg("t2", "t1", message.RoleAgent, "Divide with tests")
+	t1.Type, t2.Type = message.TypeTitle, message.TypeTitle
+	// A fork read just after its prompt was stored has no parent in the tree.
+	orphan := treeMsg("t9", "u9", message.RoleUser, "orphan")
+	orphan.Type = message.TypeTitle
+	tree.Forks = []message.Content{t1, t2, orphan}
+	return tree
+}
+
+// TestSessionTreeHidden checks that the tree hides the forks off the
+// conversation until they are toggled on, then draws them as asides off the
+// transcript, under the prompt they forked from and ahead of the reply,
+// which stays at the prompt's indent, names them in the status line, and
+// finds them by their type; that it leaves out a fork with no parent; and
+// that toggling them off again keeps the selection on the nearest listed
+// message above it.
+func TestSessionTreeHidden(t *testing.T) {
+	st := NewSessionTree(titledTree("a2"))
+	plain := []string{"u1*", "a1*", "├─ u2*", "│  a2*", "└─ u3", "   a3", "   a3", "   a4"}
+	if got := drawn(st); !slices.Equal(got, plain) {
+		t.Errorf("rows = %q, want the conversation alone: %q", got, plain)
+	}
+	if _, ok := st.Index["t9"]; ok {
+		t.Error("the tree holds a fork message whose parent it does not")
+	}
+
+	st.ToggleHidden()
+	want := []string{"u1*", "a1*", "├─ u2*", "│  └─ t1", "│     t2", "│  a2*", "└─ u3", "   a3", "   a3", "   a4"}
+	if got := drawn(st); !slices.Equal(got, want) {
+		t.Errorf("rows with hidden = %q, want %q", got, want)
+	}
+	if v := st.View(20); v.Status != "[hidden]" {
+		t.Errorf("status = %q, want [hidden]", v.Status)
+	}
+	selectID(t, st, "t2")
+
+	st.Search("title")
+	if got := drawn(st); !slices.Equal(got, []string{"t1", "t2"}) {
+		t.Errorf("rows matching title = %q, want the fork", got)
+	}
+	st.Search("")
+
+	st.ToggleHidden()
+	if got := drawn(st); !slices.Equal(got, plain) {
+		t.Errorf("rows after hiding again = %q, want %q", got, plain)
+	}
+	if got := selectedID(st); got != "u2" {
+		t.Errorf("selected %s, want u2, the nearest listed message above t2", got)
+	}
+	if v := st.View(20); v.Status != "" {
+		t.Errorf("status = %q, want none", v.Status)
+	}
+}
+
+// TestChooseHiddenTreeRow checks that choosing a fork's row says it is not
+// part of the conversation, asks for no move, and leaves the tree open.
+func TestChooseHiddenTreeRow(t *testing.T) {
+	s := &Service{state: &UIState{}}
+	s.OpenTree(titledTree("a2"))
+	s.ToggleTreeHidden()
+	selectID(t, s.state.Tree, "t2")
+	out := s.ChooseTreeRow()
+	for _, ev := range out {
+		if _, ok := ev.(EventTreeMoveRequested); ok {
+			t.Fatalf("choosing a fork asked for a move: %#v", out)
+		}
+	}
+	if !slices.ContainsFunc(out, func(ev UIEvent) bool {
+		toast, ok := toastOf(ev)
+		return ok && toast.Text == "A title message is not part of the conversation"
+	}) {
+		t.Errorf("events = %#v, want a notice that the fork is not part of the conversation", out)
+	}
+	if s.state.Banner != TreeBanner || s.state.Tree == nil {
+		t.Error("choosing a fork closed the tree")
+	}
+}
+
+// TestTreeLinesTagHidden checks that a fork's row opens with its type's tag,
+// before its role.
+func TestTreeLinesTagHidden(t *testing.T) {
+	st := NewSessionTree(titledTree("a2"))
+	st.ToggleHidden()
+	lines := TreeLines(st.View(20), nil)
+	var plain []string
+	for _, l := range lines {
+		plain = append(plain, l.PlainText())
+	}
+	for _, want := range []string{"│  └─ [title] User Summarize the user request", "│     [title] Agent Divide with tests", "│  Agent Added TestDivide."} {
+		if !slices.ContainsFunc(plain, func(l string) bool { return strings.Contains(l, want) }) {
+			t.Errorf("lines = %q, want one holding %q", plain, want)
+		}
+	}
+}
+
+// TestSessionTreeAsides checks where a fork off the conversation is drawn
+// beside what goes on from its prompt: as an aside over a single reply,
+// which keeps the prompt's indent; as a branch of the fork among several
+// replies; and as an aside under a prompt with no reply yet. The jumps
+// between branches pass asides by.
+func TestSessionTreeAsides(t *testing.T) {
+	title := func(id, parent message.ID) message.Content {
+		m := treeMsg(id, parent, message.RoleUser, "summarize")
+		m.Type = message.TypeTitle
+		return m
+	}
+	tests := []struct {
+		name string
+		tree app.Tree
+		want []string
+	}{
+		{name: "one reply", tree: app.Tree{Head: "a1", Messages: []message.Content{
+			treeMsg("u1", "", message.RoleUser, "hi"),
+			treeMsg("a1", "u1", message.RoleAgent, "hello"),
+		}, Forks: []message.Content{title("t1", "u1")}},
+			want: []string{"u1*", "└─ t1", "a1*"}},
+		{name: "several replies", tree: app.Tree{Head: "a1", Messages: []message.Content{
+			treeMsg("u1", "", message.RoleUser, "hi"),
+			treeMsg("a1", "u1", message.RoleAgent, "hello"),
+			treeMsg("a2", "u1", message.RoleAgent, "hey"),
+		}, Forks: []message.Content{title("t1", "u1")}},
+			want: []string{"u1*", "├─ t1", "├─ a1*", "└─ a2"}},
+		{name: "no reply yet", tree: app.Tree{Head: "u1", Messages: []message.Content{
+			treeMsg("u1", "", message.RoleUser, "hi"),
+		}, Forks: []message.Content{title("t1", "u1")}},
+			want: []string{"u1*", "└─ t1"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st := NewSessionTree(tt.tree)
+			st.ToggleHidden()
+			if got := drawn(st); !slices.Equal(got, tt.want) {
+				t.Errorf("rows = %q, want %q", got, tt.want)
+			}
+		})
+	}
+
+	st := NewSessionTree(titledTree("a2"))
+	st.ToggleHidden()
+	selectID(t, st, "u2")
+	st.JumpFork(1)
+	if got := selectedID(st); got != "a2" {
+		t.Errorf("jump down from u2 selected %s, want a2, past its aside", got)
+	}
+	st.JumpFork(-1)
+	if got := selectedID(st); got != "u2" {
+		t.Errorf("jump up from a2 selected %s, want u2, the start of its branch", got)
+	}
+}

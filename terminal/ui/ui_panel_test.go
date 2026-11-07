@@ -48,7 +48,7 @@ func TestPanelTitlesNameKeys(t *testing.T) {
 			want: "[↑/↓ move] [esc cancel]"},
 		{name: "session tree", open: func(ui *UI) { ui.Apply(ui.service.OpenTree(forkedTree("a2"))) },
 			header: func(ui *UI) *PanelHeader { return ui.treeHeader },
-			want:   "Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]"},
+			want:   "Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [ctrl+t hidden] [esc cancel]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -360,12 +360,12 @@ func TestKeyHintsViewLines(t *testing.T) {
 		width     int
 		want      []string
 	}{
-		{bracketed: false, width: 80, want: []string{"esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  type search"}},
-		{bracketed: false, width: 40, want: []string{"esc cancel  ↑/↓ move  alt+←/→ fork", "ctrl+o filter  type search"}},
-		{bracketed: true, width: 80, want: []string{"[esc cancel] [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [type search]"}},
-		{bracketed: true, width: 40, want: []string{"[esc cancel] [↑/↓ move] [alt+←/→ fork]", "[ctrl+o filter] [type search]"}},
+		{bracketed: false, width: 80, want: []string{"esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  ctrl+t hidden  type search"}},
+		{bracketed: false, width: 40, want: []string{"esc cancel  ↑/↓ move  alt+←/→ fork", "ctrl+o filter  ctrl+t hidden", "type search"}},
+		{bracketed: true, width: 80, want: []string{"[esc cancel] [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [ctrl+t hidden]", "[type search]"}},
+		{bracketed: true, width: 40, want: []string{"[esc cancel] [↑/↓ move] [alt+←/→ fork]", "[ctrl+o filter] [ctrl+t hidden]", "[type search]"}},
 		// A hint wider than the row takes a row of its own.
-		{bracketed: true, width: 4, want: []string{"[esc cancel]", "[↑/↓ move]", "[alt+←/→ fork]", "[ctrl+o filter]", "[type search]"}},
+		{bracketed: true, width: 4, want: []string{"[esc cancel]", "[↑/↓ move]", "[alt+←/→ fork]", "[ctrl+o filter]", "[ctrl+t hidden]", "[type search]"}},
 	} {
 		v := NewKeyHintsView("hints", tt.bracketed)
 		v.SetHints(TreeHints())

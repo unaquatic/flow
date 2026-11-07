@@ -1,5 +1,6 @@
 === text ===
-|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter] [esc cancel]   |
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
+|               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
 |  [no matches]                                                          |
 |                                                                        |
@@ -7,14 +8,13 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 === fg ===
-|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB BBBB BBBBBBB   |
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
 |  BBB BBBBBBBB                                                          |
 |                                                                        |
 |C AAA                                                                   |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
