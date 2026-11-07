@@ -28,20 +28,23 @@ type EventLoginStarted struct {
 func (EventLoginStarted) EventType() EventType { return TypeLoginStarted }
 
 // EventLoginPrompt contains what the user must do to finish a login: open
-// URL, and enter Code there when it is set.
+// URL, enter Code there when set, or complete sign-in using State.
 type EventLoginPrompt struct {
 	EventBase
 	Provider agent.ProviderID `json:"provider"`
 	Account  agent.AccountID  `json:"account"`
 	URL      string           `json:"url"`
 	Code     string           `json:"code,omitempty"`
+	// State is temporary OAuth proof for a pasted-code login, not saved settings.
+	State *agent.LoginState `json:"state,omitempty"`
 }
 
 func (EventLoginPrompt) EventType() EventType { return TypeLoginPrompt }
 
-// Prompt returns the instruction the event carries.
+// Prompt returns the page and device code carried by the event.
+// Manual results are exchanged through Accounts.CompleteLogin.
 func (e EventLoginPrompt) Prompt() agent.LoginPrompt {
-	return agent.LoginPrompt{URL: e.URL, Code: e.Code}
+	return agent.LoginPrompt{URL: e.URL, Code: e.Code, State: e.State}
 }
 
 // EventLoginSucceeded reports that a login saved its account.
@@ -59,6 +62,8 @@ type EventLoginFailed struct {
 	Provider agent.ProviderID `json:"provider"`
 	Account  agent.AccountID  `json:"account"`
 	Error    UnknownError     `json:"error"`
+	// Retry reports malformed input that can be corrected using the same State.
+	Retry bool `json:"retry,omitempty"`
 }
 
 func (EventLoginFailed) EventType() EventType { return TypeLoginFailed }

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"slices"
 	"time"
@@ -192,13 +193,26 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 		out = slices.Concat(s.LoadMessages(e.Messages), s.UpdateUsage())
 
 	case app.EventLoginPrompt:
-		out = []UIEvent{EventBannerUpdate{Text: e.Prompt().String()}}
+		if e.State != nil {
+			out = s.AskLoginCode(e)
+		} else {
+			out = []UIEvent{EventBannerUpdate{Text: e.Prompt().String()}}
+		}
 
 	case app.EventLoginSucceeded:
 		out = s.SettleLogin(fmt.Sprintf("logged in to %s account %s; it is now active.", e.Provider, e.Account))
 
 	case app.EventLoginFailed:
-		out = s.SettleLogin(fmt.Sprintf("login to %s account %s failed: %v", e.Provider, e.Account, e.Error.Message))
+		if p := s.state.Login; p != nil && p.Provider == e.Provider && p.Account == e.Account && e.Retry {
+			s.state.LoginCompleting = false
+			out = []UIEvent{s.LoginPanel(e.Error.Message)}
+			break
+		}
+		if e.Error.Message == context.Canceled.Error() {
+			out = s.SettleLogin(fmt.Sprintf("login to %s account %s cancelled.", e.Provider, e.Account))
+		} else {
+			out = s.SettleLogin(fmt.Sprintf("login to %s account %s failed: %v", e.Provider, e.Account, e.Error.Message))
+		}
 
 	case app.EventModelsListed:
 		if e.Error != nil {

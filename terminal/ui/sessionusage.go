@@ -46,8 +46,7 @@ type SessionUsage struct {
 	CacheRead int
 	// CacheWrite counts the prompt tokens written to a prompt cache.
 	CacheWrite int
-	// Cost is what the requests cost at API prices, in US dollars, whether
-	// an API key pays for them or a subscription covers them.
+	// Cost is what the requests cost at API prices, in US dollars.
 	Cost float64
 	// Context counts the tokens of the latest request and its reply, which
 	// the prompt of the next request starts from.

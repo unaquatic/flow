@@ -140,6 +140,8 @@ type EventBannerShow struct {
 	// the banner's search handler as it changes. Without it the input is
 	// hidden and takes no keys.
 	Search bool
+	// Input keeps the input visible without using its text to search a menu.
+	Input bool
 	// Query is the search the items match, which the input shows while
 	// Search is set.
 	Query string

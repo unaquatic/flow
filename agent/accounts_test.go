@@ -30,6 +30,49 @@ func (f *fakeFlow) Browser(ctx context.Context, show func(LoginPrompt)) (OAuthTo
 	return f.login(ctx)
 }
 
+// CodeTestFlow completes sign-in solely from the caller's proof and input.
+type CodeTestFlow struct{ *fakeFlow }
+
+// BeginBrowser returns temporary proof without registering a pending operation.
+func (*CodeTestFlow) BeginBrowser() LoginPrompt {
+	return LoginPrompt{URL: "https://login.test/authorize", State: &LoginState{Verifier: "proof", State: "nonce"}}
+}
+
+// CompleteBrowser validates the supplied proof and input.
+func (*CodeTestFlow) CompleteBrowser(_ context.Context, state LoginState, code string) (OAuthToken, error) {
+	if state != (LoginState{Verifier: "proof", State: "nonce"}) {
+		return OAuthToken{}, errors.New("unexpected proof")
+	}
+	if code == "" {
+		return OAuthToken{}, ErrInvalidLoginCode
+	}
+	return OAuthToken{Access: code}, nil
+}
+
+func TestCompleteLogin(t *testing.T) {
+	flow := &CodeTestFlow{}
+	s := newAccounts(t, "", flow)
+	var prompt LoginPrompt
+	if err := s.Login(t.Context(), testOpenAI, idWork, LoginBrowser, func(p LoginPrompt) { prompt = p }); err != nil {
+		t.Fatal(err)
+	}
+	if prompt.State == nil || len(s.logins) != 0 || len(saved(t, s).Accounts) != 0 {
+		t.Fatal("manual login did not return state or registered a pending login/account")
+	}
+	// A fresh Accounts can complete the login: it does not depend on the starter.
+	s = NewAccounts(AccountsConfig{Store: s.store, Flows: map[ProviderID]LoginFlow{testOpenAI: &CodeTestFlow{}}})
+	if err := s.CompleteLogin(t.Context(), testOpenAI, idWork, *prompt.State, ""); !errors.Is(err, ErrInvalidLoginCode) {
+		t.Fatalf("empty input error = %v", err)
+	}
+	if err := s.CompleteLogin(t.Context(), testOpenAI, idWork, *prompt.State, "pasted-code"); err != nil {
+		t.Fatal(err)
+	}
+	auth, err := s.Authorize(t.Context(), testOpenAI, nil)
+	if err != nil || auth.Token != "pasted-code" {
+		t.Fatalf("saved authorization = %+v, %v", auth, err)
+	}
+}
+
 func (f *fakeFlow) Device(ctx context.Context, show func(LoginPrompt)) (OAuthToken, error) {
 	show(LoginPrompt{URL: "https://login.test/device", Code: "ABCD-1234"})
 	return f.login(ctx)

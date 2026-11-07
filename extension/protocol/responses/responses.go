@@ -381,17 +381,24 @@ func (h *Handler) Handle(event sse.Event, yield func(agent.StreamPart, error) bo
 		return h.Complete(data, yield)
 
 	case "response.failed":
+		// The body keeps only the response's error, not the output that
+		// came before it, whose text Classify would read as the error's.
 		var ev struct {
 			Response struct {
-				Error struct {
-					Message string `json:"message"`
-				} `json:"error"`
+				Error json.RawMessage `json:"error"`
 			} `json:"response"`
 		}
-		json.Unmarshal(data, &ev)
+		var e struct {
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(data, &ev) != nil || string(ev.Response.Error) == "null" {
+			ev.Response.Error = nil
+		}
+		json.Unmarshal(ev.Response.Error, &e)
 		yield(nil, &agent.ResponseError{
-			Provider: h.Name,
-			Message:  cmp.Or(ev.Response.Error.Message, "response failed"),
+			Provider:     h.Name,
+			Message:      cmp.Or(e.Message, "response failed"),
+			ResponseBody: string(ev.Response.Error),
 		})
 		return false
 
@@ -402,9 +409,10 @@ func (h *Handler) Handle(event sse.Event, yield func(agent.StreamPart, error) bo
 		}
 		if json.Unmarshal(data, &errData) == nil && errData.Message != "" {
 			yield(nil, &agent.ResponseError{
-				Provider:   h.Name,
-				StatusCode: 0,
-				Message:    errData.Message,
+				Provider:     h.Name,
+				StatusCode:   0,
+				Message:      errData.Message,
+				ResponseBody: string(data),
 			})
 			return false
 		}

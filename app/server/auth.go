@@ -79,6 +79,35 @@ func (s *Server) startLogin(w http.ResponseWriter, r *http.Request, id agent.Acc
 	respondJSON(w, http.StatusAccepted, AccountResponse{ID: id})
 }
 
+// handleAuthCode exchanges an authorization result using caller-owned proof.
+func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathAccountID(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Code  string           `json:"code"`
+		State agent.LoginState `json:"state"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Code == "" {
+		respondError(w, http.StatusBadRequest, "code must not be empty")
+		return
+	}
+	if req.State.State == "" || req.State.Verifier == "" {
+		respondError(w, http.StatusBadRequest, "OAuth state and verifier must not be empty")
+		return
+	}
+	if err := s.app.Accounts().CompleteLogin(r.Context(), providerID(r), id, req.State, req.Code); err != nil {
+		if errors.Is(err, agent.ErrInvalidLoginCode) {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		respondError(w, http.StatusConflict, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // handleAuthKey replaces the API key of an existing account and reports the
 // resulting accounts.
 func (s *Server) handleAuthKey(w http.ResponseWriter, r *http.Request) {

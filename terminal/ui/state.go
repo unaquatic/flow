@@ -7,6 +7,7 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
+	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/fluid/style"
 )
 
@@ -430,6 +431,11 @@ type UIState struct {
 	// Prompt is the open question that the next submitted input answers, or
 	// nil when the input goes to the agent.
 	Prompt *TextPrompt
+	// Login holds temporary OAuth proof while the login input is open. It is
+	// not a setting or a transcript message, and closing the banner discards it.
+	Login *app.EventLoginPrompt
+	// LoginCompleting prevents a second submission during the token exchange.
+	LoginCompleting bool
 
 	// Running reports whether a run the terminal started on the active
 	// session has not ended yet: it is set when the run starts, and cleared

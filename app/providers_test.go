@@ -40,21 +40,29 @@ func TestNew_MakesProvidersOfExtensions(t *testing.T) {
 		t.Fatal(err)
 	}
 	gatewaytest.WriteCache(t, home, gatewaytest.FromAPI(t, providersCatalog))
-	registered := func(loads ...extension.Load) []agent.ProviderID {
+	registered := func(loads ...extension.Load) ([]agent.ProviderID, []agent.ProviderID) {
 		t.Helper()
 		a, err := New(t.Context(), config.NewService(home), Options{Extensions: loads})
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer a.Close()
-		return a.providers.Providers()
+		return a.Accounts().Providers(), a.Accounts().LoginProviders()
 	}
 
-	if got, want := registered(protocol.Load), []agent.ProviderID{"anthropic", "google", "gw"}; !slices.Equal(got, want) {
+	got, logins := registered(protocol.Load)
+	if want := []agent.ProviderID{"anthropic", "google", "gw"}; !slices.Equal(got, want) {
 		t.Errorf("Providers = %v, want %v: not the disabled openai, not Bedrock or GitLab, which the catalog leaves out", got, want)
 	}
-	if got := registered(); len(got) != 0 {
+	if want := []agent.ProviderID{"anthropic"}; !slices.Equal(logins, want) {
+		t.Errorf("LoginProviders = %v, want %v: not API-key-only providers or the disabled openai", logins, want)
+	}
+	got, logins = registered()
+	if len(got) != 0 {
 		t.Errorf("Providers without an extension that dials = %v, want none", got)
+	}
+	if len(logins) != 0 {
+		t.Errorf("LoginProviders without extensions = %v, want none", logins)
 	}
 }
 

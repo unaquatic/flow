@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/base64"
 	"time"
 
 	"github.com/unaquatic/fluid/buffer"
@@ -58,6 +59,10 @@ func (ui *UI) HandleKey(k *input.KeyEvent) {
 
 // HandleEnter selects from the active surface or submits the input.
 func (ui *UI) HandleEnter() {
+	if ui.service.state.Login != nil {
+		ui.Apply(ui.service.HandleSubmit(ui.input.Text()))
+		return
+	}
 	if ui.service.state.Banner != NoBanner {
 		switch ui.service.state.Banner {
 		case GraphemeBanner:
@@ -105,6 +110,26 @@ func (ui *UI) HandleSendNow() {
 // menu, where ←/→ move its cursor, and are dropped otherwise so that they
 // cannot edit the hidden input.
 func (ui *UI) HandleBannerKey(k *input.KeyEvent) {
+	if ui.service.state.Login != nil {
+		if k.Name == "l" && k.Mods == input.ModCtrl {
+			// OSC 52 copies through the terminal, including remote sessions.
+			url := ui.service.state.Login.URL
+			_, err := ui.renderer.Backend().WriteOut([]byte("\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(url)) + "\x1b\\"))
+			if err != nil {
+				ui.SetBannerText(ui.service.LoginPanel("Could not send URL to terminal clipboard: " + err.Error()).Text)
+			} else {
+				ui.SetBannerText(ui.service.LoginPanel("URL sent to terminal clipboard.").Text)
+			}
+			k.PreventDefault()
+			return
+		}
+		if k.Name == input.KeyEscape {
+			_, out := ui.service.HandleEscape()
+			ui.Apply(out)
+			k.PreventDefault()
+		}
+		return
+	}
 	plain := k.Mods == 0
 	switch {
 	case k.Name == input.KeyUp:

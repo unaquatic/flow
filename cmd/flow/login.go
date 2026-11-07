@@ -76,13 +76,53 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go printPrompts(ctx, w, a.Subscribe(ctx))
-	id, err := a.Accounts().Login(ctx, o.provider, o.account, agent.LoginMethod(o.method))
+	events := a.Subscribe(ctx)
+	id, err := a.Accounts().StartLogin(o.provider, o.account, agent.LoginMethod(o.method))
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "Logged in to %s account %s; it is now active.\n", o.provider, id)
-	return nil
+	input := bufio.NewReader(os.Stdin)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ev := <-events:
+			switch p := ev.(type) {
+			case app.EventLoginPrompt:
+				if p.Provider != o.provider || p.Account != id {
+					continue
+				}
+				fmt.Fprintln(w, p.Prompt())
+				if p.State == nil {
+					continue
+				}
+				for {
+					fmt.Fprint(w, "Authorization code: ")
+					code, err := input.ReadString('\n')
+					if err != nil && (!errors.Is(err, io.EOF) || code == "") {
+						return fmt.Errorf("read authorization code: %w", err)
+					}
+					if err := a.Accounts().CompleteLogin(ctx, p.Provider, p.Account, *p.State, code); err != nil {
+						if errors.Is(err, agent.ErrInvalidLoginCode) {
+							fmt.Fprintln(w, err)
+							continue
+						}
+						return err
+					}
+					break
+				}
+			case app.EventLoginSucceeded:
+				if p.Provider == o.provider && p.Account == id {
+					fmt.Fprintf(w, "Logged in to %s account %s; it is now active.\n", o.provider, id)
+					return nil
+				}
+			case app.EventLoginFailed:
+				if p.Provider == o.provider && p.Account == id && !p.Retry {
+					return errors.New(p.Error.Message)
+				}
+			}
+		}
+	}
 }
 
 // saveKey asks on w for an API key, reads it from standard input and saves
@@ -99,19 +139,4 @@ func saveKey(ctx context.Context, w io.Writer, a *app.App, t agent.ProviderID, i
 	}
 	fmt.Fprintf(w, "Saved the API key as %s account %s; it is now active.\n", t, id)
 	return nil
-}
-
-// printPrompts writes the login instructions among events to w until ctx is
-// done.
-func printPrompts(ctx context.Context, w io.Writer, events <-chan app.Event) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case ev := <-events:
-			if p, ok := ev.(app.EventLoginPrompt); ok {
-				fmt.Fprintln(w, p.Prompt())
-			}
-		}
-	}
 }

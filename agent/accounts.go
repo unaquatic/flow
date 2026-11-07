@@ -60,6 +60,11 @@ func NewAccounts(cfg AccountsConfig) *Accounts {
 	}
 }
 
+// SupportsLogin reports whether a loaded extension registered an OAuth flow for t.
+func (s *Accounts) SupportsLogin(t ProviderID) bool {
+	return s.flows[t] != nil
+}
+
 // For returns the Authorizer of provider t's requests.
 func (s *Accounts) For(t ProviderID) Authorizer {
 	return authorizer{s: s, t: t}
@@ -122,11 +127,10 @@ func (s *Accounts) Status(ctx context.Context, t ProviderID) (AuthStatus, error)
 	return st, nil
 }
 
-// Login logs in to provider t with method m, saves the token as account id,
-// adding the account if t has none with that ID, and makes it the active
-// account. show receives what the user must do. A new login to t cancels the
-// one in progress and waits for it to end, since both need the same callback
-// port.
+// Login starts sign-in to account id of provider t. Automatic flows wait and
+// save the token. Manual flows return after show receives a prompt with State;
+// the caller completes them with CompleteLogin or discards State to cancel.
+// A new login cancels an automatic login in progress for the same provider.
 func (s *Accounts) Login(ctx context.Context, t ProviderID, id AccountID, m LoginMethod, show func(LoginPrompt)) error {
 	id, err := writable(id)
 	if err != nil {
@@ -137,9 +141,18 @@ func (s *Accounts) Login(ctx context.Context, t ProviderID, id AccountID, m Logi
 		return fmt.Errorf("login to %s: %w", t, errors.ErrUnsupported)
 	}
 	var run func(context.Context, func(LoginPrompt)) (OAuthToken, error)
+	var manual CodeLoginFlow
 	switch m {
 	case LoginBrowser:
-		run = flow.Browser
+		if code, ok := flow.(CodeLoginFlow); ok {
+			manual = code
+			break
+		}
+		browser, ok := flow.(BrowserLoginFlow)
+		if !ok {
+			return errors.ErrUnsupported
+		}
+		run = browser.Browser
 	case LoginDevice:
 		run = flow.Device
 	default:
@@ -151,8 +164,30 @@ func (s *Accounts) Login(ctx context.Context, t ProviderID, id AccountID, m Logi
 		return err
 	}
 	defer done()
+	if manual != nil {
+		show(manual.BeginBrowser())
+		return nil
+	}
 
 	tok, err := run(ctx, show)
+	if err != nil {
+		return err
+	}
+	return s.save(ctx, t, id, tok)
+}
+
+// CompleteLogin exchanges a manual authorization result and saves its account.
+// All proof comes from the caller; no goroutine or callback waits between steps.
+func (s *Accounts) CompleteLogin(ctx context.Context, t ProviderID, id AccountID, state LoginState, code string) error {
+	id, err := writable(id)
+	if err != nil {
+		return err
+	}
+	flow, ok := s.flows[t].(CodeLoginFlow)
+	if !ok {
+		return errors.ErrUnsupported
+	}
+	tok, err := flow.CompleteBrowser(ctx, state, code)
 	if err != nil {
 		return err
 	}

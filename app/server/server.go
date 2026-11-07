@@ -49,6 +49,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /auth/{provider}/active", s.handleAuthUse)
 	mux.HandleFunc("POST /auth/{provider}/accounts", s.handleAuthAdd)
 	mux.HandleFunc("POST /auth/{provider}/accounts/{id}/login", s.handleAuthLogin)
+	mux.HandleFunc("POST /auth/{provider}/accounts/{id}/code", s.handleAuthCode)
 	mux.HandleFunc("PUT /auth/{provider}/accounts/{id}/key", s.handleAuthKey)
 	mux.HandleFunc("DELETE /auth/{provider}/accounts/{id}", s.handleAuthLogout)
 	mux.HandleFunc("GET /session", s.handleSessionList)

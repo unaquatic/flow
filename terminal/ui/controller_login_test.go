@@ -1,11 +1,18 @@
 package ui
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
+	"github.com/unaquatic/catalog/gateway/gatewaytest"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
@@ -13,12 +20,13 @@ import (
 	"github.com/unaquatic/flow/extension/protocol"
 	"github.com/unaquatic/flow/extension/protocol/login/chatgpt"
 	"github.com/unaquatic/flow/extension/protocol/login/claude"
+	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/style"
 )
 
 // newTestService returns a Service over an isolated app whose model is
 // openai/model and in which no API key is set in the environment.
-func newTestService(t *testing.T) (*Service, *app.App) {
+func newTestService(t *testing.T, loads ...extension.Load) (*Service, *app.App) {
 	t.Helper()
 	t.Chdir(t.TempDir())
 	t.Setenv("OPENAI_API_KEY", "")
@@ -30,7 +38,7 @@ func newTestService(t *testing.T) (*Service, *app.App) {
 	}
 	writeTestCatalog(t, home)
 	conf := config.NewService(home)
-	a, err := app.New(t.Context(), conf, app.Options{Extensions: []extension.Load{protocol.Load}})
+	a, err := app.New(t.Context(), conf, app.Options{Extensions: append([]extension.Load{protocol.Load}, loads...)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,6 +50,114 @@ func newTestService(t *testing.T) (*Service, *app.App) {
 	s := NewService(t.Context(), a, &UIState{Model: model})
 	s.Commands = builtinCommands(t)
 	return s, a
+}
+
+// LoginTestExtension supplies an isolated login flow for UI lifecycle tests.
+type LoginTestExtension struct {
+	// Flow is the Claude login under test.
+	Flow agent.LoginFlow
+}
+
+// Name identifies the test extension.
+func (e *LoginTestExtension) Name() string { return "test_login" }
+
+// LoginFlows overrides Claude sign-in for the test app.
+func (e *LoginTestExtension) LoginFlows() map[agent.ProviderID]agent.LoginFlow {
+	return map[agent.ProviderID]agent.LoginFlow{claude.ProviderID: e.Flow}
+}
+
+func TestManualLoginLifecycle(t *testing.T) {
+	for _, action := range []string{"retry", "escape", "ctrl-c"} {
+		t.Run(action, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if action != "retry" {
+					t.Error("cancelled login attempted a token exchange")
+				}
+				fmt.Fprint(w, `{"access_token":"access","refresh_token":"refresh","expires_in":3600}`)
+			}))
+			defer server.Close()
+			oauth := claude.NewOAuth()
+			oauth.TokenURL = server.URL
+			oauth.OpenBrowser = func(string) error { return nil }
+			ui := newInputTestUI(t, func(context.Context, extension.Host) (extension.Extension, error) {
+				return &LoginTestExtension{Flow: oauth}, nil
+			})
+			s, a := ui.service, ui.service.app
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			events := a.Subscribe(ctx)
+			if _, err := a.Accounts().StartLogin(claude.ProviderID, "", agent.LoginBrowser); err != nil {
+				t.Fatal(err)
+			}
+			var prompt app.EventLoginPrompt
+			for prompt.URL == "" {
+				select {
+				case ev := <-events:
+					if p, ok := ev.(app.EventLoginPrompt); ok {
+						prompt = p
+					}
+				case <-ctx.Done():
+					t.Fatal("timed out waiting for login prompt")
+				}
+			}
+			if prompt.State == nil {
+				t.Fatal("manual login did not return its temporary proof")
+			}
+			ui.Apply(s.ApplyAgentEvent(prompt))
+			switch action {
+			case "retry":
+				ui.HandleEnter()
+				if s.state.Login == nil || s.state.LoginCompleting {
+					t.Fatal("empty input closed the authorization or started a request")
+				}
+				ui.SetInputText("code-without-state")
+				ui.HandleEnter()
+				select {
+				case ev := <-events:
+					failed, ok := ev.(app.EventLoginFailed)
+					if !ok || !failed.Retry {
+						t.Fatalf("malformed code event = %#v", ev)
+					}
+					ui.Apply(s.ApplyAgentEvent(failed))
+				case <-ctx.Done():
+					t.Fatal("malformed code did not return a validation error")
+				}
+				if s.state.Login == nil || s.state.LoginCompleting || len(s.state.Messages) != 0 {
+					t.Fatal("retry lost its proof or added login instructions to chat")
+				}
+				u, _ := url.Parse(prompt.URL)
+				ui.SetInputText("code#" + u.Query().Get("state"))
+				ui.HandleEnter()
+			case "escape":
+				ui.HandleKey(&input.KeyEvent{Name: input.KeyEscape})
+			case "ctrl-c":
+				ui.HandleKey(&input.KeyEvent{Name: "c", Mods: input.ModCtrl})
+			}
+			if action != "retry" {
+				if s.state.Login != nil || s.state.Banner != NoBanner || len(s.state.Messages) != 0 {
+					t.Fatal("cancel did not discard the temporary login state cleanly")
+				}
+				return
+			}
+			for {
+				select {
+				case ev := <-events:
+					switch e := ev.(type) {
+					case app.EventLoginSucceeded:
+						ui.Apply(s.ApplyAgentEvent(e))
+						if s.state.Login != nil || len(s.state.Queue) != 0 {
+							t.Fatal("completed input retained its proof or queued a model message")
+						}
+						return
+					case app.EventLoginFailed:
+						t.Fatalf("unexpected login failure: %v", e.Error)
+					}
+				case <-ctx.Done():
+					t.Fatal("login did not settle after submission or cancellation")
+				}
+			}
+		})
+	}
 }
 
 // openAIStatus returns the OpenAI accounts of a.
@@ -196,6 +312,24 @@ func TestLoginMenuSearch(t *testing.T) {
 	}
 }
 
+func TestLoginMenuOmitsAPIKeyProviders(t *testing.T) {
+	s, a := newTestService(t, func(_ context.Context, host extension.Host) (extension.Extension, error) {
+		gatewaytest.WriteCache(t, host.DataDir, gatewaytest.FromAPI(t, `{
+			"anthropic":{"id":"anthropic","models":{}},
+			"openai":{"id":"openai","models":{}},
+			"api-key-only":{"id":"api-key-only","npm":"@ai-sdk/openai-compatible","api":"https://api.example/v1","models":{}}
+		}`))
+		return nil, nil
+	})
+	if !slices.Contains(a.Accounts().Providers(), agent.ProviderID("api-key-only")) {
+		t.Fatal("setup: API-key-only provider is not registered")
+	}
+	show := bannerShown(t, s.ShowLoginMenu())
+	if got, want := bannerNames(show), []string{"anthropic", "openai"}; !slices.Equal(got, want) {
+		t.Fatalf("login providers = %v, want %v", got, want)
+	}
+}
+
 func TestAccountMenu(t *testing.T) {
 	s, a := newTestService(t)
 	if _, names := accountMenu(t, s); !slices.Equal(names, []string{addAccountName}) {
@@ -260,6 +394,25 @@ func TestApplyLoginPrompt(t *testing.T) {
 	}
 	if want := "open https://login.test/device and enter code ABCD"; update.Text != want {
 		t.Errorf("banner text = %q, want %q", update.Text, want)
+	}
+}
+
+func TestApplyManualLoginPrompt(t *testing.T) {
+	s, _ := newTestService(t)
+	s.OpenBanner(LoginBanner)
+	s.ApplyAgentEvent(app.EventLoginPrompt{
+		Provider: claude.ProviderID, Account: agent.NewAccountID(),
+		URL: "https://claude.ai/oauth/authorize", State: &agent.LoginState{Verifier: "proof", State: "nonce"},
+	})
+	if s.state.Login == nil || s.state.Banner != LoginBanner || s.state.Prompt != nil {
+		t.Fatal("manual login did not keep its state in the input panel")
+	}
+	if len(s.state.Messages) != 0 {
+		t.Fatal("authorization URL was inserted into chat")
+	}
+	s.HandleEscape()
+	if len(s.state.Queue) != 0 {
+		t.Fatal("authorization code was queued as a model message")
 	}
 }
 

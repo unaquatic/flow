@@ -623,9 +623,10 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 		}
 		if json.Unmarshal(data, &ev) == nil && ev.Error.Message != "" {
 			yield(nil, &agent.ResponseError{
-				Provider:   st.name,
-				StatusCode: 0,
-				Message:    ev.Error.Message,
+				Provider:     st.name,
+				StatusCode:   0,
+				Message:      ev.Error.Message,
+				ResponseBody: string(data),
 			})
 			return false
 		}

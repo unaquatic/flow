@@ -5,6 +5,7 @@ package claude
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,13 +24,13 @@ import (
 const ProviderID agent.ProviderID = "anthropic"
 
 const (
-	clientID     = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-	authURL      = "https://claude.ai/oauth/authorize"
-	tokenURL     = "https://console.anthropic.com/v1/oauth/token"
-	deviceURL    = "https://claude.ai/oauth/device/code"
-	scopes       = "org:create_api_key user:profile user:inference user:sessions:claude_code"
-	callbackPort = 19532
-	userAgent    = "claude-cli/1.0.56 (external, cli)"
+	clientID    = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+	authURL     = "https://claude.ai/oauth/authorize"
+	tokenURL    = "https://platform.claude.com/v1/oauth/token"
+	redirectURI = "https://platform.claude.com/oauth/code/callback"
+	deviceURL   = "https://claude.ai/oauth/device/code"
+	scopes      = "org:create_api_key user:profile user:inference user:sessions:claude_code"
+	userAgent   = "axios/1.13.6"
 )
 
 // OAuth implements agent.LoginFlow for Claude sign-in.
@@ -44,68 +45,95 @@ type OAuth struct {
 	DeviceURL string
 	// Scopes contains requested OAuth scopes.
 	Scopes []string
-	// CallbackPort is the local port of the browser redirect.
-	CallbackPort int
 	// Client sends OAuth requests. Nil means http.DefaultClient.
 	Client *http.Client
+	// OpenBrowser opens the authorization URL. Nil means agent.OpenBrowser.
+	OpenBrowser func(string) error
 }
 
 // NewOAuth returns an OAuth using Anthropic's endpoints.
 func NewOAuth() *OAuth {
 	return &OAuth{
-		ClientID:     clientID,
-		AuthURL:      authURL,
-		TokenURL:     tokenURL,
-		DeviceURL:    deviceURL,
-		Scopes:       strings.Fields(scopes),
-		CallbackPort: callbackPort,
+		ClientID:  clientID,
+		AuthURL:   authURL,
+		TokenURL:  tokenURL,
+		DeviceURL: deviceURL,
+		Scopes:    strings.Fields(scopes),
 	}
 }
 
-// Browser logs in through the browser and a redirect to the local port.
-func (a *OAuth) Browser(ctx context.Context, show func(agent.LoginPrompt)) (agent.OAuthToken, error) {
+// BeginBrowser opens Anthropic's authorization page and returns the temporary
+// state the caller needs to complete sign-in. It does not wait for user input.
+func (a *OAuth) BeginBrowser() agent.LoginPrompt {
 	pkce := agent.NewPKCE()
-	state := agent.NewOAuthState()
-	cb, err := agent.ListenOAuthCallback(a.CallbackPort, "/auth/callback", state)
-	if err != nil {
-		return agent.OAuthToken{}, err
-	}
+	var nonce [16]byte
+	rand.Read(nonce[:])
+	state := fmt.Sprintf("%x", nonce)
 
 	u := a.AuthURL + "?" + url.Values{
 		"code":                  {"true"},
 		"response_type":         {"code"},
 		"client_id":             {a.ClientID},
-		"redirect_uri":          {cb.RedirectURI},
+		"redirect_uri":          {redirectURI},
 		"code_challenge":        {pkce.Challenge},
 		"code_challenge_method": {"S256"},
 		"scope":                 {strings.Join(a.Scopes, " ")},
 		"state":                 {state},
 	}.Encode()
-	show(agent.LoginPrompt{URL: u})
-	if err := agent.OpenBrowser(u); err != nil {
+	open := a.OpenBrowser
+	if open == nil {
+		open = agent.OpenBrowser
+	}
+	if err := open(u); err != nil {
 		slog.Info("open browser", "err", err)
 	}
 
-	code, err := cb.Wait(ctx)
+	return agent.LoginPrompt{URL: u, State: &agent.LoginState{Verifier: pkce.Verifier, State: state}}
+}
+
+// CompleteBrowser exchanges a pasted result using the proof from BeginBrowser.
+func (a *OAuth) CompleteBrowser(ctx context.Context, state agent.LoginState, pasted string) (agent.OAuthToken, error) {
+	if state.Verifier == "" || state.State == "" {
+		return agent.OAuthToken{}, errors.New("missing OAuth login state; please log in again")
+	}
+	code, err := ParseCode(pasted, state.State)
 	if err != nil {
 		return agent.OAuthToken{}, err
 	}
-	// Drop fragments that copying the code from the page can append.
-	code, _, _ = strings.Cut(code, "#")
-	code, _, _ = strings.Cut(code, "&")
 
 	tok, err := a.requestToken(ctx, map[string]string{
 		"grant_type":    "authorization_code",
 		"code":          code,
-		"state":         state,
+		"state":         state.State,
 		"client_id":     a.ClientID,
-		"redirect_uri":  cb.RedirectURI,
-		"code_verifier": pkce.Verifier,
+		"redirect_uri":  redirectURI,
+		"code_verifier": state.Verifier,
 	})
 	if err != nil {
 		return agent.OAuthToken{}, fmt.Errorf("token exchange: %w", err)
 	}
 	return tok, nil
+}
+
+// ParseCode extracts an authorization code and verifies its state. It accepts
+// Anthropic's code#state format, a callback URL, or URL query parameters.
+func ParseCode(input, expectedState string) (string, error) {
+	input = strings.TrimSpace(input)
+	var code, state string
+	if u, err := url.Parse(input); err == nil && u.IsAbs() {
+		code, state = u.Query().Get("code"), u.Query().Get("state")
+	} else if before, after, ok := strings.Cut(input, "#"); ok {
+		code, state = before, after
+	} else if q, err := url.ParseQuery(input); err == nil {
+		code, state = q.Get("code"), q.Get("state")
+	}
+	if code == "" || state == "" {
+		return "", fmt.Errorf("%w: paste the complete code (code#state) or callback URL", agent.ErrInvalidLoginCode)
+	}
+	if state != expectedState {
+		return "", errors.New("OAuth authorization has unexpected state; please log in again")
+	}
+	return code, nil
 }
 
 // Device logs in with the device authorization grant (RFC 8628).
@@ -218,10 +246,7 @@ func (a *OAuth) requestToken(ctx context.Context, params map[string]string) (age
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Referer", "https://claude.ai/")
-	req.Header.Set("Origin", "https://claude.ai")
 	return agent.RequestOAuthToken(a.client(), req)
 }
 
