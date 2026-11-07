@@ -1,0 +1,11 @@
+=== text ===
+|  Bash go test ./calculator/... -run 'TestDivide… [queued]  |
+|                                                            |
+=== fg ===
+|  AAAA AA AAAA AAAAAAAAAAAAAAAA AAAA AAAAAAAAAAAA AAAAAAAA  |
+|                                                            |
+=== attrs ===
+|  BBBB                                                      |
+|                                                            |
+=== legend ===
+A #707070

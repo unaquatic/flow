@@ -1,0 +1,18 @@
+=== text ===
+|  Done.                                 |
+|                                        |
+|  Cache read 1.0K write 0.2K            |
+|                                        |
+=== fg ===
+|  AAAAA                                 |
+|                                        |
+|  BBBBB BBBB BBBB BBBBB BBBB            |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|  BBBBB                                 |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #707070

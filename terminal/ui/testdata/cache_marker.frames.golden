@@ -1,0 +1,68 @@
+=== text ===
+|                                                            |
+|  fix the divide test                                       |
+|                                                            |
+|                                                            |
+|  Running the tests.                                        |
+|                                                            |
+|■ Bash go test ./... [exit 1]                               |
+|■ Cache read 18K write 4.0K                                 |
+|                                                            |
+|  Fixed the divide-by-zero check.                           |
+|                                                            |
+|■ Cache read 22K write 0K                                   |
+|                                                            |
+|  Worked for 39s                                            |
+|                                                            |
+=== fg ===
+|                                                            |
+|  AAA AAA AAAAAA AAAA                                       |
+|                                                            |
+|                                                            |
+|  AAAAAAA AAA AAAAAA                                        |
+|                                                            |
+|B BBBB BB BBBB BBBBB BBBBB BB                               |
+|B BBBBB BBBB BBB BBBBB BBBB                                 |
+|                                                            |
+|  AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
+|                                                            |
+|B BBBBB BBBB BBB BBBBB BB                                   |
+|                                                            |
+|  BBBBBB BBB BBB                                            |
+|                                                            |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== attrs ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|  BBBB                                                      |
+|  BBBBB                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
+|  BBBBB                                                     |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #e6e6e6
+B #707070
+░ #232323 BoxBg

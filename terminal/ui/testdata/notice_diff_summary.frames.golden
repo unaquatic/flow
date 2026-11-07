@@ -1,0 +1,43 @@
+=== text ===
+|                                        |
+|  7 files  +28 -6                       |
+|  /work/calc/calc.go  +1 -0             |
+|  /work/calc/calc_test.go  +2 -1        |
+|  /work/calc/divide.go  +3 -2           |
+|  /work/calc/divide_test.go  +4 -0      |
+|  /work/calc/doc.go  +5 -1              |
+|  /work/calc/errors.go  +6 -2           |
+|  [1 more]                              |
+|                                        |
+|                                        |
+=== fg ===
+|                                        |
+|  A AAAAA  BBB CC                       |
+|  DDDDDDDDDDDDDDDDDD  BB CC             |
+|  DDDDDDDDDDDDDDDDDDDDDDD  BB CC        |
+|  DDDDDDDDDDDDDDDDDDDD  BB CC           |
+|  DDDDDDDDDDDDDDDDDDDDDDDDD  BB CC      |
+|  DDDDDDDDDDDDDDDDD  BB CC              |
+|  DDDDDDDDDDDDDDDDDDDD  BB CC           |
+|  EE EEEEE                              |
+|                                        |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+=== legend ===
+A #e6e6e6
+B #5fc882
+C #dc646e
+D #dcdcdc
+E #8c8c8c
+░ #1f1f1f SurfaceRaised/SuccessSurface

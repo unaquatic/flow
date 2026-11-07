@@ -1,0 +1,26 @@
+=== text ===
+|  Bash go test ./...                                                            |
+|                                                                                |
+|  Worked for 3s                                                                 |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+=== fg ===
+|  AAAA AA AAAA AAAAA                                                            |
+|                                                                                |
+|  AAAAAA AAA AA                                                                 |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+=== attrs ===
+|  BBBB                                                                          |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+=== legend ===
+A #707070

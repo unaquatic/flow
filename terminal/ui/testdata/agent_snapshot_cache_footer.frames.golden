@@ -1,0 +1,60 @@
+=== text ===
+|                                        |
+|  Hi                                    |
+|                                        |
+|                                        |
+|  Snapshot c1d2e3f4                     |
+|                                        |
+|  Hi! How can I help you today?         |
+|                                        |
+|  Snapshot c1d2e3f4                     |
+|  Cache read 0K write 0K                |
+|                                        |
+|  Worked for 3s                         |
+|                                        |
+=== fg ===
+|                                        |
+|  AA                                    |
+|                                        |
+|                                        |
+|  BBBBBBBB BBBBBBBB                     |
+|                                        |
+|  AAA AAA AAA A AAAA AAA AAAAAA         |
+|                                        |
+|  BBBBBBBB BBBBBBBB                     |
+|  BBBBB BBBB BB BBBBB BB                |
+|                                        |
+|  BBBBBB BBB BB                         |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|  BBBBBBBB                              |
+|                                        |
+|                                        |
+|                                        |
+|  BBBBBBBB                              |
+|  BBBBB                                 |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+░ #232323 BoxBg

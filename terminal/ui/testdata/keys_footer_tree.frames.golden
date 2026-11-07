@@ -1,0 +1,73 @@
+=== text ===
+|                                                                        |
+|  Session tree                                                          |
+|                                                                        |
+|  user: add a Divide method to the calculator                           |
+|  agent: I'll add Divide with a zero check.                             |
+|  ├─ user: also add tests                                               |
+|  │  agent: Added TestDivide.                                           |
+|  └─ user: use table-driven tests instead                               |
+|     read: calc_test.go · edit: calc_test.go                            |
+|     agent: Rewrote the tests as a table.                               |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|  esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  type search        |
+|                                                                        |
+=== fg ===
+|                                                                        |
+|  AAAAAAA AAAA                                                          |
+|                                                                        |
+|  BBBBB CCC C CCCCCC CCCCCC CC CCC CCCCCCCCCC                           |
+|  DDDDDD CCCC CCC CCCCCC CCCC C CCCC CCCCCC                             |
+|  EE BBBBB CCCC CCC CCCCC                                               |
+|  F  FFFFFF FFFFF FFFFFFFFFFF                                           |
+|  EE EEEEE EEE EEEEEEEEEEEE EEEEE EEEEEEE                               |
+|     EEEEE EEEEEEEEEEEE E EEEEE EEEEEEEEEEEE                            |
+|     EEEEEE EEEEEEE EEE EEEEE EE E EEEEEE                               |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|  CCC EEEEEE  CCC EEEE  CCCCCCC EEEE  CCCCCC EEEEEE  CCCC EEEEEE        |
+|                                                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+=== attrs ===
+|                                                                        |
+|  BBBBBBBBBBBB                                                          |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #eb7513
+C #b4b4b4
+D #5af78d
+E #707070
+F #232323 BoxBg
+░ #232323 BoxBg
+▒ #ff5f00

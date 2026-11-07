@@ -1,0 +1,253 @@
+=== text ===
+|    ▄▄▄ ▄▄▄                                                             |
+|   ██▀▀ ▀██                                                             |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄                                          |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██                                          |
+|   ██    ██  ██    ██ ██    ██                                          |
+|   ██    ██  ██    ██ ██ ▄▄ ██                                          |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████                                          |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀                                           |
+|const LogoInitialColor = "#ff5f00"                                      |
+|                                                                        |
+|    ▄▄▄ ▄▄▄                               ▄▄▄ ▄▄▄                       |
+|   ██▀▀ ▀██                              ██▀▀ ▀██                       |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄         ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄    |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██         ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██    |
+|   ██    ██  ██    ██ ██    ██           ██    ██  ██    ██ ██    ██    |
+|   ██    ██  ██    ██ ██ ▄▄ ██           ██    ██  ██    ██ ██ ▄▄ ██    |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████        ▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████    |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀         ▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀     |
+|const LogoInitialColor = "#ff4e00"    const LogoInitialColor = "#ff7000"|
+|                                                                        |
+|    ▄▄▄ ▄▄▄                               ▄▄▄ ▄▄▄                       |
+|   ██▀▀ ▀██                              ██▀▀ ▀██                       |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄         ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄    |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██         ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██    |
+|   ██    ██  ██    ██ ██    ██           ██    ██  ██    ██ ██    ██    |
+|   ██    ██  ██    ██ ██ ▄▄ ██           ██    ██  ██    ██ ██ ▄▄ ██    |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████        ▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████    |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀         ▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀     |
+|const LogoInitialColor = "#ff3d00"    const LogoInitialColor = "#ff8100"|
+|                                                                        |
+|    ▄▄▄ ▄▄▄                               ▄▄▄ ▄▄▄                       |
+|   ██▀▀ ▀██                              ██▀▀ ▀██                       |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄         ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄    |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██         ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██    |
+|   ██    ██  ██    ██ ██    ██           ██    ██  ██    ██ ██    ██    |
+|   ██    ██  ██    ██ ██ ▄▄ ██           ██    ██  ██    ██ ██ ▄▄ ██    |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████        ▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████    |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀         ▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀     |
+|const LogoInitialColor = "#ff2b00"    const LogoInitialColor = "#ff9200"|
+|                                                                        |
+|    ▄▄▄ ▄▄▄                               ▄▄▄ ▄▄▄                       |
+|   ██▀▀ ▀██                              ██▀▀ ▀██                       |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄         ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄    |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██         ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██    |
+|   ██    ██  ██    ██ ██    ██           ██    ██  ██    ██ ██    ██    |
+|   ██    ██  ██    ██ ██ ▄▄ ██           ██    ██  ██    ██ ██ ▄▄ ██    |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████        ▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████    |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀         ▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀     |
+|const LogoInitialColor = "#e55500"    const LogoInitialColor = "#ff7726"|
+|                                                                        |
+|    ▄▄▄ ▄▄▄                               ▄▄▄ ▄▄▄                       |
+|   ██▀▀ ▀██                              ██▀▀ ▀██                       |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄         ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄    |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██         ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██    |
+|   ██    ██  ██    ██ ██    ██           ██    ██  ██    ██ ██    ██    |
+|   ██    ██  ██    ██ ██ ▄▄ ██           ██    ██  ██    ██ ██ ▄▄ ██    |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████        ▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████    |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀         ▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀     |
+|const LogoInitialColor = "#cc4c00"    const LogoInitialColor = "#ff8f4c"|
+|                                                                        |
+|    ▄▄▄ ▄▄▄                               ▄▄▄ ▄▄▄                       |
+|   ██▀▀ ▀██                              ██▀▀ ▀██                       |
+| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄         ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄    |
+| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██         ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██    |
+|   ██    ██  ██    ██ ██    ██           ██    ██  ██    ██ ██    ██    |
+|   ██    ██  ██    ██ ██ ▄▄ ██           ██    ██  ██    ██ ██ ▄▄ ██    |
+|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████        ▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████    |
+|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀         ▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀     |
+|const LogoInitialColor = "#b24200"    const LogoInitialColor = "#ffa772"|
+|                                                                        |
+|                                                                        |
+|  Version   flow v0.1.0                                                 |
+|  Session   01a0e33d-4571-7ed4-b06b-4229c726c313                        |
+|  Messages  4                                                           |
+|  Model     provider/model                                              |
+|                                                                        |
+|                                                                        |
+=== fg ===
+|    AAA BBB                                                             |
+|   AAAA BBB                                                             |
+| AAAAAA  BB   BBBBBB  BB    BB                                          |
+| AAAAAA  BB  BBBBBBBB BB    BB                                          |
+|   AA    BB  BB    BB BB    BB                                          |
+|   AA    BB  BB    BB BB BB BB                                          |
+|AA AA   BBBB BBBBBBBB BBBBBBBB                                          |
+|AAAAA   BBBB  BBBBBB   BB  BB                                           |
+|AAAAA CCCCCCCCCCCCCCCC C CCCCCCCCC                                      |
+|                                                                        |
+|    DDD BBB                               EEE BBB                       |
+|   DDDD BBB                              EEEE BBB                       |
+| DDDDDD  BB   BBBBBB  BB    BB         EEEEEE  BB   BBBBBB  BB    BB    |
+| DDDDDD  BB  BBBBBBBB BB    BB         EEEEEE  BB  BBBBBBBB BB    BB    |
+|   DD    BB  BB    BB BB    BB           EE    BB  BB    BB BB    BB    |
+|   DD    BB  BB    BB BB BB BB           EE    BB  BB    BB BB BB BB    |
+|DD DD   BBBB BBBBBBBB BBBBBBBB        EE EE   BBBB BBBBBBBB BBBBBBBB    |
+|DDDDD   BBBB  BBBBBB   BB  BB         EEEEE   BBBB  BBBBBB   BB  BB     |
+|DDDDD CCCCCCCCCCCCCCCC C CCCCCCCCC    EEEEE CCCCCCCCCCCCCCCC C CCCCCCCCC|
+|                                                                        |
+|    FFF BBB                               GGG BBB                       |
+|   FFFF BBB                              GGGG BBB                       |
+| FFFFFF  BB   BBBBBB  BB    BB         GGGGGG  BB   BBBBBB  BB    BB    |
+| FFFFFF  BB  BBBBBBBB BB    BB         GGGGGG  BB  BBBBBBBB BB    BB    |
+|   FF    BB  BB    BB BB    BB           GG    BB  BB    BB BB    BB    |
+|   FF    BB  BB    BB BB BB BB           GG    BB  BB    BB BB BB BB    |
+|FF FF   BBBB BBBBBBBB BBBBBBBB        GG GG   BBBB BBBBBBBB BBBBBBBB    |
+|FFFFF   BBBB  BBBBBB   BB  BB         GGGGG   BBBB  BBBBBB   BB  BB     |
+|FFFFF CCCCCCCCCCCCCCCC C CCCCCCCCC    GGGGG CCCCCCCCCCCCCCCC C CCCCCCCCC|
+|                                                                        |
+|    HHH BBB                               III BBB                       |
+|   HHHH BBB                              IIII BBB                       |
+| HHHHHH  BB   BBBBBB  BB    BB         IIIIII  BB   BBBBBB  BB    BB    |
+| HHHHHH  BB  BBBBBBBB BB    BB         IIIIII  BB  BBBBBBBB BB    BB    |
+|   HH    BB  BB    BB BB    BB           II    BB  BB    BB BB    BB    |
+|   HH    BB  BB    BB BB BB BB           II    BB  BB    BB BB BB BB    |
+|HH HH   BBBB BBBBBBBB BBBBBBBB        II II   BBBB BBBBBBBB BBBBBBBB    |
+|HHHHH   BBBB  BBBBBB   BB  BB         IIIII   BBBB  BBBBBB   BB  BB     |
+|HHHHH CCCCCCCCCCCCCCCC C CCCCCCCCC    IIIII CCCCCCCCCCCCCCCC C CCCCCCCCC|
+|                                                                        |
+|    JJJ BBB                               KKK BBB                       |
+|   JJJJ BBB                              KKKK BBB                       |
+| JJJJJJ  BB   BBBBBB  BB    BB         KKKKKK  BB   BBBBBB  BB    BB    |
+| JJJJJJ  BB  BBBBBBBB BB    BB         KKKKKK  BB  BBBBBBBB BB    BB    |
+|   JJ    BB  BB    BB BB    BB           KK    BB  BB    BB BB    BB    |
+|   JJ    BB  BB    BB BB BB BB           KK    BB  BB    BB BB BB BB    |
+|JJ JJ   BBBB BBBBBBBB BBBBBBBB        KK KK   BBBB BBBBBBBB BBBBBBBB    |
+|JJJJJ   BBBB  BBBBBB   BB  BB         KKKKK   BBBB  BBBBBB   BB  BB     |
+|JJJJJ CCCCCCCCCCCCCCCC C CCCCCCCCC    KKKKK CCCCCCCCCCCCCCCC C CCCCCCCCC|
+|                                                                        |
+|    LLL BBB                               MMM BBB                       |
+|   LLLL BBB                              MMMM BBB                       |
+| LLLLLL  BB   BBBBBB  BB    BB         MMMMMM  BB   BBBBBB  BB    BB    |
+| LLLLLL  BB  BBBBBBBB BB    BB         MMMMMM  BB  BBBBBBBB BB    BB    |
+|   LL    BB  BB    BB BB    BB           MM    BB  BB    BB BB    BB    |
+|   LL    BB  BB    BB BB BB BB           MM    BB  BB    BB BB BB BB    |
+|LL LL   BBBB BBBBBBBB BBBBBBBB        MM MM   BBBB BBBBBBBB BBBBBBBB    |
+|LLLLL   BBBB  BBBBBB   BB  BB         MMMMM   BBBB  BBBBBB   BB  BB     |
+|LLLLL CCCCCCCCCCCCCCCC C CCCCCCCCC    MMMMM CCCCCCCCCCCCCCCC C CCCCCCCCC|
+|                                                                        |
+|    NNN BBB                               OOO BBB                       |
+|   NNNN BBB                              OOOO BBB                       |
+| NNNNNN  BB   BBBBBB  BB    BB         OOOOOO  BB   BBBBBB  BB    BB    |
+| NNNNNN  BB  BBBBBBBB BB    BB         OOOOOO  BB  BBBBBBBB BB    BB    |
+|   NN    BB  BB    BB BB    BB           OO    BB  BB    BB BB    BB    |
+|   NN    BB  BB    BB BB BB BB           OO    BB  BB    BB BB BB BB    |
+|NN NN   BBBB BBBBBBBB BBBBBBBB        OO OO   BBBB BBBBBBBB BBBBBBBB    |
+|NNNNN   BBBB  BBBBBB   BB  BB         OOOOO   BBBB  BBBBBB   BB  BB     |
+|NNNNN CCCCCCCCCCCCCCCC C CCCCCCCCC    OOOOO CCCCCCCCCCCCCCCC C CCCCCCCCC|
+|                                                                        |
+|                                                                        |
+|  PPPPPPP   QQQQ QQQQQQ                                                 |
+|  PPPPPPP   QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ                        |
+|  PPPPPPPP  Q                                                           |
+|  PPPPP     QQQQQQQQQQQQQQ                                              |
+|                                                                        |
+|                                                                        |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+=== legend ===
+A #ff5f00
+B #e4e4e4
+C #ffffff
+D #ff4e00
+E #ff7000
+F #ff3d00
+G #ff8100
+H #ff2b00
+I #ff9200
+J #e55500
+K #ff7726
+L #cc4c00
+M #ff8f4c
+N #b24200
+O #ffa772
+P #8c8c8c
+Q #e6e6e6
+░ #1f1f1f SurfaceRaised/SuccessSurface

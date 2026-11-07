@@ -1,0 +1,34 @@
+=== text ===
+|  Running the checks.                   |
+|                                        |
+|  Bash go test ./... [executing]        |
+|  Bash go vet ./...                     |
+|  Grep TODO [executing]                 |
+|                                        |
+|                                        |
+=== fg ===
+|  AAAAAAA AAA AAAAAAA                   |
+|                                        |
+|  BBBB BC DADE BBBBB BBBBBBBBBBB        |
+|  BBBB BB BBB BBBBB                     |
+|  BFGH IHGF BBBBBBBBBBB                 |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|  BBBB                                  |
+|  BBBB                                  |
+|  BBBB                                  |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #818181
+D #d4d4d4
+E #ababab
+F #747474
+G #949494
+H #c1c1c1
+I #e1e1e1

@@ -1,0 +1,27 @@
+=== text ===
+|                                                            |
+|  Add a Divide method to the calculator that returns an     |
+|  error when the divisor is zero, then run the calculator   |
+|  tests and report the result.                              |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|                                                            |
+|  AAA A AAAAAA AAAAAA AA AAA AAAAAAAAAA AAAA AAAAAAA AA     |
+|  AAAAA AAAA AAA AAAAAAA AA AAAAA AAAA AAA AAA AAAAAAAAAA   |
+|  AAAAA AAA AAAAAA AAA AAAAAAA                              |
+|                                                            |
+|                                                            |
+|                                                            |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+=== legend ===
+A #e6e6e6
+░ #232323 BoxBg

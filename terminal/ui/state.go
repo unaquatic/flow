@@ -1,0 +1,480 @@
+package ui
+
+import (
+	"slices"
+	"time"
+
+	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/agent/session"
+	"github.com/unaquatic/fluid/style"
+)
+
+// ChatMessage contains the data needed to render one chat message.
+type ChatMessage struct {
+	// ID identifies the message.
+	ID message.ID
+	// ParentID identifies the first message in a shared bubble.
+	ParentID message.ID
+	// Role identifies the message author.
+	Role message.Role
+	// Parts contains the message content in display order.
+	Parts []message.ContentPart
+	// Prev holds the parts of the message before this one in the
+	// transcript, which the views of an extension may show this one
+	// against, as a reply's changes are those from the workspace the message
+	// before it ended with. It is nil for the first message.
+	Prev []message.ContentPart
+	// Error is an optional failure rendered with the message.
+	Error error
+	// Model is the model variant that produced the message, or that a
+	// prompt was sent to, in "provider/model:option:effort" form, as
+	// [message.Content.Model] names it. Its variant prices the usage.
+	Model string
+	// Usage contains the token counts of the message's request, which its
+	// usage part records. It stays zero while the message streams, though
+	// the part arrives before its tools run, so that the counts show once the
+	// message ends.
+	Usage message.Usage
+	// CreatedAt is when the message was stored, or zero when it is not
+	// known, as for a message still streaming.
+	CreatedAt time.Time
+	// Worked is how long the turn that this reply ends took, from its prompt
+	// to the end of the reply. It is zero for a message that does not end a
+	// turn, and for a turn whose time is not known.
+	Worked time.Duration
+	// Window is the most tokens a prompt of the model that produced this
+	// reply holds, as the catalog lists it, which its footer shows its
+	// context as a share of. It is zero for a reply without usage, and when
+	// the catalog does not list the model.
+	Window int
+}
+
+// HasParent reports whether the message belongs to another message's bubble.
+func (m ChatMessage) HasParent() bool {
+	return m.ParentID != "" && m.ParentID != m.ID
+}
+
+// AssignPrev records on each message in msgs the parts of the one before
+// it, as Prev describes them.
+func AssignPrev(msgs []ChatMessage) {
+	for i := range msgs {
+		msgs[i].Prev = nil
+		if i > 0 {
+			msgs[i].Prev = slices.Clone(msgs[i-1].Parts)
+		}
+	}
+}
+
+// AssignParents groups consecutive messages with the same role. The first
+// message in each group uses its own ID as ParentID.
+func AssignParents(msgs []ChatMessage) {
+	for i := range msgs {
+		if i > 0 && msgs[i].Role == msgs[i-1].Role {
+			msgs[i].ParentID = msgs[i-1].ParentID
+		} else {
+			msgs[i].ParentID = msgs[i].ID
+		}
+	}
+}
+
+// AssignWorked records on the last reply of each turn in msgs, a prompt and
+// the replies that follow it, how long the turn took: from when the prompt
+// was stored to when the reply was. A turn whose prompt
+// or last reply has no creation time records nothing. A run that continues a
+// turn without a new prompt, as /continue does, adds to the turn's time.
+func AssignWorked(msgs []ChatMessage) {
+	var prompt time.Time
+	for i := range msgs {
+		m := &msgs[i]
+		if m.Role == message.RoleUser {
+			prompt = m.CreatedAt
+			continue
+		}
+		last := i+1 == len(msgs) || msgs[i+1].Role != message.RoleAgent
+		if m.Role == message.RoleAgent && last && !prompt.IsZero() && !m.CreatedAt.IsZero() {
+			m.Worked = m.CreatedAt.Sub(prompt)
+		}
+	}
+}
+
+// Banner is the kind of modal banner that opens at the top of the input box.
+type Banner int
+
+const (
+	// NoBanner means no banner is open.
+	NoBanner Banner = iota
+	// MenuBanner shows a SearchMenu.
+	MenuBanner
+	// ModelBanner shows that the model list is loading.
+	ModelBanner
+	// LoginBanner shows the progress of a login.
+	LoginBanner
+	// GraphemeBanner shows the grapheme width report.
+	GraphemeBanner
+	// TreeBanner shows the session tree.
+	TreeBanner
+)
+
+// CacheMode is where replies show the cache use of their requests, as
+// CacheText gives it, which /settings sets.
+type CacheMode int
+
+const (
+	// CacheOff shows no cache use. It is the default.
+	CacheOff CacheMode = iota
+	// CachePerTurn shows the cache use of a turn's last request in the
+	// footer under the turn, after the turn's time.
+	CachePerTurn
+	// CachePerMessage shows the cache use of each reply in a row of its own
+	// under the reply, as CacheBox draws it.
+	CachePerMessage
+)
+
+// CacheModes lists the cache modes in the order /settings offers them.
+var CacheModes = [...]CacheMode{CacheOff, CachePerTurn, CachePerMessage}
+
+// Next returns the mode step places after m in CacheModes, or before it for
+// a negative step, going round from the last to the first and back.
+func (m CacheMode) Next(step int) CacheMode {
+	return Cycle(CacheModes[:], m, step)
+}
+
+// Cycle returns the value step places after v in values, or before it for a
+// negative step, going round from the last to the first and back, as a
+// setting's value moves in /settings.
+func Cycle[T comparable](values []T, v T, step int) T {
+	n := len(values)
+	i := slices.Index(values, v)
+	return values[((i+step)%n+n)%n]
+}
+
+// String returns the name /settings shows for m, such as "Per turn".
+func (m CacheMode) String() string {
+	switch m {
+	case CachePerTurn:
+		return "Per turn"
+	case CachePerMessage:
+		return "Per message"
+	default:
+		return "Off"
+	}
+}
+
+// ToolCallStyle is how the transcript shows a collapsed tool call, which
+// /settings sets. An expanded call shows as a block in every style.
+type ToolCallStyle int
+
+const (
+	// ToolCallsCompact shows a collapsed call as its header alone, one row on
+	// the canvas, and stacks the rows of consecutive collapsed calls with no
+	// blank row between them. It is the default.
+	ToolCallsCompact ToolCallStyle = iota
+	// ToolCallsBoxed shows a collapsed call as a block on the success
+	// surface, its header between two rows of padding, a blank row apart
+	// from what comes before and after it, as an expanded call shows.
+	ToolCallsBoxed
+)
+
+// ToolCallStyles lists the tool call styles in the order /settings offers
+// them.
+var ToolCallStyles = [...]ToolCallStyle{ToolCallsCompact, ToolCallsBoxed}
+
+// Next returns the style step places after s in ToolCallStyles, going round.
+func (s ToolCallStyle) Next(step int) ToolCallStyle {
+	return Cycle(ToolCallStyles[:], s, step)
+}
+
+// String returns the name /settings shows for s: "Compact" or "Boxed".
+func (s ToolCallStyle) String() string {
+	if s == ToolCallsBoxed {
+		return "Boxed"
+	}
+	return "Compact"
+}
+
+// ToolNameColor is the color of the marker and the name of each tool call,
+// which /settings sets.
+type ToolNameColor int
+
+const (
+	// ToolNameGray shows the marker and the name in PanelDimFg, as the
+	// input after the name is. It is the default.
+	ToolNameGray ToolNameColor = iota
+	// ToolNameWhite shows the marker and the name in titleFg, as a panel
+	// shows its title.
+	ToolNameWhite
+)
+
+// ToolNameColors lists the tool name colors in the order /settings offers
+// them.
+var ToolNameColors = [...]ToolNameColor{ToolNameGray, ToolNameWhite}
+
+// Next returns the color step places after c in ToolNameColors, going round.
+func (c ToolNameColor) Next(step int) ToolNameColor {
+	return Cycle(ToolNameColors[:], c, step)
+}
+
+// String returns the name /settings shows for c: "Gray" or "White".
+func (c ToolNameColor) String() string {
+	if c == ToolNameWhite {
+		return "White"
+	}
+	return "Gray"
+}
+
+// Fg returns the color c names: PanelDimFg or titleFg.
+func (c ToolNameColor) Fg() style.Color {
+	if c == ToolNameWhite {
+		return titleFg
+	}
+	return PanelDimFg
+}
+
+// KeyHintsMode is where the panels in the input box name their keys, which
+// /settings sets.
+type KeyHintsMode int
+
+const (
+	// KeyHintsTitle names each panel's keys after its title and count, as
+	// TitleHints gives them, such as "Commands [↑/↓ move] [esc cancel]". It is
+	// the default.
+	KeyHintsTitle KeyHintsMode = iota
+	// KeyHintsSubtitle names each panel's keys on a row under its title, as
+	// the footer names them, such as "esc cancel  ↑/↓ move  tab complete".
+	KeyHintsSubtitle
+	// KeyHintsFooter names the open panel's keys in the footer under the
+	// input box, such as "esc cancel  ↑/↓ move  tab complete".
+	KeyHintsFooter
+)
+
+// KeyHintsModes lists the key hint modes in the order /settings offers them.
+var KeyHintsModes = [...]KeyHintsMode{KeyHintsTitle, KeyHintsSubtitle, KeyHintsFooter}
+
+// Next returns the mode step places after m in KeyHintsModes, going round.
+func (m KeyHintsMode) Next(step int) KeyHintsMode {
+	return Cycle(KeyHintsModes[:], m, step)
+}
+
+// String returns the name /settings shows for m: "Title", "Subtitle", or
+// "Footer".
+func (m KeyHintsMode) String() string {
+	switch m {
+	case KeyHintsSubtitle:
+		return "Subtitle"
+	case KeyHintsFooter:
+		return "Footer"
+	default:
+		return "Title"
+	}
+}
+
+// CountPlace is where a list whose rows do not all fit counts them, as
+// TitleCount gives the count, such as "[3/20]", which /settings sets. The
+// slash menu counts no rows in either place.
+type CountPlace int
+
+const (
+	// CountBelow counts the rows on a line under them. It is the default.
+	CountBelow CountPlace = iota
+	// CountInTitle counts the rows after the list's title, such as
+	// "Models [3/15]".
+	CountInTitle
+)
+
+// CountPlaces lists the count places in the order /settings offers them.
+var CountPlaces = [...]CountPlace{CountBelow, CountInTitle}
+
+// Next returns the place step places after p in CountPlaces, going round.
+func (p CountPlace) Next(step int) CountPlace {
+	return Cycle(CountPlaces[:], p, step)
+}
+
+// String returns the name /settings shows for p: "Below" or "Title".
+func (p CountPlace) String() string {
+	if p == CountInTitle {
+		return "Title"
+	}
+	return "Below"
+}
+
+// SelectionStyle is how the lists in the input box, the slash menu, the
+// session list, a banner's menu, and the session tree, mark their selected
+// row, which /settings sets.
+type SelectionStyle int
+
+const (
+	// SelectionFullWidth fills the selected row in activeFg from one edge of
+	// the box to the other, its border cells included, under the row's text
+	// in the box's fill, with no arrow. It is the default.
+	SelectionFullWidth SelectionStyle = iota
+	// SelectionFill fills the selected row as SelectionFullWidth does, but a
+	// cell in from either edge of the box.
+	SelectionFill
+	// SelectionArrow marks the selected row with an arrow in the box's left
+	// border cell, and draws the row's text and the arrow in activeFg.
+	SelectionArrow
+)
+
+// SelectionStyles lists the selection styles in the order /settings offers
+// them.
+var SelectionStyles = [...]SelectionStyle{SelectionFullWidth, SelectionFill, SelectionArrow}
+
+// Next returns the style step places after s in SelectionStyles, going round.
+func (s SelectionStyle) Next(step int) SelectionStyle {
+	return Cycle(SelectionStyles[:], s, step)
+}
+
+// String returns the name /settings shows for s: "Full width", "Fill", or
+// "Arrow".
+func (s SelectionStyle) String() string {
+	switch s {
+	case SelectionFill:
+		return "Fill"
+	case SelectionArrow:
+		return "Arrow"
+	default:
+		return "Full width"
+	}
+}
+
+// FillInset returns how many cells in from either edge of the box the
+// selected row's fill starts, and false for a style that marks the row with
+// an arrow instead.
+func (s SelectionStyle) FillInset() (int, bool) {
+	switch s {
+	case SelectionFill:
+		return 1, true
+	case SelectionArrow:
+		return 0, false
+	default:
+		return 0, true
+	}
+}
+
+// UIState contains the terminal state read and updated by Service.
+type UIState struct {
+	// Messages contains the active transcript.
+	Messages []ChatMessage
+	// Session is the active persisted session.
+	Session *session.Session
+	// LastCtrlCTime records the idle Ctrl+C press that last armed the quit,
+	// which a second press within QuitWindow carries out.
+	LastCtrlCTime time.Time
+
+	// SlashMenuVisible reports whether the slash-command menu is open.
+	SlashMenuVisible bool
+	// SessionMenuVisible reports whether the session list is open.
+	SessionMenuVisible bool
+	// SessionChoices are the sessions the open session list searches, in
+	// the order the store lists them.
+	SessionChoices []session.Session
+	// Banner is the kind of banner open at the top of the input box.
+	Banner Banner
+	// Menu is the menu the banner shows while Banner is MenuBanner, and nil
+	// otherwise.
+	Menu *SearchMenu
+	// Tree is the session tree the banner shows while Banner is TreeBanner,
+	// and nil otherwise.
+	Tree *SessionTree
+	// MenuRows is the most rows a list in the input box shows, such as the
+	// slash menu or the session tree, so that the box stays within the
+	// terminal's height. Zero leaves each list its own maximum.
+	MenuRows int
+	// ProbedWidths contains measured widths for GraphemeProbeSamples.
+	ProbedWidths []int
+	// ProbeErr reports why terminal width measurement failed.
+	ProbeErr error
+	// Inline reports whether the UI renders inline instead of on the
+	// alternate screen.
+	Inline bool
+	// Prompt is the open question that the next submitted input answers, or
+	// nil when the input goes to the agent.
+	Prompt *TextPrompt
+
+	// Running reports whether a run the terminal started on the active
+	// session has not ended yet: it is set when the run starts, and cleared
+	// once the terminal applies the run's EventAgentEnded. The app frees the
+	// session just before it publishes that event, so asking the app instead
+	// would let a prompt start while the old run's end is still on its way.
+	Running bool
+	// Queue holds the submitted prompts not yet sent, in the order they are
+	// sent, one each time the session becomes free.
+	Queue []string
+	// QueuePaused stops the queue after a prompt that failed or could not
+	// start, until Enter on an empty input or Alt+Enter resumes it.
+	QueuePaused bool
+	// MovesPending counts the history moves in progress, which hold the
+	// queue until they finish.
+	MovesPending int
+	// TurnStart is when the turn in progress began: when its run started,
+	// or when the prompt that opened it did. It is zero while no turn of the
+	// active session is in progress.
+	TurnStart time.Time
+	// TurnFrom is the index in Messages of the first message of the turn in
+	// progress.
+	TurnFrom int
+	// Working reports whether the indicator shows how long the turn in
+	// progress has taken, which Service.TickIndicator keeps current.
+	Working bool
+
+	// StatusContent is the text displayed in the status line.
+	StatusContent style.StyledText
+	// Model is the model variant the terminal sends its prompts to, in
+	// "provider/model:option:effort" format, at the level it runs at. The
+	// model menu and its effort page change it for this terminal alone.
+	Model string
+	// ReasoningEffort is the reasoning effort chosen for the terminal, or
+	// empty for the default effort of the model's provider. Model runs at it
+	// where the catalog lists it for the model, and a model switch keeps it
+	// for the next model.
+	ReasoningEffort agent.ReasoningEffort
+	// KeepModel keeps Model when the first session opens, as when the
+	// command line chose it, rather than taking the model the session's
+	// transcript last ran.
+	KeepModel bool
+	// ModelLabel identifies the active model, which the slash menu's status
+	// row names.
+	ModelLabel string
+	// Usage is what the slash menu's status row reports of the transcript's
+	// token use.
+	Usage SessionUsage
+	// ToolsExpanded reports whether tool calls and the changes of each step
+	// show their details, which Ctrl+O toggles. They start collapsed.
+	ToolsExpanded bool
+	// ToolStyle is how collapsed tool calls show, which /settings sets. It is
+	// ToolCallsCompact by default.
+	ToolStyle ToolCallStyle
+	// ToolMarkers reports that tool calls show ToolMarker before their name,
+	// which /settings sets. They show none by default.
+	ToolMarkers bool
+	// ToolColor is the color of each tool call's marker and name, which
+	// /settings sets. It is ToolNameGray by default.
+	ToolColor ToolNameColor
+	// Debug shows what helps debug flow, which /settings sets, such as the
+	// snapshot each prompt and reply ends with, by its hash, once taken. It
+	// is off by default.
+	Debug bool
+	// CacheMode is where replies show the cache use of their requests, which
+	// /settings sets. It is CacheOff by default.
+	CacheMode CacheMode
+	// KeyHints is where the panels name their keys, which /settings sets. It
+	// is KeyHintsTitle by default.
+	KeyHints KeyHintsMode
+	// UsagePinned reports that the Usage box shows above the input box while
+	// the slash menu is closed too, which Ctrl+U toggles.
+	UsagePinned bool
+	// Count is where a list whose rows do not all fit counts them, which
+	// /settings sets. It is CountBelow by default.
+	Count CountPlace
+	// Selection is how the menus mark their selected row, which /settings
+	// sets. It is SelectionFullWidth by default.
+	Selection SelectionStyle
+}
+
+// StatusHintStyled returns the default keyboard hint.
+func StatusHintStyled() style.StyledText {
+	key := style.New().WithFg(textFg).Func()
+	dim := style.New().WithFg(style.ColorFromInts(80, 80, 80, 255)).Func()
+	return style.NewStyledText(key("slash"), dim(" commands "), key("esc"), dim(" interrupt"))
+}

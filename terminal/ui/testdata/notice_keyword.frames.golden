@@ -1,0 +1,19 @@
+=== text ===
+|                                        |
+|  Switched to openai/gpt-5.6-fast:high  |
+|                                        |
+|                                        |
+=== fg ===
+|                                        |
+|  AAAAAAAA AA BBBBBBBBBBBBBBBBBBBBBBBB  |
+|                                        |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+=== legend ===
+A #e6e6e6
+B #ff5f00
+░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -1,0 +1,38 @@
+=== text ===
+|                                                            |
+|  Bash [timeout after 120s]                                 |
+|                                                            |
+|  $ go test ./calculator/... -run                           |
+|  'TestDivide|TestDivideByZero' -count=1 -v [timeout 120s]  |
+|                                                            |
+|                                                            |
+=== fg ===
+|                                                            |
+|  AAAA AAAAAAAA AAAAA AAAAA                                 |
+|                                                            |
+|  B BB BBBB BBBBBBBBBBBBBBBB BBBB                           |
+|  CCCCCCCCCCCCCCCCCCCCCCCCCCCCC BBBBBBBB BB DDDDDDDD DDDDD  |
+|                                                            |
+|                                                            |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+=== attrs ===
+|                                                            |
+|  BBBB                                                      |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #707070
+B #e6e6e6
+C #91b557
+D #8a8a8a
+░ #1f1f1f SurfaceRaised/SuccessSurface
