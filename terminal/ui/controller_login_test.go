@@ -29,6 +29,13 @@ import (
 // to them as loginTestFlows does, and whose model is provider-a/model.
 func newTestService(t *testing.T, loads ...extension.Load) (*Service, *app.App) {
 	t.Helper()
+	return newTestServiceWith(t, app.Options{Extensions: loads})
+}
+
+// newTestServiceWith returns a Service as newTestService does, over an app
+// of opts, whose extensions load after the protocol and loginTestFlows.
+func newTestServiceWith(t *testing.T, opts app.Options) (*Service, *app.App) {
+	t.Helper()
 	t.Chdir(t.TempDir())
 	home := t.TempDir()
 	settings := `{"model":"provider-a/model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
@@ -37,7 +44,8 @@ func newTestService(t *testing.T, loads ...extension.Load) (*Service, *app.App) 
 	}
 	writeTestCatalog(t, home)
 	conf := config.NewService(home)
-	a, err := app.New(t.Context(), conf, app.Options{Extensions: append([]extension.Load{protocol.Load, loadLoginTestFlows}, loads...)})
+	opts.Extensions = append([]extension.Load{protocol.Load, loadLoginTestFlows}, opts.Extensions...)
+	a, err := app.New(t.Context(), conf, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,21 +327,67 @@ func TestLoginMenuSearch(t *testing.T) {
 	}
 }
 
-func TestLoginMenuOmitsAPIKeyProviders(t *testing.T) {
-	s, a := newTestService(t, func(_ context.Context, host extension.Host) (extension.Extension, error) {
+// The API-key-only providers of keyOnlyCatalog: keyBuiltIn, which
+// TestLoginMenuListsBuiltInKeyProviders makes built in, and keyOnly, which
+// no test does.
+const (
+	keyBuiltIn agent.ProviderID = "gw"
+	keyOnly    agent.ProviderID = "api-key-only"
+)
+
+// loadKeyOnlyCatalog is an extension.Load that adds none, and caches a
+// catalog of provider-a and provider-b, which loginTestFlows logs in to, and
+// of keyBuiltIn and keyOnly, which take an API key alone, in place of
+// testCatalog.
+func loadKeyOnlyCatalog(t *testing.T) extension.Load {
+	return func(_ context.Context, host extension.Host) (extension.Extension, error) {
 		gatewaytest.WriteCache(t, host.DataDir, protocoltest.FromAPI(t, `{
-			"provider-b":{"id":"provider-b","format":"messages","models":{}},
-			"provider-a":{"id":"provider-a","format":"responses","models":{}},
+			"provider-b":{"id":"provider-b","name":"Provider B","format":"messages","models":{}},
+			"provider-a":{"id":"provider-a","name":"Provider A","format":"responses","models":{}},
+			"gw":{"id":"gw","name":"Gateway","format":"chat","api":"https://gw.example/v1","models":{}},
 			"api-key-only":{"id":"api-key-only","format":"chat","api":"https://api.example/v1","models":{}}
 		}`))
 		return nil, nil
-	})
-	if !slices.Contains(a.Accounts().Providers(), agent.ProviderID("api-key-only")) {
+	}
+}
+
+func TestLoginMenuOmitsAPIKeyProviders(t *testing.T) {
+	s, a := newTestService(t, loadKeyOnlyCatalog(t))
+	if !slices.Contains(a.Accounts().Providers(), keyOnly) {
 		t.Fatal("setup: API-key-only provider is not registered")
 	}
 	show := bannerShown(t, s.ShowLoginMenu())
-	if got, want := bannerNames(show), []string{"provider-a", "provider-b"}; !slices.Equal(got, want) {
+	if got, want := bannerNames(show), []string{"Provider A", "Provider B"}; !slices.Equal(got, want) {
 		t.Fatalf("login providers = %v, want %v", got, want)
+	}
+}
+
+// TestLoginMenuListsBuiltInKeyProviders checks that the login menu lists a
+// built-in provider that takes an API key alone, whose method menu offers
+// the key alone, and that a key entered through it saves an account.
+func TestLoginMenuListsBuiltInKeyProviders(t *testing.T) {
+	s, a := newTestServiceWith(t, app.Options{
+		BuiltIn:    []agent.ProviderID{keyBuiltIn},
+		Extensions: []extension.Load{loadKeyOnlyCatalog(t)},
+	})
+	show := bannerShown(t, s.ShowLoginMenu())
+	if got, want := bannerNames(show), []string{"Gateway", "Provider A", "Provider B"}; !slices.Equal(got, want) {
+		t.Fatalf("login providers = %v, want %v: the built-in gw beside those with a login, not api-key-only", got, want)
+	}
+	if got, want := bannerNames(bannerShown(t, s.ShowLoginMethodMenu(keyBuiltIn))), []string{apiKeyName}; !slices.Equal(got, want) {
+		t.Errorf("gw login methods = %v, want %v alone", got, want)
+	}
+	if got, want := bannerNames(bannerShown(t, s.ShowLoginMethodMenu(providerA))), []string{"Browser", "Device code", apiKeyName}; !slices.Equal(got, want) {
+		t.Errorf("provider-a login methods = %v, want %v", got, want)
+	}
+
+	run(t, s, submit("/login"), choose("Gateway"), choose(addAccountName), choose(apiKeyName), submit("sk-gw\n"))
+	st, err := a.Accounts().Status(t.Context(), keyBuiltIn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Accounts) != 1 || st.Accounts[0].Kind != agent.CredentialAPIKey || st.Active != st.Accounts[0].ID {
+		t.Errorf("gw accounts = %+v, want one active API key", st)
 	}
 }
 

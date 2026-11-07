@@ -24,12 +24,21 @@ func (c Accounts) Providers() []agent.ProviderID {
 	return c.app.providers.Providers()
 }
 
-// LoginProviders returns enabled, registered providers with an OAuth login flow,
-// in ID order. API-key-only providers remain available through Providers.
+// LoginProviders returns the enabled, registered providers that the login
+// menu lists, in ID order: those with an OAuth login flow, and the built-in
+// ones, as Options.BuiltIn names them, which may take an API key alone. The
+// other API-key-only providers remain available through Providers.
 func (c Accounts) LoginProviders() []agent.ProviderID {
 	return slices.DeleteFunc(c.Providers(), func(t agent.ProviderID) bool {
-		return !c.app.accounts.SupportsLogin(t)
+		return !c.SupportsLogin(t) && !slices.Contains(c.app.builtIn, t)
 	})
+}
+
+// SupportsLogin reports whether provider t has an OAuth login flow, which
+// Login starts; a provider without one takes an API key alone, as SetKey
+// saves it.
+func (c Accounts) SupportsLogin(t agent.ProviderID) bool {
+	return c.app.accounts.SupportsLogin(t)
 }
 
 // Status returns the accounts of provider t and which one is active.

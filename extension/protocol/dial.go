@@ -3,6 +3,7 @@ package protocol
 import (
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/unaquatic/catalog/gateway"
@@ -57,8 +58,9 @@ type Options struct {
 //     credentials of the environment, as adc.Credentials makes them.
 //
 // The Responses endpoints of backendflow's provider also send the requests
-// of its login to its backend, as BackendURL says. An endpoint of another
-// format or authentication has no provider.
+// of its login to its backend, as BackendURL says, and the requests of
+// SessionProviders name their session, as SessionProvider sends them. An
+// endpoint of another format or authentication has no provider.
 func Dialer(opts Options) agent.Dialer {
 	env := opts.Env
 	if env == nil {
@@ -99,6 +101,9 @@ func Dialer(opts Options) agent.Dialer {
 			p = content.New(content.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, HTTPClient: client})
 		default:
 			return nil, false
+		}
+		if slices.Contains(SessionProviders, t) {
+			p = SessionProvider{Provider: p}
 		}
 		return Provider{Provider: p, Ambient: ambient}, true
 	}

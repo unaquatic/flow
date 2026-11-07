@@ -20,6 +20,7 @@ import (
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/database"
 	"github.com/unaquatic/flow/extension"
+	"github.com/unaquatic/flow/internal/catalog"
 	"github.com/unaquatic/flow/internal/pubsub"
 	_ "github.com/unaquatic/sqlite" // registers the driver that database.Open uses
 )
@@ -32,6 +33,9 @@ type App struct {
 	accounts  *agent.Accounts
 	providers *agent.Providers
 	tools     *agent.Tools
+	// builtIn are the providers flow is built with, which the login menu
+	// lists beside those with a login flow.
+	builtIn []agent.ProviderID
 	// extensions are the extensions loaded, in the order their hooks run.
 	extensions []extension.Extension
 	// config reads the configuration from the config file whenever a value
@@ -68,6 +72,10 @@ type Options struct {
 	// models. Nil makes the providers of the catalog that the extensions
 	// speak with extension.DialHook, authorized by Accounts.
 	Providers *agent.Providers
+	// BuiltIn are the providers flow is built with, which
+	// Accounts.LoginProviders lists whether or not they have a login flow.
+	// Nil takes catalog.BuiltIn's.
+	BuiltIn []agent.ProviderID
 	// Extensions load the app's extensions, in the order their hooks run. A
 	// load that returns no extension adds none.
 	Extensions []extension.Load
@@ -144,6 +152,11 @@ func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) 
 		}
 	}
 
+	builtIn := slices.Clone(opts.BuiltIn)
+	if builtIn == nil {
+		builtIn = catalog.BuiltIn()
+	}
+
 	wCtx, wCancel := context.WithCancel(ctx)
 
 	return &App{
@@ -152,6 +165,7 @@ func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) 
 		accounts:   accounts,
 		providers:  providers,
 		tools:      tools,
+		builtIn:    builtIn,
 		extensions: exts,
 		config:     conf,
 		broker:     pubsub.NewBroker[Event](),

@@ -1425,6 +1425,9 @@ func TestMenuFrames(t *testing.T) {
 		name string
 		h    int
 		open func(ui *UI)
+		// loads returns the extensions of the app the menu opens in, after
+		// those of every test UI.
+		loads func(t *testing.T) []extension.Load
 	}{
 		// Each menu opens at the top of the input box, which searches it,
 		// under a header: its title, and its key hints. The footer keeps the
@@ -1447,6 +1450,10 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_login_menu", h: 9, open: func(ui *UI) {
 			ui.Apply(ui.service.ShowLoginMenu())
 		}},
+		// A provider without a login flow offers the API key alone.
+		{name: "banner_login_key_method", h: 6, open: func(ui *UI) {
+			ui.Apply(ui.service.ShowLoginMethodMenu(keyBuiltIn))
+		}, loads: func(t *testing.T) []extension.Load { return []extension.Load{loadKeyOnlyCatalog(t)} }},
 		// With the input hidden, the banner is the last row of the input box,
 		// under the queue's box.
 		{name: "banner_login_queued", h: 12, open: func(ui *UI) {
@@ -1636,7 +1643,11 @@ func TestMenuFrames(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ui := newInputTestUI(t)
+			var loads []extension.Load
+			if tt.loads != nil {
+				loads = tt.loads(t)
+			}
+			ui := newInputTestUI(t, loads...)
 			tt.open(ui)
 			buf := renderFrames(72, tt.h, ui.inputWrapper)
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))

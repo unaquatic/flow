@@ -19,14 +19,23 @@ const SnapshotFile = "snapshot/catalog.json"
 // snapshot holds the catalog compiled into flow, of the built-in providers
 // alone, for a cold start with no cache and no server: the catalog of the
 // catalog module version go.mod requires, which go run builds the catalog
-// command at, of the providers that command keeps by default. Generate it
-// with go generate before a release build, and after a change of that
-// version, as go get github.com/unaquatic/catalog@latest makes. A build
-// without it compiles in an empty snapshot.
+// command at, of the providers BuiltIn returns, which the go:generate line
+// below names. Generate it with go generate before a release build, and
+// after a change of that version, as go get
+// github.com/unaquatic/catalog@latest makes. A build without it compiles in
+// an empty snapshot.
 //
-//go:generate go run github.com/unaquatic/catalog/cmd/catalog snapshot -o snapshot/catalog.json
+//go:generate go run github.com/unaquatic/catalog/cmd/catalog snapshot -providers anthropic,openai,opencode-go -o snapshot/catalog.json
 //go:embed all:snapshot
 var snapshot embed.FS
+
+// BuiltIn returns the providers flow is built with, in ID order: those the
+// snapshot holds, as the go:generate line above names them, which the login
+// menu lists whether or not they have a browser login. It returns a new
+// slice on each call.
+func BuiltIn() []gateway.ProviderID {
+	return []gateway.ProviderID{"anthropic", "openai", "opencode-go"}
+}
 
 // Snapshot returns the catalog compiled into flow, or an empty catalog when
 // the build compiled in none.
