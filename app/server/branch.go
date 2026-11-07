@@ -30,8 +30,8 @@ func (s *Server) handleBranchSwitch(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "message_id must not be empty")
 		return
 	}
-	files, err := s.session(r).SwitchBranch(req.MessageID)
-	respondCheckout(w, files, err)
+	moved, err := s.session(r).SwitchBranch(req.MessageID)
+	respondCheckout(w, moved, err)
 }
 
 // BranchSwitchRequest names the branch to move onto.

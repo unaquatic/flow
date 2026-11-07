@@ -101,6 +101,10 @@ type Move struct {
 type MoveResult struct {
 	// Files are the files the hook changed.
 	Files []FileDiff
+	// Checkout names what the hook checked out to follow the move, such as
+	// the hash of a workspace snapshot, or is empty when it checked out
+	// nothing.
+	Checkout string
 }
 
 // PromptHook adds parts to each prompt, after its text, before the prompt is

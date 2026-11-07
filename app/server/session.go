@@ -162,13 +162,13 @@ func (s *Server) handleStop(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUndo(w http.ResponseWriter, r *http.Request) {
-	files, err := s.session(r).Undo()
-	respondCheckout(w, files, err)
+	moved, err := s.session(r).Undo()
+	respondCheckout(w, moved, err)
 }
 
 func (s *Server) handleRedo(w http.ResponseWriter, r *http.Request) {
-	files, err := s.session(r).Redo()
-	respondCheckout(w, files, err)
+	moved, err := s.session(r).Redo()
+	respondCheckout(w, moved, err)
 }
 
 func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
@@ -179,21 +179,22 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	files, err := s.session(r).Checkout(req.MessageID)
-	respondCheckout(w, files, err)
+	moved, err := s.session(r).Checkout(req.MessageID)
+	respondCheckout(w, moved, err)
 }
 
 // respondCheckout writes a checkout outcome or its mapped failure status. A
 // move that changed no file reports an empty list rather than null.
-func respondCheckout(w http.ResponseWriter, files []app.FileDiff, err error) {
+func respondCheckout(w http.ResponseWriter, moved app.MoveResult, err error) {
 	if err != nil {
 		respondErr(w, err)
 		return
 	}
+	files := moved.Files
 	if files == nil {
 		files = []app.FileDiff{}
 	}
-	respondJSON(w, http.StatusOK, CheckoutResponse{Files: files})
+	respondJSON(w, http.StatusOK, CheckoutResponse{Files: files, Checkout: moved.Checkout})
 }
 
 // session returns a handle on the session named by the request's path.
@@ -251,6 +252,10 @@ type CheckoutRequest struct {
 type CheckoutResponse struct {
 	// Files contains workspace changes made by the move.
 	Files []app.FileDiff `json:"files"`
+	// Checkout names what the move checked out, such as the hash of the
+	// workspace snapshot it reset the workspace to, or is omitted when it
+	// checked out nothing.
+	Checkout string `json:"checkout,omitempty"`
 }
 
 // SessionStatusInfo is the status returned for one session. Idle sessions are

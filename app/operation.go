@@ -40,6 +40,11 @@ type SendInput struct {
 // extension.MoveHook of an extension reports it.
 type FileDiff = extension.FileDiff
 
+// MoveResult is what a history move changed: the files its extensions
+// changed, and what they checked out, such as the hash of the workspace
+// snapshot the move reset the workspace to.
+type MoveResult = extension.MoveResult
+
 // Operation is the operation in progress on one session, such as a send or an
 // undo. A session has at most one at a time, and none while it is idle.
 type Operation struct {
@@ -305,27 +310,27 @@ func (s Session) Wait() error {
 }
 
 // Undo moves the session to the state before its newest visible prompt.
-func (s Session) Undo() ([]FileDiff, error) {
+func (s Session) Undo() (MoveResult, error) {
 	return s.change(s.undo)
 }
 
 // Redo moves the session forward by one prompt and its run, towards the state
 // it was last moved back from.
-func (s Session) Redo() ([]FileDiff, error) {
+func (s Session) Redo() (MoveResult, error) {
 	return s.change(s.redo)
 }
 
 // Checkout moves the session to the state before messageID. An empty
 // messageID returns to the latest state.
-func (s Session) Checkout(messageID message.ID) ([]FileDiff, error) {
-	return s.change(func() ([]FileDiff, error) { return s.checkoutAt(messageID) })
+func (s Session) Checkout(messageID message.ID) (MoveResult, error) {
+	return s.change(func() (MoveResult, error) { return s.checkoutAt(messageID) })
 }
 
 // DeleteMessage removes messageID and every message below it from the
 // session.
 func (s Session) DeleteMessage(messageID message.ID) error {
-	_, err := s.change(func() ([]FileDiff, error) {
-		return nil, s.app.sessions.DeleteMessage(s.ctx, s.id, messageID)
+	_, err := s.change(func() (MoveResult, error) {
+		return MoveResult{}, s.app.sessions.DeleteMessage(s.ctx, s.id, messageID)
 	})
 	return err
 }
@@ -336,20 +341,20 @@ func (s Session) DeleteMessage(messageID message.ID) error {
 // halfway. op does not run, and the error is ErrBusy, when the session has
 // another operation in progress, ErrSessionBusy when another process is
 // changing it, or ErrClosed once the app is closed.
-func (s Session) change(op func() ([]FileDiff, error)) ([]FileDiff, error) {
+func (s Session) change(op func() (MoveResult, error)) (MoveResult, error) {
 	_, release, err := s.app.hold(s.ctx, s.id)
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	defer release()
-	files, err := op()
+	moved, err := op()
 	if err != nil {
-		return nil, err
+		return MoveResult{}, err
 	}
 	if err := s.emitSessionLoaded(); err != nil {
 		slog.Error("load session", "session", s.id, "err", err)
 	}
-	return files, nil
+	return moved, nil
 }
 
 // historyFromLog rebuilds provider history from the session's active branch.

@@ -495,7 +495,7 @@ func TestCtrlCClosesMenus(t *testing.T) {
 			s.OpenTree(app.Tree{Messages: []message.Content{{ID: message.NewID(), Role: message.RoleUser}}})
 		}, hide: EventBannerHide{}},
 		{name: "resume", open: func(t *testing.T, s *Service, a *app.App) {
-			storePrompts(t, a, "run the tests")
+			storePrompts(t, a, "Run the tests")
 			s.HandleSubmit("/resume")
 			if !s.state.SessionMenuVisible {
 				t.Fatal("setup: /resume did not open the session list")

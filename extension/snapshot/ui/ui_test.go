@@ -67,7 +67,8 @@ func TestStepBox_ShownWhilePending(t *testing.T) {
 }
 
 // TestStepBox_ShowDone checks that a step part kept once taken stays a row,
-// reads as being indexed while pending, and then shows its tree's short hash,
+// reads as being indexed while pending, and then shows its tree's short hash in
+// brackets, as a history move's notice names what it checked out,
 // or that recording it failed.
 func TestStepBox_ShowDone(t *testing.T) {
 	box := NewStepBox(snapshot.StepPart{ID: "s", Pending: true})
@@ -77,7 +78,7 @@ func TestStepBox_ShowDone(t *testing.T) {
 		want string
 	}{
 		{snapshot.StepPart{ID: "s", Pending: true}, "Snapshot " + IndexingStatus},
-		{snapshot.StepPart{ID: "s", Snapshot: tree}, "Snapshot " + tree.String()[:engine.ShortHashLen]},
+		{snapshot.StepPart{ID: "s", Snapshot: tree}, "Snapshot [" + tree.String()[:engine.ShortHashLen] + "]"},
 		{snapshot.StepPart{ID: "s"}, "Snapshot " + FailedStatus},
 	} {
 		ui.UpdateContentPart(box, step.part)
@@ -188,17 +189,17 @@ func TestLoadPatch_ReadsOnce(t *testing.T) {
 }
 
 // TestPatchHeader checks that a step's changes are headed like a tool call,
-// by "changes", not bold, in the color of a panel's title, without brackets,
+// by "Diff", not bold, in the color of a panel's title, without brackets,
 // and counted as the notice of a history move counts them, in the same
 // colors.
 func TestPatchHeader(t *testing.T) {
 	header := PatchHeader(DiffStat{Files: 1, Additions: 0, Deletions: 205})
-	if got, want := header.PlainText(), "changes 1 file  +0 -205"; got != want {
+	if got, want := header.PlainText(), "Diff 1 file  +0 -205"; got != want {
 		t.Fatalf("header = %q, want %q", got, want)
 	}
 	name := header.Chunks[0]
-	if title := ui.TitleChunk("changes"); name.Text != "changes" || name.Attributes&style.AttrBold != 0 || name.Fg != title.Fg {
-		t.Errorf("name = %+v, want \"changes\", not bold, in the title color", name)
+	if title := ui.TitleChunk(PatchTitle); name.Text != "Diff" || name.Attributes&style.AttrBold != 0 || name.Fg != title.Fg {
+		t.Errorf("name = %+v, want \"Diff\", not bold, in the title color", name)
 	}
 	notice := ui.BuildDiffToastLines([]app.FileDiff{{File: "/abs/x.go", Deletions: 205}})[0]
 	fgs := func(chunks []style.TextChunk) []style.Color {

@@ -70,7 +70,8 @@ func TestWireBodies(t *testing.T) {
 		{"POST /session/{id}/undo", CheckoutResponse{Files: []app.FileDiff{
 			{File: "calc.go", Additions: 3, Deletions: 1, Status: "modified"},
 			{File: "old.go", Deletions: 12, Status: "deleted"},
-		}}},
+		}, Checkout: "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0"}},
+		{"POST /session/{id}/undo nothing checked out", CheckoutResponse{Files: []app.FileDiff{}}},
 	} {
 		data, err := json.Marshal(body.v)
 		if err != nil {

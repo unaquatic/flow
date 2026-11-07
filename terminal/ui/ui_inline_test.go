@@ -264,7 +264,7 @@ func TestQuitLiveTop(t *testing.T) {
 // other row, the indicator included, so that it ends the final frame.
 func TestResumeNoticeComesLast(t *testing.T) {
 	ui := newBuiltTestUI(t, true)
-	ui.AddMessage(userText("u1", "run the tests"))
+	ui.AddMessage(userText("u1", "Run the tests"))
 	ui.ShowIndicator(EventIndicatorShow{Text: "Request failed"})
 
 	ui.AppendResumeNotice("01a12e38-2689-73a1-a799-5db6b6a8bc44")

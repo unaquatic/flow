@@ -135,7 +135,7 @@ func TestSessionMenuTranscript(t *testing.T) {
 
 	t.Run("inline", func(t *testing.T) {
 		ui := newBuiltTestUI(t, true)
-		ui.AddMessage(userText("u1", "run the tests"))
+		ui.AddMessage(userText("u1", "Run the tests"))
 		visible := func() bool {
 			return !slices.ContainsFunc(ui.transcriptRows, func(r *widget.Box) bool { return !r.Visible() })
 		}

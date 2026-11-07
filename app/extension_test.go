@@ -40,12 +40,12 @@ func (r *recorder) OnMove(_ context.Context, m extension.Move) (extension.MoveRe
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.moves = append(r.moves, m)
-	return extension.MoveResult{Files: []extension.FileDiff{{File: "a.txt", Status: "modified"}}}, nil
+	return extension.MoveResult{Files: []extension.FileDiff{{File: "a.txt", Status: "modified"}}, Checkout: "c1d2e3f4a5"}, nil
 }
 
 // TestHooks_DescribeTheirEvents checks that each hook is told which session
 // and message its event is about: the prompt sent, the turn that answers it,
-// and the move back before them, whose files the hook reports.
+// and the move back before them, whose files and checkout the hook reports.
 func TestHooks_DescribeTheirEvents(t *testing.T) {
 	a, _ := newActorTestApp(t, "hello")
 	rec := &recorder{}
@@ -75,12 +75,13 @@ func TestHooks_DescribeTheirEvents(t *testing.T) {
 		t.Errorf("turn = %+v, want the stored reply %q, completed", tt, branch[1].ID)
 	}
 
-	files, err := a.Session("ses_hooks").Undo()
+	moved, err := a.Session("ses_hooks").Undo()
+	files := moved.Files
 	if err != nil {
 		t.Fatalf("undo: %v", err)
 	}
-	if len(files) != 1 || files[0].File != "a.txt" {
-		t.Errorf("undo reported %+v, want the file the hook changed", files)
+	if len(files) != 1 || files[0].File != "a.txt" || moved.Checkout != "c1d2e3f4a5" {
+		t.Errorf("undo reported %+v, want the file the hook changed and what it checked out", moved)
 	}
 	rec.mu.Lock()
 	defer rec.mu.Unlock()

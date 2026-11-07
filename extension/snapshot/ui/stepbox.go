@@ -24,7 +24,8 @@ const SnapshotLabel = "Snapshot"
 // a row like a collapsed tool call's, "Snapshot [indexing]", so that its
 // message shows the snapshot being taken. Once the part holds its tree it is
 // gone, unless ShowDone keeps it, as the Debug setting does: then it shows
-// the tree's hash, as engine.ShortHash gives it, as in "Snapshot 7a36b04c",
+// the tree's hash, as engine.ShortHash gives it, in brackets, as in
+// "Snapshot [7a36b04c]",
 // or FailedStatus. The box always shows as a row, starts with ui.ToolMarker
 // as tool calls do, and has nothing to expand. The changes of a reply's step
 // show in its PatchBox either way.
@@ -105,7 +106,8 @@ func (b *StepBox) ShowHeader() {
 
 // StepStatus returns what a step part's row shows after SnapshotLabel:
 // IndexingStatus while the part is pending, then the hash of its tree, as
-// engine.ShortHash gives it, or FailedStatus when it holds none.
+// engine.ShortHash gives it, in brackets, as a history move's notice names
+// the snapshot it checked out, or FailedStatus when it holds none.
 func StepStatus(part snapshot.StepPart) string {
 	switch {
 	case part.Pending:
@@ -113,5 +115,5 @@ func StepStatus(part snapshot.StepPart) string {
 	case part.Snapshot.IsZero():
 		return FailedStatus
 	}
-	return engine.ShortHash(part.Snapshot)
+	return "[" + engine.ShortHash(part.Snapshot) + "]"
 }

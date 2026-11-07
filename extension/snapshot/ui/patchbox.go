@@ -6,14 +6,18 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/extension/snapshot"
 	"github.com/unaquatic/flow/terminal/ui"
+	"github.com/unaquatic/fluid/layout"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
-// PatchBox is the ui.PartBox of the workspace changes one agent step made: a
-// block whose header sums them up, as PatchHeader gives it, and whose details
-// show them as a unified diff, which Ctrl+O expands with the tool calls. It
-// stays hidden until a nonempty patch is set.
+// PatchBox is the ui.PartBox of the workspace changes one agent step made,
+// shown as a tool call is: a row on the canvas, marked as /settings marks
+// tool calls, whose header sums them up, as PatchHeader gives it, and which
+// Ctrl+O expands with the tool calls. Expanded, the header is PatchTitle
+// alone, and the details show the summary under it, then the changes of each
+// file, as FileView shows them. It stays hidden until a nonempty patch is
+// set.
 type PatchBox struct {
 	*ui.PartBox
 	// From is the tree the step started from, which the message before it
@@ -29,8 +33,14 @@ type PatchBox struct {
 	Load func(from, to snapshot.Hash)
 	// Patch is the unified diff shown, as SetPatch sets it.
 	Patch string
-	// Body displays the unified diff.
-	Body *widget.Markdown
+	// Summary counts the changed files and lines, as ui.DiffSummary does,
+	// over Files while the box is expanded.
+	Summary *widget.Text
+	// Files holds a FileView for each file Patch changes, in its order.
+	Files *widget.Box
+	// Theme and Fg are the palette FileView draws with.
+	Theme *style.Theme
+	Fg    style.Color
 }
 
 var (
@@ -38,8 +48,8 @@ var (
 	_ ui.BoxContent  = (*PatchBox)(nil)
 )
 
-// NewPatchBox creates a hidden, collapsed patch block on the theme's raised
-// surface.
+// NewPatchBox creates a hidden, collapsed patch row, which expands into a
+// block on the theme's raised surface as a tool call does.
 func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	if theme == nil {
 		theme = ui.DefaultTheme()
@@ -47,12 +57,21 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	surface := theme.ResolveSurfaceRaised()
 	b := &PatchBox{
 		PartBox: ui.NewPartBox(theme, fg, surface),
-		Body:    ui.NewToolBody(theme, fg, surface),
+		// The summary sits right under the header, closing the gap the box
+		// leaves between its header and its details.
+		Summary: widget.NewText("", widget.TextWithFg(fg), widget.TextWithLayout(layout.WithMarginTop(layout.Points(-1)))),
+		// A blank row parts the files, as it parts the box's details.
+		Files: widget.NewBox(widget.BoxWithLayout(
+			layout.WithFlexDirection(layout.DirectionColumn),
+			layout.WithAlignItems(layout.AlignStretch),
+			layout.WithGap(1),
+		)),
+		Theme: theme,
+		Fg:    fg,
 	}
 	b.Content = b
-	b.Shape = ui.ShapeBlock
-	b.Marked = false
-	b.Details.Add(b.Body)
+	b.Details.Add(b.Summary)
+	b.Details.Add(b.Files)
 	b.SetGone(true)
 	b.ShowShape()
 	return b
@@ -91,18 +110,56 @@ func (b *PatchBox) Pending() bool {
 	return !b.From.IsZero() && !b.To.IsZero() && !b.Requested
 }
 
-// SetPatch displays patch, hiding the box when it is empty.
+// SetPatch displays patch, a FileView for each file it changes, hiding the
+// box when it is empty.
 func (b *PatchBox) SetPatch(patch string) {
 	b.Patch = patch
+	files := SplitPatch(patch)
+	st := StatOf(files)
+	b.Summary.SetStyledContent(style.NewStyledText(ui.DiffSummary(st.Files, st.Additions, st.Deletions)...))
 	b.ShowHeader()
-	b.Body.SetContent(ui.ToolFence("diff", patch))
+	for _, child := range b.Files.Children() {
+		b.Files.Remove(child.ID())
+	}
+	for _, f := range files {
+		b.Files.Add(b.FileView(f))
+	}
 	b.SetGone(patch == "")
 }
 
-// ShowHeader writes the summary of Patch, as PatchHeader gives it, once a
-// patch is set.
+// FileView returns the changes of f as a tool call's diff shows an edit:
+// its path in the box's color and its counts as ui.DiffCounts colors them,
+// and right under them its hunks, without Git's headers.
+func (b *PatchBox) FileView(f FilePatch) *widget.Box {
+	heading := widget.NewStyledText(style.NewStyledText(
+		append([]style.TextChunk{{Text: f.Path, Fg: b.Fg}, style.Plain("  ")}, ui.DiffCounts(f.Additions, f.Deletions)...)...))
+	view := widget.NewBox(
+		widget.BoxWithLayout(
+			layout.WithFlexDirection(layout.DirectionColumn),
+			layout.WithAlignItems(layout.AlignStretch),
+		),
+		widget.Children(heading),
+	)
+	if f.Hunks != "" {
+		// The hunks fill no background of their own, as a tool call's body
+		// does, so that the box's shows through them: its surface when
+		// boxed, and the canvas when plain.
+		body := ui.NewToolBody(b.Theme, b.Fg, style.ColorTransparent)
+		body.SetContent(ui.ToolFence("diff", f.Hunks))
+		view.Add(body)
+	}
+	return view
+}
+
+// ShowHeader writes the header once a patch is set: PatchTitle alone while
+// the box is open, where Summary counts the changes under it, and otherwise
+// PatchHeader of Patch.
 func (b *PatchBox) ShowHeader() {
-	if b.Patch != "" {
+	switch {
+	case b.Patch == "":
+	case b.Open():
+		b.Header.SetStyledContent(style.NewStyledText(ui.TitleChunk(PatchTitle)))
+	default:
 		b.Header.SetStyledContent(PatchHeader(ParseDiffStat(b.Patch)))
 	}
 }
@@ -117,34 +174,106 @@ type DiffStat struct {
 	Deletions int
 }
 
-// ParseDiffStat counts the files and changed lines in a Git unified diff. Only
-// lines inside hunks are counted, so file headers such as "--- a/x" are not
-// mistaken for deletions.
+// ParseDiffStat counts the files and changed lines in a Git unified diff, as
+// StatOf counts those SplitPatch finds.
 func ParseDiffStat(patch string) DiffStat {
-	var st DiffStat
-	inHunk := false
-	for line := range strings.Lines(patch) {
-		switch {
-		case strings.HasPrefix(line, "diff --git "):
-			st.Files++
-			inHunk = false
-		case strings.HasPrefix(line, "@@"):
-			inHunk = true
-		case !inHunk:
-		case strings.HasPrefix(line, "+"):
-			st.Additions++
-		case strings.HasPrefix(line, "-"):
-			st.Deletions++
-		}
+	return StatOf(SplitPatch(patch))
+}
+
+// StatOf counts files and the lines they add and delete.
+func StatOf(files []FilePatch) DiffStat {
+	st := DiffStat{Files: len(files)}
+	for _, f := range files {
+		st.Additions += f.Additions
+		st.Deletions += f.Deletions
 	}
 	return st
 }
 
-// PatchHeader summarizes st for a collapsed patch block, as a tool call's
-// header names its call: "changes" as ui.TitleChunk gives it, and then the
+// FilePatch is the part of a Git unified diff that changes one file.
+type FilePatch struct {
+	// Path is the file's path in the tree the diff ends with, or for a
+	// deleted file in the one it starts from.
+	Path string
+	// Hunks are the file's hunks, from its first "@@" line, or Git's line
+	// that says a binary file differs. Git's headers, such as "diff --git",
+	// "index", "---" and "+++", are left out.
+	Hunks string
+	// Additions and Deletions count the lines the hunks add and delete.
+	Additions int
+	Deletions int
+}
+
+// SplitPatch returns the files a Git unified diff changes, in its order. Only
+// lines inside hunks are counted, so headers such as "--- a/x" are not
+// mistaken for deletions.
+func SplitPatch(patch string) []FilePatch {
+	var files []FilePatch
+	var hunks strings.Builder
+	inHunk := false
+	end := func() {
+		if len(files) > 0 {
+			files[len(files)-1].Hunks = strings.TrimSuffix(hunks.String(), "\n")
+		}
+		hunks.Reset()
+	}
+	for line := range strings.Lines(patch) {
+		if rest, ok := strings.CutPrefix(line, "diff --git "); ok {
+			end()
+			files = append(files, FilePatch{Path: GitDiffPath(rest)})
+			inHunk = false
+			continue
+		}
+		if len(files) == 0 {
+			continue
+		}
+		f := &files[len(files)-1]
+		switch {
+		case strings.HasPrefix(line, "@@"):
+			inHunk = true
+		case inHunk:
+			switch {
+			case strings.HasPrefix(line, "+"):
+				f.Additions++
+			case strings.HasPrefix(line, "-"):
+				f.Deletions++
+			}
+		case strings.HasPrefix(line, "Binary files "):
+		case strings.HasPrefix(line, "+++ b/"):
+			f.Path = strings.TrimSpace(strings.TrimPrefix(line, "+++ b/"))
+			continue
+		case strings.HasPrefix(line, "rename to "):
+			f.Path = strings.TrimSpace(strings.TrimPrefix(line, "rename to "))
+			continue
+		default:
+			continue
+		}
+		hunks.WriteString(line)
+	}
+	end()
+	return files
+}
+
+// GitDiffPath returns the path a "diff --git" line names, given the rest of
+// the line after "diff --git ": that after " b/", the path in the tree the
+// diff ends with.
+func GitDiffPath(rest string) string {
+	rest = strings.TrimSpace(rest)
+	if i := strings.LastIndex(rest, " b/"); i >= 0 {
+		return rest[i+len(" b/"):]
+	}
+	return strings.TrimPrefix(rest, "a/")
+}
+
+// PatchTitle names the changes of a step during a run. The notice of a
+// history move names its changes ui.ChangesTitle instead.
+const PatchTitle = "Diff"
+
+// PatchHeader summarizes st for a collapsed patch row, as a tool call's
+// header names its call: PatchTitle as ui.TitleChunk gives it, and then the
 // files changed as a history move's notice counts them, such as
-// "changes 2 files  +15 -5".
+// "Diff 2 files  +15 -5".
 func PatchHeader(st DiffStat) style.StyledText {
-	chunks := append([]style.TextChunk{ui.TitleChunk("changes"), style.Plain(" ")}, ui.DiffSummary(st.Files, st.Additions, st.Deletions)...)
+	chunks := append([]style.TextChunk{ui.TitleChunk(PatchTitle), style.Plain(" ")}, ui.DiffSummary(st.Files, st.Additions, st.Deletions)...)
 	return style.NewStyledText(chunks...)
 }

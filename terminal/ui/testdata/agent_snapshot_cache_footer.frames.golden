@@ -3,11 +3,11 @@
 |  Hi                                    |
 |                                        |
 |                                        |
-|  Snapshot c1d2e3f4                     |
+|  Snapshot [c1d2e3f4]                   |
 |                                        |
 |  Hi! How can I help you today?         |
 |                                        |
-|  Snapshot c1d2e3f4                     |
+|  Snapshot [c1d2e3f4]                   |
 |  Cache read 0K write 0K                |
 |                                        |
 |  Done [3s]                             |
@@ -17,11 +17,11 @@
 |  AA                                    |
 |                                        |
 |                                        |
-|  BBBBBBBB BBBBBBBB                     |
+|  BBBBBBBB BBBBBBBBBB                   |
 |                                        |
 |  AAA AAA AAA A AAAA AAA AAAAAA         |
 |                                        |
-|  BBBBBBBB BBBBBBBB                     |
+|  BBBBBBBB BBBBBBBBBB                   |
 |  BBBBB BBBB BB BBBBB BB                |
 |                                        |
 |  BBBB BBBB                             |
