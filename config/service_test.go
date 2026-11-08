@@ -111,7 +111,7 @@ func TestServiceSaveDefaultModel(t *testing.T) {
 	if keys, err := s.File().Read(); err != nil || keys["model"] != nil {
 		t.Errorf("config file keys = %v, %v, want the older model key gone", keys, err)
 	}
-	if got, want := names(t, dir), []string{FileName, FileName + ".lock"}; !slices.Equal(got, want) {
+	if got, want := names(t, dir), []string{FileName, "config.lock"}; !slices.Equal(got, want) {
 		t.Errorf("directory holds %q, want %q: no temporary file left", got, want)
 	}
 }
@@ -243,7 +243,7 @@ func TestServiceSaveDefaultModelThroughSymlink(t *testing.T) {
 			if existing && cfg.LogLevel != LogDebug {
 				t.Errorf("log level = %q, want the target's kept", cfg.LogLevel)
 			}
-			if got, want := names(t, dir), []string{FileName, FileName + ".lock"}; !slices.Equal(got, want) {
+			if got, want := names(t, dir), []string{FileName, "config.lock"}; !slices.Equal(got, want) {
 				t.Errorf("data directory holds %q, want %q: the link and its lock file alone", got, want)
 			}
 			if got, want := names(t, filepath.Dir(target)), []string{filepath.Base(target)}; !slices.Equal(got, want) {

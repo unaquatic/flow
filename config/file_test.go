@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -210,5 +211,26 @@ func writeFile(t *testing.T, f File, data string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(f.Dir, f.Name), []byte(data), 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestFileLockName checks that a file's lock file is named after the file
+// without its extension, and that an update takes it there.
+func TestFileLockName(t *testing.T) {
+	for name, want := range map[string]string{
+		"config.json": "config.lock",
+		"auth.json":   "auth.lock",
+		"settings":    "settings.lock",
+	} {
+		if got := (File{Name: name}).LockName(); got != want {
+			t.Errorf("LockName of %s = %q, want %q", name, got, want)
+		}
+	}
+	dir := t.TempDir()
+	if err := (Section[int]{File: File{Dir: dir, Name: "auth.json"}, Key: "n"}).Set(t.Context(), 1); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := names(t, dir), []string{"auth.json", "auth.lock"}; !slices.Equal(got, want) {
+		t.Errorf("directory holds %q, want %q", got, want)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/unaquatic/flow/internal/flock"
 )
@@ -23,10 +24,10 @@ const fileMode = 0o600
 //
 // Reads take no lock: a write replaces the file with a rename, so a read
 // sees the file as it was before the write or after it, never part of
-// either. Writes hold an exclusive lock on the lock file beside it, Name with
-// ".lock" added, so concurrent updates apply one after another and none is
-// lost. The lock file stays when the write is done. The locks are advisory:
-// programs that edit the file without them are not excluded.
+// either. Writes hold an exclusive lock on the lock file beside it, LockName,
+// so concurrent updates apply one after another and none is lost. The lock
+// file stays when the write is done. The locks are advisory: programs that
+// edit the file without them are not excluded.
 type File struct {
 	// Dir is the directory that holds the file and its lock file. Update
 	// creates it, private to its user, when it is missing.
@@ -129,13 +130,19 @@ func (f File) Edit(ctx context.Context, change func(keys map[string]json.RawMess
 	return replace(path, data, mode)
 }
 
+// LockName returns the name of the lock file of the file in Dir: Name with
+// its extension replaced by ".lock", such as "auth.lock" of "auth.json".
+func (f File) LockName() string {
+	return strings.TrimSuffix(f.Name, filepath.Ext(f.Name)) + ".lock"
+}
+
 // lock takes the exclusive lock of the file, creating Dir and the lock file
 // when they are missing, and returns the function that releases it.
 func (f File) lock(ctx context.Context) (unlock func() error, err error) {
 	if err := os.MkdirAll(f.Dir, 0o700); err != nil {
 		return nil, err
 	}
-	lf, err := os.OpenFile(filepath.Join(f.Dir, f.Name+".lock"), os.O_RDWR|os.O_CREATE, fileMode)
+	lf, err := os.OpenFile(filepath.Join(f.Dir, f.LockName()), os.O_RDWR|os.O_CREATE, fileMode)
 	if err != nil {
 		return nil, err
 	}
