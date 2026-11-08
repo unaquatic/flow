@@ -50,15 +50,34 @@ func (s *Store) CreateSession(_ context.Context) *Session {
 }
 
 // sessionColumns lists the session fields every session query selects, in
-// the order scanSession reads them.
-const sessionColumns = `id, title, head_id, forward_id, created_at, updated_at`
+// the order scanSession reads them, from the sessions table as s joined to
+// its project as p, which sessionsSQL names.
+const sessionColumns = `s.id, s.title, s.head_id, s.forward_id, s.created_at, s.updated_at, p.worktree`
+
+// sessionsSQL is the FROM clause of every session query: the sessions table
+// as s, joined to the project each belongs to as p.
+const sessionsSQL = `FROM sessions s JOIN projects p ON p.id = s.project`
 
 // ListSessions returns the project's sessions, newest first.
 func (s *Store) ListSessions(ctx context.Context) ([]Session, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+sessionColumns+` FROM sessions
-		WHERE project = ?
-		ORDER BY updated_at DESC, id`, s.project)
+	return s.listSessions(ctx, `
+		SELECT `+sessionColumns+` `+sessionsSQL+`
+		WHERE s.project = ?
+		ORDER BY s.updated_at DESC, s.id`, s.project)
+}
+
+// ListAllSessions returns the sessions of every project, newest first, each
+// with the worktree of its project, as the session list shows them.
+func (s *Store) ListAllSessions(ctx context.Context) ([]Session, error) {
+	return s.listSessions(ctx, `
+		SELECT `+sessionColumns+` `+sessionsSQL+`
+		ORDER BY s.updated_at DESC, s.id`)
+}
+
+// listSessions returns the sessions that query, which selects
+// sessionColumns, reads with args.
+func (s *Store) listSessions(ctx context.Context, query string, args ...any) ([]Session, error) {
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,15 +98,15 @@ func (s *Store) ListSessions(ctx context.Context) ([]Session, error) {
 // error wraps [fs.ErrNotExist] when the store holds no such session.
 func (s *Store) Session(ctx context.Context, id message.SessionID) (*Session, error) {
 	return lookupSession(id, s.db.QueryRowContext(ctx, `
-		SELECT `+sessionColumns+` FROM sessions WHERE id = ?`, id))
+		SELECT `+sessionColumns+` `+sessionsSQL+` WHERE s.id = ?`, id))
 }
 
 // FindSession returns a session of the store's project by ID. The error
 // wraps [fs.ErrNotExist] when the project has no such session.
 func (s *Store) FindSession(ctx context.Context, id message.SessionID) (*Session, error) {
 	return lookupSession(id, s.db.QueryRowContext(ctx, `
-		SELECT `+sessionColumns+` FROM sessions
-		WHERE id = ? AND project = ?`, id, s.project))
+		SELECT `+sessionColumns+` `+sessionsSQL+`
+		WHERE s.id = ? AND s.project = ?`, id, s.project))
 }
 
 // Stored reports whether id is a stored session of the store's project. A
@@ -121,7 +140,7 @@ func scanSession[R interface{ Scan(dest ...any) error }](r R) (Session, error) {
 		head, forward        sql.Null[string]
 		createdAt, updatedAt string
 	)
-	if err := r.Scan(&sess.ID, &sess.Title, &head, &forward, &createdAt, &updatedAt); err != nil {
+	if err := r.Scan(&sess.ID, &sess.Title, &head, &forward, &createdAt, &updatedAt, &sess.Worktree); err != nil {
 		return Session{}, err
 	}
 	sess.Head = Head{ID: message.ID(head.V), Forward: message.ID(forward.V)}

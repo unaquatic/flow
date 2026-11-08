@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -79,12 +80,21 @@ type Options struct {
 	// Extensions load the app's extensions, in the order their hooks run. A
 	// load that returns no extension adds none.
 	Extensions []extension.Load
+	// Session, when it names a stored session, makes the app work in that
+	// session's folder, the worktree of its project, wherever the process
+	// started: New changes the process's working directory to it before it
+	// chooses the project, so that the session's tools, files and snapshots
+	// are those of that folder. A session the database does not hold leaves
+	// the working directory as it is.
+	Session message.SessionID
 }
 
 // New returns an App over the data directory that conf reads the config file
 // in, which also holds the database and the log, with the parts opts gives.
 // Sessions are stored in the database, scoped to the working directory's
-// project. Each of opts.Extensions loads an extension, in order, which the
+// project, which opts.Session may first move to the folder of its session;
+// it fails when that folder no longer exists. Each of opts.Extensions loads
+// an extension, in order, which the
 // app then calls the hooks of. The model may call the tools that the
 // extensions add with extension.ToolHook, and no others, and runs at the
 // providers they make with extension.DialHook, unless opts gives its own.
@@ -115,6 +125,11 @@ func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) 
 	db, err := database.Open(filepath.Join(conf.Dir, database.FileName))
 	if err != nil {
 		return nil, err
+	}
+	if opts.Session != "" {
+		if wd, err = enterSessionDir(ctx, db, opts.Session, wd); err != nil {
+			return nil, errors.Join(err, db.Close())
+		}
 	}
 	project, err := database.Project(ctx, db, wd)
 	if err != nil {
@@ -175,6 +190,25 @@ func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) 
 		cancel:     wCancel,
 		operations: make(map[message.SessionID]*Operation),
 	}, nil
+}
+
+// enterSessionDir changes the process's working directory to the folder of
+// session id, the worktree of its project, and returns that folder. It
+// returns wd, the working directory, when db holds no session id or the
+// session's folder is wd already.
+func enterSessionDir(ctx context.Context, db *sql.DB, id message.SessionID, wd string) (string, error) {
+	if err := session.Migrate(ctx, db); err != nil {
+		return "", err
+	}
+	dir, ok, err := session.WorktreeOf(ctx, db, id)
+	if err != nil || !ok || dir == wd {
+		return wd, err
+	}
+	if err := os.Chdir(dir); err != nil {
+		return "", fmt.Errorf("session %s belongs to %s: %w", id, dir, err)
+	}
+	slog.Info("entered the session's folder", "session", id, "dir", dir)
+	return dir, nil
 }
 
 // WorkingDir returns the working directory resolved when the app was created.

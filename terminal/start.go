@@ -46,7 +46,8 @@ type Start struct {
 }
 
 // FirstSession returns the stored session that s opens first, or "" for a
-// new session. It fails when StartID names no stored session of the project.
+// new session. It fails when StartID names no stored session of the project,
+// which the app works in the folder of once it was opened on that session.
 func (s Start) FirstSession(ctx context.Context, sessions *session.Store) (message.SessionID, error) {
 	switch s.Mode {
 	case StartLatest:
@@ -62,7 +63,7 @@ func (s Start) FirstSession(ctx context.Context, sessions *session.Store) (messa
 			return "", err
 		}
 		if !ok {
-			return "", fmt.Errorf("no session of this project matches %q", s.ID)
+			return "", fmt.Errorf("no stored session matches %q", s.ID)
 		}
 		return s.ID, nil
 	}

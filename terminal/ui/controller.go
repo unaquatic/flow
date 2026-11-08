@@ -23,6 +23,9 @@ type Service struct {
 	// active is the ID of state.Session as SetSession last set it, for
 	// readers off the event loop.
 	active atomic.Pointer[message.SessionID]
+	// relaunch is the session of another folder that RelaunchIn recorded,
+	// for readers off the event loop, as RelaunchID reads it.
+	relaunch atomic.Pointer[message.SessionID]
 	// Settings saves the settings /settings sets, each time one changes, or
 	// is nil to save none.
 	Settings SettingsStore
@@ -77,6 +80,16 @@ func (s *Service) SetSession(sess *session.Session) {
 // still be handling a key.
 func (s *Service) ActiveSessionID() message.SessionID {
 	if id := s.active.Load(); id != nil {
+		return *id
+	}
+	return ""
+}
+
+// RelaunchID returns the session of another folder that RelaunchIn recorded,
+// for the UI to close and have reopened in its folder, or "". Like
+// ActiveSessionID, it may be called from any goroutine.
+func (s *Service) RelaunchID() message.SessionID {
+	if id := s.relaunch.Load(); id != nil {
 		return *id
 	}
 	return ""

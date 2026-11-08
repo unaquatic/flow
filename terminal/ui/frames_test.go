@@ -1260,9 +1260,9 @@ func TestCountInTitleFrames(t *testing.T) {
 func threeSessionRows() []widget.SelectItem {
 	rows := sessionRows("s1", "s2")
 	names := SessionRowNames([]session.Session{
-		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
-		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
-		{ID: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2", UpdatedAt: time.Date(2026, 9, 26, 16, 3, 18, 0, time.Local)},
+		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
+		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
+		{ID: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2", Worktree: "/work/other", UpdatedAt: time.Date(2026, 9, 26, 16, 3, 18, 0, time.Local)},
 	})
 	return append(rows, widget.SelectItem{Name: names[2], Value: "s3"})
 }
@@ -1271,8 +1271,8 @@ func threeSessionRows() []widget.SelectItem {
 // them, the first titled and active, with values first and second.
 func sessionRows(first, second any) []widget.SelectItem {
 	names := SessionRowNames([]session.Session{
-		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
-		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
+		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
+		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
 	})
 	return []widget.SelectItem{
 		{Name: names[0], Hint: CurrentHint, Value: first},

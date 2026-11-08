@@ -117,6 +117,57 @@ func TestListSessions_ScopesToProject(t *testing.T) {
 	}
 }
 
+// TestListAllSessions_ListsEveryProject checks that the sessions of every
+// project are listed, newest first, each with its project's worktree, which
+// the project's own reads carry too, and that WorktreeOf finds a session's
+// worktree by ID alone.
+func TestListAllSessions_ListsEveryProject(t *testing.T) {
+	db := openTestDB(t)
+	a := newProjectStore(t, db, "/work/a")
+	b := newProjectStore(t, db, "/work/b")
+	ctx := t.Context()
+	appendAt(t, a, "ses_a", "", "msg_1")
+	appendAt(t, b, "ses_b", "", "msg_1")
+	// Times are whole seconds, so ses_a is made an hour older to order the
+	// two.
+	if _, err := db.ExecContext(ctx, `UPDATE sessions SET updated_at = ? WHERE id = 'ses_a'`,
+		encodeTime(time.Now().Add(-time.Hour))); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := a.ListAllSessions(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type row struct {
+		ID       message.SessionID
+		Worktree string
+	}
+	var got []row
+	for _, s := range all {
+		got = append(got, row{s.ID, s.Worktree})
+	}
+	if want := []row{{"ses_b", "/work/b"}, {"ses_a", "/work/a"}}; !slices.Equal(got, want) {
+		t.Errorf("all sessions = %v, want %v", got, want)
+	}
+
+	own, err := a.ListSessions(ctx)
+	if err != nil || len(own) != 1 || own[0].Worktree != "/work/a" {
+		t.Errorf("project a's sessions = %+v, %v; want ses_a in /work/a", own, err)
+	}
+	if sess, err := a.Session(ctx, "ses_b"); err != nil || sess.Worktree != "/work/b" {
+		t.Errorf("another project's session = %+v, %v; want it in /work/b", sess, err)
+	}
+	for id, want := range map[message.SessionID]string{"ses_a": "/work/a", "ses_b": "/work/b"} {
+		if dir, ok, err := WorktreeOf(ctx, db, id); err != nil || !ok || dir != want {
+			t.Errorf("WorktreeOf(%s) = %q, %v, %v; want %q", id, dir, ok, err, want)
+		}
+	}
+	if dir, ok, err := WorktreeOf(ctx, db, "ses_missing"); err != nil || ok || dir != "" {
+		t.Errorf("WorktreeOf of a missing session = %q, %v, %v; want none", dir, ok, err)
+	}
+}
+
 // TestFindSession_ScopesToProject checks that FindSession, unlike Session,
 // finds only the stored sessions of the store's project.
 func TestFindSession_ScopesToProject(t *testing.T) {

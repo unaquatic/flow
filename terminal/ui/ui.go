@@ -237,6 +237,10 @@ type Result struct {
 	ResumeShown bool
 	// ColorMode is the color mode the UI drew in.
 	ColorMode style.ColorMode
+	// Relaunch is the session of another folder that was picked from the
+	// session list, which the UI closed to have reopened in its own
+	// folder, or "" when it closed for good.
+	Relaunch message.SessionID
 }
 
 // Run runs the interactive terminal UI of a, as opts start it, and blocks
@@ -352,6 +356,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 		Closed:      ui.service.ActiveSessionID(),
 		ResumeShown: ui.resumeShown.Load(),
 		ColorMode:   r.ColorMode(),
+		Relaunch:    ui.service.RelaunchID(),
 	}, err
 }
 

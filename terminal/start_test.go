@@ -69,7 +69,7 @@ func TestStartFirstSession(t *testing.T) {
 		{name: "latest", start: Start{Mode: StartLatest}, want: older},
 		{name: "by ID", start: Start{Mode: StartID, ID: newer}, want: newer},
 		{name: "unknown ID", start: Start{Mode: StartID, ID: "ses_missing"},
-			wantErr: `no session of this project matches "ses_missing"`},
+			wantErr: `no stored session matches "ses_missing"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
