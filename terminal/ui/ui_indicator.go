@@ -20,7 +20,7 @@ var (
 )
 
 // ShowIndicator displays IndicatorText of e between the transcript and the
-// input, with e's detail in a box under it, and while it shows the time of a
+// input, with e's detail right under it, and while it shows the time of a
 // run in progress, blinks the markers.
 func (ui *UI) ShowIndicator(e EventIndicatorShow) {
 	ui.indicatorError = e.Error
@@ -85,10 +85,9 @@ func (ui *UI) Tick() {
 	}
 }
 
-// ShowIndicatorDetail shows e's detail in the box under the indicator's
-// line, JSON highlighted as code is, or hides the box when e has none. A
-// hidden box keeps the detail it showed, so that ShowIndicatorWhile can
-// show it again.
+// ShowIndicatorDetail shows e's detail right under the indicator's line,
+// JSON highlighted as code is, or hides it when e has none. A hidden detail
+// keeps what it showed, so that ShowIndicatorWhile can show it again.
 func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
 	if ui.indicatorDetail == nil {
 		return
@@ -99,7 +98,7 @@ func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
 	}
 }
 
-// DetailText returns detail as the indicator's detail box shows it: in
+// DetailText returns detail as the indicator shows it under its line: in
 // textFg, and, when isJSON reports it is JSON, highlighted as JSON code is.
 // JSON the highlighter fails on shows in textFg.
 func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {

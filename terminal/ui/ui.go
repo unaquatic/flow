@@ -104,10 +104,10 @@ type UI struct {
 	// indicatorError reports that the indicator shows the error a run
 	// ended with, as EventIndicatorShow.Error says.
 	indicatorError bool
-	// indicatorDetail is the box under indicatorRow, filled as a tool box
-	// is, that shows indicatorDetailText, in indicatorDetailRow, which the
-	// fit bounds: an error's body, as EventIndicatorShow.Detail holds it. It
-	// is gone while there is none.
+	// indicatorDetail is the plain box right under indicatorRow, with no
+	// fill or padding, that shows indicatorDetailText, in
+	// indicatorDetailRow, which the fit bounds: an error's body, as
+	// EventIndicatorShow.Detail holds it. It is gone while there is none.
 	indicatorDetail     *widget.Box
 	indicatorDetailRow  *widget.Box
 	indicatorDetailText *widget.Text
@@ -706,9 +706,8 @@ func (ui *UI) BuildUI() {
 	for menu := range ui.Menus() {
 		menu.RenderAfterHook = ui.MarkSelection(menu)
 	}
-	// An error's body shows under the line in a box filled as a tool box
-	// is, from edge to edge, its text inset as the line's is, a row below
-	// the line.
+	// An error's body shows right under the line, its text inset as the
+	// line's is, on the canvas: no fill, padding or margin of its own.
 	ui.indicatorDetailText = widget.NewText("",
 		widget.TextWithID("indicator-detail"),
 		widget.TextWithFg(textFg),
@@ -724,16 +723,7 @@ func (ui *UI) BuildUI() {
 		widget.Children(ui.indicatorDetailText),
 	)
 	ui.indicatorDetail = widget.NewBox(
-		widget.BoxWithLayout(
-			layout.WithFlexDirection(layout.DirectionColumn),
-			layout.WithPadding(layout.Points(1)),
-			layout.WithPaddingLeft(layout.Points(PaddingX)),
-			layout.WithPaddingRight(layout.Points(PaddingX)),
-			layout.WithMarginTop(layout.Points(1)),
-			layout.WithMarginLeft(layout.Points(-PaddingX)),
-			layout.WithMarginRight(layout.Points(-PaddingX)),
-		),
-		widget.BoxWithBg(ui.theme.ResolveSurfaceRaised()),
+		widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionColumn)),
 		widget.Children(ui.indicatorDetailRow),
 	)
 	ui.indicatorDetail.SetGone(true)
