@@ -3,11 +3,13 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -43,8 +45,22 @@ func (l LogLevel) Level() slog.Level {
 	return slog.LevelInfo
 }
 
+// Version is the format version of the config file that this build reads
+// and writes. LoadDir reads a file of an older version as upgrade brings it
+// to Version, every write of Service saves the file at Version, and a file
+// of a newer version fails with ErrNewerVersion.
+const Version = 1
+
+// ErrNewerVersion reports a config file of a format version newer than
+// Version, which a newer build wrote.
+var ErrNewerVersion = errors.New("config file of a newer version")
+
 // Config contains resolved application configuration.
 type Config struct {
+	// Version is the format version of the config file, Version once it
+	// is read; a file without one is of version 0.
+	Version int `json:"version"`
+
 	// DefaultProvider is the provider the default model runs at, by its
 	// catalog ID, such as "provider-a".
 	DefaultProvider string `json:"default_provider,omitempty"`
@@ -53,12 +69,6 @@ type Config struct {
 	// "model:option:effort" form, as agent.Variant.Ref writes it, such as
 	// "lab-a/model-a:fast:high", leaving out the option and the effort it
 	// does not set.
-	//
-	// A file without it may set the older "model" key instead, in
-	// "provider/model:option:effort" form, whose model left out its lab
-	// when the lab was the provider. LoadDir reads its first segment as the
-	// default provider, and puts it back as the lab of a model that has
-	// none.
 	DefaultModel string `json:"default_model,omitempty"`
 
 	// LogLevel controls logging verbosity.
@@ -186,15 +196,69 @@ type Terminal struct {
 	Selection string `json:"selection,omitempty"`
 }
 
-// legacyModelKey is the key older config files name the default model by,
-// in "provider/model:option:effort" form, as DefaultModel describes.
+// versionKey is the key of the config file that holds its format version.
+const versionKey = "version"
+
+// legacyModelKey is the key that config files of version 0 name the
+// default model by, in "provider/model:option:effort" form.
 const legacyModelKey = "model"
 
+// upgrade brings keys, the top-level keys of a config file, from their
+// format version to Version, in place, and sets the version. It fails with
+// ErrNewerVersion when keys are of a newer version, and changes nothing
+// then.
+//
+// Version 1 replaces the "model" key of version 0 with "default_provider"
+// and "default_model", unless the file sets "default_model" already. The
+// older form left out the model's lab when the lab was the provider, so its
+// first segment becomes the default provider, and also the lab of a model
+// left without one.
+func upgrade(keys map[string]json.RawMessage) error {
+	var v int
+	if raw, ok := keys[versionKey]; ok {
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return fmt.Errorf("%s: %w", versionKey, err)
+		}
+	}
+	if v > Version {
+		return fmt.Errorf("%w: version %d, and this build reads up to %d", ErrNewerVersion, v, Version)
+	}
+	if v < 1 {
+		if err := upgradeV1(keys); err != nil {
+			return err
+		}
+	}
+	keys[versionKey] = json.RawMessage(strconv.Itoa(Version))
+	return nil
+}
+
+// upgradeV1 brings keys of version 0 to version 1, as upgrade describes.
+func upgradeV1(keys map[string]json.RawMessage) error {
+	raw, ok := keys[legacyModelKey]
+	if !ok {
+		return nil
+	}
+	delete(keys, legacyModelKey)
+	if _, ok := keys["default_model"]; ok {
+		return nil
+	}
+	var model string
+	if err := json.Unmarshal(raw, &model); err != nil {
+		return fmt.Errorf("%s: %w", legacyModelKey, err)
+	}
+	provider, rest, ok := strings.Cut(model, "/")
+	if !ok {
+		return setDefaultModel(keys, "", model)
+	}
+	if !strings.Contains(rest, "/") {
+		rest = provider + "/" + rest
+	}
+	return setDefaultModel(keys, provider, rest)
+}
+
 // defaultModelOf returns the default provider and model that keys, the
-// top-level keys of a config file, set, as Config.DefaultProvider and
-// Config.DefaultModel hold them, reading the older "model" key, as
-// DefaultModel describes it, when keys set no default model. Either is
-// empty when keys do not set it.
+// top-level keys of a config file of Version, set. Either is empty when
+// keys do not set it.
 func defaultModelOf(keys map[string]json.RawMessage) (provider, model string, err error) {
 	if raw, ok := keys["default_provider"]; ok {
 		if err := json.Unmarshal(raw, &provider); err != nil {
@@ -205,30 +269,14 @@ func defaultModelOf(keys map[string]json.RawMessage) (provider, model string, er
 		if err := json.Unmarshal(raw, &model); err != nil {
 			return "", "", fmt.Errorf("default_model: %w", err)
 		}
-		return provider, model, nil
 	}
-	raw, ok := keys[legacyModelKey]
-	if !ok {
-		return provider, "", nil
-	}
-	if err := json.Unmarshal(raw, &model); err != nil {
-		return "", "", fmt.Errorf("%s: %w", legacyModelKey, err)
-	}
-	t, rest, ok := strings.Cut(model, "/")
-	if !ok {
-		return provider, model, nil
-	}
-	if !strings.Contains(rest, "/") {
-		rest = t + "/" + rest
-	}
-	return t, rest, nil
+	return provider, model, nil
 }
 
 // setDefaultModel sets provider and model as the default provider and
-// model in keys, the top-level keys of a config file, and removes the older
-// "model" key they replace. An empty provider removes the default provider.
+// model in keys, the top-level keys of a config file. An empty provider
+// removes the default provider.
 func setDefaultModel(keys map[string]json.RawMessage, provider, model string) error {
-	delete(keys, legacyModelKey)
 	m, err := json.Marshal(model)
 	if err != nil {
 		return err
@@ -364,6 +412,11 @@ func mergeFromFile(cfg *Config, f File) error {
 	if err != nil || len(raw) == 0 {
 		return err
 	}
+	// Read an older file as its upgrade to Version, which a write saves.
+	if err := upgrade(raw); err != nil {
+		path, _ := f.Path()
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
 	// Decode the overlay from the keys of the one read, so that both see
 	// the same file even when a write replaces it meanwhile.
 	data, err := json.Marshal(raw)
@@ -376,6 +429,7 @@ func mergeFromFile(cfg *Config, f File) error {
 		return fmt.Errorf("parsing %s: %w", path, err)
 	}
 
+	cfg.Version = overlay.Version
 	if cfg.DefaultProvider, cfg.DefaultModel, err = defaultModelOf(raw); err != nil {
 		path, _ := f.Path()
 		return fmt.Errorf("parsing %s: %w", path, err)

@@ -3,9 +3,11 @@ package config
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -323,5 +325,40 @@ func TestServiceUpdateDefaultModel(t *testing.T) {
 	wg.Wait()
 	if cfg, err := s.Get(); err != nil || cfg.DefaultModel != "provider-a/model-a"+strings.Repeat("x", n) {
 		t.Errorf("model after %d updates at once = %q, %v, want every update", n, cfg.DefaultModel, err)
+	}
+}
+
+// TestServiceVersion checks that every write saves the config file at
+// Version, upgrading the settings of an older file in the same write, and
+// that a file of a newer version is neither read nor written.
+func TestServiceVersion(t *testing.T) {
+	dir := t.TempDir()
+	s := NewService(dir)
+	write(t, dir, `{"model":"provider-a/model-a","log_level":"debug"}`)
+	if err := s.SaveDebug(true); err != nil {
+		t.Fatal(err)
+	}
+	keys, err := s.File().Read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(keys["version"]) != strconv.Itoa(Version) || keys["model"] != nil ||
+		string(keys["default_provider"]) != `"provider-a"` || string(keys["default_model"]) != `"provider-a/model-a"` {
+		t.Errorf("config file after a write = %v, want it at version %d with the model upgraded", keys, Version)
+	}
+	if cfg, err := s.Get(); err != nil || cfg.Version != Version || !cfg.Debug || cfg.LogLevel != LogDebug {
+		t.Errorf("config = %+v, %v, want version %d and the settings kept", cfg, err, Version)
+	}
+
+	newer := fmt.Sprintf(`{"version":%d,"default_model":"lab-a/model-a"}`, Version+1)
+	write(t, dir, newer)
+	if _, err := s.Get(); !errors.Is(err, ErrNewerVersion) {
+		t.Errorf("Get of a newer file = %v, want ErrNewerVersion", err)
+	}
+	if err := s.SaveDebug(false); !errors.Is(err, ErrNewerVersion) {
+		t.Errorf("write of a newer file = %v, want ErrNewerVersion", err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(dir, FileName)); string(data) != newer {
+		t.Errorf("newer file after a refused write = %s, want it unchanged", data)
 	}
 }

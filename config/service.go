@@ -36,11 +36,10 @@ func (s *Service) File() File {
 
 // SaveDefaultModel sets provider and model, in the forms
 // Config.DefaultProvider and Config.DefaultModel hold, as the default
-// provider and model of the config file, in one write, as save sets a
-// setting, and removes the older "model" key they replace. An empty
-// provider removes the default provider.
+// provider and model of the config file, in one write, as edit saves it.
+// An empty provider removes the default provider.
 func (s *Service) SaveDefaultModel(provider, model string) error {
-	return s.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
+	return s.edit(func(keys map[string]json.RawMessage) error {
 		return setDefaultModel(keys, provider, model)
 	})
 }
@@ -52,7 +51,7 @@ func (s *Service) SaveDefaultModel(provider, model string) error {
 // Nothing is saved when change fails. change must not update the config
 // file, which would wait for the lock.
 func (s *Service) UpdateDefaultModel(change func(provider, model string) (string, string, error)) error {
-	return s.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
+	return s.edit(func(keys map[string]json.RawMessage) error {
 		provider, model, err := defaultModelOf(keys)
 		if err != nil {
 			return err
@@ -72,9 +71,35 @@ func (s *Service) SaveTerminal(t Terminal) error { return save(s, "terminal", t)
 // setting. The DEBUG environment variable still overrides it.
 func (s *Service) SaveDebug(on bool) error { return save(s, "debug", on) }
 
-// save sets v as the setting key of the config file, as Section.Set does:
-// it keeps the file's other settings, its permissions, and a symbolic link
-// the file is, and replaces the file with a rename.
+// save sets v as the setting key of the config file, as edit saves it, or
+// removes the setting when v has an IsZero method that reports true, as
+// Section.Set does.
 func save[T any](s *Service, key string, v T) error {
-	return Section[T]{File: s.File(), Key: key}.Set(context.Background(), v)
+	return s.edit(func(keys map[string]json.RawMessage) error {
+		if z, ok := any(v).(interface{ IsZero() bool }); ok && z.IsZero() {
+			delete(keys, key)
+			return nil
+		}
+		data, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		keys[key] = data
+		return nil
+	})
+}
+
+// edit applies change to the top-level keys of the config file, upgraded
+// to Version first, as upgrade brings them, and saves them, as File.Edit
+// does: it keeps the file's other settings, its permissions, and a symbolic
+// link the file is, and replaces the file with a rename. Every write of the
+// config file goes through it, so that the file is saved at Version. It
+// fails, and saves nothing, when the file is of a newer version.
+func (s *Service) edit(change func(keys map[string]json.RawMessage) error) error {
+	return s.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
+		if err := upgrade(keys); err != nil {
+			return err
+		}
+		return change(keys)
+	})
 }
