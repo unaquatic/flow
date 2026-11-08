@@ -3,8 +3,9 @@ package engine
 // Migrations are the schema upgrades of the tables snapshots are stored in,
 // in version order, which the snapshot extension applies with
 // database.Migrate as it loads. An applied migration is never edited:
-// databases have already recorded it, so a change to the tables is always a
-// new entry.
+// databases have already recorded it, so a change to the tables, or to what
+// their values mean, is always a new entry, even an empty one (""): it stops
+// older builds still running from writing to them.
 var Migrations = []string{
 	migrationV1,
 }

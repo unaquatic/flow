@@ -3,7 +3,9 @@ package session
 // Migrations are the schema upgrades of the tables sessions are stored in,
 // in version order, which [Open] applies with database.Migrate under [Name].
 // An applied migration is never edited: databases have already recorded it,
-// so a change to the tables is always a new entry.
+// so a change to the tables, or to what their values mean, is always a new
+// entry, even an empty one (""): it stops older builds still running from
+// writing to them.
 var Migrations = []string{
 	migrationV1,
 }

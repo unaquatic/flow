@@ -28,7 +28,8 @@ var migrationID = regexp.MustCompile(`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`)
 
 // migrations are the schema upgrades of the package's own tables, in version
 // order. An applied migration is never edited: databases have already
-// recorded it, so a change to the tables is always a new entry. The other
+// recorded it, so a change to the tables, or to what their values mean, is
+// always a new entry. The other
 // tables belong to package agent/session and to the extensions, which create
 // and upgrade them with Migrate.
 var migrations = []string{
@@ -77,6 +78,12 @@ func migrate(db *sql.DB) error {
 // fail with [ErrNewerSchema] before any step runs. Each step is applied and
 // recorded under id in one transaction, so a process that races another to
 // apply one applies it once.
+//
+// Once Migrate returns, the [Guard] of db, which [Open] sets up, knows
+// len(steps) as the version of id's tables, and a later step that another
+// process applies stops this one from using db. So a change in what stored
+// values mean, with no change to the tables, is a new step too, even an
+// empty one (""), or a build that writes the old meaning goes on doing so.
 func Migrate(ctx context.Context, db *sql.DB, id string, steps []string) error {
 	if !migrationID.MatchString(id) {
 		return fmt.Errorf("migrate %q: %w", id, ErrInvalidMigrationID)
@@ -96,6 +103,9 @@ func Migrate(ctx context.Context, db *sql.DB, id string, steps []string) error {
 		if err := applyMigration(ctx, db, id, v, step); err != nil {
 			return fmt.Errorf("migrate %s to v%d: %w", id, v+1, err)
 		}
+	}
+	if g, ok := db.Driver().(*Guard); ok {
+		g.Know(id, len(steps))
 	}
 	return nil
 }
