@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"iter"
@@ -156,12 +157,29 @@ func (s Session) Busy() bool {
 // released the session. Stop ends it from the start; a run stopped before its
 // first turn stores the prompt and nothing more.
 //
-// Nothing is stored, and the error is ErrBusy, when the session has another
+// Nothing is stored, and the error is the one checkModel reports when
+// input's model cannot answer, ErrBusy when the session has another
 // operation in progress, ErrSessionBusy when another process is changing it,
 // ErrInvalidSessionID for an ID that cannot name its lock file, or ErrClosed
 // once the app is closed.
 func (s Session) Send(input SendInput) error {
+	if err := s.checkModel(input.Model); err != nil {
+		return err
+	}
 	return s.start(func(s Session, ctx context.Context) error { return s.processSend(ctx, input) })
+}
+
+// checkModel reports why model, or the default model when it is empty,
+// cannot answer a run: the errors Models.Resolve reports, or one wrapping
+// agent.ErrProviderNotRegistered for a provider the app does not have. It
+// lets a send fail before it stores its prompt; the run resolves the model
+// again once it holds the session.
+func (s Session) checkModel(model string) error {
+	v, err := s.app.Models().Resolve(model)
+	if err != nil {
+		return err
+	}
+	return s.app.registered(v.Provider)
 }
 
 // Continue starts a run like Send's that picks up from where the transcript
@@ -178,13 +196,16 @@ func (s Session) Continue(model string) error {
 	if err := s.continuable(); err != nil {
 		return err
 	}
+	if err := s.checkModel(model); err != nil {
+		return err
+	}
 	return s.start(func(s Session, ctx context.Context) error { return s.processContinue(ctx, model) })
 }
 
 // ContinueStream runs a continue like Continue, but in the caller, as Stream
 // runs a send.
 func (s Session) ContinueStream(model string) iter.Seq2[Event, error] {
-	if err := s.continuable(); err != nil {
+	if err := cmp.Or(s.continuable(), s.checkModel(model)); err != nil {
 		return func(yield func(Event, error) bool) { yield(nil, err) }
 	}
 	return s.stream(func(s Session, ctx context.Context) error { return s.processContinue(ctx, model) })
@@ -231,6 +252,9 @@ func (s Session) start(work func(Session, context.Context) error) error {
 // EventAgentEnded. Stopping the iteration early stops the run, and the
 // sequence returns once the run has ended.
 func (s Session) Stream(input SendInput) iter.Seq2[Event, error] {
+	if err := s.checkModel(input.Model); err != nil {
+		return func(yield func(Event, error) bool) { yield(nil, err) }
+	}
 	return s.stream(func(s Session, ctx context.Context) error { return s.processSend(ctx, input) })
 }
 

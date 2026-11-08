@@ -2,6 +2,8 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -49,6 +51,9 @@ func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, sess)
 }
 
+// handleSessionUpdate changes the settings of the session that the body
+// names, and answers with the session. A body that names none leaves it as
+// it is; an empty title clears it.
 func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 	var req SessionUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -56,11 +61,13 @@ func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := sessionID(r)
-	title := ""
+	var sess *session.Session
+	var err error
 	if req.Title != nil {
-		title = *req.Title
+		sess, err = s.app.Session(id).SetTitle(*req.Title)
+	} else {
+		sess, err = s.app.Sessions().Session(r.Context(), id)
 	}
-	sess, err := s.app.Session(id).SetTitle(title)
 	if err != nil {
 		respondSessionErr(w, err)
 		return
@@ -117,11 +124,9 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 // transcript is answered 409.
 func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 	var req ContinueRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondInvalid(w, "invalid JSON body")
-			return
-		}
+	if err := decodeOptional(r, &req); err != nil {
+		respondInvalid(w, "invalid JSON body")
+		return
 	}
 	if req.Stream {
 		s.streamRun(w, r, s.session(r).ContinueStream(req.Model))
@@ -173,11 +178,9 @@ func (s *Server) handleRedo(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	var req CheckoutRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondInvalid(w, "invalid request body")
-			return
-		}
+	if err := decodeOptional(r, &req); err != nil {
+		respondInvalid(w, "invalid request body")
+		return
 	}
 	moved, err := s.session(r).Checkout(req.MessageID)
 	respondCheckout(w, moved, err)
@@ -195,6 +198,15 @@ func respondCheckout(w http.ResponseWriter, moved app.MoveResult, err error) {
 		files = []app.FileDiff{}
 	}
 	respondJSON(w, http.StatusOK, CheckoutResponse{Files: files, Checkout: moved.Checkout})
+}
+
+// decodeOptional decodes the JSON body of r, which may be left out, into v.
+// A body that is empty, however it is sent, leaves v as it is.
+func decodeOptional(r *http.Request, v any) error {
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
 }
 
 // session returns a handle on the session named by the request's path.
@@ -265,8 +277,10 @@ type SessionStatusInfo struct {
 	Type string `json:"type"`
 }
 
-// SessionUpdateRequest is the body of PATCH /session/{id}.
+// SessionUpdateRequest is the body of PATCH /session/{id}, which changes the
+// settings it names and leaves the others as they are.
 type SessionUpdateRequest struct {
-	// Title replaces the session title when present.
+	// Title replaces the session title when present. An empty title clears
+	// it.
 	Title *string `json:"title,omitempty"`
 }
