@@ -91,6 +91,31 @@ func agentText(id message.ID, text string) ChatMessage {
 	return agentParts(id, message.TextPart{ID: message.PartID(id + "-text"), Text: text})
 }
 
+// systemText returns a system message holding text.
+func systemText(id message.ID, text string) ChatMessage {
+	return ChatMessage{ID: id, ParentID: id, Role: message.RoleSystem,
+		Parts: []message.ContentPart{message.TextPart{ID: message.PartID(id + "-text"), Text: text}}}
+}
+
+// systemTurn adds the system message a session opens with, then its first
+// prompt and the reply.
+func systemTurn(ui *UI) {
+	ui.AddMessage(systemText("s1", "# Calc\n\n- Run the tests before every commit you make.\n- Use tabs."))
+	ui.AddMessage(userText("u1", "Run the tests"))
+	ui.AddMessage(agentText("a1", "All tests pass."))
+}
+
+// clickSystem clicks the header of the system box of the bubble that holds
+// message id, as a click that expands or collapses it does.
+func clickSystem(ui *UI, id message.ID) {
+	for b := range ui.messageWidgets[id].Boxes() {
+		if sys, ok := b.Content.(*SystemBox); ok {
+			sys.HeaderRow.OnMouseDownHandler(&input.MouseEvent{Type: input.MouseDown, Button: input.ButtonLeft})
+			return
+		}
+	}
+}
+
 // expandTools expands the details of every tool call and step change in the
 // transcript of ui, as Ctrl+O does, without the input box that ui, built
 // without one, does not have.
@@ -269,6 +294,24 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(msg)
 			msg.Error = errors.New("connection reset by peer")
 			ui.UpdateMessage(msg)
+		}},
+		// The system message a session opens with shows above its first
+		// prompt as a collapsed row, as a tool call does: its name, then the
+		// number of lines of its text as its status.
+		{name: "system_collapsed", h: 10, add: systemTurn},
+		// A click on the row shows the text whole, as the model is sent it,
+		// in a block a blank row above the prompt.
+		{name: "system_expanded", h: 17, add: func(ui *UI) {
+			systemTurn(ui)
+			clickSystem(ui, "s1")
+		}},
+		// Ctrl+O expands it with the tool calls, and the marker /settings
+		// shows marks it as it marks them.
+		{name: "system_expanded_plain_marker", h: 15, add: func(ui *UI) {
+			systemTurn(ui)
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+			expandTools(ui)
 		}},
 		// Tool calls start collapsed to their header, and Ctrl+O expands them.
 		{name: "agent_tool_streamed", h: 12, add: streamToolTurn},
@@ -1661,6 +1704,15 @@ func TestMenuFrames(t *testing.T) {
 			ui.Apply(ui.service.OpenTree(titledTree("a2")))
 			ui.Apply(ui.service.ToggleTreeHidden())
 			ui.Apply(ui.service.MoveTree(-1))
+		}},
+		// The system message a session opens with heads its tree, named and
+		// its text muted, as the transcript heads it.
+		{name: "tree_panel_system", h: 9, open: func(ui *UI) {
+			ui.Apply(ui.service.OpenTree(app.Tree{Head: "a1", Messages: []message.Content{
+				treeMsg("s1", "", message.RoleSystem, "# Calc\n\nUse tabs."),
+				treeMsg("u1", "s1", message.RoleUser, "Run the tests"),
+				treeMsg("a1", "u1", message.RoleAgent, "All tests pass."),
+			}}))
 		}},
 		{name: "tree_panel_user_only", h: 12, open: func(ui *UI) {
 			ui.Apply(ui.service.OpenTree(forkedTree("a2")))

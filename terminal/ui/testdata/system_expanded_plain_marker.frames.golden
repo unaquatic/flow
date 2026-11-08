@@ -1,0 +1,52 @@
+=== text ===
+|■ Context [4 lines]                     |
+|                                        |
+|  # Calc                                |
+|                                        |
+|  - Run the tests before every commit   |
+|  you make.                             |
+|  - Use tabs.                           |
+|                                        |
+|                                        |
+|  Run the tests                         |
+|                                        |
+|                                        |
+|■ All tests pass.                       |
+|                                        |
+|                                        |
+=== fg ===
+|A AAAAAAA AA AAAAAA                     |
+|                                        |
+|  B BBBB                                |
+|                                        |
+|  B BBB BBB BBBBB BBBBBB BBBBB BBBBBB   |
+|  BBB BBBBB                             |
+|  B BBB BBBBB                           |
+|                                        |
+|                                        |
+|  BBB BBB BBBBB                         |
+|                                        |
+|                                        |
+|B BBB BBBBB BBBBB                       |
+|                                        |
+|                                        |
+=== bg ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #8c8c8c
+B #e6e6e6
+░ #232323 BoxBg

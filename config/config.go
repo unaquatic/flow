@@ -117,7 +117,10 @@ type Agent struct {
 	// RetryDelay is the delay between provider attempts.
 	RetryDelay Duration `json:"retry_delay"`
 
-	// SystemPrompt is additional text appended to the default system prompt.
+	// SystemPrompt is additional text appended to the system prompt, after
+	// the AGENTS.md files, as app.SystemPrompt joins them. A session stores
+	// its system prompt with its first prompt, so a change applies to the
+	// sessions opened after it.
 	SystemPrompt string `json:"system_prompt,omitempty"`
 }
 

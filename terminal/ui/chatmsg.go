@@ -769,8 +769,14 @@ func WritingRow() style.StyledText {
 	return style.NewStyledText(style.TextChunk{Text: "Writing…", Fg: PanelDimFg})
 }
 
-// NewContentPart creates the widget for a content part.
+// NewContentPart creates the widget for a content part. The text of a system
+// message shows in a SystemBox, collapsed as a tool call is.
 func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Renderable {
+	if p, ok := part.(message.TextPart); ok && cm.role == message.RoleSystem {
+		box := NewSystemBox(p, cm.theme, cm.fg)
+		cm.AdoptBox(box.PartBox)
+		return box
+	}
 	switch p := part.(type) {
 	case message.ToolPart:
 		box := NewToolBox(p, cm.theme, cm.fg, cm.ToolFormatters()...)
@@ -952,6 +958,10 @@ func UpdateContentPart(view render.Renderable, part message.ContentPart) {
 	case *UsageBox:
 		if up, ok := part.(message.UsagePart); ok {
 			view.SetPart(up)
+		}
+	case *SystemBox:
+		if tp, ok := part.(message.TextPart); ok {
+			view.SetPart(tp)
 		}
 	case PartView:
 		view.SetPart(part)

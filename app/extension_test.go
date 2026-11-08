@@ -54,7 +54,8 @@ func TestHooks_DescribeTheirEvents(t *testing.T) {
 	events := a.Subscribe(t.Context())
 	send(t, a, "ses_hooks", SendInput{Text: "hi"})
 	collectUntilIdle(t, events)
-	branch := branchOf(t, a.Sessions(), "ses_hooks")
+	whole := branchOf(t, a.Sessions(), "ses_hooks")
+	branch := conversation(t, whole)
 	if len(branch) != 2 {
 		t.Fatalf("stored %d messages, want the prompt and its reply", len(branch))
 	}
@@ -88,8 +89,9 @@ func TestHooks_DescribeTheirEvents(t *testing.T) {
 	if len(rec.moves) != 1 {
 		t.Fatalf("move hook ran %d times, want 1", len(rec.moves))
 	}
-	if m := rec.moves[0]; m.SessionID != "ses_hooks" || m.Head != "" || len(m.Branch) != 2 {
-		t.Errorf("move = %+v, want ses_hooks moved before its first message, on its branch", m)
+	// Undoing the first prompt leaves the system message it was sent with.
+	if m := rec.moves[0]; m.SessionID != "ses_hooks" || m.Head != whole[0].ID || len(m.Branch) != 3 {
+		t.Errorf("move = %+v, want ses_hooks moved to its system message, before its first prompt, on its branch", m)
 	}
 }
 

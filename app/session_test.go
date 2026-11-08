@@ -31,8 +31,9 @@ func nextEvent(t *testing.T, events <-chan Event) Event {
 }
 
 // TestSession_PublishesItsLifecycle checks that a session's first prompt
-// publishes the session once the prompt has stored it, after the prompt
-// ends, and that later prompts do not; that a title publishes the session
+// publishes the session once the system message it opens with has stored
+// it, after that message ends, and that later prompts do not; that a title
+// publishes the session
 // with it; and that deleting the session publishes its deletion. A title for
 // a session that is not stored yet fails and publishes nothing.
 func TestSession_PublishesItsLifecycle(t *testing.T) {
@@ -53,8 +54,11 @@ func TestSession_PublishesItsLifecycle(t *testing.T) {
 	if n := len(eventsOfType[EventSessionUpdated](first)); n != 1 || i < 1 {
 		t.Fatalf("first run published %d EventSessionUpdated, want 1", n)
 	}
-	if ended, ok := first[i-1].(EventMessageEnded); !ok || ended.Message.ID != "msg_first" {
-		t.Errorf("event before EventSessionUpdated = %+v, want the end of the first prompt", first[i-1])
+	if ended, ok := first[i-1].(EventMessageEnded); !ok || ended.Message.Role != message.RoleSystem {
+		t.Errorf("event before EventSessionUpdated = %+v, want the end of the system message", first[i-1])
+	}
+	if started, ok := first[i+1].(EventMessageStarted); !ok || started.Message.ID != "msg_first" {
+		t.Errorf("event after EventSessionUpdated = %+v, want the start of the first prompt", first[i+1])
 	}
 	stored, err := a.Sessions().Session(t.Context(), id)
 	if err != nil {

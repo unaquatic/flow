@@ -47,6 +47,9 @@ func (s Session) processScript(ctx context.Context, script Script) error {
 		if !ok {
 			return nil
 		}
+		if err := s.emitSystem(); err != nil {
+			return err
+		}
 		history, err := s.historyFromLog()
 		if err != nil {
 			return err

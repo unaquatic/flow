@@ -138,6 +138,8 @@ func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 		switch {
 		case e.Role == message.RoleUser:
 			chunks = append(chunks, accent("User "), text(e.Text))
+		case e.Role == message.RoleSystem:
+			chunks = append(chunks, muted(ContextLabel+" "), muted(e.Text))
 		case e.ToolsOnly():
 			call := e.Tools[0]
 			if call.Input == "" {
