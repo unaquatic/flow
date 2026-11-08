@@ -496,15 +496,15 @@ func TestTranscriptFrames(t *testing.T) {
 			)
 			ui.AddMessage(msg)
 		}},
-		// Inline, the marker of the text a reply writes blinks, here hidden,
-		// while its first row is the one that stands for the block it holds
-		// back.
+		// Inline, the marker of the text a reply writes does not blink once
+		// its first block shows whole, here while the blink hides others: the
+		// row may scroll into the scrollback, where it cannot be redrawn.
 		{name: "agent_text_marker_blink_off", h: 4, add: func(ui *UI) {
 			ui.inline = true
 			ui.Apply(ui.service.SetToolMarkers(true))
 			ui.blink.On.Store(true)
 			ui.blink.Off = true
-			msg := agentText("a1", "Running the tests")
+			msg := agentText("a1", "Running the tests.\n\nThen")
 			msg.Live = []message.PartID{"a1-text"}
 			ui.AddMessage(msg)
 		}},

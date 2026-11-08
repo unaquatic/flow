@@ -717,8 +717,8 @@ func (cm *ChatMessageBox) SyncHeld() {
 
 // LiveRow returns the first row of the bubble that may still change, as
 // last laid out, and reports whether there is one: the first row of
-// LivePart, or for text, of the row that stands for the block it holds
-// back, as PendingTop finds it, since the blocks above it are whole.
+// LivePart, or for text, the row where the block it holds back will show,
+// as PendingTop finds it, since the blocks above it are whole.
 func (cm *ChatMessageBox) LiveRow() (int, bool) {
 	switch w := cm.LivePart.(type) {
 	case nil:
@@ -732,13 +732,13 @@ func (cm *ChatMessageBox) LiveRow() (int, bool) {
 	}
 }
 
-// PendingTop returns the first row, as last laid out, of the row that
-// stands for the block sm holds back while it streams: that of its last
-// child that takes rows, or sm's own when none does.
+// PendingTop returns the row, as last laid out, where the block sm holds
+// back while it streams will show, which takes no rows until then: the row
+// under its last child that takes rows, or sm's first row when none does.
 func PendingTop(sm *widget.StreamMarkdown) int {
 	for _, c := range slices.Backward(sm.Children()) {
 		if n := c.LayoutNode(); c.Visible() && n.Computed.Height > 0 {
-			return n.Computed.Y
+			return n.Computed.Y + n.Computed.Height
 		}
 	}
 	return sm.LayoutNode().Computed.Y
@@ -761,13 +761,6 @@ func (cm *ChatMessageBox) UpsertContentPart(seg *MessageSegment, id string, part
 // proseBlockPaddingY is the number of blank rows above and below the prose of
 // a Filled bubble, such as a prompt's text, inside its background.
 const proseBlockPaddingY = 1
-
-// WritingRow returns the row that stands for the block that streaming text
-// holds back until it is whole, as widget.StreamMarkdown's SetStreaming
-// describes: "Writing…" in PanelDimFg.
-func WritingRow() style.StyledText {
-	return style.NewStyledText(style.TextChunk{Text: "Writing…", Fg: PanelDimFg})
-}
 
 // NewContentPart creates the widget for a content part. The text of a system
 // message shows in a SystemBox, collapsed as a tool call is.
@@ -814,7 +807,6 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		widget.StreamMarkdownWithCodeBlockMargin(PaddingX),
 		widget.StreamMarkdownWithCodeBlockFit(true),
 		widget.StreamMarkdownWithProsePadding(PaddingX),
-		widget.StreamMarkdownWithPending(WritingRow()),
 		widget.StreamMarkdownWithLayout(layout.WithWidth(layout.Percent(100))),
 	)
 	if cm.Filled() {
@@ -904,8 +896,8 @@ func (cm *ChatMessageBox) Writing(sm *widget.StreamMarkdown) bool {
 // TextMarkerBlinks reports whether the marker DrawTextMarker draws before
 // sm blinks: while the blink runs and the reply is Writing sm. A bubble
 // that Holds, as in inline mode, blinks it only while the first row of sm
-// is the row that stands for the block it holds back, which stays in the
-// live area: a row that scrolls into the terminal's scrollback cannot be
+// is where the block it holds back will show, which stays in the live
+// area: a row that scrolls into the terminal's scrollback cannot be
 // redrawn, and would keep the marker hidden there.
 func (cm *ChatMessageBox) TextMarkerBlinks(sm *widget.StreamMarkdown) bool {
 	if cm.Blink == nil || !cm.Blink.On.Load() || !cm.Writing(sm) {
