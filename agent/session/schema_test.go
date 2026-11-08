@@ -2,9 +2,11 @@ package session
 
 import (
 	"database/sql"
+	"errors"
 	"slices"
 	"testing"
 
+	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/database"
 )
 
@@ -48,9 +50,9 @@ func TestOpen_CreatesTheTables(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	tests := map[string][]string{
-		"sessions":      {"id", "project", "title", "created_at", "updated_at", "deleted_at", "head_id", "forward_id"},
-		"messages":      {"seq", "session_id", "id", "parent_id", "type", "role", "model", "created_at", "updated_at", "deleted_at"},
-		"message_parts": {"seq", "message", "id", "data"},
+		"sessions":      {"id", "project", "title", "created_at", "updated_at", "head_id", "forward_id"},
+		"messages":      {"seq", "session_id", "id", "parent_id", "type", "role", "model", "created_at", "updated_at"},
+		"message_parts": {"seq", "message", "id", "type", "data"},
 	}
 	for table, want := range tests {
 		if got := columns(t, db, table); !slices.Equal(got, want) {
@@ -75,5 +77,108 @@ func TestOpen_CreatesTheTables(t *testing.T) {
 	}
 	if len(sessions) != 1 || sessions[0].ID != "ses_kept" {
 		t.Errorf("sessions after opening again = %+v, want the one stored before", sessions)
+	}
+}
+
+// insertMessageSQL inserts a message row, taking its session, ID, parent,
+// type and role.
+const insertMessageSQL = `
+	INSERT INTO messages (session_id, id, parent_id, type, role, model, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, '', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')`
+
+// insertPartSQL inserts a part row, taking its message's seq, its ID, its
+// type and its data.
+const insertPartSQL = `INSERT INTO message_parts (message, id, type, data) VALUES (?, ?, ?, ?)`
+
+// TestSchema_RefusesBadRows checks that the tables refuse a row that links
+// to what does not exist, a role that names no message.Role, a message or
+// part type that is not lowercase letters, digits and underscores, a part
+// without an ID, and part data that is not a JSON object, however it is
+// written.
+func TestSchema_RefusesBadRows(t *testing.T) {
+	store := newTestStore(t)
+	ctx := t.Context()
+	appendAt(t, store, "ses_a", "", "msg_a")
+	appendAt(t, store, "ses_b", "", "msg_b")
+
+	tests := map[string]struct {
+		query string
+		args  []any
+	}{
+		"message of an unknown session": {insertMessageSQL, []any{"ses_missing", "msg_x", nil, "chat", "user"}},
+		"parent that does not exist":    {insertMessageSQL, []any{"ses_a", "msg_x", "msg_missing", "chat", "user"}},
+		"parent of another session":     {insertMessageSQL, []any{"ses_a", "msg_x", "msg_b", "chat", "user"}},
+		"unknown role":                  {insertMessageSQL, []any{"ses_a", "msg_x", "msg_a", "chat", "assistant"}},
+		"empty type":                    {insertMessageSQL, []any{"ses_a", "msg_x", "msg_a", "", "user"}},
+		"type in capitals":              {insertMessageSQL, []any{"ses_a", "msg_x", "msg_a", "Title", "user"}},
+		"type with a dash":              {insertMessageSQL, []any{"ses_a", "msg_x", "msg_a", "title-x", "user"}},
+		"type led by a digit":           {insertMessageSQL, []any{"ses_a", "msg_x", "msg_a", "2title", "user"}},
+		"head that does not exist":      {`UPDATE sessions SET head_id = 'msg_missing' WHERE id = 'ses_a'`, nil},
+		"head of another session":       {`UPDATE sessions SET head_id = 'msg_b' WHERE id = 'ses_a'`, nil},
+		"forward of another session":    {`UPDATE sessions SET forward_id = 'msg_b' WHERE id = 'ses_a'`, nil},
+		"session left without its head": {`DELETE FROM messages WHERE id = 'msg_a'`, nil},
+		"part of an unknown message":    {insertPartSQL, []any{999, "prt_x", "text", `{}`}},
+		"part without an ID":            {insertPartSQL, []any{1, "", "text", `{}`}},
+		"part without a type":           {insertPartSQL, []any{1, "prt_x", "", `{}`}},
+		"part type in capitals":         {insertPartSQL, []any{1, "prt_x", "Text", `{}`}},
+		"part data that is an array":    {insertPartSQL, []any{1, "prt_x", "text", `[]`}},
+		"part data that is a string":    {insertPartSQL, []any{1, "prt_x", "text", `"hi"`}},
+		"part data that is not JSON":    {insertPartSQL, []any{1, "prt_x", "text", `{"text":`}},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if _, err := store.db.ExecContext(ctx, tt.query, tt.args...); err == nil {
+				t.Error("the table took the row")
+			}
+		})
+	}
+	if _, err := store.db.ExecContext(ctx, insertMessageSQL, "ses_a", "msg_ok", "msg_a", "title_v2", "agent"); err != nil {
+		t.Errorf("a valid fork row: %v", err)
+	}
+	if _, err := store.db.ExecContext(ctx, insertPartSQL, 1, "prt_ok", "test_tree", `{}`); err != nil {
+		t.Errorf("a valid part row: %v", err)
+	}
+	if rows, err := store.db.QueryContext(ctx, `PRAGMA foreign_key_check`); err != nil {
+		t.Fatal(err)
+	} else {
+		defer rows.Close()
+		if rows.Next() {
+			t.Error("foreign_key_check reports a violation")
+		}
+	}
+}
+
+// TestStore_FailsOnUnknownRole checks that a message whose role names no
+// message.Role is refused as it is appended, and fails the reads that meet
+// it, rather than reading back as an agent message.
+func TestStore_FailsOnUnknownRole(t *testing.T) {
+	store := newTestStore(t)
+	ctx := t.Context()
+	appendAt(t, store, "ses_a", "", "msg_1")
+
+	bad := message.Content{ID: "msg_bad", Role: message.Role(99)}
+	if err := store.AppendMessage(ctx, "ses_a", &bad); !errors.Is(err, message.ErrUnknownRole) {
+		t.Errorf("append with an unknown role: err = %v, want ErrUnknownRole", err)
+	}
+	if err := store.AppendFork(ctx, "ses_a", "msg_1", &message.Content{ID: "msg_fork", Role: message.RoleUser, Type: "Not A Type"}); err == nil {
+		t.Error("stored a fork of a type that is not snake_case")
+	}
+
+	// A row that slipped past the table's check, as one an older build
+	// wrote, must fail the read.
+	if _, err := store.db.ExecContext(ctx, `PRAGMA ignore_check_constraints = ON`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.ExecContext(ctx, insertMessageSQL, "ses_a", "msg_old", "msg_1", "chat", "assistant"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.ExecContext(ctx, `PRAGMA ignore_check_constraints = OFF`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Message(ctx, "ses_a", "msg_old"); !errors.Is(err, message.ErrUnknownRole) {
+		t.Errorf("read of a stored unknown role: err = %v, want ErrUnknownRole", err)
+	}
+	if _, err := store.Messages(ctx, "ses_a"); !errors.Is(err, message.ErrUnknownRole) {
+		t.Errorf("messages holding a stored unknown role: err = %v, want ErrUnknownRole", err)
 	}
 }

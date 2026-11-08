@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"database/sql"
@@ -23,8 +24,8 @@ import (
 // branch: Branch and Path walk parent links back from a leaf, so a session
 // can retain alternative continuations that no read returns.
 //
-// Deleting a session is soft: the session and its messages stay stored, and
-// every read and change treats the session as one the store does not hold.
+// Deleting removes rows: a session with its messages and their parts, and a
+// message with every message below it.
 type Store struct {
 	db      *sql.DB
 	project database.ProjectID
@@ -56,7 +57,7 @@ const sessionColumns = `id, title, head_id, forward_id, created_at, updated_at`
 func (s *Store) ListSessions(ctx context.Context) ([]Session, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT `+sessionColumns+` FROM sessions
-		WHERE project = ? AND deleted_at IS NULL
+		WHERE project = ?
 		ORDER BY updated_at DESC, id`, s.project)
 	if err != nil {
 		return nil, err
@@ -78,8 +79,7 @@ func (s *Store) ListSessions(ctx context.Context) ([]Session, error) {
 // error wraps [fs.ErrNotExist] when the store holds no such session.
 func (s *Store) Session(ctx context.Context, id message.SessionID) (*Session, error) {
 	return lookupSession(id, s.db.QueryRowContext(ctx, `
-		SELECT `+sessionColumns+` FROM sessions
-		WHERE id = ? AND deleted_at IS NULL`, id))
+		SELECT `+sessionColumns+` FROM sessions WHERE id = ?`, id))
 }
 
 // FindSession returns a session of the store's project by ID. The error
@@ -87,7 +87,7 @@ func (s *Store) Session(ctx context.Context, id message.SessionID) (*Session, er
 func (s *Store) FindSession(ctx context.Context, id message.SessionID) (*Session, error) {
 	return lookupSession(id, s.db.QueryRowContext(ctx, `
 		SELECT `+sessionColumns+` FROM sessions
-		WHERE id = ? AND project = ? AND deleted_at IS NULL`, id, s.project))
+		WHERE id = ? AND project = ?`, id, s.project))
 }
 
 // Stored reports whether id is a stored session of the store's project. A
@@ -118,11 +118,13 @@ func lookupSession(id message.SessionID, row *sql.Row) (*Session, error) {
 func scanSession[R interface{ Scan(dest ...any) error }](r R) (Session, error) {
 	var (
 		sess                 Session
+		head, forward        sql.Null[string]
 		createdAt, updatedAt string
 	)
-	if err := r.Scan(&sess.ID, &sess.Title, &sess.Head.ID, &sess.Head.Forward, &createdAt, &updatedAt); err != nil {
+	if err := r.Scan(&sess.ID, &sess.Title, &head, &forward, &createdAt, &updatedAt); err != nil {
 		return Session{}, err
 	}
+	sess.Head = Head{ID: message.ID(head.V), Forward: message.ID(forward.V)}
 	var err error
 	if sess.CreatedAt, err = decodeTime(createdAt); err != nil {
 		return Session{}, err
@@ -133,14 +135,11 @@ func scanSession[R interface{ Scan(dest ...any) error }](r R) (Session, error) {
 	return sess, nil
 }
 
-// DeleteSession deletes a session softly: it stamps the session deleted and
-// keeps it and its messages, which no read returns afterwards. The error
-// wraps [fs.ErrNotExist] when the store holds no such session, or has
-// deleted it already.
+// DeleteSession removes a session, and its messages and their parts with it,
+// through the foreign keys. The error wraps [fs.ErrNotExist] when the store
+// holds no such session.
 func (s *Store) DeleteSession(ctx context.Context, id message.SessionID) error {
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE sessions SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`,
-		encodeTime(time.Now()), id)
+	res, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -150,9 +149,9 @@ func (s *Store) DeleteSession(ctx context.Context, id message.SessionID) error {
 // AppendMessage stamps msg's creation time, and appends msg and its parts
 // below the session's head, in one transaction, and moves the head onto it.
 // Appending while the head sits mid-tree starts a new branch. A stored
-// message is not changed afterwards. Appending to a deleted session fails
-// with an error wrapping [fs.ErrNotExist], since its ID stays taken, and
-// appending a message that is not chat, which AppendFork stores, with
+// message is not changed afterwards. Appending to a session the store does
+// not hold, as a new one or a deleted one, stores the session with msg.
+// Appending a message that is not chat, which AppendFork stores, fails with
 // [ErrMessageType].
 func (s *Store) AppendMessage(ctx context.Context, sessionID message.SessionID, msg *message.Content) error {
 	if !msg.Type.IsChat() {
@@ -199,9 +198,8 @@ func (s *Store) AppendMessage(ctx context.Context, sessionID message.SessionID, 
 // stays, and the reads of the conversation leave it out, as Branch,
 // Children, Forks, Leaf, Messages and Size do. ForkChildren and Path read
 // it. Deleting parent deletes it too. It fails with [ErrMessageType] when a
-// message of msgs is chat, with [ErrMessageNotFound] when the session holds
-// no parent, as one not stored holds none, and with an error wrapping
-// [fs.ErrNotExist] when the session is deleted.
+// message of msgs is chat, and with [ErrMessageNotFound] when the session
+// holds no parent, as one not stored, or deleted, holds none.
 func (s *Store) AppendFork(ctx context.Context, sessionID message.SessionID, parent message.ID, msgs ...*message.Content) error {
 	for _, msg := range msgs {
 		if msg.Type.IsChat() {
@@ -214,9 +212,6 @@ func (s *Store) AppendFork(ctx context.Context, sessionID message.SessionID, par
 	}
 	defer tx.Rollback()
 
-	if _, err := currentHead(ctx, tx, sessionID); err != nil {
-		return err
-	}
 	var found bool
 	if err := tx.QueryRowContext(ctx, `
 		SELECT EXISTS (SELECT 1 FROM messages WHERE session_id = ? AND id = ?)`,
@@ -253,10 +248,10 @@ func (s *Store) AppendFork(ctx context.Context, sessionID message.SessionID, par
 // Message returns one message, or [ErrMessageNotFound].
 func (s *Store) Message(ctx context.Context, sessionID message.SessionID, messageID message.ID) (*message.Content, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT `+messageColumns+`, mp.data
+		SELECT `+messageColumns+`, `+partColumns+`
 		FROM messages m
-		LEFT JOIN message_parts mp ON mp.message = m.seq
-		WHERE m.session_id = ? AND m.id = ? AND `+liveSQL+`
+		`+partsJoinSQL+`
+		WHERE m.session_id = ? AND m.id = ?
 		ORDER BY mp.seq`, sessionID, string(messageID))
 	if err != nil {
 		return nil, err
@@ -271,8 +266,11 @@ func (s *Store) Message(ctx context.Context, sessionID message.SessionID, messag
 	return &msgs[0], nil
 }
 
-// DeleteMessage removes messageID and every message below it. A head left
-// inside the removed subtree falls back to the deleted message's parent.
+// DeleteMessage removes messageID and every message below it, forks too,
+// and their parts with them. A head left inside the removed subtree falls
+// back to the removed message's parent, and a forward marker there is
+// cleared. It fails with [ErrMessageNotFound] when the session holds no such
+// message.
 func (s *Store) DeleteMessage(ctx context.Context, sessionID message.SessionID, messageID message.ID) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -282,7 +280,7 @@ func (s *Store) DeleteMessage(ctx context.Context, sessionID message.SessionID, 
 
 	var parent sql.Null[string]
 	err = tx.QueryRowContext(ctx, `
-		SELECT m.parent_id FROM messages m WHERE m.session_id = ? AND m.id = ? AND `+liveSQL,
+		SELECT parent_id FROM messages WHERE session_id = ? AND id = ?`,
 		sessionID, string(messageID)).Scan(&parent)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrMessageNotFound
@@ -294,7 +292,7 @@ func (s *Store) DeleteMessage(ctx context.Context, sessionID message.SessionID, 
 		sessionID, string(messageID), sessionID, sessionID); err != nil {
 		return err
 	}
-	if err := repairHead(ctx, tx, sessionID, parent.V); err != nil {
+	if err := repairHead(ctx, tx, sessionID, message.ID(parent.V)); err != nil {
 		return err
 	}
 	if err := touchSession(ctx, tx, sessionID); err != nil {
@@ -308,7 +306,7 @@ func (s *Store) DeleteMessage(ctx context.Context, sessionID message.SessionID, 
 // as does titling a session that is not stored at all, or deleted.
 func (s *Store) SetTitle(ctx context.Context, sessionID message.SessionID, title string) error {
 	res, err := s.db.ExecContext(ctx, `
-		UPDATE sessions SET title = ? WHERE id = ? AND deleted_at IS NULL`, title, sessionID)
+		UPDATE sessions SET title = ? WHERE id = ?`, title, sessionID)
 	if err != nil {
 		return err
 	}
@@ -327,20 +325,63 @@ func (s *Store) UpdateSession(ctx context.Context, id message.SessionID, title s
 // SetHead moves the session onto another point in its message tree. Moving the
 // head does not reorder the session list, because it changes what the session
 // shows rather than what it contains. The error wraps [fs.ErrNotExist] when
-// the session is not stored, or deleted.
+// the session is not stored, or deleted. Otherwise the head and the forward
+// marker must each be empty or name a message of the conversation: one the
+// session does not hold fails with [ErrMessageNotFound], and a message of a
+// fork with [ErrMessageType].
 func (s *Store) SetHead(ctx context.Context, sessionID message.SessionID, h Head) error {
-	res, err := s.db.ExecContext(ctx, `
-		UPDATE sessions SET head_id = ?, forward_id = ? WHERE id = ? AND deleted_at IS NULL`,
-		string(h.ID), string(h.Forward), sessionID)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	return sessionFound(res, sessionID)
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx, `
+		UPDATE sessions SET head_id = ?, forward_id = ? WHERE id = ?`,
+		nullableID(h.ID), nullableID(h.Forward), sessionID)
+	if err != nil {
+		return err
+	}
+	if err := sessionFound(res, sessionID); err != nil {
+		return err
+	}
+	for _, id := range []message.ID{h.ID, h.Forward} {
+		if err := checkHeadAt(ctx, tx, sessionID, id); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// checkHeadAt reports whether a head or forward marker may rest on id: the
+// empty ID, or a chat message of the session.
+func checkHeadAt(ctx context.Context, tx *sql.Tx, sessionID message.SessionID, id message.ID) error {
+	if id == "" {
+		return nil
+	}
+	var typ string
+	err := tx.QueryRowContext(ctx, `
+		SELECT type FROM messages WHERE session_id = ? AND id = ?`,
+		sessionID, string(id)).Scan(&typ)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return ErrMessageNotFound
+	case err != nil:
+		return err
+	case !message.Type(typ).IsChat():
+		return fmt.Errorf("%w: the head rests on the %s message %s", ErrMessageType, typ, id)
+	}
+	return nil
 }
 
 // insertMessage inserts one message row and returns its sequence number. Its
-// parts, its usage among them, are stored apart by insertParts.
+// parts, its usage among them, are stored apart by insertParts. A role that
+// names no [message.Role] fails with [message.ErrUnknownRole], before the
+// table refuses it.
 func insertMessage(ctx context.Context, tx *sql.Tx, sessionID message.SessionID, msg *message.Content) (int64, error) {
+	if _, err := message.ParseRole(msg.Role.String()); err != nil {
+		return 0, fmt.Errorf("message %s: %w", msg.ID, err)
+	}
 	var parent message.ID
 	if msg.ParentID != nil {
 		parent = *msg.ParentID
@@ -360,13 +401,13 @@ func insertMessage(ctx context.Context, tx *sql.Tx, sessionID message.SessionID,
 // insertParts stores parts below one message, in order.
 func insertParts(ctx context.Context, tx *sql.Tx, msgSeq int64, parts []message.ContentPart) error {
 	for _, p := range parts {
-		id, data, err := encodePart(p)
+		id, typ, data, err := encodePart(p)
 		if err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO message_parts (message, id, data) VALUES (?, ?, ?)`,
-			msgSeq, string(id), string(data)); err != nil {
+			INSERT INTO message_parts (message, id, type, data) VALUES (?, ?, ?, ?)`,
+			msgSeq, string(id), string(typ), string(data)); err != nil {
 			return err
 		}
 	}
@@ -387,25 +428,19 @@ func sessionFound(res sql.Result, id message.SessionID) error {
 }
 
 // currentHead returns the session's head, which is zero for a session that
-// holds no messages yet. The error wraps [fs.ErrNotExist] when the session
-// is deleted.
+// is not stored, and so holds no messages yet.
 func currentHead(ctx context.Context, tx *sql.Tx, sessionID message.SessionID) (Head, error) {
-	var (
-		h       Head
-		deleted sql.Null[string]
-	)
+	var head, forward sql.Null[string]
 	err := tx.QueryRowContext(ctx, `
-		SELECT head_id, forward_id, deleted_at FROM sessions WHERE id = ?`, sessionID).
-		Scan(&h.ID, &h.Forward, &deleted)
+		SELECT head_id, forward_id FROM sessions WHERE id = ?`, sessionID).
+		Scan(&head, &forward)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return Head{}, nil
 	case err != nil:
 		return Head{}, err
-	case deleted.Valid:
-		return Head{}, fmt.Errorf("session %s is deleted: %w", sessionID, fs.ErrNotExist)
 	}
-	return h, nil
+	return Head{ID: message.ID(head.V), Forward: message.ID(forward.V)}, nil
 }
 
 // moveHead stamps a session and points it at h, storing the session if it is
@@ -419,23 +454,25 @@ func (s *Store) moveHead(ctx context.Context, tx *sql.Tx, sessionID message.Sess
 			updated_at = excluded.updated_at,
 			head_id = excluded.head_id,
 			forward_id = excluded.forward_id`,
-		sessionID, s.project, now, now, string(h.ID), string(h.Forward))
+		sessionID, s.project, now, now, nullableID(h.ID), nullableID(h.Forward))
 	return err
 }
 
-// repairHead points a head or forward marker at fallback once the message it
-// named has been deleted.
-func repairHead(ctx context.Context, tx *sql.Tx, sessionID message.SessionID, fallback string) error {
+// repairHead points a head left on a removed message at fallback, the empty
+// ID standing for none, and clears a forward marker left on one. It runs in
+// the transaction that removed the message, before the keys on the head are
+// checked.
+func repairHead(ctx context.Context, tx *sql.Tx, sessionID message.SessionID, fallback message.ID) error {
 	_, err := tx.ExecContext(ctx, `
 		UPDATE sessions SET
-			head_id = CASE WHEN head_id = '' OR EXISTS (
-				SELECT 1 FROM messages WHERE session_id = ? AND id = sessions.head_id
+			head_id = CASE WHEN head_id IS NULL OR EXISTS (
+				SELECT 1 FROM messages WHERE session_id = sessions.id AND id = sessions.head_id
 			) THEN head_id ELSE ? END,
-			forward_id = CASE WHEN forward_id = '' OR EXISTS (
-				SELECT 1 FROM messages WHERE session_id = ? AND id = sessions.forward_id
-			) THEN forward_id ELSE '' END
+			forward_id = CASE WHEN forward_id IS NULL OR EXISTS (
+				SELECT 1 FROM messages WHERE session_id = sessions.id AND id = sessions.forward_id
+			) THEN forward_id ELSE NULL END
 		WHERE id = ?`,
-		sessionID, fallback, sessionID, sessionID)
+		nullableID(fallback), sessionID)
 	return err
 }
 
@@ -463,22 +500,59 @@ func optionalID(id message.ID) *message.ID {
 	return &id
 }
 
-// encodePart encodes one content part and reports the ID it is stored under.
-// A part that arrives without an ID is assigned one.
-func encodePart(p message.ContentPart) (message.PartID, []byte, error) {
+// encodePart encodes one content part as the columns of its row: its ID, its
+// type, and data, the JSON object of its other fields, which is the tagged
+// form message.PartJSON encodes without "type" and "id". A part that arrives
+// without an ID is assigned one. A part of a type neither package message
+// defines nor message.RegisterPart registered fails, since nothing could
+// read it back.
+func encodePart(p message.ContentPart) (message.PartID, message.ContentType, []byte, error) {
 	j := message.PartToJSON(p)
-	data, err := json.Marshal(j)
-	if err != nil {
-		return "", nil, err
+	if j.PartID == "" {
+		return "", "", nil, fmt.Errorf("store a %s part: the type is not registered", j.Type)
 	}
-	return j.PartID, data, nil
+	tagged, err := json.Marshal(j)
+	if err != nil {
+		return "", "", nil, err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(tagged, &fields); err != nil {
+		return "", "", nil, fmt.Errorf("store a %s part: %w", j.Type, err)
+	}
+	delete(fields, "type")
+	delete(fields, "id")
+	data, err := json.Marshal(fields)
+	if err != nil {
+		return "", "", nil, err
+	}
+	return j.PartID, j.Type, data, nil
 }
 
-// decodePart decodes one stored content part.
-func decodePart(data []byte) (message.ContentPart, error) {
-	var j message.PartJSON
-	if err := json.Unmarshal(data, &j); err != nil {
+// decodePart decodes one stored content part from the columns of its row,
+// as encodePart wrote them: it puts "type" and "id" back in front of the
+// other fields and decodes the tagged form.
+func decodePart(id message.PartID, typ message.ContentType, data []byte) (message.ContentPart, error) {
+	data = bytes.TrimSpace(data)
+	if len(data) < 2 || data[0] != '{' {
+		return nil, fmt.Errorf("part %s: data is not a JSON object", id)
+	}
+	head, err := json.Marshal(struct {
+		Type message.ContentType `json:"type"`
+		ID   message.PartID      `json:"id"`
+	}{typ, id})
+	if err != nil {
 		return nil, err
+	}
+	tagged := head[:len(head)-1] // drop the closing brace
+	if rest := bytes.TrimSpace(data[1:]); rest[0] != '}' {
+		tagged = append(tagged, ',')
+		tagged = append(tagged, rest...)
+	} else {
+		tagged = append(tagged, '}')
+	}
+	var j message.PartJSON
+	if err := json.Unmarshal(tagged, &j); err != nil {
+		return nil, fmt.Errorf("part %s: %w", id, err)
 	}
 	return message.PartFromJSON(j), nil
 }

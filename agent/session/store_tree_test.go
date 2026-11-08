@@ -219,6 +219,22 @@ func TestLeaf(t *testing.T) {
 	})
 }
 
+// messageTimes returns the stored creation and update times of a message.
+func messageTimes(t *testing.T, store *Store, sessionID message.SessionID, id message.ID) (created, updated string) {
+	t.Helper()
+	if err := store.db.QueryRowContext(t.Context(), `
+		SELECT created_at, updated_at FROM messages WHERE session_id = ? AND id = ?`,
+		sessionID, string(id)).Scan(&created, &updated); err != nil {
+		t.Fatalf("message %s: %v", id, err)
+	}
+	return created, updated
+}
+
+// TestDeleteMessage_RemovesSubtreeAndRepairsHead checks that deleting a
+// message removes it and every message below it, and no other, that no read
+// or change of the conversation finds them afterwards, and that a head left
+// inside the subtree falls back to the deleted message's parent while its
+// forward marker is cleared.
 func TestDeleteMessage_RemovesSubtreeAndRepairsHead(t *testing.T) {
 	store := newTestStore(t)
 	id := fork(t, store)
@@ -231,8 +247,13 @@ func TestDeleteMessage_RemovesSubtreeAndRepairsHead(t *testing.T) {
 		t.Fatalf("delete: %v", err)
 	}
 
-	if _, err := store.Message(ctx, id, "msg_4a"); err != ErrMessageNotFound {
-		t.Errorf("descendant survived the delete, err = %v", err)
+	if n := countRows(t, store, "messages", id); n != 3 {
+		t.Errorf("%d message rows left, want the 3 outside the subtree", n)
+	}
+	for _, msg := range []message.ID{"msg_3a", "msg_4a"} {
+		if _, err := store.Message(ctx, id, msg); err != ErrMessageNotFound {
+			t.Errorf("%s survived the delete, err = %v", msg, err)
+		}
 	}
 	sess, err := store.Session(ctx, id)
 	if err != nil {
@@ -245,8 +266,57 @@ func TestDeleteMessage_RemovesSubtreeAndRepairsHead(t *testing.T) {
 		t.Errorf("forward = %q, want it cleared", sess.Head.Forward)
 	}
 
+	if all, err := store.Messages(ctx, id); err != nil || !equal(ids(all), []message.ID{"msg_1", "msg_2", "msg_3b"}) {
+		t.Errorf("messages = %v, %v; want the ones left", ids(all), err)
+	}
+	if kids, err := store.Children(ctx, id, "msg_2"); err != nil || !equal(ids(kids), []message.ID{"msg_3b"}) {
+		t.Errorf("children of msg_2 = %v, %v; want msg_3b", ids(kids), err)
+	}
+	if forks, err := store.Forks(ctx, id); err != nil || len(forks) != 0 {
+		t.Errorf("forks = %v, %v; want none once one branch is deleted", forks, err)
+	}
+	if n, err := store.Size(ctx, id, "msg_2"); err != nil || n != 2 {
+		t.Errorf("size of msg_2 = %d, %v; want 2", n, err)
+	}
+	if path, err := store.Path(ctx, id, "msg_4a"); err != nil || len(path) != 0 {
+		t.Errorf("path to a deleted message = %v, %v; want none", ids(path), err)
+	}
+	if _, err := store.Leaf(ctx, id, "msg_3a"); err != ErrMessageNotFound {
+		t.Errorf("leaf of a deleted message: err = %v, want ErrMessageNotFound", err)
+	}
+	if err := store.AppendFork(ctx, id, "msg_3a", &message.Content{ID: "msg_x", Role: message.RoleUser, Type: message.TypeTitle}); !errors.Is(err, ErrMessageNotFound) {
+		t.Errorf("fork below a deleted message = %v, want ErrMessageNotFound", err)
+	}
 	if err := store.DeleteMessage(ctx, id, "msg_3a"); err != ErrMessageNotFound {
+		t.Errorf("deleting a deleted message returned %v, want ErrMessageNotFound", err)
+	}
+	if err := store.DeleteMessage(ctx, id, "msg_missing"); err != ErrMessageNotFound {
 		t.Errorf("deleting a missing message returned %v, want ErrMessageNotFound", err)
+	}
+}
+
+// TestDeleteMessage_OfTheRootLeavesNoHead checks that deleting a session's
+// first message leaves its head on nothing, which is stored as NULL, and the
+// session showing no messages.
+func TestDeleteMessage_OfTheRootLeavesNoHead(t *testing.T) {
+	store := newTestStore(t)
+	id := fork(t, store)
+	ctx := t.Context()
+	if err := store.DeleteMessage(ctx, id, "msg_1"); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if head, forward := headColumns(t, store, id); head.Valid || forward.Valid {
+		t.Errorf("head stored as %v, %v; want NULL for both", head, forward)
+	}
+	if branch, err := store.Branch(ctx, id); err != nil || len(branch) != 0 {
+		t.Errorf("branch = %v, %v; want none", ids(branch), err)
+	}
+	if leaf, err := store.Leaf(ctx, id, ""); err != nil || leaf != "" {
+		t.Errorf("leaf = %q, %v; want none", leaf, err)
+	}
+	appendAt(t, store, id, "", "msg_new")
+	if branch, err := store.Branch(ctx, id); err != nil || !equal(ids(branch), []message.ID{"msg_new"}) {
+		t.Errorf("branch after a new first message = %v, %v; want msg_new", ids(branch), err)
 	}
 }
 
