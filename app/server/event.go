@@ -20,7 +20,7 @@ import (
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		respondError(w, http.StatusInternalServerError, "streaming unsupported")
+		respondErr(w, errStreamingUnsupported)
 		return
 	}
 	filter := message.SessionID(r.URL.Query().Get("session"))
@@ -60,14 +60,14 @@ func (s *Server) streamSend(w http.ResponseWriter, r *http.Request, input app.Se
 func (s *Server) streamRun(w http.ResponseWriter, r *http.Request, run iter.Seq2[app.Event, error]) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		respondError(w, http.StatusInternalServerError, "streaming unsupported")
+		respondErr(w, errStreamingUnsupported)
 		return
 	}
 	started := false
 	for ev, err := range run {
 		if err != nil {
 			if !started {
-				respondErr(w, err)
+				respondSessionErr(w, err)
 			}
 			return
 		}

@@ -265,7 +265,7 @@ func (s *Service) ShowIndicator(text string) []UIEvent {
 
 // ShowError shows e, the error a run ended with, in the indicator, as
 // ErrorIndicator shows it.
-func (s *Service) ShowError(e app.UnknownError) []UIEvent {
+func (s *Service) ShowError(e app.Error) []UIEvent {
 	s.state.Working = false
 	return []UIEvent{ErrorIndicator(e)}
 }
@@ -283,7 +283,7 @@ const MaxErrorDetailBytes = 2 << 10
 // a provider's error response, its provider and status, such as
 // "provider-a response error (400)", over the body it answered with, as
 // ErrorBody formats it; and for another error, its message alone.
-func ErrorIndicator(e app.UnknownError) EventIndicatorShow {
+func ErrorIndicator(e app.Error) EventIndicatorShow {
 	if e.Status == 0 || strings.TrimSpace(e.Body) == "" {
 		return EventIndicatorShow{Text: e.Message, Error: true}
 	}
@@ -360,5 +360,5 @@ func (s *Service) ResetError() []UIEvent {
 // SimulateError displays a representative request failure, as ShowError
 // shows the error a run ends with.
 func (s *Service) SimulateError() []UIEvent {
-	return s.ShowError(app.NewUnknownError("Request Failed: Post \"https://api.example.com/v1/responses\": EOF"))
+	return s.ShowError(app.NewError(app.CodeProviderError, "Request Failed: Post \"https://api.example.com/v1/responses\": EOF"))
 }

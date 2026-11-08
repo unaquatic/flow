@@ -110,6 +110,36 @@ func doJSON(t *testing.T, method, url string, body, out any) int {
 	return resp.StatusCode
 }
 
+// doError sends a request as doJSON does, and returns the status of its
+// response and the error it holds. It fails t when the response is not a
+// JSON ErrorResponse.
+func doError(t *testing.T, method, url string, body any) (int, app.Error) {
+	t.Helper()
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatal(err)
+		}
+	}
+	req, err := http.NewRequestWithContext(t.Context(), method, url, &buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var got ErrorResponse
+	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("%s %s: Content-Type %q, want application/json", method, url, ct)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode %s %s error response: %v", method, url, err)
+	}
+	return resp.StatusCode, got.Error
+}
+
 func createSession(t *testing.T, ts *httptest.Server) session.Session {
 	t.Helper()
 	var sess session.Session

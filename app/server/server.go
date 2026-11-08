@@ -5,6 +5,11 @@
 // streams are app.Event, the messages app.Message, the model listings
 // app.ModelListing, the branches app.Fork, the files a move changed
 // app.FileDiff, and the sessions session.Session.
+//
+// Every failure is an app.Error, whose code tells failures apart: an error
+// response holds it as an ErrorResponse, with the status ErrorStatus maps
+// the code to, as a path no route takes does too, and the events and the
+// streamed responses that report a failure hold it as their error.
 package server
 
 import (
@@ -19,9 +24,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/extension"
 )
 
 // Server serves the HTTP API for one application instance.
@@ -72,8 +75,42 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /session/{id}/branch", s.handleBranchList)
 	mux.HandleFunc("POST /session/{id}/branch", s.handleBranchSwitch)
 	mux.HandleFunc("GET /event", s.handleEvents)
-	return mux
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h, pattern := mux.Handler(r); pattern == "" {
+			respondUnrouted(w, r, h)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
 }
+
+// respondUnrouted answers a request that no route takes, which h, the
+// mux's handler of it, answers with a plain text 404, or a 405 with the
+// methods the path allows in its Allow header, with an error response
+// instead.
+func respondUnrouted(w http.ResponseWriter, r *http.Request, h http.Handler) {
+	rec := &statusRecorder{ResponseWriter: w}
+	h.ServeHTTP(rec, r)
+	if rec.status == http.StatusMethodNotAllowed {
+		respondError(w, app.NewError(app.CodeMethodNotAllowed, fmt.Sprintf("method %s not allowed at %s", r.Method, r.URL.Path)))
+		return
+	}
+	respondError(w, app.NewError(app.CodeRouteNotFound, "no route for "+r.URL.Path))
+}
+
+// statusRecorder keeps the status a handler writes, and drops its body, so
+// that another response can be written in their place. Headers go to the
+// response writer it wraps.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+// WriteHeader keeps status in place of writing it.
+func (w *statusRecorder) WriteHeader(status int) { w.status = status }
+
+// Write drops p.
+func (w *statusRecorder) Write(p []byte) (int, error) { return len(p), nil }
 
 // ListenAndServe serves on the loopback interface until ctx is canceled.
 func ListenAndServe(ctx context.Context, a *app.App, port int) error {
@@ -99,44 +136,85 @@ func ListenAndServe(ctx context.Context, a *app.App, port int) error {
 	return nil
 }
 
-// errorResponse is the body of every non-2xx JSON response.
-type errorResponse struct {
-	Error string `json:"error"`
+// ErrorResponse is the body of every error response of the API, whose
+// status ErrorStatus maps the error's code to.
+type ErrorResponse struct {
+	// Error describes the failure, in the shape the app's events report
+	// failures in.
+	Error app.Error `json:"error"`
 }
 
-// respondErr reports err with the status errStatus maps it to. A session that
-// is not stored is reported as "session not found".
+// codeStatus maps error codes onto the HTTP statuses of the responses that
+// report them.
+var codeStatus = map[app.ErrorCode]int{
+	app.CodeInvalidRequest:   http.StatusBadRequest,
+	app.CodeRouteNotFound:    http.StatusNotFound,
+	app.CodeMethodNotAllowed: http.StatusMethodNotAllowed,
+
+	app.CodeSessionNotFound:   http.StatusNotFound,
+	app.CodeInvalidSessionID:  http.StatusBadRequest,
+	app.CodeMessageNotFound:   http.StatusNotFound,
+	app.CodeSessionBusy:       http.StatusConflict,
+	app.CodeSessionLocked:     http.StatusConflict,
+	app.CodeClosed:            http.StatusConflict,
+	app.CodeNothingToUndo:     http.StatusConflict,
+	app.CodeNothingToRedo:     http.StatusConflict,
+	app.CodeNothingToContinue: http.StatusConflict,
+	app.CodeAlreadyThere:      http.StatusConflict,
+	app.CodeNoBranches:        http.StatusNotFound,
+	app.CodeRefused:           http.StatusBadRequest,
+
+	app.CodeInvalidModel:       http.StatusBadRequest,
+	app.CodeModelNotFound:      http.StatusNotFound,
+	app.CodeProviderNotFound:   http.StatusNotFound,
+	app.CodeFormatNotSupported: http.StatusBadRequest,
+	app.CodeMissingVariable:    http.StatusBadRequest,
+	app.CodeNotAuthenticated:   http.StatusUnauthorized,
+	app.CodeProviderError:      http.StatusBadGateway,
+	app.CodeCatalogUnavailable: http.StatusBadGateway,
+
+	app.CodeAccountNotFound:  http.StatusNotFound,
+	app.CodeInvalidAccountID: http.StatusBadRequest,
+	app.CodeEmptyKey:         http.StatusBadRequest,
+	app.CodeReadOnlyAccount:  http.StatusConflict,
+	app.CodeInvalidLoginCode: http.StatusBadRequest,
+	app.CodeLoginFailed:      http.StatusConflict,
+}
+
+// ErrorStatus returns the HTTP status of a response reporting a failure of
+// code: the status codeStatus lists, or 500 for a code it does not.
+func ErrorStatus(code app.ErrorCode) int {
+	if status, ok := codeStatus[code]; ok {
+		return status
+	}
+	return http.StatusInternalServerError
+}
+
+// respondErr reports err, a failure of the app, as app.ErrorOf describes it.
 func respondErr(w http.ResponseWriter, err error) {
-	msg := err.Error()
-	if errors.Is(err, fs.ErrNotExist) {
-		msg = "session not found"
-	}
-	respondError(w, errStatus(err), msg)
+	respondError(w, app.ErrorOf(err))
 }
 
-// errStatus maps the errors of the session store, and of the app's
-// operations on a session, onto HTTP status codes. An extension that refuses
-// an operation, with an extension.Refusal, makes it a bad request.
-func errStatus(err error) int {
-	switch {
-	case errors.Is(err, fs.ErrNotExist),
-		errors.Is(err, session.ErrMessageNotFound),
-		errors.Is(err, app.ErrNoBranches):
-		return http.StatusNotFound
-	case errors.Is(err, app.ErrBusy),
-		errors.Is(err, app.ErrSessionBusy),
-		errors.Is(err, app.ErrClosed),
-		errors.Is(err, app.ErrNothingToUndo),
-		errors.Is(err, app.ErrNothingToRedo),
-		errors.Is(err, app.ErrNothingToContinue),
-		errors.Is(err, app.ErrAlreadyThere):
-		return http.StatusConflict
-	case errors.Is(err, app.ErrInvalidSessionID),
-		errors.Is(err, extension.ErrRefused):
-		return http.StatusBadRequest
-	default:
-		return http.StatusInternalServerError
+// respondSessionErr reports err, a failure of an operation on the session
+// the request names, as respondErr does, but reports a session that is not
+// stored as app.CodeSessionNotFound.
+func respondSessionErr(w http.ResponseWriter, err error) {
+	if errors.Is(err, fs.ErrNotExist) {
+		respondError(w, app.NewError(app.CodeSessionNotFound, "session not found"))
+		return
 	}
+	respondErr(w, err)
+}
+
+// respondInvalid reports a request that cannot be taken as it is, as
+// app.CodeInvalidRequest with msg.
+func respondInvalid(w http.ResponseWriter, msg string) {
+	respondError(w, app.NewError(app.CodeInvalidRequest, msg))
+}
+
+// respondError reports e with the status ErrorStatus maps its code to.
+func respondError(w http.ResponseWriter, e app.Error) {
+	respondJSON(w, ErrorStatus(e.Code), ErrorResponse{Error: e})
 }
 
 func respondJSON(w http.ResponseWriter, status int, v any) {
@@ -147,6 +225,6 @@ func respondJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
-func respondError(w http.ResponseWriter, status int, msg string) {
-	respondJSON(w, status, errorResponse{Error: msg})
-}
+// errStreamingUnsupported reports a response writer that cannot flush, which
+// a streamed response needs.
+var errStreamingUnsupported = errors.New("streaming unsupported")

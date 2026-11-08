@@ -200,7 +200,7 @@ func (a *App) registered(t agent.ProviderID) error {
 }
 
 func (a *App) publishLoginFailed(pt agent.ProviderID, id agent.AccountID, err error) {
-	a.publish(EventLoginFailed{EventBase: a.eventBase(), Provider: pt, Account: id, Error: NewUnknownError(err.Error()), Retry: errors.Is(err, agent.ErrInvalidLoginCode)})
+	a.publish(EventLoginFailed{EventBase: a.eventBase(), Provider: pt, Account: id, Error: ErrorOf(err), Retry: errors.Is(err, agent.ErrInvalidLoginCode)})
 }
 
 // publishAccountsChanged publishes the active account of provider t.

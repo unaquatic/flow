@@ -44,6 +44,13 @@ func testListing() app.ModelListing {
 	return app.NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
 }
 
+// providerRefusal returns the error response of a provider that is rate
+// limited.
+func providerRefusal() error {
+	return &agent.ResponseError{Provider: "provider-a", StatusCode: http.StatusTooManyRequests, Message: "slow down",
+		ResponseBody: `{"error":{"message":"slow down"}}`}
+}
+
 // TestWireBodies checks that the response bodies that carry what the app
 // returns are written as testdata/wire_bodies.golden records them, one per
 // line after the request that answers with it. The events the API streams
@@ -72,6 +79,9 @@ func TestWireBodies(t *testing.T) {
 			{File: "old.go", Deletions: 12, Status: "deleted"},
 		}, Checkout: "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0"}},
 		{"POST /session/{id}/undo nothing checked out", CheckoutResponse{Files: []app.FileDiff{}}},
+		{"error", ErrorResponse{Error: app.ErrorOf(app.ErrBusy)}},
+		{"error from a provider", ErrorResponse{Error: app.ErrorOf(fmt.Errorf("generate: %w", providerRefusal()))}},
+		{"POST /generate generate.failed", GenerateFailed{Error: app.ErrorOf(providerRefusal())}},
 	} {
 		data, err := json.Marshal(body.v)
 		if err != nil {

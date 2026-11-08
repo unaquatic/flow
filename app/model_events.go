@@ -46,7 +46,7 @@ type EventModelsListed struct {
 	EventBase
 	Listings []ModelListing `json:"listings"`
 	// Error is why the listings could not be read, or nil when they were.
-	Error *UnknownError `json:"error,omitempty"`
+	Error *Error `json:"error,omitempty"`
 }
 
 func (EventModelsListed) EventType() EventType { return TypeModelsListed }

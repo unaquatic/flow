@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
@@ -19,7 +18,7 @@ import (
 func (s *Server) handleModelList(w http.ResponseWriter, r *http.Request) {
 	listings, err := s.app.Models().Listings(r.Context(), agent.ProviderID(r.URL.Query().Get("provider")))
 	if err != nil {
-		respondModelErr(w, err)
+		respondErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, listings)
@@ -27,10 +26,11 @@ func (s *Server) handleModelList(w http.ResponseWriter, r *http.Request) {
 
 // handleModelRefresh downloads the model catalog, and answers with the
 // listings of GET /model taken from it. A failure of the catalog source is a
-// bad gateway; one storing the catalog is the server's own.
+// bad gateway, app.CodeCatalogUnavailable; one storing the catalog is the
+// server's own.
 func (s *Server) handleModelRefresh(w http.ResponseWriter, r *http.Request) {
 	if err := s.app.Models().Refresh(r.Context()); err != nil {
-		respondError(w, modelErrStatus(err), "refresh the model catalog: "+err.Error())
+		respondErr(w, fmt.Errorf("refresh the model catalog: %w", err))
 		return
 	}
 	s.handleModelList(w, r)
@@ -40,22 +40,24 @@ func (s *Server) handleModelRefresh(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleModelGet(w http.ResponseWriter, r *http.Request) {
 	m, err := s.app.Models().Listing(agent.ProviderID(r.PathValue("provider")), r.PathValue("id"))
 	if err != nil {
-		respondModelErr(w, err)
+		respondErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, m)
 }
 
-// handleGenerate answers one model request outside any session.
+// handleGenerate answers one model request outside any session. A provider
+// that fails is a bad gateway, whose error holds the provider's status and
+// body when it answered with an error response.
 func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	var body GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid JSON body")
+		respondInvalid(w, "invalid JSON body")
 		return
 	}
 	req, err := body.Request()
 	if err != nil {
-		respondError(w, http.StatusBadRequest, err.Error())
+		respondInvalid(w, err.Error())
 		return
 	}
 	if body.Stream {
@@ -64,7 +66,7 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, model, err := s.app.Models().Generate(r.Context(), body.Model, req)
 	if err != nil {
-		respondModelErr(w, err)
+		respondErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, generateResponse(model, resp))
@@ -77,12 +79,12 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model string, req agent.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		respondError(w, http.StatusInternalServerError, "streaming unsupported")
+		respondErr(w, errStreamingUnsupported)
 		return
 	}
 	stream, name, err := s.app.Models().GenerateStream(r.Context(), model, req)
 	if err != nil {
-		respondModelErr(w, err)
+		respondErr(w, err)
 		return
 	}
 	sse.Start(w)
@@ -104,7 +106,7 @@ func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model st
 	})
 	resp, err := forwarded.Collect()
 	if err != nil {
-		writeEvent(w, EventGenerateFailed, GenerateFailed{Error: err.Error()})
+		writeEvent(w, EventGenerateFailed, GenerateFailed{Error: app.ErrorOf(err)})
 	} else {
 		writeEvent(w, EventGenerateEnded, generateResponse(name, resp))
 	}
@@ -131,42 +133,6 @@ func generateResponse(model string, resp *agent.Response) GenerateResponse {
 		StopReason: resp.StopReason,
 		Usage:      agent.UsageFrom(resp.Usage),
 	}
-}
-
-// respondModelErr reports err, an error of a model or catalog request, with
-// the status modelErrStatus maps it to.
-func respondModelErr(w http.ResponseWriter, err error) {
-	respondError(w, modelErrStatus(err), err.Error())
-}
-
-// modelErrStatus maps the errors of model and catalog requests onto HTTP
-// status codes. A provider or the catalog source that failed or answered
-// with an error is a bad gateway.
-func modelErrStatus(err error) int {
-	switch {
-	case errors.Is(err, agent.ErrProviderNotRegistered),
-		errors.Is(err, agent.ErrModelNotFound),
-		errors.Is(err, agent.ErrVariantNotFound):
-		return http.StatusNotFound
-	case errors.Is(err, app.ErrModelFormat),
-		errors.Is(err, agent.ErrFormatNotSupported),
-		errors.Is(err, agent.ErrMissingVariable):
-		return http.StatusBadRequest
-	case errors.Is(err, agent.ErrNotAuthenticated):
-		return http.StatusUnauthorized
-	case errors.Is(err, gateway.ErrSource):
-		return http.StatusBadGateway
-	}
-	if _, ok := errors.AsType[*agent.ResponseError](err); ok {
-		return http.StatusBadGateway
-	}
-	if _, ok := errors.AsType[*agent.RequestError](err); ok {
-		return http.StatusBadGateway
-	}
-	if _, ok := errors.AsType[*agent.ResponseParseError](err); ok {
-		return http.StatusBadGateway
-	}
-	return http.StatusInternalServerError
 }
 
 // GenerateRequest is the body of POST /generate: one model request outside
@@ -222,8 +188,8 @@ type GenerateDelta struct {
 
 // GenerateFailed is the data of a generate.failed event.
 type GenerateFailed struct {
-	// Error describes the failure.
-	Error string `json:"error"`
+	// Error describes the failure, as an error response would.
+	Error app.Error `json:"error"`
 }
 
 // Event types of a streamed POST /generate.

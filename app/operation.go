@@ -536,7 +536,7 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 		err = s.app.sessions.AppendMessage(s.ctx, s.id, &msg)
 	}
 	if err != nil {
-		e := NewUnknownError(err.Error())
+		e := ErrorOf(err)
 		s.publish(EventMessageEnded{EventBase: s.eventBase(), Message: prompt(), Error: &e})
 		return err
 	}

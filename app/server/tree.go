@@ -14,7 +14,7 @@ import (
 func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 	tree, err := s.session(r).Tree()
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	out := TreeResponse{Messages: make([]app.Message, 0, len(tree.Messages)), Head: tree.Head}
@@ -31,11 +31,11 @@ func (s *Server) handleTree(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleNavigate(w http.ResponseWriter, r *http.Request) {
 	var req NavigateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+		respondInvalid(w, "invalid request body")
 		return
 	}
 	if req.MessageID == "" {
-		respondError(w, http.StatusBadRequest, "message_id must not be empty")
+		respondInvalid(w, "message_id must not be empty")
 		return
 	}
 	moved, err := s.session(r).Navigate(req.MessageID)

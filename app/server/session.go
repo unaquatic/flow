@@ -14,7 +14,7 @@ import (
 func (s *Server) handleSessionList(w http.ResponseWriter, r *http.Request) {
 	sessions, err := s.app.Sessions().ListSessions(r.Context())
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	if sessions == nil {
@@ -30,7 +30,7 @@ func (s *Server) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSessionStatus(w http.ResponseWriter, r *http.Request) {
 	busy, err := s.app.BusySessions(r.Context())
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	out := make(map[string]SessionStatusInfo, len(busy))
@@ -43,7 +43,7 @@ func (s *Server) handleSessionStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.app.Sessions().Session(r.Context(), sessionID(r))
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, sess)
@@ -52,7 +52,7 @@ func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 	var req SessionUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid JSON body")
+		respondInvalid(w, "invalid JSON body")
 		return
 	}
 	id := sessionID(r)
@@ -62,7 +62,7 @@ func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	sess, err := s.app.Session(id).SetTitle(title)
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, sess)
@@ -70,7 +70,7 @@ func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 	if err := s.app.DeleteSession(r.Context(), sessionID(r)); err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -82,7 +82,7 @@ func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageList(w http.ResponseWriter, r *http.Request) {
 	msgs, err := s.session(r).Messages()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, msgs)
@@ -91,11 +91,11 @@ func (s *Server) handleMessageList(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 	var req SendRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid JSON body")
+		respondInvalid(w, "invalid JSON body")
 		return
 	}
 	if req.Text == "" {
-		respondError(w, http.StatusBadRequest, "text must not be empty")
+		respondInvalid(w, "text must not be empty")
 		return
 	}
 	id := message.NewID()
@@ -105,7 +105,7 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.session(r).Send(input); err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusAccepted, SendResponse{MessageID: id})
@@ -119,7 +119,7 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 	var req ContinueRequest
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid JSON body")
+			respondInvalid(w, "invalid JSON body")
 			return
 		}
 	}
@@ -128,7 +128,7 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.session(r).Continue(req.Model); err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
@@ -139,7 +139,7 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageGet(w http.ResponseWriter, r *http.Request) {
 	m, err := s.session(r).Message(message.ID(r.PathValue("messageID")))
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, m)
@@ -150,7 +150,7 @@ func (s *Server) handleMessageGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageDelete(w http.ResponseWriter, r *http.Request) {
 	err := s.session(r).DeleteMessage(message.ID(r.PathValue("messageID")))
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -175,7 +175,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	var req CheckoutRequest
 	if r.ContentLength > 0 {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid request body")
+			respondInvalid(w, "invalid request body")
 			return
 		}
 	}
@@ -187,7 +187,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 // move that changed no file reports an empty list rather than null.
 func respondCheckout(w http.ResponseWriter, moved app.MoveResult, err error) {
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	files := moved.Files

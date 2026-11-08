@@ -977,7 +977,7 @@ func TestIndicatorFrames(t *testing.T) {
 		// An error starts with a marker and Error, in the danger color, as a
 		// tool call's row starts with its marker and name.
 		{name: "indicator_error", h: 11, add: replyStarted,
-			show: ErrorIndicator(app.NewUnknownError(`Request Failed: Post "https://api.example.com/v1/messages": EOF`))},
+			show: ErrorIndicator(app.NewError(app.CodeProviderError, `Request Failed: Post "https://api.example.com/v1/messages": EOF`))},
 		// A provider's error names the provider and status, over the body it
 		// answered with, formatted and highlighted, in a box filled as a
 		// tool's is.

@@ -69,7 +69,7 @@ func AgentEvent(base EventBase, ev agent.Event) Event {
 		return out
 	case agent.Retrying:
 		out := EventAgentRetrying{EventBase: base, MessageID: e.MessageID, Attempt: e.Attempt, MaxAttempts: e.MaxAttempts,
-			RetryAt: base.Timestamp.Add(e.Delay), Reason: e.Reason, Error: NewUnknownError(e.Reason)}
+			RetryAt: base.Timestamp.Add(e.Delay), Reason: e.Reason, Error: NewError(CodeUnknown, e.Reason)}
 		if e.Err != nil {
 			out.Error = ErrorOf(e.Err)
 		}
