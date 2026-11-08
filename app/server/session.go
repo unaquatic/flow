@@ -3,18 +3,34 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
 )
 
-// handleSessionList returns the project's sessions, as a list of
-// [session.Session] that is empty rather than null when there are none.
+// handleSessionList returns the project's sessions, or with the all query
+// set to true those of every project, newest first, each with the worktree
+// of its project, as a list of [session.Session] that is empty rather than
+// null when there are none.
 func (s *Server) handleSessionList(w http.ResponseWriter, r *http.Request) {
-	sessions, err := s.app.Sessions().ListSessions(r.Context())
+	all := false
+	if q := r.URL.Query().Get("all"); q != "" {
+		var err error
+		if all, err = strconv.ParseBool(q); err != nil {
+			respondInvalid(w, fmt.Sprintf("all must be true or false, not %q", q))
+			return
+		}
+	}
+	list := s.app.Sessions().ListSessions
+	if all {
+		list = s.app.Sessions().ListAllSessions
+	}
+	sessions, err := list(r.Context())
 	if err != nil {
 		respondErr(w, err)
 		return

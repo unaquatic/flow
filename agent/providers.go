@@ -244,10 +244,8 @@ func (s *Providers) Offering(v Variant) (gateway.Offering, bool) {
 // at when none is chosen: the catalog's default effort of its offering, or
 // else FallbackEffort, medium.
 func (s *Providers) DefaultReasoningEffort(v Variant) ReasoningEffort {
-	if off, ok := s.Offering(v); ok && off.Reasoning != nil && off.Reasoning.DefaultEffort != "" {
-		return ReasoningEffort(off.Reasoning.DefaultEffort)
-	}
-	return FallbackEffort
+	off, _ := s.Offering(v)
+	return DefaultEffort(off.Reasoning)
 }
 
 // ReasoningEfforts returns the effort levels the catalog lists for the model

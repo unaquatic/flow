@@ -23,18 +23,32 @@ type ModelListing struct {
 	// to them, in the order the catalog lists them, as the ":effort" suffix
 	// of a model names them.
 	ReasoningEfforts map[string][]agent.ReasoningEffort `json:"reasoning_efforts,omitempty"`
+	// DefaultEfforts maps the ID of each model of ReasoningEfforts to the
+	// effort it runs at when a model names none, as Models.FitEffort fits
+	// it. A model that runs at none of its levels by default, which leaves
+	// the effort to the provider, is left out.
+	DefaultEfforts map[string]agent.ReasoningEffort `json:"default_efforts,omitempty"`
 }
 
 // NewModelListing returns the listing of models of provider t, with the
-// effort levels the catalog lists for each.
+// effort levels the catalog lists for each, and the one it runs at by
+// default.
 func NewModelListing(t agent.ProviderID, models []agent.Listing) ModelListing {
 	l := ModelListing{Provider: t, Models: models}
 	for _, m := range models {
-		if levels := agent.ReasoningEfforts(m.Reasoning); len(levels) > 0 {
-			if l.ReasoningEfforts == nil {
-				l.ReasoningEfforts = make(map[string][]agent.ReasoningEffort)
+		levels := agent.ReasoningEfforts(m.Reasoning)
+		if len(levels) == 0 {
+			continue
+		}
+		if l.ReasoningEfforts == nil {
+			l.ReasoningEfforts = make(map[string][]agent.ReasoningEffort)
+		}
+		l.ReasoningEfforts[m.Model] = levels
+		if def := agent.Fit(levels, "", agent.DefaultEffort(m.Reasoning)); def != "" {
+			if l.DefaultEfforts == nil {
+				l.DefaultEfforts = make(map[string]agent.ReasoningEffort)
 			}
-			l.ReasoningEfforts[m.Model] = levels
+			l.DefaultEfforts[m.Model] = def
 		}
 	}
 	return l

@@ -20,7 +20,7 @@ func (s *Server) handleAuthList(w http.ResponseWriter, r *http.Request) {
 			respondErr(w, err)
 			return
 		}
-		out = append(out, wireAuthStatus(st))
+		out = append(out, s.wireAuthStatus(st))
 	}
 	respondJSON(w, http.StatusOK, out)
 }
@@ -129,7 +129,7 @@ func (s *Server) handleAuthKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, err := s.app.Accounts().Status(r.Context(), t)
-	respondAuthResult(w, st, err)
+	s.respondAuthResult(w, st, err)
 }
 
 // handleAuthLogout removes an account and reports the resulting accounts.
@@ -139,7 +139,7 @@ func (s *Server) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, err := s.app.Accounts().Logout(r.Context(), providerID(r), id)
-	respondAuthResult(w, st, err)
+	s.respondAuthResult(w, st, err)
 }
 
 // handleAuthUse switches the active account and reports the resulting
@@ -155,7 +155,7 @@ func (s *Server) handleAuthUse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, err := s.app.Accounts().Use(r.Context(), providerID(r), req.ID)
-	respondAuthResult(w, st, err)
+	s.respondAuthResult(w, st, err)
 }
 
 // pathAccountID returns the account ID in the request's path, or writes a 400
@@ -169,9 +169,20 @@ func pathAccountID(w http.ResponseWriter, r *http.Request) (agent.AccountID, boo
 	return id, true
 }
 
-// wireAuthStatus converts a provider's accounts to their wire form.
-func wireAuthStatus(st agent.AuthStatus) AuthStatus {
-	out := AuthStatus{Provider: st.Provider, Active: st.Active, Accounts: make([]AccountStatus, 0, len(st.Accounts))}
+// wireAuthStatus converts a provider's accounts to their wire form, with how
+// an account of it can be added.
+func (s *Server) wireAuthStatus(st agent.AuthStatus) AuthStatus {
+	accounts := s.app.Accounts()
+	out := AuthStatus{
+		Provider:     st.Provider,
+		Active:       st.Active,
+		Accounts:     make([]AccountStatus, 0, len(st.Accounts)),
+		LoginMethods: accounts.LoginMethods(st.Provider),
+		BuiltIn:      accounts.BuiltIn(st.Provider),
+	}
+	if out.LoginMethods == nil {
+		out.LoginMethods = []agent.LoginMethod{}
+	}
 	for _, a := range st.Accounts {
 		out.Accounts = append(out.Accounts, AccountStatus(a))
 	}
@@ -179,12 +190,12 @@ func wireAuthStatus(st agent.AuthStatus) AuthStatus {
 }
 
 // respondAuthResult writes the accounts after a change, or the failure.
-func respondAuthResult(w http.ResponseWriter, st agent.AuthStatus, err error) {
+func (s *Server) respondAuthResult(w http.ResponseWriter, st agent.AuthStatus, err error) {
 	if err != nil {
 		respondErr(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, wireAuthStatus(st))
+	respondJSON(w, http.StatusOK, s.wireAuthStatus(st))
 }
 
 // providerID returns the provider ID in the request's path.
@@ -201,6 +212,14 @@ type AuthStatus struct {
 	Active agent.AccountID `json:"active,omitempty"`
 	// Accounts lists the provider's accounts by ID.
 	Accounts []AccountStatus `json:"accounts"`
+	// LoginMethods lists the methods of NewAccountRequest.Method and
+	// LoginRequest.Method that the provider takes, browser first when it
+	// takes it, or is empty when an account of it is added by API key alone.
+	LoginMethods []agent.LoginMethod `json:"login_methods"`
+	// BuiltIn reports whether flow is built with the provider. A login menu
+	// lists the providers built in, and those with login methods; the others
+	// still take an API key.
+	BuiltIn bool `json:"built_in"`
 }
 
 // AccountStatus is the wire form of one account.

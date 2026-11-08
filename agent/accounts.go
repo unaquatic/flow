@@ -65,6 +65,22 @@ func (s *Accounts) SupportsLogin(t ProviderID) bool {
 	return s.flows[t] != nil
 }
 
+// LoginMethods returns the methods Login takes for provider t, browser first
+// when its flow has one, or none when t has no login flow and takes an API
+// key alone. The slice is new at each call.
+func (s *Accounts) LoginMethods(t ProviderID) []LoginMethod {
+	flow := s.flows[t]
+	if flow == nil {
+		return nil
+	}
+	var methods []LoginMethod
+	switch flow.(type) {
+	case CodeLoginFlow, BrowserLoginFlow:
+		methods = append(methods, LoginBrowser)
+	}
+	return append(methods, LoginDevice)
+}
+
 // For returns the Authorizer of provider t's requests.
 func (s *Accounts) For(t ProviderID) Authorizer {
 	return authorizer{s: s, t: t}

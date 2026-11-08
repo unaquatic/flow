@@ -698,3 +698,39 @@ func TestParseLoginMethod(t *testing.T) {
 		})
 	}
 }
+
+// deviceOnlyFlow is a LoginFlow with no browser login.
+type deviceOnlyFlow struct{}
+
+func (deviceOnlyFlow) Device(context.Context, func(LoginPrompt)) (OAuthToken, error) {
+	return OAuthToken{}, errors.ErrUnsupported
+}
+
+func (deviceOnlyFlow) Refresh(context.Context, OAuthToken) (OAuthToken, error) {
+	return OAuthToken{}, errors.ErrUnsupported
+}
+
+// TestLoginMethods checks that a provider's login methods are those its
+// flow takes, browser first, through a redirect or a pasted result, and
+// that a provider with no flow has none.
+func TestLoginMethods(t *testing.T) {
+	const deviceOnly, pasted ProviderID = "provider-c", "provider-d"
+	s := NewAccounts(AccountsConfig{Flows: map[ProviderID]LoginFlow{
+		testProviderA: &fakeFlow{},
+		deviceOnly:    deviceOnlyFlow{},
+		pasted:        &CodeTestFlow{},
+	}})
+	for _, tt := range []struct {
+		provider ProviderID
+		want     []LoginMethod
+	}{
+		{testProviderA, []LoginMethod{LoginBrowser, LoginDevice}},
+		{deviceOnly, []LoginMethod{LoginDevice}},
+		{pasted, []LoginMethod{LoginBrowser, LoginDevice}},
+		{testProviderB, nil},
+	} {
+		if got := s.LoginMethods(tt.provider); !slices.Equal(got, tt.want) {
+			t.Errorf("LoginMethods(%s) = %v, want %v", tt.provider, got, tt.want)
+		}
+	}
+}

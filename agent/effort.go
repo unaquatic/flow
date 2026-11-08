@@ -50,6 +50,15 @@ func ReasoningEfforts(r *gateway.Reasoning) []ReasoningEffort {
 	return levels
 }
 
+// DefaultEffort returns the effort a model with the reasoning controls r
+// runs at when none is chosen: r's default effort, or else FallbackEffort.
+func DefaultEffort(r *gateway.Reasoning) ReasoningEffort {
+	if r != nil && r.DefaultEffort != "" {
+		return ReasoningEffort(r.DefaultEffort)
+	}
+	return FallbackEffort
+}
+
 // Fit returns chosen when levels holds it, or else def when levels holds
 // it, or else none.
 func Fit(levels []ReasoningEffort, chosen, def ReasoningEffort) ReasoningEffort {

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/unaquatic/flow/app"
 )
@@ -206,4 +207,39 @@ func doGuardError(t *testing.T, req guardRequest, ts *httptest.Server) (int, app
 		t.Fatalf("decode error response: %v", err)
 	}
 	return resp.StatusCode, got.Error
+}
+
+// TestEventKeepalive checks that a quiet event stream sends a keepalive
+// comment every heartbeat, which an event stream reader skips.
+func TestEventKeepalive(t *testing.T) {
+	_, a := newTestServerApp(t)
+	ts := httptest.NewServer(New(a, Options{Heartbeat: 10 * time.Millisecond}).Handler())
+	t.Cleanup(ts.Close)
+	events := openEvents(t, ts.URL+"/event")
+	for range 2 {
+		for {
+			line, err := events.ReadString('\n')
+			if err != nil {
+				t.Fatalf("read event stream: %v", err)
+			}
+			if line == ": keepalive\n" {
+				break
+			}
+		}
+	}
+}
+
+// TestAuthLoginMethods checks that GET /auth reports, for a provider with no
+// login flow that flow is not built with, no login methods as an empty list.
+func TestAuthLoginMethods(t *testing.T) {
+	ts := newTestServer(t)
+	var got []AuthStatus
+	if status := doJSON(t, "GET", ts.URL+"/auth", nil, &got); status != http.StatusOK || len(got) == 0 {
+		t.Fatalf("GET /auth = %d %+v, want providers", status, got)
+	}
+	for _, st := range got {
+		if st.LoginMethods == nil || len(st.LoginMethods) != 0 || st.BuiltIn {
+			t.Errorf("GET /auth %s: login methods %#v, built in %v; want [] and false", st.Provider, st.LoginMethods, st.BuiltIn)
+		}
+	}
 }

@@ -75,7 +75,7 @@ func WorktreeOf(ctx context.Context, db *sql.DB, id message.SessionID) (string, 
 }
 
 // Session contains persisted conversation metadata. It encodes as the JSON
-// of the HTTP API's session routes, which leave out its Head and Worktree.
+// of the HTTP API's session routes, which leave out its Head.
 type Session struct {
 	// ID identifies the session.
 	ID message.SessionID `json:"id"`
@@ -90,7 +90,7 @@ type Session struct {
 	Head Head `json:"-"`
 	// Worktree is the worktree of the project the session belongs to, the
 	// folder its tools ran in. It is empty for a session not yet stored.
-	Worktree string `json:"-"`
+	Worktree string `json:"worktree,omitempty"`
 }
 
 // Head records where a session's visible transcript ends.
