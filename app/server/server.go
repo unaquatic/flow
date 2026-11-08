@@ -29,16 +29,18 @@ import (
 
 // Server serves the HTTP API for one application instance.
 type Server struct {
-	app *app.App
+	app  *app.App
+	opts Options
 }
 
-// New creates a Server for a. A request that names no model goes to the
-// default model in the config file.
-func New(a *app.App) *Server {
-	return &Server{app: a}
+// New creates a Server for a, which takes the requests opts lets in, as
+// Handler describes. A request that names no model goes to the default model
+// in the config file.
+func New(a *app.App, opts Options) *Server {
+	return &Server{app: a, opts: opts}
 }
 
-// Handler returns the API routing handler.
+// Handler returns the API routing handler, behind the checks Guard makes.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", s.handleHealth)
@@ -75,13 +77,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /session/{id}/branch", s.handleBranchList)
 	mux.HandleFunc("POST /session/{id}/branch", s.handleBranchSwitch)
 	mux.HandleFunc("GET /event", s.handleEvents)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return s.Guard(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h, pattern := mux.Handler(r); pattern == "" {
 			respondUnrouted(w, r, h)
 			return
 		}
 		mux.ServeHTTP(w, r)
-	})
+	}))
 }
 
 // respondUnrouted answers a request that no route takes, which h, the
@@ -112,11 +114,17 @@ func (w *statusRecorder) WriteHeader(status int) { w.status = status }
 // Write drops p.
 func (w *statusRecorder) Write(p []byte) (int, error) { return len(p), nil }
 
-// ListenAndServe serves on the loopback interface until ctx is canceled.
-func ListenAndServe(ctx context.Context, a *app.App, port int) error {
+// ListenAndServe serves the API of a on the address opts names until ctx is
+// canceled, and prints the address it listens on, with the port it picked
+// when opts names none.
+func ListenAndServe(ctx context.Context, a *app.App, opts Options) error {
+	ln, err := net.Listen("tcp", net.JoinHostPort(opts.Host(), strconv.Itoa(opts.Port)))
+	if err != nil {
+		return err
+	}
 	srv := &http.Server{
-		Addr:    net.JoinHostPort("127.0.0.1", strconv.Itoa(port)),
-		Handler: New(a).Handler(),
+		Handler:           New(a, opts).Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
 		// The server's own errors, such as recovered handler panics, go to
 		// the application log rather than standard error.
 		ErrorLog: slog.NewLogLogger(slog.Default().Handler(), slog.LevelWarn),
@@ -129,8 +137,8 @@ func ListenAndServe(ctx context.Context, a *app.App, port int) error {
 			slog.Warn("server shutdown", "err", err)
 		}
 	}()
-	fmt.Printf("server listening on http://%s\n", srv.Addr)
-	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+	fmt.Printf("server listening on http://%s\n", ln.Addr())
+	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 	return nil
@@ -150,6 +158,9 @@ var codeStatus = map[app.ErrorCode]int{
 	app.CodeInvalidRequest:   http.StatusBadRequest,
 	app.CodeRouteNotFound:    http.StatusNotFound,
 	app.CodeMethodNotAllowed: http.StatusMethodNotAllowed,
+	app.CodeUnauthorized:     http.StatusUnauthorized,
+	app.CodeOriginNotAllowed: http.StatusForbidden,
+	app.CodeHostNotAllowed:   http.StatusForbidden,
 
 	app.CodeSessionNotFound:   http.StatusNotFound,
 	app.CodeInvalidSessionID:  http.StatusBadRequest,

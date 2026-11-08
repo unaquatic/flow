@@ -80,7 +80,7 @@ func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Serv
 		t.Fatal(err)
 	}
 	t.Cleanup(a.Close)
-	ts := httptest.NewServer(New(a).Handler())
+	ts := httptest.NewServer(New(a, Options{}).Handler())
 	t.Cleanup(ts.Close)
 	return ts, a
 }

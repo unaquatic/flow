@@ -100,6 +100,16 @@ const (
 	// CodeMethodNotAllowed reports a method the API does not serve at the
 	// path.
 	CodeMethodNotAllowed ErrorCode = "method_not_allowed"
+	// CodeUnauthorized reports a request without the credentials the server
+	// asks for.
+	CodeUnauthorized ErrorCode = "unauthorized"
+	// CodeOriginNotAllowed reports a request from a browser page whose
+	// origin may not call the API.
+	CodeOriginNotAllowed ErrorCode = "origin_not_allowed"
+	// CodeHostNotAllowed reports a request to a server on the loopback
+	// interface that names another host, as a page that rebinds its own
+	// domain name to the loopback address sends.
+	CodeHostNotAllowed ErrorCode = "host_not_allowed"
 )
 
 // Error is the common shape of failures that the app reports: in the events

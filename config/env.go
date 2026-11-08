@@ -25,6 +25,12 @@ const (
 	// EnvWidthProbe makes the terminal UI measure how wide the terminal
 	// draws characters when it starts.
 	EnvWidthProbe = "WIDTH_PROBE"
+	// EnvServerPassword makes flow serve ask every request for this
+	// password, by HTTP basic authentication.
+	EnvServerPassword = "FLOW_SERVER_PASSWORD"
+	// EnvServerUsername sets the user name that goes with
+	// EnvServerPassword. Without it, the user name is flow.
+	EnvServerUsername = "FLOW_SERVER_USERNAME"
 )
 
 // An EnvVar is an environment variable that flow reads.
@@ -44,7 +50,15 @@ func EnvVars() []EnvVar {
 		{Name: EnvSnapshotDelay, Usage: "Slow each snapshot by a duration, such as 2s, to preview indexing"},
 		{Name: EnvDisableTerminalTitle, Usage: "Stop changing the terminal title"},
 		{Name: EnvWidthProbe, Usage: "Measure character widths at startup"},
+		{Name: EnvServerPassword, Usage: "Password that flow serve asks every request for"},
+		{Name: EnvServerUsername, Usage: "User name that goes with the server password (default flow)"},
 	}
+}
+
+// ServerCredentials returns the user name and password that EnvServerUsername
+// and EnvServerPassword set for flow serve, each empty when unset.
+func ServerCredentials() (username, password string) {
+	return os.Getenv(EnvServerUsername), os.Getenv(EnvServerPassword)
 }
 
 // TerminalTitleDisabled reports whether EnvDisableTerminalTitle turns off
