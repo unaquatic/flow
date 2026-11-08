@@ -33,7 +33,7 @@ type Script struct {
 // until Stop ends it or the script has no more prompts. It reports the
 // errors Send does.
 func (s Session) Play(script Script) error {
-	return s.start(func(s Session, ctx context.Context) error { return s.processScript(ctx, script) })
+	return s.start(nil, func(s Session, ctx context.Context) error { return s.processScript(ctx, script) })
 }
 
 // processScript runs script until ctx, the run's context, ends, or the

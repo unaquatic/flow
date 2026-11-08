@@ -53,7 +53,7 @@ func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Serv
 	t.Setenv(keyEnvA, "")
 	t.Setenv(keyEnvB, "")
 	cfg := &config.Config{
-		Model:      "test/model",
+		Model:      "provider-b/model-y",
 		HomeDir:    t.TempDir(),
 		Extensions: map[string]json.RawMessage{snapshot.Name: json.RawMessage(`{"enabled":false}`)},
 	}
@@ -205,6 +205,15 @@ func TestSessionLifecycle(t *testing.T) {
 	if err := json.Unmarshal([]byte(awaitSSE(t, events, app.TypeSessionUpdated)), &streamed); err != nil ||
 		streamed.Title != title || !streamed.CreatedAt.Equal(titled.CreatedAt) || !streamed.UpdatedAt.Equal(titled.UpdatedAt) {
 		t.Errorf("session.updated once titled = %+v, %v; want the session PATCH answered with, %+v", streamed, err, titled)
+	}
+	// An update that leaves the title out keeps it; an empty one clears it.
+	var kept session.Session
+	if status := doJSON(t, "PATCH", sessURL, SessionUpdateRequest{}, &kept); status != http.StatusOK || kept.Title != title {
+		t.Errorf("update without a title: status %d, title %q; want 200, %q", status, kept.Title, title)
+	}
+	var cleared session.Session
+	if status := doJSON(t, "PATCH", sessURL, SessionUpdateRequest{Title: new("")}, &cleared); status != http.StatusOK || cleared.Title != "" {
+		t.Errorf("update with an empty title: status %d, title %q; want 200, none", status, cleared.Title)
 	}
 
 	if status := doJSON(t, "DELETE", sessURL, nil, nil); status != http.StatusNoContent {

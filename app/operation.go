@@ -1,7 +1,6 @@
 package app
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"iter"
@@ -157,29 +156,29 @@ func (s Session) Busy() bool {
 // released the session. Stop ends it from the start; a run stopped before its
 // first turn stores the prompt and nothing more.
 //
-// Nothing is stored, and the error is the one checkModel reports when
-// input's model cannot answer, ErrBusy when the session has another
+// Nothing is stored, and the error is ErrBusy, when the session has another
 // operation in progress, ErrSessionBusy when another process is changing it,
-// ErrInvalidSessionID for an ID that cannot name its lock file, or ErrClosed
-// once the app is closed.
+// ErrInvalidSessionID for an ID that cannot name its lock file, ErrClosed
+// once the app is closed, or else ErrModelFormat, or an error wrapping
+// agent.ErrProviderNotRegistered, when input's model cannot answer.
 func (s Session) Send(input SendInput) error {
-	if err := s.checkModel(input.Model); err != nil {
-		return err
-	}
-	return s.start(func(s Session, ctx context.Context) error { return s.processSend(ctx, input) })
+	return s.start(s.modelCheck(input.Model), func(s Session, ctx context.Context) error { return s.processSend(ctx, input) })
 }
 
-// checkModel reports why model, or the default model when it is empty,
-// cannot answer a run: the errors Models.Resolve reports, or one wrapping
+// modelCheck returns the check of a run that answers with model, or the
+// default model when it is empty, which reports why the model cannot answer:
+// the errors Models.Resolve reports, or one wrapping
 // agent.ErrProviderNotRegistered for a provider the app does not have. It
-// lets a send fail before it stores its prompt; the run resolves the model
-// again once it holds the session.
-func (s Session) checkModel(model string) error {
-	v, err := s.app.Models().Resolve(model)
-	if err != nil {
-		return err
+// lets a run fail before it stores anything; the run resolves the model
+// again once it starts.
+func (s Session) modelCheck(model string) func() error {
+	return func() error {
+		v, err := s.app.Models().Resolve(model)
+		if err != nil {
+			return err
+		}
+		return s.app.registered(v.Provider)
 	}
-	return s.app.registered(v.Provider)
 }
 
 // Continue starts a run like Send's that picks up from where the transcript
@@ -196,19 +195,16 @@ func (s Session) Continue(model string) error {
 	if err := s.continuable(); err != nil {
 		return err
 	}
-	if err := s.checkModel(model); err != nil {
-		return err
-	}
-	return s.start(func(s Session, ctx context.Context) error { return s.processContinue(ctx, model) })
+	return s.start(s.modelCheck(model), func(s Session, ctx context.Context) error { return s.processContinue(ctx, model) })
 }
 
 // ContinueStream runs a continue like Continue, but in the caller, as Stream
 // runs a send.
 func (s Session) ContinueStream(model string) iter.Seq2[Event, error] {
-	if err := cmp.Or(s.continuable(), s.checkModel(model)); err != nil {
+	if err := s.continuable(); err != nil {
 		return func(yield func(Event, error) bool) { yield(nil, err) }
 	}
-	return s.stream(func(s Session, ctx context.Context) error { return s.processContinue(ctx, model) })
+	return s.stream(s.modelCheck(model), func(s Session, ctx context.Context) error { return s.processContinue(ctx, model) })
 }
 
 // continuable reports ErrNothingToContinue when the transcript is empty. It
@@ -232,14 +228,27 @@ func Continues(history []agent.Message) bool {
 
 // start holds the session and runs work on it in a goroutine of its own, as
 // run describes, returning once work holds the session. It reports the errors
-// Send documents.
-func (s Session) start(work func(Session, context.Context) error) error {
+// Send documents, and then the error of check, if not nil, which it calls
+// once it holds the session, before work starts.
+func (s Session) start(check func() error, work func(Session, context.Context) error) error {
 	ctx, release, err := s.app.hold(s.ctx, s.id)
 	if err != nil {
 		return err
 	}
+	if err := runCheck(check); err != nil {
+		release()
+		return err
+	}
 	s.app.wg.Go(func() { s.run(ctx, release, work) })
 	return nil
+}
+
+// runCheck returns the error of check, or nil when check is nil.
+func runCheck(check func() error) error {
+	if check == nil {
+		return nil
+	}
+	return check()
 }
 
 // Stream runs input like Send, but in the caller, which it blocks until the
@@ -252,18 +261,21 @@ func (s Session) start(work func(Session, context.Context) error) error {
 // EventAgentEnded. Stopping the iteration early stops the run, and the
 // sequence returns once the run has ended.
 func (s Session) Stream(input SendInput) iter.Seq2[Event, error] {
-	if err := s.checkModel(input.Model); err != nil {
-		return func(yield func(Event, error) bool) { yield(nil, err) }
-	}
-	return s.stream(func(s Session, ctx context.Context) error { return s.processSend(ctx, input) })
+	return s.stream(s.modelCheck(input.Model), func(s Session, ctx context.Context) error { return s.processSend(ctx, input) })
 }
 
 // stream holds the session and runs work on it in the caller, yielding the
-// run's events, as Stream documents.
-func (s Session) stream(work func(Session, context.Context) error) iter.Seq2[Event, error] {
+// run's events, as Stream documents. It checks the run with check as start
+// does.
+func (s Session) stream(check func() error, work func(Session, context.Context) error) iter.Seq2[Event, error] {
 	return func(yield func(Event, error) bool) {
 		ctx, release, err := s.app.hold(s.ctx, s.id)
 		if err != nil {
+			yield(nil, err)
+			return
+		}
+		if err := runCheck(check); err != nil {
+			release()
 			yield(nil, err)
 			return
 		}

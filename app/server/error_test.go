@@ -1,9 +1,12 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"net/http"
 	"strconv"
 	"testing"
@@ -105,5 +108,62 @@ func TestErrorStatus(t *testing.T) {
 	}
 	if got := ErrorStatus(app.CodeUnknown); got != http.StatusInternalServerError {
 		t.Errorf("ErrorStatus(%s) = %d, want 500", app.CodeUnknown, got)
+	}
+}
+
+// TestRunModelRefused checks that a prompt or a continue naming a model that
+// cannot answer is refused before it stores anything, after the checks of
+// the session itself, and that a continue reads the model from a body sent
+// without its length.
+func TestRunModelRefused(t *testing.T) {
+	ts, a := newTestServerApp(t)
+	sess := createSession(t, ts)
+	base := ts.URL + "/session/" + string(sess.ID)
+	for _, tt := range []struct {
+		name     string
+		path     string
+		body     any
+		wantCode app.ErrorCode
+	}{
+		{"malformed model", "/message", SendRequest{Text: "hi", Model: "model-x"}, app.CodeInvalidModel},
+		{"unknown provider", "/message", SendRequest{Text: "hi", Model: "nope/model-x"}, app.CodeProviderNotFound},
+		{"streamed, unknown provider", "/message", SendRequest{Text: "hi", Model: "nope/model-x", Stream: true}, app.CodeProviderNotFound},
+	} {
+		if status, got := doError(t, "POST", base+tt.path, tt.body); got.Code != tt.wantCode || status != ErrorStatus(tt.wantCode) {
+			t.Errorf("%s: %d %+v, want %s", tt.name, status, got, tt.wantCode)
+		}
+	}
+	var msgs []json.RawMessage
+	if status := doJSON(t, "GET", base+"/message", nil, &msgs); status != http.StatusOK || len(msgs) != 0 {
+		t.Errorf("messages after refused prompts = %d with status %d, want none", len(msgs), status)
+	}
+
+	// A continue's body sent in chunks, with no length, is read all the same.
+	appendMessages(t, a, sess.ID, promptMsg("u1", "hi"))
+	body, err := json.Marshal(ContinueRequest{Model: "nope/model-x"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := http.NewRequestWithContext(t.Context(), "POST", base+"/continue", io.MultiReader(bytes.NewReader(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("chunked continue naming an unknown provider: status %d, want 404", resp.StatusCode)
+	}
+
+	// A session another operation holds is reported busy, whatever the model.
+	op, _, err := a.Claim(t.Context(), sess.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Release(sess.ID, op)
+	if status, got := doError(t, "POST", base+"/message", SendRequest{Text: "hi", Model: "nope/model-x"}); got.Code != app.CodeSessionBusy {
+		t.Errorf("busy session, unknown provider: %d %+v, want %s", status, got, app.CodeSessionBusy)
 	}
 }
