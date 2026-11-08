@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/product"
 )
@@ -17,11 +18,11 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-// TestConfig checks that GET /config reports the default model of the config
-// file, and that PATCH /config saves the model it names there, keeping the
-// file's other settings, changes nothing when it names none, and refuses a
-// model not named as provider/model, of an unknown provider, or a setting it
-// cannot change.
+// TestConfig checks that GET /config reports the default provider and
+// model of the config file, and that PATCH /config saves those it names
+// there, with the other as the file sets it, keeping the file's other
+// settings, changes nothing when it names none, and refuses an empty
+// provider or model, an unknown provider, or a setting it cannot change.
 func TestConfig(t *testing.T) {
 	var home string
 	ts, _ := newTestServerWith(t, func(cfg *config.Config) {
@@ -30,33 +31,56 @@ func TestConfig(t *testing.T) {
 	})
 
 	var got Config
-	if status := doJSON(t, "GET", ts.URL+"/config", nil, &got); status != http.StatusOK || got.Model != "provider-b/model-y" {
-		t.Fatalf("GET /config = %d, %+v, want 200 and provider-b/model-y", status, got)
+	if status := doJSON(t, "GET", ts.URL+"/config", nil, &got); status != http.StatusOK ||
+		got != (Config{DefaultProvider: "provider-b", DefaultModel: "provider-b/model-y"}) {
+		t.Fatalf("GET /config = %d, %+v, want 200 and provider-b/model-y at provider-b", status, got)
 	}
 
-	model := "provider-a/model-x"
-	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{Model: &model}, &got); status != http.StatusOK || got.Model != model {
-		t.Fatalf("PATCH /config = %d, %+v, want 200 and %s", status, got, model)
+	want := Config{DefaultProvider: "provider-a", DefaultModel: "provider-a/model-x"}
+	provider, model := want.DefaultProvider, want.DefaultModel
+	update := ConfigUpdate{DefaultProvider: &provider, DefaultModel: &model}
+	if status := doJSON(t, "PATCH", ts.URL+"/config", update, &got); status != http.StatusOK || got != want {
+		t.Fatalf("PATCH /config = %d, %+v, want 200 and %+v", status, got, want)
 	}
-	if doJSON(t, "GET", ts.URL+"/config", nil, &got); got.Model != model {
-		t.Errorf("GET /config after PATCH = %q, want %s", got.Model, model)
+	if doJSON(t, "GET", ts.URL+"/config", nil, &got); got != want {
+		t.Errorf("GET /config after PATCH = %+v, want %+v", got, want)
 	}
 	saved, err := config.LoadDir(home)
-	if err != nil || saved.Model != model || saved.LogLevel != config.LogDebug {
-		t.Errorf("config file = model %q, log level %q, %v, want %s and the kept log level", saved.Model, saved.LogLevel, err, model)
+	if err != nil || saved.DefaultProvider != "provider-a" || saved.DefaultModel != "provider-a/model-x" || saved.LogLevel != config.LogDebug {
+		t.Errorf("config file = provider %q, model %q, log level %q, %v, want provider-a/model-x at provider-a and the kept log level",
+			saved.DefaultProvider, saved.DefaultModel, saved.LogLevel, err)
 	}
-	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{}, &got); status != http.StatusOK || got.Model != model {
-		t.Errorf("PATCH /config with no setting = %d, %+v, want 200 and %s unchanged", status, got, model)
+	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{}, &got); status != http.StatusOK || got != want {
+		t.Errorf("PATCH /config with no setting = %d, %+v, want 200 and %+v unchanged", status, got, want)
 	}
 
-	unqualified, unknown := "model-x", "nope/x"
+	// A model alone runs at the provider the file sets.
+	other := "provider-a/model-z"
+	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{DefaultModel: &other}, &got); status != http.StatusOK ||
+		got != (Config{DefaultProvider: "provider-a", DefaultModel: other}) {
+		t.Errorf("PATCH /config with a model alone = %d, %+v, want 200 and %s at provider-a", status, got, other)
+	}
+	// A provider alone keeps the model the file sets.
+	providerB := agent.ProviderID("provider-b")
+	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{DefaultProvider: &providerB}, &got); status != http.StatusOK ||
+		got != (Config{DefaultProvider: providerB, DefaultModel: other}) {
+		t.Errorf("PATCH /config with a provider alone = %d, %+v, want 200 and %s at provider-b", status, got, other)
+	}
+	if status := doJSON(t, "PATCH", ts.URL+"/config", update, &got); status != http.StatusOK || got != want {
+		t.Fatalf("PATCH /config back = %d, %+v, want 200 and %+v", status, got, want)
+	}
+
+	empty, unknown := agent.ProviderID(""), agent.ProviderID("nope")
+	noModel := ""
 	tests := []struct {
 		name       string
 		body       any
 		wantStatus int
 	}{
-		{name: "model without provider", body: ConfigUpdate{Model: &unqualified}, wantStatus: http.StatusBadRequest},
-		{name: "unknown provider", body: ConfigUpdate{Model: &unknown}, wantStatus: http.StatusNotFound},
+		{name: "empty provider", body: ConfigUpdate{DefaultProvider: &empty}, wantStatus: http.StatusBadRequest},
+		{name: "empty model", body: ConfigUpdate{DefaultModel: &noModel}, wantStatus: http.StatusBadRequest},
+		{name: "unknown provider", body: ConfigUpdate{DefaultProvider: &unknown}, wantStatus: http.StatusNotFound},
+		{name: "older model setting", body: map[string]string{"model": "provider-a/provider-a/model-x"}, wantStatus: http.StatusBadRequest},
 		{name: "setting it cannot change", body: map[string]string{"log_level": "warn"}, wantStatus: http.StatusBadRequest},
 		{name: "not an object", body: "model", wantStatus: http.StatusBadRequest},
 	}
@@ -65,8 +89,8 @@ func TestConfig(t *testing.T) {
 			t.Errorf("%s: PATCH /config = %d, want %d", tt.name, status, tt.wantStatus)
 		}
 	}
-	if doJSON(t, "GET", ts.URL+"/config", nil, &got); got.Model != model {
-		t.Errorf("model after refused updates = %q, want %s", got.Model, model)
+	if doJSON(t, "GET", ts.URL+"/config", nil, &got); got != want {
+		t.Errorf("config after refused updates = %+v, want %+v", got, want)
 	}
 	if saved, _ := config.LoadDir(home); saved.LogLevel != config.LogDebug {
 		t.Errorf("log level after a refused update = %q, want it kept", saved.LogLevel)
@@ -80,8 +104,9 @@ func TestRequestsUseTheConfigModel(t *testing.T) {
 	ts, _, bodies := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		io.WriteString(w, messagesReply)
 	})
-	model := "provider-b/model-y"
-	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{Model: &model}, nil); status != http.StatusOK {
+	model := "provider-b/provider-b/model-y"
+	provider, id := agent.ProviderID("provider-b"), "provider-b/model-y"
+	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{DefaultProvider: &provider, DefaultModel: &id}, nil); status != http.StatusOK {
 		t.Fatalf("PATCH /config: status %d", status)
 	}
 
@@ -98,10 +123,11 @@ func TestRequestsUseTheConfigModel(t *testing.T) {
 	}
 	waitForMessages(t, ts, msgURL)
 	var msgs []struct {
-		Model string `json:"model"`
+		Provider string `json:"provider"`
+		Model    string `json:"model"`
 	}
 	doJSON(t, "GET", msgURL, nil, &msgs)
-	if len(msgs) == 0 || msgs[0].Model != model {
+	if len(msgs) == 0 || msgs[0].Provider+"/"+msgs[0].Model != model {
 		t.Errorf("prompt = %+v, want it sent to %s", msgs, model)
 	}
 	if len(bodies()) < 2 {

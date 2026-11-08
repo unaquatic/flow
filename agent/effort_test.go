@@ -171,37 +171,34 @@ func TestParseVariant(t *testing.T) {
 		in   string
 		want agent.Variant
 	}{
-		{"provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a"}},
-		{"provider-a/model-a:high", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "high"}},
-		{"provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}},
-		// A pro mode is a model of its own.
-		{"provider-a/model-a-pro:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "none"}},
-		{"provider-a/model-a:pro", agent.Variant{Provider: providerA, Model: "model-a:pro"}},
-		// The variant's whole ID names it too.
+		{"provider-a/provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a"}},
+		{"provider-a/provider-a/model-a:high", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "high"}},
 		{"provider-a/provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}},
-		// A gateway's model is the lab's, named whole.
+		// A pro mode is a model of its own.
+		{"provider-a/provider-a/model-a-pro:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "none"}},
+		{"provider-a/provider-a/model-a:pro", agent.Variant{Provider: providerA, Model: "provider-a/model-a:pro"}},
+		// A model ID without its lab is not the catalog's.
+		{"provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "model-a:fast"}},
 		{"router/provider-a/model-a:high", agent.Variant{Provider: "router", Model: "provider-a/model-a", Effort: "high"}},
-		{"provider-b/model-i:fast:max", agent.Variant{Provider: providerB, Model: "provider-b/model-i", Option: "fast", Effort: "max"}},
+		{"provider-b/provider-b/model-i:fast:max", agent.Variant{Provider: providerB, Model: "provider-b/model-i", Option: "fast", Effort: "max"}},
 		// A model without a provider names none, and stays whole.
 		{"model-i:fast:max", agent.Variant{Model: "model-i:fast:max"}},
 		// The catalog's IDs are lower case, and name a variant whatever its
 		// case.
-		{"provider-a/MODEL-A:Fast:HIGH", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}},
-		// A model named by the provider's own ID and a mode, as no variant
-		// is, is not the catalog's.
-		{"provider-a/model-a-fast", agent.Variant{Provider: providerA, Model: "model-a-fast"}},
+		{"provider-a/PROVIDER-A/MODEL-A:Fast:HIGH", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}},
+		// A model named with a mode, as no variant is, is not the catalog's.
+		{"provider-a/provider-a/model-a-fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a-fast"}},
 		// A level the model does not list is part of the ID.
-		{"provider-a/model-b:none", agent.Variant{Provider: providerA, Model: "model-b:none"}},
+		{"provider-a/provider-a/model-b:none", agent.Variant{Provider: providerA, Model: "provider-a/model-b:none"}},
 		// A listed ID is never cut, though it ends in a mode's name.
-		{"provider-a/model-c-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-c-pro"}},
-		// A variant the model lacks, and a model not listed, stay whole.
-		{"provider-a/model-b-fast", agent.Variant{Provider: providerA, Model: "model-b-fast"}},
-		{"provider-a/model-b:fast", agent.Variant{Provider: providerA, Model: "model-b:fast"}},
+		{"provider-a/provider-a/model-c-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-c-pro"}},
+		// A variant the model lacks stays whole.
+		{"provider-a/provider-a/model-b:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-b:fast"}},
 		// A suffix that names no level is part of the ID.
 		{"provider-a/ft:model-b:org", agent.Variant{Provider: providerA, Model: "ft:model-b:org"}},
 		// A level the catalog lists is one, though flow does not know it.
-		{"provider-a/model-d:XXXHIGH", agent.Variant{Provider: providerA, Model: "provider-a/model-d", Effort: "xxxhigh"}},
-		{"provider-a/model-d:bogus", agent.Variant{Provider: providerA, Model: "model-d:bogus"}},
+		{"provider-a/provider-a/model-d:XXXHIGH", agent.Variant{Provider: providerA, Model: "provider-a/model-d", Effort: "xxxhigh"}},
+		{"provider-a/provider-a/model-d:bogus", agent.Variant{Provider: providerA, Model: "provider-a/model-d:bogus"}},
 	}
 	for _, tt := range tests {
 		got := agent.ParseVariant(tt.in, cat)
@@ -211,28 +208,53 @@ func TestParseVariant(t *testing.T) {
 	}
 }
 
+// TestVariantString checks that String writes the provider and then Ref,
+// the form ParseVariant reads back.
 func TestVariantString(t *testing.T) {
 	cat := variantCatalog(t)
 	for _, s := range []string{
-		"provider-a/model-a",
-		"provider-a/model-a:fast",
-		"provider-a/model-a-pro:xhigh",
-		"provider-b/model-j:high",
+		"provider-a/provider-a/model-a",
+		"provider-a/provider-a/model-a:fast",
+		"provider-a/provider-a/model-a-pro:xhigh",
+		"provider-b/provider-b/model-j:high",
 		"router/provider-a/model-a:high",
 	} {
-		if got := agent.ParseVariant(s, cat).String(); got != s {
-			t.Errorf("ParseVariant(%q).String() = %q", s, got)
+		v := agent.ParseVariant(s, cat)
+		if got := v.String(); got != s || got != string(v.Provider)+"/"+v.Ref() {
+			t.Errorf("ParseVariant(%q).String() = %q, Ref %q", s, got, v.Ref())
 		}
 	}
-	for in, want := range map[string]string{
-		// Levels are written in lower case, as the catalog lists them.
-		"provider-a/model-a:NONE": "provider-a/model-a:none",
-		// The variant's whole ID is written without the lab.
-		"provider-a/provider-a/model-a:fast": "provider-a/model-a:fast",
-	} {
-		if got := agent.ParseVariant(in, cat).String(); got != want {
-			t.Errorf("String of %s = %q, want %q", in, got, want)
+	// Levels are written in lower case, as the catalog lists them.
+	if got := agent.ParseVariant("provider-a/provider-a/model-a:NONE", cat).String(); got != "provider-a/provider-a/model-a:none" {
+		t.Errorf("String = %q, want provider-a/provider-a/model-a:none", got)
+	}
+}
+
+// TestVariantRef checks that Ref writes a variant without its provider, as
+// its ID and its effort, and that ParseVariantAt reads it back at that
+// provider.
+func TestVariantRef(t *testing.T) {
+	cat := variantCatalog(t)
+	tests := []struct {
+		provider agent.ProviderID
+		ref      string
+	}{
+		{providerA, "provider-a/model-a"},
+		{providerA, "provider-a/model-a:fast"},
+		{providerA, "provider-a/model-a-pro:xhigh"},
+		{providerB, "provider-b/model-j:high"},
+		{"router", "provider-a/model-a:high"},
+		// A model the catalog does not list keeps the ID it is named by.
+		{providerA, "model-b:fast"},
+	}
+	for _, tt := range tests {
+		v := agent.ParseVariantAt(tt.provider, tt.ref, cat)
+		if v.Provider != tt.provider || v.Ref() != tt.ref {
+			t.Errorf("ParseVariantAt(%s, %q) = %+v, Ref %q; want it back", tt.provider, tt.ref, v, v.Ref())
 		}
+	}
+	if v := agent.ParseVariantAt("", "", cat); v != (agent.Variant{}) {
+		t.Errorf("ParseVariantAt of no model = %+v, want the zero Variant", v)
 	}
 }
 
@@ -246,7 +268,7 @@ func TestVariants(t *testing.T) {
 	for _, w := range agent.Variants(v.Provider, v.Model, off) {
 		got = append(got, w.String())
 	}
-	if want := []string{"provider-a/model-a", "provider-a/model-a:fast"}; !slices.Equal(got, want) {
+	if want := []string{"provider-a/provider-a/model-a", "provider-a/provider-a/model-a:fast"}; !slices.Equal(got, want) {
 		t.Errorf("Variants = %q, want %q", got, want)
 	}
 	// The pro model runs model-a with the pro mode's fields, as its call.

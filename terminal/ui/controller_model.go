@@ -23,7 +23,7 @@ func (s *Service) SetModelLabel(label string) []UIEvent {
 func (s *Service) SessionUsage() SessionUsage {
 	cat := s.app.Models().Catalog()
 	u := SumUsage(s.state.Messages, func(msg ChatMessage) (gateway.Price, bool) {
-		v := agent.ParseVariant(msg.Model, cat)
+		v := msg.Variant(cat)
 		r, ok := cat.Resolve(v.Provider, v.ID())
 		if !ok || r.Price == nil {
 			return gateway.Price{}, false
@@ -40,7 +40,7 @@ func (s *Service) SessionUsage() SessionUsage {
 // msg holds, as the catalog lists it, or zero when it does not list it.
 func (s *Service) ContextWindow(msg ChatMessage) int {
 	cat := s.app.Models().Catalog()
-	off, ok := agent.Lookup(cat, agent.ParseVariant(msg.Model, cat))
+	off, ok := agent.Lookup(cat, msg.Variant(cat))
 	if !ok {
 		return 0
 	}
@@ -87,7 +87,7 @@ func VariantName(off gateway.Offering, v agent.Variant) string {
 		name = off.Variants[v.Option].Name
 	}
 	if name == "" {
-		return v.ModelName()
+		return v.ID()
 	}
 	return name
 }
@@ -235,7 +235,7 @@ func (s *Service) RestoreSessionModel() []UIEvent {
 		if m.Model == "" {
 			continue
 		}
-		v := s.app.Models().ParseVariant(m.Model)
+		v := m.Variant(s.app.Models().Catalog())
 		s.state.ReasoningEffort = v.Effort
 		return s.SetVariant(v)
 	}

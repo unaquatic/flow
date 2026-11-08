@@ -78,7 +78,26 @@ func (f File) Read() (map[string]json.RawMessage, error) {
 //
 // Update holds the lock while change runs, so change must not update the
 // same file, which would wait for it.
-func (f File) Update(ctx context.Context, key string, change func(json.RawMessage) (json.RawMessage, error)) (err error) {
+func (f File) Update(ctx context.Context, key string, change func(json.RawMessage) (json.RawMessage, error)) error {
+	return f.Edit(ctx, func(keys map[string]json.RawMessage) error {
+		value, err := change(keys[key])
+		if err != nil {
+			return err
+		}
+		if value == nil {
+			delete(keys, key)
+		} else {
+			keys[key] = value
+		}
+		return nil
+	})
+}
+
+// Edit lets change edit the top-level keys of the file and their JSON
+// values in place, and saves the result, as Update does, so that keys that
+// belong together change in one write. change gets an empty map when the
+// file is missing or empty.
+func (f File) Edit(ctx context.Context, change func(keys map[string]json.RawMessage) error) (err error) {
 	unlock, err := f.lock(ctx)
 	if err != nil {
 		return err
@@ -93,17 +112,11 @@ func (f File) Update(ctx context.Context, key string, change func(json.RawMessag
 	if err != nil {
 		return err
 	}
-	value, err := change(keys[key])
-	if err != nil {
-		return err
-	}
 	if keys == nil {
 		keys = make(map[string]json.RawMessage)
 	}
-	if value == nil {
-		delete(keys, key)
-	} else {
-		keys[key] = value
+	if err := change(keys); err != nil {
+		return err
 	}
 	data, err := json.MarshalIndent(keys, "", "  ")
 	if err != nil {

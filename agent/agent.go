@@ -177,10 +177,11 @@ func (a *Agent) EndTurn(ctx context.Context, s *TurnState, err error) error {
 	var storeErr error
 	if a.Store != nil && len(s.Parts) > 0 {
 		msg := message.Content{
-			ID:    s.MessageID,
-			Role:  message.RoleAgent,
-			Parts: s.Parts,
-			Model: a.Variant.String(),
+			ID:       s.MessageID,
+			Role:     message.RoleAgent,
+			Parts:    s.Parts,
+			Provider: a.Variant.Provider,
+			Model:    a.Variant.Ref(),
 		}
 		// The message is stored also when ctx ended, since the turn was
 		// stopped then, and what it produced so far is kept.

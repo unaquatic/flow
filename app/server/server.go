@@ -176,6 +176,7 @@ var codeStatus = map[app.ErrorCode]int{
 	app.CodeRefused:           http.StatusBadRequest,
 
 	app.CodeInvalidModel:       http.StatusBadRequest,
+	app.CodeAmbiguousModel:     http.StatusBadRequest,
 	app.CodeModelNotFound:      http.StatusNotFound,
 	app.CodeProviderNotFound:   http.StatusNotFound,
 	app.CodeFormatNotSupported: http.StatusBadRequest,

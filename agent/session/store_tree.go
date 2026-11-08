@@ -11,7 +11,7 @@ import (
 
 // messageColumns lists the message fields every message query selects, in scan
 // order, for a query that joins the messages table as m.
-const messageColumns = `m.seq, m.id, m.parent_id, m.role, m.model, m.created_at, m.type`
+const messageColumns = `m.seq, m.id, m.parent_id, m.role, m.provider, m.model, m.created_at, m.type`
 
 // partColumns lists the part fields every message query selects after
 // messageColumns, in scan order, for a query that left-joins the
@@ -315,7 +315,7 @@ func (r *messageRow) scan(rows *sql.Rows, lead ...any) error {
 		partID, partType sql.Null[string]
 		part             []byte
 	)
-	err := rows.Scan(append(lead, &r.Seq, &m.ID, &parent, &role, &m.Model, &createdAt, &typ, &partID, &partType, &part)...)
+	err := rows.Scan(append(lead, &r.Seq, &m.ID, &parent, &role, &m.Provider, &m.Model, &createdAt, &typ, &partID, &partType, &part)...)
 	if err != nil {
 		return err
 	}

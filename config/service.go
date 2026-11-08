@@ -1,6 +1,9 @@
 package config
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+)
 
 // FileName is the name of the config file in the data directory.
 const FileName = "config.json"
@@ -31,9 +34,35 @@ func (s *Service) File() File {
 	return File{Dir: s.Dir, Name: FileName}
 }
 
-// SaveModel sets model as the model of the config file, as save sets a
-// setting.
-func (s *Service) SaveModel(model string) error { return save(s, "model", model) }
+// SaveDefaultModel sets provider and model, in the forms
+// Config.DefaultProvider and Config.DefaultModel hold, as the default
+// provider and model of the config file, in one write, as save sets a
+// setting, and removes the older "model" key they replace. An empty
+// provider removes the default provider.
+func (s *Service) SaveDefaultModel(provider, model string) error {
+	return s.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
+		return setDefaultModel(keys, provider, model)
+	})
+}
+
+// UpdateDefaultModel applies change to the default provider and model of
+// the config file, as Get reads them, and saves the provider and model it
+// returns, as SaveDefaultModel saves them, in one write under the file's
+// lock, so that a change another process makes meanwhile is not lost.
+// Nothing is saved when change fails. change must not update the config
+// file, which would wait for the lock.
+func (s *Service) UpdateDefaultModel(change func(provider, model string) (string, string, error)) error {
+	return s.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
+		provider, model, err := defaultModelOf(keys)
+		if err != nil {
+			return err
+		}
+		if provider, model, err = change(provider, model); err != nil {
+			return err
+		}
+		return setDefaultModel(keys, provider, model)
+	})
+}
 
 // SaveTerminal sets t as the terminal settings of the config file, as save
 // sets a setting.

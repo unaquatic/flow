@@ -59,7 +59,7 @@ func newActorTestApp(t *testing.T, streamText string) (*App, *agenttest.Gateway)
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"model":"mock/test-model"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"default_provider":"mock","default_model":"test-model"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// The user's instructions give each new session a system message.
@@ -215,7 +215,7 @@ func TestSend_OpensWithTheSystemPrompt(t *testing.T) {
 	a.workingDir = t.TempDir()
 	userFile, projectFile := filepath.Join(a.config.Dir, InstructionsFile), filepath.Join(a.workingDir, InstructionsFile)
 	for path, body := range map[string]string{
-		filepath.Join(a.config.Dir, config.FileName): `{"model":"mock/test-model","agent":{"system_prompt":"Answer in haiku."}}`,
+		filepath.Join(a.config.Dir, config.FileName): `{"default_provider":"mock","default_model":"test-model","agent":{"system_prompt":"Answer in haiku."}}`,
 		userFile:    "Call me Sam.\n",
 		projectFile: "\n# Project\n\nUse tabs.\n",
 	} {
@@ -356,16 +356,16 @@ func TestSend_KeepsReasoningOfTheModelThatRuns(t *testing.T) {
 	dir := t.TempDir()
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
 	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, agenttest.Provider{ID: providerA, Gateway: gw})
-	stored := func(role message.Role, model string, parts ...message.ContentPart) {
-		appendMessage(t, a.sessions, "ses_mixed", &message.Content{ID: message.NewID(), Role: role, Model: model, Parts: parts})
+	stored := func(role message.Role, provider agent.ProviderID, model string, parts ...message.ContentPart) {
+		appendMessage(t, a.sessions, "ses_mixed", &message.Content{ID: message.NewID(), Role: role, Provider: provider, Model: model, Parts: parts})
 	}
-	stored(message.RoleUser, "provider-a/model-a:fast:high", message.TextPart{Text: "hi"})
-	stored(message.RoleAgent, "provider-a/model-a:fast:high", message.ReasoningPart{Text: "own"}, message.TextPart{Text: "one"})
-	stored(message.RoleUser, "provider-b/model-x", message.TextPart{Text: "and you?"})
-	stored(message.RoleAgent, "provider-b/model-x", message.ReasoningPart{Text: "other"}, message.TextPart{Text: "two"})
+	stored(message.RoleUser, providerA, "provider-a/model-a:fast:high", message.TextPart{Text: "hi"})
+	stored(message.RoleAgent, providerA, "provider-a/model-a:fast:high", message.ReasoningPart{Text: "own"}, message.TextPart{Text: "one"})
+	stored(message.RoleUser, "provider-b", "model-x", message.TextPart{Text: "and you?"})
+	stored(message.RoleAgent, "provider-b", "model-x", message.ReasoningPart{Text: "other"}, message.TextPart{Text: "two"})
 
 	events := a.Subscribe(t.Context())
-	send(t, a, "ses_mixed", SendInput{Text: "again", Model: "provider-a/model-a:xhigh"})
+	send(t, a, "ses_mixed", SendInput{Text: "again", Model: "provider-a/provider-a/model-a:xhigh"})
 	collectUntilIdle(t, events)
 
 	if len(gw.StreamCalls) != 1 {
@@ -1021,8 +1021,9 @@ func TestPlay_StoresItsTurns(t *testing.T) {
 		if e.Message.ParentID == nil || e.Message.CreatedAt.IsZero() {
 			t.Errorf("reply %s ended without its parent and creation time", e.Message.ID)
 		}
-		if v := a.Models().ParseVariant(e.Message.Model); v.Provider != "script" || v.Model != "player" || stored.Model != e.Message.Model {
-			t.Errorf("reply %s came from %s, stored %s; want script/player, stored with it", e.Message.ID, e.Message.Model, stored.Model)
+		if e.Message.Provider != "script" || e.Message.Model != "player" || stored.Provider != e.Message.Provider || stored.Model != e.Message.Model {
+			t.Errorf("reply %s came from %s/%s, stored %s/%s; want script/player, stored with it",
+				e.Message.ID, e.Message.Provider, e.Message.Model, stored.Provider, stored.Model)
 		}
 	}
 	if u := ended[1].Message.Usage(); u.InputTokens != 9 || msgs[2].Usage() != u {
@@ -1039,9 +1040,9 @@ func TestSend_RecordsVariant(t *testing.T) {
 	tests := []struct {
 		model, want string
 	}{
-		{model: "provider-a/model-a:fast:high", want: "provider-a/model-a:fast:high"},
-		{model: "provider-a/model-a:xhigh", want: "provider-a/model-a:xhigh"},
-		{model: "provider-a/model-a", want: "provider-a/model-a:medium"},
+		{model: "provider-a/provider-a/model-a:fast:high", want: "provider-a/model-a:fast:high"},
+		{model: "provider-a/provider-a/model-a:xhigh", want: "provider-a/model-a:xhigh"},
+		{model: "provider-a/provider-a/model-a", want: "provider-a/model-a:medium"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.model, func(t *testing.T) {
@@ -1065,13 +1066,13 @@ func TestSend_RecordsVariant(t *testing.T) {
 				t.Fatalf("got %d message ends, want the prompt's and the reply's", len(ended))
 			}
 			for _, e := range ended {
-				if m := e.Message; m.Model != tt.want {
-					t.Errorf("%v message ended as %s, want %s", m.Role, m.Model, tt.want)
+				if m := e.Message; m.Provider != providerA || m.Model != tt.want {
+					t.Errorf("%v message ended as %s at %s, want %s", m.Role, m.Model, m.Provider, tt.want)
 				}
 			}
 			for _, m := range conversation(t, branchOf(t, a.Sessions(), "ses_variant")) {
-				if m.Model != tt.want {
-					t.Errorf("stored %v message as %s, want %s", m.Role, m.Model, tt.want)
+				if m.Provider != providerA || m.Model != tt.want {
+					t.Errorf("stored %v message as %s at %s, want %s", m.Role, m.Model, m.Provider, tt.want)
 				}
 			}
 		})

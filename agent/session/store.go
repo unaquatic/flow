@@ -407,10 +407,10 @@ func insertMessage(ctx context.Context, tx *sql.Tx, sessionID message.SessionID,
 	}
 	created := encodeTime(msg.CreatedAt)
 	res, err := tx.ExecContext(ctx, `
-		INSERT INTO messages (session_id, id, parent_id, type, role, model, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO messages (session_id, id, parent_id, type, role, provider, model, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		sessionID, string(msg.ID), nullableID(parent), string(cmp.Or(msg.Type, message.TypeChat)),
-		msg.Role.String(), msg.Model, created, created)
+		msg.Role.String(), string(msg.Provider), msg.Model, created, created)
 	if err != nil {
 		return 0, err
 	}

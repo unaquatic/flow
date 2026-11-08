@@ -45,10 +45,21 @@ func (l LogLevel) Level() slog.Level {
 
 // Config contains resolved application configuration.
 type Config struct {
-	// Model is the default model in "provider/model:option:effort" form, as
-	// agent.Variant.String writes it, such as "provider-a/model-a:fast:high",
-	// leaving out the option and the effort it does not set.
-	Model string `json:"model,omitempty"`
+	// DefaultProvider is the provider the default model runs at, by its
+	// catalog ID, such as "provider-a".
+	DefaultProvider string `json:"default_provider,omitempty"`
+
+	// DefaultModel is the default model, without its provider, in
+	// "model:option:effort" form, as agent.Variant.Ref writes it, such as
+	// "lab-a/model-a:fast:high", leaving out the option and the effort it
+	// does not set.
+	//
+	// A file without it may set the older "model" key instead, in
+	// "provider/model:option:effort" form, whose model left out its lab
+	// when the lab was the provider. LoadDir reads its first segment as the
+	// default provider, and puts it back as the lab of a model that has
+	// none.
+	DefaultModel string `json:"default_model,omitempty"`
 
 	// LogLevel controls logging verbosity.
 	LogLevel LogLevel `json:"log_level,omitempty"`
@@ -173,6 +184,66 @@ type Terminal struct {
 	// Selection is how the menus mark their selected row: "full_width",
 	// "fill", or "arrow".
 	Selection string `json:"selection,omitempty"`
+}
+
+// legacyModelKey is the key older config files name the default model by,
+// in "provider/model:option:effort" form, as DefaultModel describes.
+const legacyModelKey = "model"
+
+// defaultModelOf returns the default provider and model that keys, the
+// top-level keys of a config file, set, as Config.DefaultProvider and
+// Config.DefaultModel hold them, reading the older "model" key, as
+// DefaultModel describes it, when keys set no default model. Either is
+// empty when keys do not set it.
+func defaultModelOf(keys map[string]json.RawMessage) (provider, model string, err error) {
+	if raw, ok := keys["default_provider"]; ok {
+		if err := json.Unmarshal(raw, &provider); err != nil {
+			return "", "", fmt.Errorf("default_provider: %w", err)
+		}
+	}
+	if raw, ok := keys["default_model"]; ok {
+		if err := json.Unmarshal(raw, &model); err != nil {
+			return "", "", fmt.Errorf("default_model: %w", err)
+		}
+		return provider, model, nil
+	}
+	raw, ok := keys[legacyModelKey]
+	if !ok {
+		return provider, "", nil
+	}
+	if err := json.Unmarshal(raw, &model); err != nil {
+		return "", "", fmt.Errorf("%s: %w", legacyModelKey, err)
+	}
+	t, rest, ok := strings.Cut(model, "/")
+	if !ok {
+		return provider, model, nil
+	}
+	if !strings.Contains(rest, "/") {
+		rest = t + "/" + rest
+	}
+	return t, rest, nil
+}
+
+// setDefaultModel sets provider and model as the default provider and
+// model in keys, the top-level keys of a config file, and removes the older
+// "model" key they replace. An empty provider removes the default provider.
+func setDefaultModel(keys map[string]json.RawMessage, provider, model string) error {
+	delete(keys, legacyModelKey)
+	m, err := json.Marshal(model)
+	if err != nil {
+		return err
+	}
+	keys["default_model"] = m
+	if provider == "" {
+		delete(keys, "default_provider")
+		return nil
+	}
+	p, err := json.Marshal(provider)
+	if err != nil {
+		return err
+	}
+	keys["default_provider"] = p
+	return nil
 }
 
 // legacyExtensions maps each top-level key of config files written before
@@ -305,8 +376,9 @@ func mergeFromFile(cfg *Config, f File) error {
 		return fmt.Errorf("parsing %s: %w", path, err)
 	}
 
-	if _, ok := raw["model"]; ok {
-		cfg.Model = overlay.Model
+	if cfg.DefaultProvider, cfg.DefaultModel, err = defaultModelOf(raw); err != nil {
+		path, _ := f.Path()
+		return fmt.Errorf("parsing %s: %w", path, err)
 	}
 	if _, ok := raw["log_level"]; ok {
 		cfg.LogLevel = LogLevel(strings.ToLower(string(overlay.LogLevel)))

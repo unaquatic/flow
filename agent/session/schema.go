@@ -8,7 +8,31 @@ package session
 // writing to them.
 var Migrations = []string{
 	migrationV1,
+	migrationV2,
 }
+
+// migrationV2 stores a message's provider apart from its model, in a
+// provider column, and its model without it, in "model:option:effort" form
+// with the model's whole catalog ID, as agent.Variant.Ref writes it, such as
+// lab-a/model-a:fast:xhigh. Both are empty when the model is not known.
+//
+// It moves the first segment of each model in the older
+// "provider/model:option:effort" form to the provider column. That form
+// left out the model's lab when the lab was the provider, as
+// provider-a/model-a, so a model left without a lab gets the provider as
+// its lab back. The column has a default only because SQLite adds no NOT
+// NULL column without one; every insert names it.
+const migrationV2 = `
+ALTER TABLE messages ADD COLUMN provider TEXT NOT NULL DEFAULT '';
+
+UPDATE messages
+SET provider = substr(model, 1, instr(model, '/') - 1),
+    model = CASE
+        WHEN instr(substr(model, instr(model, '/') + 1), '/') > 0 THEN substr(model, instr(model, '/') + 1)
+        ELSE model
+    END
+WHERE instr(model, '/') > 0;
+`
 
 // migrationV1 creates the tables.
 //
@@ -25,7 +49,8 @@ var Migrations = []string{
 // provider-a/model-a:fast:xhigh: the catalog variant's option, which
 // prices its usage, is left out for the default variant, and the effort when
 // the provider chose it. Telling the option and the effort from the rest of
-// the model ID takes the catalog.
+// the model ID takes the catalog. migrationV2 moves the provider to a column
+// of its own.
 //
 // Foreign keys hold every link: a message's session, its parent, which is a
 // message of the same session, and a session's head and forward, which are

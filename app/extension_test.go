@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
 )
@@ -66,13 +67,13 @@ func TestHooks_DescribeTheirEvents(t *testing.T) {
 	if len(prompts) != 1 {
 		t.Fatalf("prompt hook ran %d times, want 1", len(prompts))
 	}
-	if p := prompts[0]; p.SessionID != "ses_hooks" || p.MessageID != branch[0].ID || p.Text != "hi" || p.Model != branch[0].Model {
+	if p := prompts[0]; p.SessionID != "ses_hooks" || p.MessageID != branch[0].ID || p.Text != "hi" || p.Model != variantOf(branch[0]) {
 		t.Errorf("prompt = %+v, want the stored prompt %q of ses_hooks", p, branch[0].ID)
 	}
 	if len(turns) != 1 {
 		t.Fatalf("turn hook ran %d times, want 1", len(turns))
 	}
-	if tt := turns[0]; tt.SessionID != "ses_hooks" || tt.MessageID != branch[1].ID || tt.Model != branch[1].Model || tt.Stopped || tt.Err != nil {
+	if tt := turns[0]; tt.SessionID != "ses_hooks" || tt.MessageID != branch[1].ID || tt.Model != variantOf(branch[1]) || tt.Stopped || tt.Err != nil {
 		t.Errorf("turn = %+v, want the stored reply %q, completed", tt, branch[1].ID)
 	}
 
@@ -141,4 +142,10 @@ func TestNew_OffersTheToolsOfExtensions(t *testing.T) {
 	if !slices.EqualFunc(got, want, func(g, w agent.ToolDefinition) bool { return g.Name == w.Name && g.Description == w.Description }) {
 		t.Errorf("offered %+v, want bash and the second extension's read", got)
 	}
+}
+
+// variantOf returns the model variant of m in the form Variant.String
+// writes.
+func variantOf(m message.Content) string {
+	return agent.FormatModel(m.Provider, m.Model)
 }

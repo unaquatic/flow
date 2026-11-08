@@ -102,7 +102,7 @@ func TestBannerMenuAfterEmptyModels(t *testing.T) {
 func TestBannerSearchesFromTheInput(t *testing.T) {
 	ui := newBannerTestUI(t)
 	ui.renderer.FocusRenderable(ui.input)
-	items := []MenuItem{{Name: "provider-a/model-a"}, {Name: "provider-b/model-b"}}
+	items := []MenuItem{{Name: "provider-a/provider-a/model-a"}, {Name: "provider-b/provider-b/model-b"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	if !ui.inputContentRow.Visible() || !ui.input.Focused() {
 		t.Fatal("input is not on screen and focused for the search")
@@ -181,7 +181,7 @@ func TestBannerArrowsChangeSetting(t *testing.T) {
 		t.Errorf("shift+right changed the mode to %s or was kept from the input", ui.service.state.CacheMode)
 	}
 
-	items := []MenuItem{{Name: "provider-a/model-a"}}
+	items := []MenuItem{{Name: "provider-a/provider-a/model-a"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	left := &input.KeyEvent{Name: input.KeyLeft}
 	ui.HandleBannerKey(left)

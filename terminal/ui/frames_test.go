@@ -200,7 +200,7 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// A notice that names a model draws it in the primary color.
 		{name: "notice_keyword", w: 64, h: 4, add: func(ui *UI) {
-			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/model-a:high", " as the default model"))
+			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/provider-a/model-a:high", " as the default model"))
 		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
@@ -285,7 +285,7 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_usage", h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.SetCacheMode(CachePerMessage))
 			msg := agentText("a1", "Done.")
-			msg.Model = "provider-b/model-d"
+			msg.Model = "provider-b/provider-b/model-d"
 			msg.Usage = message.Usage{InputTokens: 1200, OutputTokens: 300, CachedInputTokens: 1024, CacheCreationInputTokens: 176}
 			ui.AddMessage(msg)
 		}},
@@ -863,7 +863,7 @@ func TestSlashStatusFrames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.SetInputText("hello")
-			ui.SetModelLabel("provider-a/model-h:medium")
+			ui.SetModelLabel("provider-a/provider-a/model-h:medium")
 			ui.SetUsage(tt.usage)
 			ui.service.state.Messages = []ChatMessage{{ID: "a1", Role: message.RoleAgent, Worked: 3*time.Minute + 12*time.Second}}
 			if tt.marker {
@@ -1048,7 +1048,7 @@ func TestWorkedFrames(t *testing.T) {
 		{name: "worked_run_ended", h: 8, add: func(ui *UI) {
 			prompt := message.Content{ID: "u1", Role: message.RoleUser,
 				Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "Run the tests"}}}
-			reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "provider/model"}
+			reply := message.Content{ID: "a1", Role: message.RoleAgent, Provider: "provider", Model: "model"}
 			done := reply
 			done.Parts = []message.ContentPart{
 				message.TextPart{ID: "a1-text", Text: "All tests pass."},
@@ -1068,7 +1068,7 @@ func TestWorkedFrames(t *testing.T) {
 		// A reply that read and wrote no cache shows no cache use.
 		{name: "worked_cache_miss", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Done.")
-			msg.Model = "provider-a/model-b"
+			msg.Model = "provider-a/provider-a/model-b"
 			msg.Usage = message.Usage{InputTokens: 1200, OutputTokens: 300}
 			msg.Worked = 42 * time.Second
 			ui.AddMessage(msg)
@@ -1088,7 +1088,7 @@ func TestWorkedFrames(t *testing.T) {
 		{name: "worked_loaded", h: 20, add: func(ui *UI) {
 			ui.Apply(ui.service.SetCacheMode(CachePerMessage))
 			modelD := func(msg ChatMessage) ChatMessage {
-				msg.Model = "provider-b/model-d:high"
+				msg.Model = "provider-b/provider-b/model-d:high"
 				return msg
 			}
 			first := modelD(agentParts("a1", bash))
@@ -1568,10 +1568,10 @@ func TestMenuFrames(t *testing.T) {
 		// The model menu names each model by the catalog's name of its
 		// variant, such as "Model A Fast", and then, dim, in aligned
 		// columns, its variant ID and its provider, such as
-		// "provider-a/model-a:fast   [provider-a]", with the terminal's
+		// "provider-a/provider-a/model-a:fast   [provider-a]", with the terminal's
 		// model selected.
 		{name: "banner_model_menu", h: 13, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("provider-a/model-a:fast:high"))
+			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:fast:high"))
 			ui.service.OpenBanner(ModelBanner)
 			cat := ui.service.app.Models().Catalog()
 			ui.Apply(ui.service.ModelsListed([]app.ModelListing{
@@ -1582,13 +1582,13 @@ func TestMenuFrames(t *testing.T) {
 		// The model menu's next page: the levels the chosen model takes,
 		// with the default marked and the one it would run at selected.
 		{name: "banner_model_effort", h: 14, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("provider-a/model-a:high"))
+			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:high"))
 			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}))
 		}},
 		// The default is marked on the selected row too, as /effort shows it
 		// for a model that runs at its default.
 		{name: "banner_effort_default_selected", h: 14, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("provider-a/model-a:medium"))
+			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:medium"))
 			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a"}))
 		}},
 		// Under the fill selection style, → on the Selection setting fills

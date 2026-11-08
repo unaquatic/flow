@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/product"
 )
 
@@ -28,8 +30,16 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 		respondInvalid(w, "invalid config update: "+err.Error())
 		return
 	}
-	if req.Model != nil {
-		if err := s.app.Models().SaveDefault(*req.Model); err != nil {
+	if req.DefaultProvider != nil || req.DefaultModel != nil {
+		err := s.app.Models().UpdateDefaultModel(func(d *app.DefaultModel) {
+			if req.DefaultProvider != nil {
+				d.Provider = *req.DefaultProvider
+			}
+			if req.DefaultModel != nil {
+				d.Model = *req.DefaultModel
+			}
+		})
+		if err != nil {
 			respondErr(w, err)
 			return
 		}
@@ -40,12 +50,12 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 // RespondConfig answers with the settings of the config file, or with why it
 // cannot be read.
 func (s *Server) RespondConfig(w http.ResponseWriter) {
-	model, err := s.app.Models().Default()
+	d, err := s.app.Models().DefaultModel()
 	if err != nil {
 		respondErr(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, Config{Model: model})
+	respondJSON(w, http.StatusOK, Config{DefaultProvider: d.Provider, DefaultModel: d.Model})
 }
 
 // Health is the answer of GET /health.
@@ -57,14 +67,25 @@ type Health struct {
 // Config is the wire form of the settings of the config file that the API
 // exposes, as GET /config and PATCH /config answer with them.
 type Config struct {
-	// Model is the default model of a request that names none, in the
-	// format of SendRequest.Model.
-	Model string `json:"model"`
+	// DefaultProvider is the provider of the default model of a request
+	// that names none, by its catalog ID, such as "provider-a", or empty
+	// when the config file sets none.
+	DefaultProvider agent.ProviderID `json:"default_provider"`
+	// DefaultModel is the default model without its provider, in
+	// "model:option:effort" form, such as "lab-a/model-a:fast:high", or
+	// empty when the config file sets none.
+	DefaultModel string `json:"default_model"`
 }
 
 // ConfigUpdate is the body of PATCH /config. It changes the settings it
-// names, and leaves the others as they are.
+// names, and leaves the others as they are. A default provider or model
+// it names is saved with the other as the config file sets it; the two
+// must name a registered provider and a model.
 type ConfigUpdate struct {
-	// Model is the new default model, in the format of Config.Model.
-	Model *string `json:"model,omitempty"`
+	// DefaultProvider is the new default provider, in the form of
+	// Config.DefaultProvider.
+	DefaultProvider *agent.ProviderID `json:"default_provider,omitempty"`
+	// DefaultModel is the new default model, in the form of
+	// Config.DefaultModel.
+	DefaultModel *string `json:"default_model,omitempty"`
 }
