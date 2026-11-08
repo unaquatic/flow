@@ -131,10 +131,9 @@ func (ui *UI) HandleSendNow() {
 // HandleBannerKey handles banner navigation, ←/→ without modifiers, which
 // change the value of the selected row when it has values, as in /settings,
 // Tab, which enters an entry the menu does not list when it takes one, as in
-// /model, and Ctrl+S, which saves the selected row as a default when it can
-// be saved, as a model in /model. Other keys go to the input when it searches the banner's
-// menu, where ←/→ move its cursor, and are dropped otherwise so that they
-// cannot edit the hidden input.
+// /model. Other keys go to the input when it searches the banner's menu,
+// where ←/→ move its cursor, and are dropped otherwise so that they cannot
+// edit the hidden input.
 func (ui *UI) HandleBannerKey(k *input.KeyEvent) {
 	if ui.service.state.Login != nil {
 		if k.Name == "l" && k.Mods == input.ModCtrl {
@@ -167,7 +166,6 @@ func (ui *UI) HandleBannerKey(k *input.KeyEvent) {
 	case plain && k.Name == input.KeyLeft && ui.ChangeBannerRow(-1):
 	case plain && k.Name == input.KeyRight && ui.ChangeBannerRow(1):
 	case plain && k.Name == input.KeyTab && ui.CustomBanner():
-	case k.Mods == input.ModCtrl && k.Name == "s" && ui.SaveBannerRow():
 	default:
 		if ui.bannerSearch {
 			return
@@ -186,18 +184,6 @@ func (ui *UI) ChangeBannerRow(step int) bool {
 	changed, events := ui.service.HandleBannerChange(item.Value, step)
 	ui.Apply(events)
 	return changed
-}
-
-// SaveBannerRow saves the selected banner row as a default, as Ctrl+S does,
-// and reports whether the row can be saved.
-func (ui *UI) SaveBannerRow() bool {
-	item := ui.bannerMenu.SelectedItem()
-	if item == nil {
-		return false
-	}
-	saved, events := ui.service.HandleBannerSave(item.Value)
-	ui.Apply(events)
-	return saved
 }
 
 // CustomBanner enters an entry the open menu does not list, as Tab does, and

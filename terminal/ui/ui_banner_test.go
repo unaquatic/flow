@@ -228,39 +228,6 @@ func TestBannerTabAsksCustomModel(t *testing.T) {
 	}
 }
 
-// TestBannerCtrlSSavesRow checks that Ctrl+S in a menu whose rows can be
-// saved, as the model menu's can, saves the selected row and leaves the menu
-// open, and that in a menu without one it goes to the input.
-func TestBannerCtrlSSavesRow(t *testing.T) {
-	ui := newBannerTestUI(t)
-	var saved []string
-	items := []MenuItem{
-		{Name: "model-a", Save: func() []UIEvent { saved = append(saved, "model-a"); return nil }},
-		{Name: "model-b", Selected: true, Save: func() []UIEvent { saved = append(saved, "model-b"); return nil }},
-	}
-	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Title: modelsTitle, Items: func() []MenuItem { return items }}))
-	if got := ui.bannerHeader.Keys.Hints; !slices.Contains(got, HintSave) {
-		t.Errorf("title keys = %v, want %s among them", got, HintSave)
-	}
-
-	key := &input.KeyEvent{Name: "s", Mods: input.ModCtrl}
-	ui.HandleKey(key)
-	if !key.DefaultPrevented() || !ui.bannerPanel.Visible() || !slices.Equal(saved, []string{"model-b"}) {
-		t.Errorf("ctrl+s kept %v, banner shown %v, saved %q; want kept, the menu open, and model-b saved", key.DefaultPrevented(), ui.bannerPanel.Visible(), saved)
-	}
-
-	plain := []MenuItem{{Name: "model-a"}}
-	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return plain }}))
-	key = &input.KeyEvent{Name: "s", Mods: input.ModCtrl}
-	ui.HandleBannerKey(key)
-	if key.DefaultPrevented() {
-		t.Error("ctrl+s in a menu without rows to save was kept from the input")
-	}
-	if got := ui.bannerHeader.Keys.Hints; slices.Contains(got, HintSave) {
-		t.Errorf("title keys = %v for a menu without rows to save, want no %s", got, HintSave)
-	}
-}
-
 // TestCtrlCClosesPages checks that Ctrl+C closes the page open in the input
 // box, also with a search typed: the settings, and the session list with its
 // preview. The input is emptied and takes the focus back, and the footer

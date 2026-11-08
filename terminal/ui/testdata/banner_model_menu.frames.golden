@@ -1,5 +1,5 @@
 === text ===
-|■ Models [↑/↓ move] [tab custom] [ctrl+s save default] [esc cancel]     |
+|■ Models [↑/↓ move] [tab custom] [esc cancel]                           |
 |                                                                        |
 |  Model A        provider-a/model-a        [provider-a]                 |
 |  Model A Fast   provider-a/model-a:fast   [provider-a]                 |
@@ -13,7 +13,7 @@
 |                                                                        |
 |                                                                        |
 === fg ===
-|A AAAAAA BBBB BBBBB BBBB BBBBBBB BBBBBBB BBBB BBBBBBBB BBBB BBBBBBB     |
+|A AAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                           |
 |                                                                        |
 |  AAAAA A        BBBBBBBBBBBBBBBBBB        BBBBBBBBBBBB                 |
 |  CCCCC C CCCC   CCCCCCCCCCCCCCCCCCCCCCC   CCCCCCCCCCCC                 |

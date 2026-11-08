@@ -199,8 +199,8 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
 		// A notice that names a model draws it in the primary color.
-		{name: "notice_keyword", h: 4, add: func(ui *UI) {
-			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/model-a:high", ""))
+		{name: "notice_keyword", w: 64, h: 4, add: func(ui *UI) {
+			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/model-a:high", " as the default model"))
 		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})

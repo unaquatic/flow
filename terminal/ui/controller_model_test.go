@@ -178,18 +178,21 @@ func TestModelMenuSearchAfterClose(t *testing.T) {
 	}
 }
 
-// TestSelectModelIsTheTerminals checks that choosing a model changes the
-// model this terminal labels and sends its prompts to, and leaves the app's
-// default model as it was.
-func TestSelectModelIsTheTerminals(t *testing.T) {
+// TestSelectModelSavesTheDefault checks that choosing a model changes the
+// model this terminal labels and sends its prompts to, and saves it as the
+// app's default model, saying so in one notice.
+func TestSelectModelSavesTheDefault(t *testing.T) {
 	q := newQueueTest(t)
-	q.s.SelectModel("provider-b/model-y")
+	out := q.s.SelectModel("provider-b/model-y")
 
 	if q.s.state.Model != "provider-b/model-y" || q.s.state.ModelLabel != "provider-b/model-y" {
 		t.Errorf("terminal model, label = %q, %q, want provider-b/model-y", q.s.state.Model, q.s.state.ModelLabel)
 	}
-	if got, err := q.a.Models().Default(); got != "provider-a/model" || err != nil {
-		t.Errorf("app default model = %q, %v, want provider-a/model as it was", got, err)
+	if got, err := q.a.Models().Default(); got != "provider-b/model-y" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-b/model-y saved", got, err)
+	}
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-b/model-y as the default model"}) {
+		t.Errorf("notices = %q, want the model switched to and saved", got)
 	}
 
 	if err := q.s.SendPrompt("hi"); err != nil {
@@ -202,51 +205,34 @@ func TestSelectModelIsTheTerminals(t *testing.T) {
 	q.until(app.TypeAgentEnded)
 }
 
-// TestModelMenuSaveDefault checks that the model menu and its levels page
-// name Ctrl+S, which saves the selected row as the app's default model, at
-// the level choosing it would run it at, or at the level of the row, and
-// leaves the menu open and the terminal's model as it was. Other menus name
-// no such key.
-func TestModelMenuSaveDefault(t *testing.T) {
+// TestModelMenuChooseSavesTheDefault checks that choosing a model in the
+// model menu, and a level on its levels page, saves the model at that level
+// as the app's default model and closes the menu, and that neither page
+// names a key to save a row apart from choosing it.
+func TestModelMenuChooseSavesTheDefault(t *testing.T) {
 	s, _ := newTestService(t)
 	show := listModels(t, s)
-	if !slices.Contains(show.Hints(), HintSave) {
-		t.Errorf("model menu keys %v lack %v", show.Hints(), HintSave)
+	noSaveKey := func(show EventBannerShow) {
+		t.Helper()
+		for _, h := range show.Hints() {
+			if h.Key == "ctrl+s" {
+				t.Errorf("menu %q names %v", show.Title, h)
+			}
+		}
 	}
+	noSaveKey(show)
 
-	i := slices.Index(bannerNames(show), "Model C")
-	saved, out := s.HandleBannerSave(i)
-	if !saved {
-		t.Fatal("Ctrl+S on model-c saved nothing")
+	levels := bannerShown(t, s.HandleBannerSelect(slices.Index(bannerNames(show), "Model C")))
+	noSaveKey(levels)
+	out := s.HandleBannerSelect(slices.Index(bannerNames(levels), "High"))
+	if got, err := s.app.Models().Default(); got != "provider-a/model-c:high" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-a/model-c:high", got, err)
 	}
-	if got, err := s.app.Models().Default(); got != "provider-a/model-c:medium" || err != nil {
-		t.Errorf("app default model = %q, %v, want provider-a/model-c:medium", got, err)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-c:high as the default model"}) {
+		t.Errorf("notices = %q, want the model switched to and saved", got)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Saved provider-a/model-c:medium as the default model"}) {
-		t.Errorf("notices = %q, want the saved model", got)
-	}
-	if s.state.Banner != MenuBanner || s.state.Model != "provider-a/model" {
-		t.Errorf("banner %v, model %q, want the menu open and provider-a/model as it was", s.state.Banner, s.state.Model)
-	}
-
-	show = bannerShown(t, s.ShowEffortMenu(s.app.Models().ParseVariant("provider-a/model-a:fast")))
-	if !slices.Contains(show.Hints(), HintSave) {
-		t.Errorf("levels keys %v lack %v", show.Hints(), HintSave)
-	}
-	if saved, _ := s.HandleBannerSave(slices.Index(bannerNames(show), "High")); !saved {
-		t.Fatal("Ctrl+S on High saved nothing")
-	}
-	if got, err := s.app.Models().Default(); got != "provider-a/model-a:fast:high" || err != nil {
-		t.Errorf("app default model = %q, %v, want provider-a/model-a:fast:high", got, err)
-	}
-
-	s.CancelBanner()
-	settings := bannerShown(t, s.ShowSettingsMenu())
-	if slices.Contains(settings.Hints(), HintSave) {
-		t.Errorf("settings keys %v name %v", settings.Hints(), HintSave)
-	}
-	if saved, _ := s.HandleBannerSave(0); saved {
-		t.Error("Ctrl+S saves a row of /settings")
+	if s.state.Banner != NoBanner || s.state.Model != "provider-a/model-c:high" {
+		t.Errorf("banner %v, model %q, want the menu closed and provider-a/model-c:high", s.state.Banner, s.state.Model)
 	}
 }
 

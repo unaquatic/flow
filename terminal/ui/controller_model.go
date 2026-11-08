@@ -104,9 +104,8 @@ const modelColumnGap = 3
 // row by its name, its ID, or its whole "provider/model" form. It does
 // nothing once the loading banner has closed. Choosing a model that takes
 // reasoning efforts shows them next, as ShowEffortMenu does; choosing one
-// that takes none switches to it. Ctrl+S saves a model, at the level
-// choosing it would run it at, as the default model, as SaveDefaultModel
-// does, and leaves the menu open.
+// that takes none switches to it and saves it as the default model, as
+// SelectModel does.
 func (s *Service) ModelsListed(listings []app.ModelListing) []UIEvent {
 	if s.state.Banner != ModelBanner {
 		return nil
@@ -147,9 +146,6 @@ func (s *Service) ModelsListed(listings []app.ModelListing) []UIEvent {
 			Aliases:  []string{id, v.String()},
 			Selected: v == current,
 			Choose:   choose,
-			Save: func() []UIEvent {
-				return s.SaveDefaultModel(s.app.Models().FitEffort(v.WithEffort(s.state.ReasoningEffort)).String())
-			},
 		})
 	}
 	if len(items) == 0 {
@@ -171,8 +167,9 @@ const CustomModelPlaceholder = "[provider]/[model]"
 // the menu need not list, in "provider/model" form, as SelectModel takes it,
 // with CustomModelPlaceholder in the empty input. The input starts with
 // query, the menu's search, so that a model searched for and not found need
-// not be typed again. Enter switches to the model; an empty answer leaves
-// the model as it is.
+// not be typed again. Enter switches to the model and saves it as the
+// default model, as SelectModel does; an empty answer leaves the model as
+// it is.
 func (s *Service) AskCustomModel(query string) []UIEvent {
 	events := slices.Concat(s.CancelBanner(), s.Ask("", &TextPrompt{
 		Hint:        PromptHintStyled("use model"),
@@ -200,27 +197,25 @@ func (s *Service) ModelsListFailed(reason string) []UIEvent {
 }
 
 // SelectModel makes model, a variant as Models.ParseVariant reads it, the
-// model this terminal sends its prompts to. A level model names becomes the
-// terminal's chosen level; a model that names none runs at the chosen level,
-// as SetVariant fits it.
+// model this terminal sends its prompts to, and saves it as the default
+// model in the config file, which a request that names no model goes to and
+// a new terminal starts with, so that the model chosen is the one flow keeps
+// using. A level model names becomes the terminal's chosen level; a model
+// that names none runs at the chosen level, as SetVariant fits it, and is
+// saved at that level. A notice says what it switched to, or, when the
+// config file cannot be written, that it switched but could not save.
 func (s *Service) SelectModel(model string) []UIEvent {
 	v := s.app.Models().ParseVariant(model)
 	if v.Effort != "" {
 		s.state.ReasoningEffort = v.Effort
 	}
 	events := s.SetVariant(v)
-	return slices.Concat(events, s.ShowKeywordToast("Switched to ", s.state.Model, ""))
-}
-
-// SaveDefaultModel saves model, a variant as Models.ParseVariant reads it, as
-// the default model in the config file, which a request that names no model
-// goes to and a new terminal starts with, and says so in a notice, or why it
-// could not. The terminal's own model stays as it is.
-func (s *Service) SaveDefaultModel(model string) []UIEvent {
-	if err := s.app.Models().SaveDefault(model); err != nil {
-		return s.ShowToast("Saving the default model failed: " + err.Error())
+	if err := s.app.Models().SaveDefault(s.state.Model); err != nil {
+		return slices.Concat(events,
+			s.ShowKeywordToast("Switched to ", s.state.Model, ""),
+			s.ShowToast("Saving the default model failed: "+err.Error()))
 	}
-	return s.ShowKeywordToast("Saved ", model, " as the default model")
+	return slices.Concat(events, s.ShowKeywordToast("Switched to ", s.state.Model, " as the default model"))
 }
 
 // SetVariant makes v, at the terminal's chosen reasoning effort fitted to its

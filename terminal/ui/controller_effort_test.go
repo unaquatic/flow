@@ -68,7 +68,7 @@ func TestModelMenuEffortPage(t *testing.T) {
 	if s.state.Model != "provider-a/model-a:fast:high" || s.state.Banner != NoBanner {
 		t.Errorf("after choosing high: model %q, banner %v, want provider-a/model-a:fast:high and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-a:fast:high"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-a:fast:high as the default model"}) {
 		t.Errorf("notices = %q, want Switched to provider-a/model-a:fast:high", got)
 	}
 
@@ -91,7 +91,7 @@ func TestModelMenuWithoutEfforts(t *testing.T) {
 	if s.state.Model != "provider-a/model" || s.state.Banner != NoBanner {
 		t.Errorf("model %q, banner %v, want provider-a/model and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model as the default model"}) {
 		t.Errorf("notices = %q, want Switched to provider-a/model", got)
 	}
 }
@@ -120,7 +120,7 @@ func TestEffortCommand(t *testing.T) {
 	if s.state.Model != "provider-a/model-a:fast:low" || s.state.Banner != NoBanner {
 		t.Errorf("after choosing low: model %q, banner %v, want provider-a/model-a:fast:low and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-a:fast:low"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model-a:fast:low as the default model"}) {
 		t.Errorf("notices = %q, want Switched to provider-a/model-a:fast:low", got)
 	}
 }
@@ -227,7 +227,7 @@ func TestSelectModelKeepsEffort(t *testing.T) {
 		if s.state.Model != step.want {
 			t.Errorf("select %q: model %q, want %q", step.selected, s.state.Model, step.want)
 		}
-		if got := toasts(out); !slices.Equal(got, []string{"Switched to " + step.want}) {
+		if got := toasts(out); !slices.Equal(got, []string{"Switched to " + step.want + " as the default model"}) {
 			t.Errorf("select %q: notices %q, want Switched to %s", step.selected, got, step.want)
 		}
 	}
