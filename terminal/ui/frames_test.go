@@ -124,6 +124,27 @@ func expandTools(ui *UI) {
 	ui.SetToolsExpanded(true)
 }
 
+// collapseTools collapses every tool call, as Ctrl+O does after expandTools.
+func collapseTools(ui *UI) {
+	ui.service.SetToolsExpanded(false)
+	ui.SetToolsExpanded(false)
+}
+
+// todoTurn adds a reply, a1, that reads a file, writes its todo list, and
+// runs the tests.
+func todoTurn(ui *UI) {
+	ui.AddMessage(agentParts("a1",
+		message.TextPart{ID: "a1-text", Text: "Planning the change."},
+		message.ToolPart{ID: "a1-read", CallID: "c1", Name: "read", State: message.ToolStateCompleted{
+			Input: json.RawMessage(`{"path":"calc.go"}`), Output: "package calc"}},
+		message.ToolPart{ID: "a1-todo", CallID: "c2", Name: "todo", State: message.ToolStateCompleted{
+			Input:  json.RawMessage(`{"todos":[{"content":"Read calc.go","status":"completed"},{"content":"Add Divide","status":"in_progress"},{"content":"Run the tests","status":"pending"}]}`),
+			Output: "[✓] Read calc.go\n[–] Add Divide\n[ ] Run the tests"}},
+		message.ToolPart{ID: "a1-bash", CallID: "c3", Name: "bash", State: message.ToolStateCompleted{
+			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}},
+	))
+}
+
 // toolRowsTurn adds a turn of three replies: a1, which says what it does and
 // makes two calls, a2, the next step, which makes one, and a3, which sums up.
 func toolRowsTurn(ui *UI) {
@@ -328,6 +349,21 @@ func TestTranscriptFrames(t *testing.T) {
 			toolRowsTurn(ui)
 			clickTool(ui, "a1", 1)
 		}},
+		// A todo call shows expanded though the calls are collapsed, as its
+		// view keeps it, between the rows of the calls around it.
+		{name: "agent_tool_todo_kept", h: 14, add: todoTurn},
+		// Ctrl+O expands the other calls and, collapsing them again, leaves
+		// the todo call expanded.
+		{name: "agent_tool_todo_kept_collapsed", h: 14, add: func(ui *UI) {
+			todoTurn(ui)
+			expandTools(ui)
+			collapseTools(ui)
+		}},
+		// A click still collapses it to its row.
+		{name: "agent_tool_todo_clicked", h: 6, add: func(ui *UI) {
+			todoTurn(ui)
+			clickTool(ui, "a1", 1)
+		}},
 		// Showing the tool marker in /settings puts it in the padding before
 		// each row, leaving the rows' text where it was.
 		{name: "agent_tool_rows_marker", h: 10, add: func(ui *UI) {
@@ -485,6 +521,8 @@ func TestTranscriptFrames(t *testing.T) {
 
 func TestToolBoxFrames(t *testing.T) {
 	bashInput := json.RawMessage(`{"command":"go test ./calculator/...","description":"Run calculator tests"}`)
+	todoInput := json.RawMessage(`{"todos":[{"content":"Find the source and tests","status":"completed"},{"content":"Add Divide","status":"in_progress"},{"content":"Run the package tests","status":"pending"}]}`)
+	todoList := "[✓] Find the source and tests\n[–] Add Divide\n[ ] Run the package tests"
 	tests := []struct {
 		name string
 		h    int
@@ -571,6 +609,14 @@ func TestToolBoxFrames(t *testing.T) {
 				Input:  json.RawMessage(`{"pattern":"TODO","path":"calculator","include":"*.go"}`),
 				Output: "calculator/calc.go:3:// TODO: handle overflow\ncalculator/calc_test.go:9:// TODO: test Divide",
 			}}},
+		// A todo call shows the list it writes, and in its header, which
+		// keeps it while expanded, how many of its items are done.
+		{name: "toolbox_todo_queued", h: 8, tool: message.ToolPart{Name: "todo",
+			State: message.ToolStatePending{Input: todoInput}}},
+		{name: "toolbox_todo_completed", h: 8, tool: message.ToolPart{Name: "todo",
+			State: message.ToolStateCompleted{Input: todoInput, Output: todoList}}},
+		{name: "toolbox_todo_row", h: 2, collapsed: true, tool: message.ToolPart{Name: "todo",
+			State: message.ToolStateCompleted{Input: todoInput, Output: todoList}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -186,6 +186,39 @@ func TestToolBoxSkipsEqualTool(t *testing.T) {
 	}
 }
 
+// TestCtrlOLeavesKeptToolsExpanded checks that a call whose view keeps it
+// expanded, as a todo call's does, starts expanded among collapsed calls,
+// that Ctrl+O, expanding and collapsing the others, leaves it so, and that
+// TogglesTools does not count it.
+func TestCtrlOLeavesKeptToolsExpanded(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.AddMessage(agentParts("a1",
+		message.ToolPart{ID: "t1", CallID: "t1", Name: "todo", State: message.ToolStateCompleted{
+			Input: json.RawMessage(`{"todos":[{"content":"Add Divide","status":"in_progress"}]}`), Output: "[–] Add Divide"}},
+		message.ToolPart{ID: "t2", CallID: "t2", Name: "bash", State: message.ToolStateCompleted{
+			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}},
+	))
+	boxes := slices.Collect(ui.messageWidgets["a1"].ToolBoxes())
+	check := func(when string, todo, bash bool) {
+		t.Helper()
+		if boxes[0].Expanded != todo || boxes[1].Expanded != bash {
+			t.Errorf("%s: todo expanded %v, bash %v; want %v, %v", when, boxes[0].Expanded, boxes[1].Expanded, todo, bash)
+		}
+	}
+	check("new", true, false)
+	if ui.TogglesTools(false) {
+		t.Error("TogglesTools(false) = true with only the todo call expanded")
+	}
+	press := func() {
+		t.Helper()
+		ui.HandleKey(input.NewParser().Parse([]byte("\x0f"))[0].Key) // Ctrl+O
+	}
+	press()
+	check("Ctrl+O", true, true)
+	press()
+	check("Ctrl+O again", true, false)
+}
+
 // TestCtrlOTogglesTools checks that tool calls and step changes start
 // collapsed, that Ctrl+O expands every one and those added after it, and
 // that it collapses them again. A bare "o" still goes to the input. While the

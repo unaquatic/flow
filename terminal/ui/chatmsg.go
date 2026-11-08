@@ -1036,15 +1036,16 @@ func (cm *ChatMessageBox) Boxes() iter.Seq[*PartBox] {
 
 // AdoptBox shows box, the PartBox of one of the bubble's parts or views, as
 // the bubble shows the others: with its blink, as its tool call style,
-// markers, and name color say, expanded as they are, and spaced from the
-// rows around it each time its shape changes.
+// markers, and name color say, expanded as they are, or expanded whatever
+// they are when it is KeepExpanded, and spaced from the rows around it each
+// time its shape changes.
 func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
 	box.Blink = cm.Blink
 	box.SetStyle(cm.ExpandStyle)
 	box.SetMarker(cm.ToolMarkers)
 	box.SetNameFg(cm.ToolColor.Fg())
 	box.SetMarkerShape(cm.MarkerShape)
-	box.SetExpanded(cm.ToolsExpanded)
+	box.SetExpanded(cm.ToolsExpanded || box.KeepExpanded)
 	// A click that expands the box, or collapses it, changes whether it
 	// stacks with the rows around it.
 	box.OnShapeChange = cm.SyncRows
@@ -1052,24 +1053,25 @@ func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
 
 // TogglesTools reports whether SetToolsExpanded(expanded) would show or hide
 // the details of any box shown in the bubble, such as a tool call's or a
-// step's changes.
+// step's changes. A KeepExpanded box is not among them.
 func (cm *ChatMessageBox) TogglesTools(expanded bool) bool {
 	for b := range cm.Boxes() {
-		if b.Expandable && b.Visible() && b.Expanded != expanded {
+		if b.FollowsToolsExpanded() && b.Visible() && b.Expanded != expanded {
 			return true
 		}
 	}
 	return false
 }
 
-// SetToolsExpanded shows or hides the details of every Expandable box in the
-// bubble, such as its tool calls and the changes of its steps, and of those
-// added to it later. A box already shown that way is left alone, so that it
-// is not laid out and painted again.
+// SetToolsExpanded shows or hides the details of every box in the bubble
+// that follows Ctrl+O, as FollowsToolsExpanded reports, such as its tool
+// calls and the changes of its steps, and of those added to it later. A box
+// already shown that way is left alone, so that it is not laid out and
+// painted again, and so is a KeepExpanded one.
 func (cm *ChatMessageBox) SetToolsExpanded(expanded bool) {
 	cm.ToolsExpanded = expanded
 	for b := range cm.Boxes() {
-		if b.Expandable && b.Expanded != expanded {
+		if b.FollowsToolsExpanded() && b.Expanded != expanded {
 			b.SetExpanded(expanded)
 		}
 	}

@@ -8,7 +8,9 @@
 //   - read: the file as code in its language, and the lines it reads;
 //   - write and edit: the change as a diff;
 //   - grep: the number of matches once it completes;
-//   - ls: the label "List".
+//   - ls: the label "List";
+//   - todo: the list it writes, and how many of its items are done,
+//     expanded whatever Ctrl+O says.
 //
 // Any other tool's call, such as glob's, shows as the box shows every call.
 package ui
@@ -83,8 +85,38 @@ func (*Extension) FormatTool(call message.ToolPart) (ui.ToolView, bool) {
 		return view, true
 	case "ls":
 		return ui.ToolView{Label: "List", ParamInHeader: true}, true
+	case "todo":
+		return TodoView(call), true
 	}
 	return ui.ToolView{}, false
+}
+
+// TodoView returns how a todo call shows: expanded whatever Ctrl+O says, the
+// list it writes, an item a line as the todo tool lists it, which stands for
+// its output once it completes, the items done or not started muted, so that
+// the one in progress stands out, and in the header how many of its items
+// are done out of all, as "Todo [1/3]". Input that holds no valid list shows
+// as the box shows any call's.
+func TodoView(call message.ToolPart) ui.ToolView {
+	_, completed := call.State.(message.ToolStateCompleted)
+	view := ui.ToolView{Unnoted: []string{"todos"}, BodyLang: "text", OutputInBody: completed, KeepExpanded: true}
+	v, ok := ui.DecodeToolArgs(call.Input())["todos"]
+	if !ok {
+		return view
+	}
+	list, err := builtin.ParseTodos(v)
+	if err != nil {
+		return view
+	}
+	if len(list) == 0 {
+		view.Lines = []ui.ToolLine{{Text: builtin.NoTodos, Muted: true}}
+		return view
+	}
+	for _, item := range list {
+		view.Lines = append(view.Lines, ui.ToolLine{Text: item.String(), Muted: item.Status != builtin.TodoInProgress})
+	}
+	view.HeaderNote = fmt.Sprintf("[%d/%d]", list.Done(), len(list))
+	return view
 }
 
 // nonEmpty returns s as the one note of a list, or no notes when it is "".

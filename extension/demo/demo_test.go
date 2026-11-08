@@ -174,6 +174,32 @@ func TestTools(t *testing.T) {
 	}
 }
 
+// TestTodoOutput checks that each todo call of the demo returns the list as
+// the built-in todo tool returns it for the call's input.
+func TestTodoOutput(t *testing.T) {
+	i := slices.IndexFunc(tools.All(), func(tl agent.Tool) bool { return tl.Name == "todo" })
+	if i < 0 {
+		t.Fatal("no built-in todo tool")
+	}
+	todo := tools.All()[i]
+	for _, seg := range Segments {
+		if seg.Tool == nil || seg.Tool.Name != "todo" {
+			continue
+		}
+		var args map[string]any
+		if err := json.Unmarshal(seg.Tool.Input, &args); err != nil {
+			t.Fatal(err)
+		}
+		out, err := todo.Execute(t.Context(), args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Text != seg.Tool.Output {
+			t.Errorf("todo %s returns %q, want the demo's output %q", seg.Tool.Input, out.Text, seg.Tool.Output)
+		}
+	}
+}
+
 // TestDemoSourcesAreFormatted checks that the Go files the demo writes and
 // shows read as gofmt writes them.
 func TestDemoSourcesAreFormatted(t *testing.T) {

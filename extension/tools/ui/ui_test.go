@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,7 +24,7 @@ func newBox(call message.ToolPart) *ui.ToolBox {
 // calls of the built-in tools it formats, and leaves any other tool's to the
 // box, and that it labels ls as List.
 func TestFormatTool_OnlyBuiltinTools(t *testing.T) {
-	for _, name := range []string{"bash", "read", "write", "edit", "grep", "ls"} {
+	for _, name := range []string{"bash", "read", "write", "edit", "grep", "ls", "todo"} {
 		if _, ok := New().FormatTool(message.ToolPart{Name: name}); !ok {
 			t.Errorf("FormatTool(%s) does not describe the call", name)
 		}
@@ -274,6 +275,75 @@ func TestToolBox_ReadRangeInHeader(t *testing.T) {
 	chunks := box.Header.Content().Chunks
 	if last := chunks[len(chunks)-1]; last.Text != "calc.go [8-14]" || last.Fg != box.Status.Fg() {
 		t.Errorf("input = %+v; want calc.go [8-14] in the status's color %v", last, box.Status.Fg())
+	}
+}
+
+// TestToolBox_TodoShowsList checks that a todo call shows the list it
+// writes, as the todo tool's own output lists it, in place of the output,
+// the items done or not started in the muted text color and the one in
+// progress in the box's, notes how many of its items are done in its
+// header, and shows input that holds no list as any call's.
+func TestToolBox_TodoShowsList(t *testing.T) {
+	input := `{"todos":[{"content":"Find the tests","status":"completed"},{"content":"Add Divide","status":"in_progress"},{"content":"Run the tests","status":"pending"}]}`
+	list := "[✓] Find the tests\n[–] Add Divide\n[ ] Run the tests"
+	var args map[string]any
+	if err := json.Unmarshal([]byte(input), &args); err != nil {
+		t.Fatal(err)
+	}
+	out, err := builtin.Todo().Execute(t.Context(), args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Text != list {
+		t.Fatalf("todo output = %q; want %q", out.Text, list)
+	}
+	tests := map[string]struct {
+		state                 message.ToolState
+		wantHeader, wantLines string
+		// wantMuted lists whether each line is muted.
+		wantMuted []bool
+	}{
+		"queued":    {message.ToolStatePending{Input: json.RawMessage(input)}, "Todo [1/3]", list, []bool{true, false, true}},
+		"completed": {message.ToolStateCompleted{Input: json.RawMessage(input), Output: out.Text}, "Todo [1/3]", list, []bool{true, false, true}},
+		"cleared":   {message.ToolStateCompleted{Input: json.RawMessage(`{"todos":[]}`), Output: builtin.NoTodos}, "Todo", builtin.NoTodos, []bool{true}},
+		"partial":   {message.ToolStatePending{Input: json.RawMessage(`{"todos":[{"con`)}, "Todo", "", nil},
+	}
+	muted := ui.DefaultTheme().TextMuted
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			box := newBox(message.ToolPart{Name: "todo", State: tt.state})
+			box.SetExpanded(true)
+			if got := box.Header.PlainText(); got != tt.wantHeader {
+				t.Errorf("header = %q; want %q", got, tt.wantHeader)
+			}
+			if !box.KeepExpanded {
+				t.Error("KeepExpanded = false; want the todo call kept expanded whatever Ctrl+O says")
+			}
+			if box.Params.Visible() || box.Output.Visible() {
+				t.Errorf("params shown %v, output shown %v; want the list alone", box.Params.Visible(), box.Output.Visible())
+			}
+			if tt.wantLines == "" {
+				if box.Lines.Visible() {
+					t.Errorf("lines = %q; want none for input that holds no list", box.Lines.PlainText())
+				}
+				return
+			}
+			if box.Body.Visible() {
+				t.Errorf("body = %q; want the lines in its place", box.Body.Content())
+			}
+			if got := box.Lines.PlainText(); got != tt.wantLines {
+				t.Errorf("lines = %q; want %q", got, tt.wantLines)
+			}
+			var gotMuted []bool
+			for _, c := range box.Lines.Content().Chunks {
+				if c.Text != "\n" {
+					gotMuted = append(gotMuted, c.Fg == muted)
+				}
+			}
+			if !slices.Equal(gotMuted, tt.wantMuted) {
+				t.Errorf("lines muted %v; want %v", gotMuted, tt.wantMuted)
+			}
+		})
 	}
 }
 

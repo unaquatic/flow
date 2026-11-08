@@ -50,7 +50,7 @@ const LandingPrompt = "Add a Divide method that rejects a zero divisor"
 // LandingSteps are the steps of demo.Segments that the landing page's turn
 // takes, in order: its replies find and read the calculator, add the method,
 // write tests, see one fail, fix it, and run them again.
-var LandingSteps = []int{1, 2, 3, 4, 7, 8, 10, 11, 12, 13, 14}
+var LandingSteps = []int{1, 3, 4, 5, 8, 9, 11, 12, 13, 14, 15}
 
 // LandingSummary is the text of the last reply of the landing page's turn. Its
 // table fits in LandingWidth inside the transcript's padding.

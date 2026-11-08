@@ -144,9 +144,27 @@ type ToolView struct {
 	// BodyLang, rather than under it as text, such as the file a read
 	// reads.
 	OutputInBody bool
+	// Lines, when set, show in place of Body, and so of the output when
+	// OutputInBody is set, as lines of text, each in the box's text color
+	// or, when Muted, in the muted text color, such as the items of a todo
+	// list, of which only the one in progress stands out.
+	Lines []ToolLine
 	// Status, when set, is the call's status in place of the one its state
 	// gives, such as the matches of a completed search.
 	Status string
+	// KeepExpanded shows the call expanded whatever Ctrl+O says, as
+	// PartBox.KeepExpanded describes, such as a todo list, which is read
+	// whole.
+	KeepExpanded bool
+}
+
+// ToolLine is one of the Lines a ToolView shows.
+type ToolLine struct {
+	// Text is what the line says, on one row, or more when it wraps.
+	Text string
+	// Muted shows the line in the muted text color, as an item that is
+	// done or not started yet.
+	Muted bool
 }
 
 // NameLabel returns Label, or ToolLabel(name) when Label is "".

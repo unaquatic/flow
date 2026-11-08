@@ -1,6 +1,7 @@
 === text ===
 |  Read go.mod                                               |
 |  Glob calculator/*.go                                      |
+|  Todo [1/4]                                                |
 |  Grep ^func \(c \*Calculator\) [3 matches]                 |
 |  Read calculator/divide.go [tool execution failed]         |
 |  Read calculator/calc.go                                   |
@@ -27,6 +28,7 @@
 === fg ===
 |  AAAA AAAAAA                                               |
 |  AAAA AAAAAAAAAAAAAAA                                      |
+|  AAAA AAAAA                                                |
 |  AAAA AAAAA AAA AAAAAAAAAAAAAA AA AAAAAAAA                 |
 |  AAAA AAAAAAAAAAAAAAAAAAAA AAAAA AAAAAAAAA AAAAAAA         |
 |  AAAA AAAAAAAAAAAAAAAAAA                                   |

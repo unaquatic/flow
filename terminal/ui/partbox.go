@@ -85,6 +85,11 @@ type PartBox struct {
 	// Expandable reports whether a click on the header and Ctrl+O expand
 	// the box. A box that is not stays collapsed.
 	Expandable bool
+	// KeepExpanded shows the box expanded whatever Ctrl+O says, as for a
+	// todo list, which is read whole: the transcript adopts it expanded,
+	// and Ctrl+O leaves it as it is. A click on its header still expands
+	// and collapses it.
+	KeepExpanded bool
 	// Marked reports whether the box shows Marker as /settings says, as a
 	// tool call does.
 	Marked bool
@@ -347,6 +352,10 @@ func (b *PartBox) ShowOpen() {
 
 // ToggleExpanded shows or hides Details.
 func (b *PartBox) ToggleExpanded() { b.SetExpanded(!b.Expanded) }
+
+// FollowsToolsExpanded reports whether Ctrl+O expands and collapses the box:
+// whether it is Expandable and not KeepExpanded.
+func (b *PartBox) FollowsToolsExpanded() bool { return b.Expandable && !b.KeepExpanded }
 
 // ToggleInPlace shows or hides Details as a click on the header does,
 // keeping the header on the row it was clicked on. A scroll box that holds
