@@ -254,7 +254,7 @@ func toolState(t *testing.T, msg message.Content) message.ToolState {
 
 // TestSend_StoresResponseWhenTurnEnds checks that a response is stored
 // once its turn ends, after its tools have run, and that the prompt and each
-// response end with a step part recording the workspace.
+// response end with a snapshot part recording the workspace.
 func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	a, _ := newActorTestApp(t, "unused")
 	a.extensions = []extension.Extension{snapshotForAgentTest(t)}
@@ -297,8 +297,8 @@ func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	for _, m := range after {
 		if parts := m.Parts; len(parts) == 0 {
 			t.Errorf("stored %s message has no parts", m.Role)
-		} else if step, ok := parts[len(parts)-1].(snapshot.StepPart); !ok || step.Snapshot.IsZero() {
-			t.Errorf("stored %s message ends with %+v, want a step part holding a tree", m.Role, parts[len(parts)-1])
+		} else if step, ok := parts[len(parts)-1].(snapshot.SnapshotPart); !ok || step.Tree.IsZero() {
+			t.Errorf("stored %s message ends with %+v, want a snapshot part holding a tree", m.Role, parts[len(parts)-1])
 		}
 	}
 
@@ -311,8 +311,8 @@ func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	}
 }
 
-// TestSend_PromptSnapshotEvents checks that a prompt's step part, which the
-// snapshot extension adds, arrives through the part events between the
+// TestSend_PromptSnapshotEvents checks that a prompt's snapshot part, which
+// the snapshot extension adds, arrives through the part events between the
 // prompt's start and its end: pending first when recording the workspace
 // takes longer than the extension's IndexingDelay, as a delay of zero makes
 // it, and with its tree at once when recording is quicker. The prompt ends
@@ -335,7 +335,7 @@ func TestSend_PromptSnapshotEvents(t *testing.T) {
 			send(t, a, "ses_snap", SendInput{Text: "hi", MessageID: "msg_prompt"})
 
 			var types []EventType
-			var steps []snapshot.StepPart
+			var steps []snapshot.SnapshotPart
 			var ended EventMessageEnded
 			for _, ev := range collectUntilIdle(t, events) {
 				switch e := ev.(type) {
@@ -345,11 +345,11 @@ func TestSend_PromptSnapshotEvents(t *testing.T) {
 					}
 				case EventPartStarted:
 					if e.MessageID == "msg_prompt" {
-						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.StepPart))
+						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.SnapshotPart))
 					}
 				case EventPartEnded:
 					if e.MessageID == "msg_prompt" {
-						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.StepPart))
+						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.SnapshotPart))
 					}
 				case EventMessageEnded:
 					if e.Message.ID == "msg_prompt" {
@@ -361,14 +361,14 @@ func TestSend_PromptSnapshotEvents(t *testing.T) {
 				t.Fatalf("prompt events = %v, want %v", types, want)
 			}
 			started, last := steps[0], steps[1]
-			if started.Pending != tt.pending || started.Pending == !started.Snapshot.IsZero() {
+			if started.Pending != tt.pending || started.Pending == !started.Tree.IsZero() {
 				t.Errorf("step started as %+v, want pending = %v, with a tree unless pending", started, tt.pending)
 			}
-			if last.Pending || last.Snapshot.IsZero() || last.ID != started.ID {
+			if last.Pending || last.Tree.IsZero() || last.ID != started.ID {
 				t.Errorf("step ended as %+v, want the part %q with its tree", last, started.ID)
 			}
-			if ended.Message.CreatedAt.IsZero() || snapshot.TreeIn(ended.Message.Parts) != last.Snapshot {
-				t.Errorf("prompt ended as %+v, want it stored with the step's tree", ended.Message)
+			if ended.Message.CreatedAt.IsZero() || snapshot.TreeIn(ended.Message.Parts) != last.Tree {
+				t.Errorf("prompt ended as %+v, want it stored with the snapshot's tree", ended.Message)
 			}
 		})
 	}

@@ -39,12 +39,12 @@ func mustParseTree(s string) snapshot.Hash {
 // streamToolTurn applies the updates of agent step a1 as the agent sends
 // them: the step follows a prompt that ended with toolTurnBase, streams text
 // and the arguments of a bash call, runs the call, which prints as it goes,
-// and ends with a step part holding toolTurnTree.
+// and ends with a snapshot part holding toolTurnTree.
 func streamToolTurn(ui *UI) {
 	const id = message.ID("a1")
 	input := `{"command":"go test ./..."}`
-	prev := []message.ContentPart{snapshot.StepPart{ID: "u1-step", Snapshot: toolTurnBase}}
-	step := snapshot.StepPart{ID: "a1-step", Snapshot: toolTurnTree}
+	prev := []message.ContentPart{snapshot.SnapshotPart{ID: "u1-step", Tree: toolTurnBase}}
+	step := snapshot.SnapshotPart{ID: "a1-step", Tree: toolTurnTree}
 	text := func(s string) message.ContentPart { return message.TextPart{ID: "a1-text", Text: s} }
 	tool := func(state message.ToolState) message.ContentPart {
 		return message.ToolPart{ID: "a1-tool", CallID: "c1", Name: "bash", State: state}
@@ -108,9 +108,9 @@ func TestMessageUpdatesKeepOneWidgetPerPart(t *testing.T) {
 // none.
 func TestMessagesHoldThePartsBefore(t *testing.T) {
 	prompt := ChatMessage{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{
-		message.TextPart{ID: "u1-text", Text: "Run the tests"}, snapshot.StepPart{ID: "u1-step", Snapshot: toolTurnBase},
+		message.TextPart{ID: "u1-text", Text: "Run the tests"}, snapshot.SnapshotPart{ID: "u1-step", Tree: toolTurnBase},
 	}}
-	first := ChatMessage{ID: "a1", Role: message.RoleAgent, Parts: []message.ContentPart{snapshot.StepPart{ID: "a1-step", Snapshot: toolTurnTree}}}
+	first := ChatMessage{ID: "a1", Role: message.RoleAgent, Parts: []message.ContentPart{snapshot.SnapshotPart{ID: "a1-step", Tree: toolTurnTree}}}
 	second := ChatMessage{ID: "a2", Role: message.RoleAgent}
 	want := [][]message.ContentPart{nil, prompt.Parts, first.Parts}
 

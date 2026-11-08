@@ -11,29 +11,30 @@ import (
 )
 
 // DefaultIndexingDelay is how long recording the workspace may take before
-// the step part that records it starts pending. A quicker snapshot shows
+// the snapshot part that records it starts pending. A quicker snapshot shows
 // nothing, so that the end of every message does not flash an indexing row,
 // and a slower one shows that it is being taken.
 const DefaultIndexingDelay = 150 * time.Millisecond
 
-// OnPrompt ends the prompt with a step part recording the workspace as the
+// OnPrompt ends the prompt with a snapshot part recording the workspace as the
 // prompt was sent, which the run's first reply starts from, as Track adds it.
 func (e *Extension) OnPrompt(ctx context.Context, _ extension.Prompt, sink agent.PartSink) {
 	e.Track(ctx, sink)
 }
 
-// OnTurnEnd ends the turn's message with a step part recording the workspace
-// as the turn left it, as Track adds it. Tools may have changed files however
-// the turn ended, so a stop does not keep the workspace from being recorded.
+// OnTurnEnd ends the turn's message with a snapshot part recording the
+// workspace as the turn left it, as Track adds it. Tools may have changed
+// files however the turn ended, so a stop does not keep the workspace from
+// being recorded.
 //
-// The trees of the message before the turn and of its step part describe
+// The trees of the message before the turn and of its snapshot part describe
 // everything the turn changed, so no separate record of changed files is
 // kept: a diff of the pair reproduces it on demand.
 func (e *Extension) OnTurnEnd(ctx context.Context, _ agent.Turn, sink agent.PartSink) {
 	e.Track(ctx, sink)
 }
 
-// Track records the workspace in a new step part, which it starts and ends
+// Track records the workspace in a new snapshot part, which it starts and ends
 // through sink. When recording takes longer than IndexingDelay, it starts
 // the part pending, so that its message shows the snapshot being taken, and
 // ends it with the tree once recorded. A quicker snapshot starts the part
@@ -45,14 +46,14 @@ func (e *Extension) Track(ctx context.Context, sink agent.PartSink) {
 		return
 	}
 	id := message.NewPartID()
-	recorded := make(chan StepPart, 1)
+	recorded := make(chan SnapshotPart, 1)
 	go func() {
 		h, err := e.Service.Track(ctx)
 		if err != nil {
 			slog.Warn("track snapshot", "part", id, "err", err)
 		}
 		e.hold(ctx)
-		recorded <- StepPart{ID: id, Snapshot: h}
+		recorded <- SnapshotPart{ID: id, Tree: h}
 	}()
 	if e.IndexingDelay > 0 {
 		timer := time.NewTimer(e.IndexingDelay)
@@ -65,7 +66,7 @@ func (e *Extension) Track(ctx context.Context, sink agent.PartSink) {
 		case <-timer.C:
 		}
 	}
-	sink.Start(StepPart{ID: id, Pending: true})
+	sink.Start(SnapshotPart{ID: id, Pending: true})
 	sink.End(<-recorded)
 }
 

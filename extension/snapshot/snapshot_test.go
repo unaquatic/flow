@@ -31,7 +31,7 @@ func mustHash(t *testing.T, s string) Hash {
 }
 
 // newTestExtension returns the extension over a worktree with one file, in a
-// database of its own, whose step parts start pending after delay.
+// database of its own, whose snapshot parts start pending after delay.
 func newTestExtension(t *testing.T, delay time.Duration) *Extension {
 	t.Helper()
 	worktree := t.TempDir()
@@ -69,23 +69,22 @@ func recordSink(events *[]sinkEvent) agent.PartSink {
 	}
 }
 
-// TestStepPart_JSONRoundtrip checks that a step part keeps its tree and
-// whether it is pending through the stored form, which is the form the part
-// had before it moved out of package message: the tagged fields, leaving out
-// the zero Hash of a failed or pending snapshot.
-func TestStepPart_JSONRoundtrip(t *testing.T) {
+// TestSnapshotPart_JSONRoundtrip checks that a snapshot part keeps its tree
+// and whether it is pending through its tagged form: the type, then the
+// fields, leaving out the zero Hash of a failed or pending snapshot.
+func TestSnapshotPart_JSONRoundtrip(t *testing.T) {
 	tree := mustHash(t, "7a36b04ce429eb3326713c5689665b792179b206")
 	parts := []message.ContentPart{
-		StepPart{ID: "s1", Snapshot: tree},
-		StepPart{ID: "s2"},
-		StepPart{ID: "s3", Pending: true},
+		SnapshotPart{ID: "s1", Tree: tree},
+		SnapshotPart{ID: "s2"},
+		SnapshotPart{ID: "s3", Pending: true},
 	}
 	data, err := message.MarshalParts(parts)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	const want = `[{"type":"step","id":"s1","snapshot":"7a36b04ce429eb3326713c5689665b792179b206"},` +
-		`{"type":"step","id":"s2"},{"type":"step","id":"s3","pending":true}]`
+	const want = `[{"type":"snapshot","id":"s1","tree":"7a36b04ce429eb3326713c5689665b792179b206"},` +
+		`{"type":"snapshot","id":"s2"},{"type":"snapshot","id":"s3","pending":true}]`
 	if string(data) != want {
 		t.Errorf("stored form\n%s\nwant\n%s", data, want)
 	}
@@ -97,14 +96,14 @@ func TestStepPart_JSONRoundtrip(t *testing.T) {
 		t.Fatalf("round-trip lost data: got %+v want %+v", got, parts)
 	}
 	if _, ok := got[0].(message.Metadata); !ok {
-		t.Error("a step part is not metadata, and would be sent to a provider")
+		t.Error("a snapshot part is not metadata, and would be sent to a provider")
 	}
 }
 
-// TestStepPart_MalformedSnapshot checks that a stored tree that is not an
+// TestSnapshotPart_MalformedTree checks that a stored tree that is not an
 // object name fails to decode rather than reading as no tree.
-func TestStepPart_MalformedSnapshot(t *testing.T) {
-	if got, err := message.UnmarshalParts([]byte(`[{"type":"step","snapshot":"tree_a"}]`)); err == nil {
+func TestSnapshotPart_MalformedTree(t *testing.T) {
+	if got, err := message.UnmarshalParts([]byte(`[{"type":"snapshot","tree":"tree_a"}]`)); err == nil {
 		t.Fatalf("unmarshal = %+v, want an error", got)
 	}
 }
@@ -112,11 +111,11 @@ func TestStepPart_MalformedSnapshot(t *testing.T) {
 // TestTreeIn finds the tree a message ends with among its parts.
 func TestTreeIn(t *testing.T) {
 	tree := mustHash(t, "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0")
-	if got := TreeIn([]message.ContentPart{message.TextPart{Text: "hi"}, StepPart{Snapshot: tree}}); got != tree {
+	if got := TreeIn([]message.ContentPart{message.TextPart{Text: "hi"}, SnapshotPart{Tree: tree}}); got != tree {
 		t.Errorf("tree = %s, want %s", got, tree)
 	}
 	if got := TreeIn([]message.ContentPart{message.TextPart{Text: "hi"}}); !got.IsZero() {
-		t.Errorf("tree of parts without a step part = %s, want zero", got)
+		t.Errorf("tree of parts without a snapshot part = %s, want zero", got)
 	}
 }
 
@@ -127,9 +126,9 @@ func TestTreeAt(t *testing.T) {
 	sent := mustHash(t, "7a36b04ce429eb3326713c5689665b792179b206")
 	edited := mustHash(t, "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0")
 	branch := []message.Content{
-		{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{StepPart{Snapshot: sent}}},
+		{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{SnapshotPart{Tree: sent}}},
 		{ID: "a1", Role: message.RoleAgent, Parts: []message.ContentPart{message.TextPart{Text: "thinking"}}},
-		{ID: "a2", Role: message.RoleAgent, Parts: []message.ContentPart{StepPart{Snapshot: edited}}},
+		{ID: "a2", Role: message.RoleAgent, Parts: []message.ContentPart{SnapshotPart{Tree: edited}}},
 	}
 	for _, tt := range []struct {
 		head message.ID
@@ -144,13 +143,13 @@ func TestTreeAt(t *testing.T) {
 			t.Errorf("TreeAt(%q) = %s, %v; want %s", tt.head, got, err, tt.want)
 		}
 	}
-	failed := []message.Content{{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{StepPart{}}}}
+	failed := []message.Content{{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{SnapshotPart{}}}}
 	if _, err := TreeAt(failed, "u1"); !errors.Is(err, ErrNoSnapshot) || !errors.Is(err, extension.ErrRefused) {
 		t.Errorf("TreeAt of a failed snapshot = %v, want ErrNoSnapshot, a refusal", err)
 	}
 }
 
-// TestTrack checks that the step part starts pending when recording the
+// TestTrack checks that the snapshot part starts pending when recording the
 // workspace takes longer than IndexingDelay, as a delay of zero makes it, and
 // with its tree when recording is quicker. Either way it ends with the tree,
 // under the ID it started with.
@@ -169,11 +168,11 @@ func TestTrack(t *testing.T) {
 			if len(events) != 2 || events[0].Ended || !events[1].Ended {
 				t.Fatalf("sink calls = %+v, want a start and then an end", events)
 			}
-			started, ended := events[0].Part.(StepPart), events[1].Part.(StepPart)
-			if started.Pending != tt.pending || started.Pending == !started.Snapshot.IsZero() {
+			started, ended := events[0].Part.(SnapshotPart), events[1].Part.(SnapshotPart)
+			if started.Pending != tt.pending || started.Pending == !started.Tree.IsZero() {
 				t.Errorf("step started as %+v, want pending = %v, with a tree unless pending", started, tt.pending)
 			}
-			if ended.Pending || ended.Snapshot.IsZero() || ended.ID != started.ID {
+			if ended.Pending || ended.Tree.IsZero() || ended.ID != started.ID {
 				t.Errorf("step ended as %+v, want the part %q with its tree", ended, started.ID)
 			}
 		})
@@ -197,11 +196,11 @@ func TestTrack_TrackDelay(t *testing.T) {
 	if len(events) != 2 {
 		t.Fatalf("sink calls = %+v, want a start and an end", events)
 	}
-	started, ended := events[0].Part.(StepPart), events[1].Part.(StepPart)
+	started, ended := events[0].Part.(SnapshotPart), events[1].Part.(SnapshotPart)
 	if !started.Pending {
 		t.Errorf("step started as %+v, want it pending", started)
 	}
-	if ended.Pending || ended.Snapshot.IsZero() || ended.ID != started.ID {
+	if ended.Pending || ended.Tree.IsZero() || ended.ID != started.ID {
 		t.Errorf("step ended as %+v, want the part %q with its tree", ended, started.ID)
 	}
 }
@@ -240,7 +239,7 @@ func TestDisabled(t *testing.T) {
 	if len(events) != 0 {
 		t.Errorf("a disabled extension added %+v", events)
 	}
-	branch := []message.Content{{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{StepPart{Snapshot: tree}}}}
+	branch := []message.Content{{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{SnapshotPart{Tree: tree}}}}
 	if _, err := e.OnMove(t.Context(), extension.Move{Branch: branch, Head: "u1"}); !errors.Is(err, ErrDisabled) {
 		t.Errorf("OnMove = %v, want ErrDisabled", err)
 	}

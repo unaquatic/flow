@@ -1031,11 +1031,11 @@ func TestWorkedFrames(t *testing.T) {
 			ui.AddMessage(msg)
 		}},
 		// A last reply that shows nothing but metadata that no extension
-		// shows, such as its step part, and so counted no tokens, is parted
+		// shows, such as its snapshot part, and so counted no tokens, is parted
 		// from the reply above it by one blank row, as a reply is.
 		{name: "worked_alone", h: 7, add: func(ui *UI) {
 			ui.AddMessage(agentParts("a1", bash))
-			last := agentParts("a2", snapshot.StepPart{ID: "a2-step"})
+			last := agentParts("a2", snapshot.SnapshotPart{ID: "a2-step"})
 			last.ParentID, last.Worked = "a1", 3*time.Second
 			ui.AddMessage(last)
 		}},

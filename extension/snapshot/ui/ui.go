@@ -1,6 +1,6 @@
 // Package ui shows workspace snapshots in the terminal UI, as the terminal
 // side of the snapshot extension: a row like a tool call's while a snapshot
-// is being taken (StepBox), and under each reply the changes it made
+// is being taken (SnapshotBox), and under each reply the changes it made
 // (PatchBox).
 package ui
 
@@ -37,13 +37,14 @@ func New(ctx context.Context, s *snapshot.Extension) *Extension {
 	return &Extension{Snapshots: s, ReadPatch: s.Patch, Patches: make(map[[2]snapshot.Hash]string), ctx: ctx}
 }
 
-// NewPartView returns the StepBox of a step part, and nil for another part.
+// NewPartView returns the SnapshotBox of a snapshot part, and nil for another
+// part.
 func (e *Extension) NewPartView(part message.ContentPart, host ui.ViewHost) ui.PartView {
-	step, ok := part.(snapshot.StepPart)
+	step, ok := part.(snapshot.SnapshotPart)
 	if !ok {
 		return nil
 	}
-	box := NewStepBox(step)
+	box := NewSnapshotBox(step)
 	box.SetViewStyle(host.Style)
 	return box
 }
