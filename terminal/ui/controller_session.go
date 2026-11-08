@@ -118,12 +118,6 @@ func (s *Service) ShowInfo() []UIEvent {
 	return s.ShowInfoUnder(slices.Collect(LogoLines()))
 }
 
-// ShowLogo shows the product logo on the canvas, from the transcript's left
-// edge, as a new session opens under it.
-func (s *Service) ShowLogo() []UIEvent {
-	return s.AddNotice(Notice{Lines: slices.Collect(LogoLines()), Surface: NoticeCanvas})
-}
-
 // ShowInfoUnder reports the running version and the active session in the
 // transcript, as StatusLines lays them out, under logo as LogoNotice shows
 // it, or alone when logo is empty.
@@ -487,11 +481,11 @@ func ChatMessageOf(m message.Content) ChatMessage {
 
 // InitSession opens the initial session, the stored session id or a new one
 // when id is empty, and returns the load of its transcript, the product logo
-// followed by its messages, without the session info /status shows, and its
-// terminal title. A stored session
-// takes the model variant its messages last ran, unless state.KeepModel keeps
-// the terminal's. A stored session that fails to load leaves the new session
-// active, and says so under the logo.
+// and the session info /status shows, as ShowInfo shows them, followed by
+// its messages, and its terminal title. A stored session takes the model
+// variant its messages last ran, unless state.KeepModel keeps the
+// terminal's. A stored session that fails to load leaves the new session
+// active, and says so under the session info.
 //
 // The transcript is loaded whole, rather than a message at a time, so that
 // the UI builds the rows of the last messages alone, as BuildTranscript
@@ -508,9 +502,11 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The logo heads the transcript, above the messages it follows in.
+	// The logo and the session info head the transcript, above the messages
+	// they follow in. They show once the session and its model are set, so
+	// that the info reads them.
 	loaded := len(s.state.Messages)
-	s.ShowLogo()
+	s.ShowInfo()
 	s.state.Messages = slices.Concat(s.state.Messages[loaded:], s.state.Messages[:loaded])
 	return slices.Concat(restored, []UIEvent{EventSessionLoad{Messages: s.state.Messages}}, s.UpdateUsage(), s.UpdateTitle())
 }

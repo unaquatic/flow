@@ -248,8 +248,9 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "notice_multiline", h: 7, add: func(ui *UI) {
 			ui.AddNotice(Notice{Lines: statusLines()})
 		}},
-		// /status is a system notice under the logo, which sits on the canvas
-		// from the left edge, a blank row above the notice.
+		// Startup heads the transcript with /status, a system notice under
+		// the logo, which sits on the canvas from the left edge, a blank row
+		// above the notice.
 		{name: "status_notice", h: 18, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines())...)
 		}},

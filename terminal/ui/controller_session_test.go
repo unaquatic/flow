@@ -194,7 +194,7 @@ func TestActiveSessionIDOffLoop(t *testing.T) {
 
 // TestInitSessionNoticeFirst checks that a session opened at startup loads its
 // transcript in one event, which the UI builds the last rows of, with the
-// logo above its messages and no /status notice, and adds nothing to it
+// logo and the /status notice above its messages, and adds nothing to it
 // after.
 func TestInitSessionNoticeFirst(t *testing.T) {
 	tests := []struct {
@@ -202,8 +202,8 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 		messages int
 		want     []string
 	}{
-		{name: "new session", want: []string{"logo"}},
-		{name: "stored session", messages: 2, want: []string{"logo", "message", "message"}},
+		{name: "new session", want: []string{"logo", "notice"}},
+		{name: "stored session", messages: 2, want: []string{"logo", "notice", "message", "message"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -240,7 +240,17 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 				}
 			}
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("loaded transcript = %q, want %q", got, tt.want)
+				t.Fatalf("loaded transcript = %q, want %q", got, tt.want)
+			}
+			// The /status notice reads the session opened, and its messages.
+			status := loads[0].Messages[1].Notice
+			for _, want := range []string{
+				fmt.Sprintf("%-10s%s", "Session", s.SessionID()),
+				fmt.Sprintf("%-10s%d", "Messages", tt.messages),
+			} {
+				if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
+					t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
+				}
 			}
 			// A transcript built again from the state shows them in order too.
 			messages := false
