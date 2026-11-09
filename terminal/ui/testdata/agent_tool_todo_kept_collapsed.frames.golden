@@ -14,21 +14,21 @@
 |                                        |
 |                                        |
 === fg ===
-|A AAAAAAAA AAA AAAAAAA                  |
+|A BBBBBBBB BBB BBBBBBB                  |
 |                                        |
-|B BBBB BBBBBBB                          |
+|C CCCC CCCCCCC                          |
 |                                        |
-|B BBBB BBBBB                            |
+|C CCCC CCCCC                            |
 |                                        |
 |  CCC CCCC CCCCCCC                      |
-|  AAA AAA AAAAAA                        |
+|  BBB BBB BBBBBB                        |
 |  C C CCC CCC CCCCC                     |
 |                                        |
-|B BBBB BB BBBB BBBBB                    |
+|C CCCC CC CCCC CCCCC                    |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
+A #eb7513
+B #e6e6e6
 C #8a8a8a

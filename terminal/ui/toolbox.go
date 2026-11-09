@@ -48,12 +48,12 @@ var _ BoxContent = (*ToolBox)(nil)
 
 // NewToolBox creates the box of a tool call, collapsed to a row on the
 // canvas, whose block, once it expands, fills the theme's success surface in
-// ExpandedBoxed. Its status is in ToolFg, as a panel colors its
-// keys after its title, and notes on its input in the theme's muted text
-// color. Its header is a single row: the call summary and then the status,
-// with the summary cut off with an ellipsis when the row is full, after
-// ToolMarker, in the box's left padding, once SetMarker shows it. The marker
-// and the tool's name are in ToolFg, as the input is. Clicking the header
+// ExpandedBoxed. Its status and the notes on its input are in the theme's
+// muted text color. Its header is a single row: the call summary and then
+// the status, with the summary cut off with an ellipsis when the row is
+// full, after ToolMarker, in the box's left padding, once SetMarker shows
+// it. The marker and the tool's name are in the muted text color too, as
+// the input is. Clicking the header
 // expands the block, and the header of an expanded call drops the summary of
 // its input, which the details show, and the marker. The call shows as the
 // first of formats that describes it says.

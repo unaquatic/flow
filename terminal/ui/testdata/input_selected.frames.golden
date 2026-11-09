@@ -5,7 +5,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A BBCCC                                                     |
+|A AABBB                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -17,7 +17,6 @@
 |                                                            |
 |                                                            |
 === legend ===
-A #ff5f00
-B #e6e6e6
-C #232323 BoxBg
+A #e6e6e6
+B #232323 BoxBg
 ░ #ff5f00

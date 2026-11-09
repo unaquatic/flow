@@ -71,6 +71,11 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 	ui.messageWidgets[msg.ID] = cm
 }
 
+// PromptMarkerFg returns the color of the marker that the user's text starts
+// with: the bar of a prompt in PromptBar, and the left edge of the input and
+// of a queued prompt, as RoleMarkerFg gives it for a prompt.
+func (ui *UI) PromptMarkerFg() style.Color { return RoleMarkerFg(ui.theme, message.RoleUser) }
+
 // ChatMessageOptions returns bubble options for role.
 func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 	// Agent prose sits on the canvas, as does the system message, whose
@@ -81,7 +86,7 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 	case role == message.RoleAgent || role == message.RoleSystem:
 		bg = style.ColorTransparent
 	case role == message.RoleUser && ui.service.state.PromptStyle == PromptBar:
-		bg, bar = style.ColorTransparent, productFg
+		bg, bar = style.ColorTransparent, ui.PromptMarkerFg()
 	}
 	return []ChatMessageOption{
 		ChatMessageWithTheme(ui.theme),
@@ -156,7 +161,7 @@ func (ui *UI) ShowStatusMarker() {
 	}
 	st := ui.service.state
 	ui.statusRow.SetMarker(!st.HideToolMarkers)
-	ui.statusRow.SetNameFg(st.ToolColor.Fg())
+	ui.statusRow.SetNameFg(st.ToolColor.Fg(ui.theme))
 	ui.statusRow.SetMarkerShape(st.MarkerShape)
 	ui.SyncSlashStatus()
 }
@@ -351,18 +356,15 @@ var productFg = style.ColorFromHex(product.PrimaryColor)
 // as --version and the README logos draw it. It is productFg.
 var logoInitialFg = style.ColorFromHex(product.LogoInitialColor)
 
-// logoFg is the light grey of the logo after its "f", as --version draws it.
-var logoFg = style.ColorFromHex("#e4e4e4")
-
 // LogoLines yields the lines of the product logo, the "f" in logoInitialFg
-// and the rest in logoFg.
+// and the rest in textFg.
 func LogoLines() iter.Seq[style.StyledText] { return LogoLinesIn(logoInitialFg) }
 
 // LogoLinesIn yields the lines of the product logo, the "f" in c and the rest
-// in logoFg.
+// in textFg.
 func LogoLinesIn(c style.Color) iter.Seq[style.StyledText] {
 	initial := style.New().WithFg(c).Func()
-	rest := style.New().WithFg(logoFg).Func()
+	rest := style.New().WithFg(textFg).Func()
 	return func(yield func(style.StyledText) bool) {
 		for f, r := range product.LogoParts() {
 			if !yield(style.NewStyledText(initial(f), rest(r))) {

@@ -24,21 +24,21 @@
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  AAAAA CCCCCCC CC                                                      |
-|  DDDD CCCCCCC CC                                                       |
-|  AAAAA CCCCCCC CC                                                      |
-|  DDDD CCCCCCC CC                                                       |
-|  AAAAA CCCCCCC CC                                                      |
-|  DDDD CCCCCCC CC                                                       |
-|  AAAAA CCCCCCC CC                                                      |
-|  DDDD CCCCCCC CC                                                       |
-|  AAAAA CCCCCCC CC                                                      |
-|  DDDD CCCCCCC CC                                                       |
-|  AAAAA CCCCCCC CC                                                      |
+|  CCCCC BBBBBBB BB                                                      |
+|  AAAA BBBBBBB BB                                                       |
+|  CCCCC BBBBBBB BB                                                      |
+|  AAAA BBBBBBB BB                                                       |
+|  CCCCC BBBBBBB BB                                                      |
+|  AAAA BBBBBBB BB                                                       |
+|  CCCCC BBBBBBB BB                                                      |
+|  AAAA BBBBBBB BB                                                       |
+|  CCCCC BBBBBBB BB                                                      |
+|  AAAA BBBBBBB BB                                                       |
+|  CCCCC BBBBBBB BB                                                      |
 |                                                                        |
 |  BBBBBBB                                                               |
 |                                                                        |
-|E                                                                       |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -66,8 +66,6 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
-C #b4b4b4
-D #eb7513
-E #ff5f00
+B #8a8a8a
+C #eb7513
 ░ #ff5f00

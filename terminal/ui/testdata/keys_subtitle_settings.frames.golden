@@ -10,12 +10,12 @@
 |                                                                        |
 === fg ===
 |A AAAAAAAA                                                              |
-|  BBB CCCCCC  BBB CCCC  BBB CCCCCC  BBBB CCCCCC                         |
+|  BBB BBBBBB  BBB BBBB  BBB BBBBBB  BBBB BBBBBB                         |
 |                                                                        |
-|  DDDDDDDDDD              DD                                            |
-|  AAAAA                   CCC                                           |
+|  CCCCCCCCCC              CC                                            |
+|  AAAAA                   BBB                                           |
 |                                                                        |
-|E                                                                       |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 === bg ===
@@ -30,8 +30,6 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #b4b4b4
-C #707070
-D #232323 BoxBg
-E #ff5f00
+B #8a8a8a
+C #232323 BoxBg
 ░ #ff5f00

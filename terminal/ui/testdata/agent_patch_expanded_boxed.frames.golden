@@ -17,17 +17,17 @@
 |                                        |
 |                                        |
 === fg ===
-|A AAAAAAA AAA AAAAAAAAAAA               |
+|A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
 |                                        |
-|  AAAA                                  |
-|  A AAAA  BB CC                         |
+|  BBBB                                  |
+|  B BBBB  CC DD                         |
 |                                        |
-|  AAAAAAA  BB CC                        |
-|  AA AAAA AAAA AA                       |
-|   AAAAAAA AAAA                         |
-|  D                                     |
-|  DDDDDDD DDDDDDDD                      |
+|  BBBBBBB  CC DD                        |
+|  BB BBBB BBBB BB                       |
+|   BBBBBBB BBBB                         |
+|  E                                     |
+|  EEEEEEE EEEEEEEE                      |
 |                                        |
 |                                        |
 |                                        |
@@ -53,8 +53,9 @@
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #5fc882
-C #dc646e
-D #91b557
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e
+E #91b557
 ░ #1f1f1f SurfaceRaised/SuccessSurface

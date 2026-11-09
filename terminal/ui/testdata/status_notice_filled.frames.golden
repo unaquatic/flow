@@ -28,12 +28,12 @@
 |AAAAA   BBBB  BBBBBB   BB  BB           |
 |                                        |
 |                                        |
-|  CCCCCCC   DDDD DDDDDD                 |
-|  CCCCCCC   DDDDDDDDDDDDDDDDDDDDDDDDDD  |
-|  CCCCCCCC  D                           |
-|  CCCCC     DDDDDDDDDDDDDD              |
-|  CCCCCCC   DDD D DDDD DD               |
-|  CCCCCCCCC DDDDDDDDDDDDD               |
+|  CCCCCCC   BBBB BBBBBB                 |
+|  CCCCCCC   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
+|  CCCCCCCC  B                           |
+|  CCCCC     BBBBBBBBBBBBBB              |
+|  CCCCCCC   BBB B BBBB BB               |
+|  CCCCCCCCC BBBBBBBBBBBBB               |
 |                                        |
 |                                        |
 === bg ===
@@ -57,7 +57,6 @@
 |                                        |
 === legend ===
 A #ff5f00
-B #e4e4e4
-C #8c8c8c
-D #e6e6e6
+B #e6e6e6
+C #8a8a8a
 ░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -487,7 +487,7 @@ func (ui *UI) BuildUI() {
 		widget.SelectWithFg(titleFg),
 		// The descriptions are dim, as the labels of the Usage box's values
 		// are, and the commands bright, as its values are.
-		widget.SelectWithDescriptionFg(PanelDimFg),
+		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
 		widget.SelectWithFocusedBold(false),
 		widget.SelectWithFocusedFg(activeFg),
 		widget.SelectWithSelectedFg(activeFg),
@@ -583,11 +583,11 @@ func (ui *UI) BuildUI() {
 		widget.SelectWithFocusedFg(activeFg),
 		widget.SelectWithSelectedBg(sessionBg),
 		widget.SelectWithSelectedFg(activeFg),
-		widget.SelectWithDescriptionFg(PanelDimFg),
+		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
 		// The active session's "[current]" stays dim on the selected row
 		// under SelectionArrow, and takes the fill's text color under the
 		// styles that fill it.
-		widget.SelectWithHintFg(PanelDimFg),
+		widget.SelectWithHintFg(ui.theme.TextMuted),
 		widget.SelectWithShowDescription(false),
 		widget.SelectWithWrapSelection(true),
 		widget.SelectWithOnItemSelected(func(_ int, item widget.SelectItem) {
@@ -605,7 +605,7 @@ func (ui *UI) BuildUI() {
 	ui.sessionMenu.SetFocusable(false)
 	ui.sessionText = widget.NewText("",
 		widget.TextWithID("session-text"),
-		widget.TextWithFg(style.ColorFromInts(92, 92, 92, 255)),
+		widget.TextWithFg(ui.theme.TextMuted),
 	)
 	ui.sessionPanel = NewInputPanel("session-panel")
 	ui.sessionHeader = AddPanelHeader(ui.sessionPanel, "session", "Sessions", inputBorderFg, sessionBg)
@@ -633,7 +633,7 @@ func (ui *UI) BuildUI() {
 	ui.bannerText = widget.NewText("",
 		widget.TextWithID("banner-text"),
 		widget.TextWithWrapMode(textbuf.WrapWord),
-		widget.TextWithFg(style.ColorFromInts(92, 92, 92, 255)),
+		widget.TextWithFg(ui.theme.TextMuted),
 	)
 	ui.bannerMenu = widget.NewSelect(
 		nil,
@@ -649,11 +649,11 @@ func (ui *UI) BuildUI() {
 		widget.SelectWithFg(titleFg),
 		// What follows a row's name, such as a setting's value or a demo's
 		// description, is dim, as in the slash menu.
-		widget.SelectWithDescriptionFg(PanelDimFg),
+		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
 		// A row's hint, such as "[default]", stays dim on the selected row
 		// under SelectionArrow, and takes the fill's text color under the
 		// styles that fill it.
-		widget.SelectWithHintFg(PanelDimFg),
+		widget.SelectWithHintFg(ui.theme.TextMuted),
 		widget.SelectWithWrapSelection(true),
 		widget.SelectWithShowScrollIndicator(false),
 		widget.SelectWithShowDescription(false),
@@ -689,13 +689,13 @@ func (ui *UI) BuildUI() {
 	// error, such as a provider's raw response body, wraps onto more lines.
 	ui.indicatorLabel = widget.NewText("",
 		widget.TextWithID("indicator-label"),
-		widget.TextWithFg(indicatorFg),
+		widget.TextWithFg(ui.theme.TextMuted),
 		widget.TextWithWrapMode(textbuf.WrapWord),
 		widget.TextWithLayout(layout.WithFlexGrow(1), layout.WithFlexShrink(1)),
 	)
 	// While a turn is in progress, a marker starts the line in its left
 	// padding, as a tool call's does, and blinks while the time shows.
-	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, indicatorHintFg)
+	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, ui.theme.TextMuted)
 	ui.indicatorMarker.SetGone(true)
 	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden)
 	ui.indicatorRow = widget.NewBox(

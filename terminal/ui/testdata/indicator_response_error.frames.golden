@@ -20,17 +20,17 @@
 |                                                                        |
 |                                                                        |
 === fg ===
-|A BB                                                                    |
+|A AA                                                                    |
 |                                                                        |
-|C CCCCC DDDDDDDDDD DDDDDDDD DDDDD DDDDD                                 |
-|  B                                                                     |
-|    BBBBBBB EEEEEEEB                                                    |
-|    BBBBBBBB B                                                          |
-|      BBBBBBB EEEEEEEEEEEEEEEEEEB                                       |
-|      BBBBBBBBBB EEEEEEE                                                |
-|    BB                                                                  |
-|    BBBBBBBBBBBBB EEEEEEEEEEEEEEEE                                      |
-|  B                                                                     |
+|B BBBBB CCCCCCCCCC CCCCCCCC CCCCC CCCCC                                 |
+|  A                                                                     |
+|    AAAAAAA DDDDDDDA                                                    |
+|    AAAAAAAA A                                                          |
+|      AAAAAAA DDDDDDDDDDDDDDDDDDA                                       |
+|      AAAAAAAAAA DDDDDDD                                                |
+|    AA                                                                  |
+|    AAAAAAAAAAAAA DDDDDDDDDDDDDDDD                                      |
+|  A                                                                     |
 |                                                                        |
 |A                                                                       |
 |                                                                        |
@@ -41,8 +41,7 @@
 |                                                                        |
 |                                                                        |
 === legend ===
-A #ff5f00
-B #e6e6e6
-C #ff7c78
-D #787878
-E #91b557
+A #e6e6e6
+B #ff7c78
+C #8a8a8a
+D #91b557

@@ -254,8 +254,8 @@ func (s ExpandedStyle) String() string {
 type ToolNameColor int
 
 const (
-	// ToolNameGray shows the marker and the name in ToolFg, as the
-	// input after the name is. It is the default.
+	// ToolNameGray shows the marker and the name in the theme's TextMuted,
+	// as the input after the name is. It is the default.
 	ToolNameGray ToolNameColor = iota
 	// ToolNameWhite shows the marker and the name in titleFg, as a panel
 	// shows its title.
@@ -342,12 +342,13 @@ func (m MarkerShape) String() string {
 	return markerShapeInfo[m].glyph + " " + markerShapeInfo[m].name
 }
 
-// Fg returns the color c names: ToolFg or titleFg.
-func (c ToolNameColor) Fg() style.Color {
+// Fg returns the color c names in theme t: its TextMuted, or titleFg. A nil
+// t uses the default theme.
+func (c ToolNameColor) Fg(t *style.Theme) style.Color {
 	if c == ToolNameWhite {
 		return titleFg
 	}
-	return ToolFg
+	return themeOrDefault(t).TextMuted
 }
 
 // KeyHintsMode is where the panels in the input box name their keys, which
@@ -675,6 +676,6 @@ type UIState struct {
 // StatusHintStyled returns the default keyboard hint.
 func StatusHintStyled() style.StyledText {
 	key := style.New().WithFg(textFg).Func()
-	dim := style.New().WithFg(style.ColorFromInts(80, 80, 80, 255)).Func()
+	dim := style.New().WithFg(mutedFg).Func()
 	return style.NewStyledText(key("slash"), dim(" commands "), key("esc"), dim(" interrupt"))
 }

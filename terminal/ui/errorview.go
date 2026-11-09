@@ -61,7 +61,7 @@ func NewErrorView(p ErrorPart, theme *style.Theme, shape MarkerShape) *ErrorView
 		Theme:  theme,
 		Marker: NewMarker(shape, theme.Danger),
 		Label: widget.NewText("",
-			widget.TextWithFg(indicatorFg),
+			widget.TextWithFg(theme.TextMuted),
 			widget.TextWithWrapMode(textbuf.WrapWord),
 			widget.TextWithLayout(layout.WithFlexGrow(1), layout.WithFlexShrink(1)),
 		),

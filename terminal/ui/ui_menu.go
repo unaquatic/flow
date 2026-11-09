@@ -313,7 +313,7 @@ func (p *PromptPreview) Draw() {
 	p.Box.SetGone(rows == 0)
 	switch {
 	case rows > 0 && p.Loading:
-		p.Text.SetStyledContent(style.NewStyledText(style.New().WithFg(PanelDimFg).Func()("  " + LoadingText)))
+		p.Text.SetStyledContent(style.NewStyledText(style.New().WithFg(mutedFg).Func()("  " + LoadingText)))
 	case rows > 0:
 		p.Text.SetStyledContent(JoinStyledLines(PromptLines(p.Prompts, p.Earlier, rows-1, p.Theme)))
 	}
@@ -341,8 +341,9 @@ func (p *PromptPreview) Part() (FitPart, bool) {
 // first and follow earlier prompts not given: every prompt when they all fit
 // and none came before, and otherwise a count of the earlier prompts, those
 // not given among them, such as "[31 earlier]", above the latest that fit
-// in the other rows, or the latest alone in a single row. Each prompt follows a "User" label in the theme's accent,
-// as the session tree labels prompts, and every row lines up with the
+// in the other rows, or the latest alone in a single row. Each prompt follows
+// a "User" label in the color of a prompt's marker, as RoleMarkerFg gives it
+// and the session tree labels prompts, and every row lines up with the
 // session list's text, past its arrow.
 func PromptLines(prompts []string, earlier, n int, theme *style.Theme) []style.StyledText {
 	if n <= 0 || len(prompts) == 0 {
@@ -350,7 +351,8 @@ func PromptLines(prompts []string, earlier, n int, theme *style.Theme) []style.S
 	}
 	theme = themeOrDefault(theme)
 	fg := func(c style.Color) func(string) style.TextChunk { return style.New().WithFg(c).Func() }
-	text, dim, accent := fg(panelTextFg), fg(PanelDimFg), fg(theme.Accent)
+	text, user := fg(theme.TextMuted), fg(RoleMarkerFg(theme, message.RoleUser))
+	dim := text
 
 	var lines []style.StyledText
 	shown := prompts
@@ -365,7 +367,7 @@ func PromptLines(prompts []string, earlier, n int, theme *style.Theme) []style.S
 		}
 	}
 	for _, prompt := range shown {
-		lines = append(lines, style.NewStyledText(text("  "), accent("User "), text(prompt)))
+		lines = append(lines, style.NewStyledText(text("  "), user("User "), text(prompt)))
 	}
 	return lines
 }

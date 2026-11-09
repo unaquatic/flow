@@ -17,20 +17,20 @@
 |                                                                        |
 === fg ===
 |A AAAAAAA AAAA                                                          |
-|  BBB CCCCCC  BBB CCCC  BBBBBBB CCCC  BBBBBB CCCCCC  BBBBBB CCCCCC      |
-|  BBBB CCCCCC                                                           |
+|  BBB BBBBBB  BBB BBBB  BBBBBBB BBBB  BBBBBB BBBBBB  BBBBBB BBBBBB      |
+|  BBBB BBBBBB                                                           |
 |                                                                        |
-|  DDDD BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
-|  AAAAA BBBB BBB BBBBBB BBBB B BBBB BBBBBB                              |
-|  CC DDDD BBBB BBB BBBBB                                                |
-|  C  AAAAA BBBBB BBBBBBBBBBB                                            |
-|  E                                                                     |
-|  CC CCCC CCC CCCCCCCCCCCC CCCCC CCCCCCC                                |
-|     CCCC CCCCCCCCCCCC                                                  |
-|     CCCC CCCCCCCCCCCC                                                  |
-|     CCCCC CCCCCCC CCC CCCCC CC C CCCCCC                                |
+|  AAAA BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
+|  CCCCC BBBB BBB BBBBBB BBBB B BBBB BBBBBB                              |
+|  BB AAAA BBBB BBB BBBBB                                                |
+|  B  CCCCC BBBBB BBBBBBBBBBB                                            |
+|  D                                                                     |
+|  EE EEEE EEE EEEEEEEEEEEE EEEEE EEEEEEE                                |
+|     EEEE EEEEEEEEEEEE                                                  |
+|     EEEE EEEEEEEEEEEE                                                  |
+|     EEEEE EEEEEEE EEE EEEEE EE E EEEEEE                                |
 |                                                                        |
-|F                                                                       |
+|A                                                                       |
 |                                                                        |
 === bg ===
 |                                                                        |
@@ -51,9 +51,8 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #b4b4b4
-C #707070
-D #eb7513
-E #232323 BoxBg
-F #ff5f00
+B #8a8a8a
+C #eb7513
+D #232323 BoxBg
+E #313132
 ░ #ff5f00

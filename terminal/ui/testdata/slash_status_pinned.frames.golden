@@ -11,9 +11,9 @@
 |                                                                                    |
 |                                                                                    |
 === fg ===
-|A AAAAA BBBBBBBBBBBBBBBBBB BBBBBB CCCCCCC BBB BB CC BBBB CCC BBBB CCCCC BBBB BBBBB  |
+|A AAAAA BBBBBBBBBBBBBBBBBB BBBBBB AAAAAAA BBB BB AA BBBB AAA BBBB AAAAA BBBB BBBBB  |
 |                                                                                    |
-|D BBBBB                                                                             |
+|B BBBBB                                                                             |
 |                                                                                    |
 |                                                                                    |
 |                                                                                    |
@@ -23,7 +23,5 @@
 |                                                                                    |
 |                                                                                    |
 === legend ===
-A #8c8c8c
+A #8a8a8a
 B #e6e6e6
-C #707070
-D #ff5f00

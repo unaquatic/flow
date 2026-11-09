@@ -195,8 +195,8 @@ func TestToolBox_BashHeaderAndCommand(t *testing.T) {
 			if got, want := box.Status.PlainText(), "[queued]"; got != want {
 				t.Errorf("status = %q; want %q", got, want)
 			}
-			if got := box.Status.Fg(); got != ui.ToolFg {
-				t.Errorf("status fg = %v; want ToolFg, as tool rows show their status", got)
+			if got := box.Status.Fg(); got != muted {
+				t.Errorf("status fg = %v; want TextMuted, as tool rows show their status", got)
 			}
 			if got := box.Params.PlainText(); got != tt.wantCommand {
 				t.Errorf("command = %q; want %q", got, tt.wantCommand)

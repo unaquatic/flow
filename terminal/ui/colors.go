@@ -62,25 +62,16 @@ func backgroundChoices(t *style.Theme) []ColorChoice {
 
 // textChoices returns TextChoices for the theme t.
 func textChoices(t *style.Theme) []ColorChoice {
-	gray := func(v uint8) style.Color { return style.ColorFromInts(v, v, v, 255) }
 	return []ColorChoice{
 		// Text.
-		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, code attributes, objects, numbers, types, constants, and properties
-		{logoFg, style.ANSIBrightWhite, 254},           // the logo after its "f"
-		{gray(220), style.ANSIBrightWhite, 253},        // paths in the diff toast
+		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, code attributes, objects, numbers, types, constants, and properties, the logo after its "f", paths in the diff toast
 		{style.ColorWhite, style.ANSIBrightWhite, 231}, // OnAccent, OnInteractive and the other On roles
-		{panelTextFg, style.ANSIWhite, 249},            // session tree rows, footer keys
 		{boxBg, style.ANSIBlack, 235},                  // text on the bar of a selected row, selected input text
 
 		// Dim text, which cards hold too.
-		{t.TextMuted, style.ANSIWhite, 245}, // TextMuted, Interactive, Info, comments, quotes, H5
-		{gray(140), style.ANSIWhite, 245},   // the labels of /status and the diff toast, tool rows and reasoning (ToolFg)
-		{PanelDimFg, style.ANSIWhite, 242},  // panel counts, menu descriptions, hints
-		{gray(92), style.ANSIWhite, 59},     // the banner's text, the session list's no-match notice
-		{gray(80), style.ANSIWhite, 239},    // the words between keys in the status hints
+		{t.TextMuted, style.ANSIWhite, 245}, // TextMuted, Interactive, Info, comments, quotes, H5, tool rows and reasoning, the labels of /status and the diff toast, panel counts, menu descriptions, hints, the banner's text, the indicator
 
 		// Dim text and lines on the canvas only.
-		{indicatorFg, style.ANSIBrightBlack, 243},   // the indicator
 		{t.BorderWeak, style.ANSIBrightBlack, 236},  // BorderWeak, markdown rules
 		{t.TextWeak, style.ANSIBrightBlack, 236},    // TextWeak
 		{t.Border, style.ANSIBrightBlack, 237},      // Border, quote borders

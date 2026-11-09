@@ -7,13 +7,12 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB BBBB BBBBBBB BB     |
-|  BBBBB BBBB BBB BBBBBBB BB BBBBB BBBB BBB BBB BBBBBBBBBB   |
-|  BBBBB BBB BBBBBB BBB BBBBBBB                              |
+|A AAA A AAAAAA AAAAAA AA AAA AAAAAAAAAA AAAA AAAAAAA AA     |
+|  AAAAA AAAA AAA AAAAAAA AA AAAAA AAAA AAA AAA AAAAAAAAAA   |
+|  AAAAA AAA AAAAAA AAA AAAAAAA                              |
 |                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #ff5f00
-B #e6e6e6
+A #e6e6e6

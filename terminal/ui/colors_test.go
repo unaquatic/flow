@@ -49,7 +49,7 @@ func TestColorIndexers(t *testing.T) {
 		{name: "16 selected bar", mode: style.Color16, color: productFg, bg: true, want: "\x1b[47m"},
 		{name: "16 selected bar text", mode: style.Color16, color: boxBg, want: "\x1b[30m"},
 		{name: "16 text", mode: style.Color16, color: theme.TextBase, want: "\x1b[97m"},
-		{name: "16 dim text", mode: style.Color16, color: PanelDimFg, want: "\x1b[37m"},
+		{name: "16 dim text", mode: style.Color16, color: theme.TextMuted, want: "\x1b[37m"},
 		{name: "16 accent", mode: style.Color16, color: theme.Accent, want: "\x1b[33m"},
 		{name: "16 success", mode: style.Color16, color: theme.Success, want: "\x1b[92m"},
 		{name: "16 reasoning code", mode: style.Color16, color: ReasoningCodeFg(theme), want: "\x1b[32m"},

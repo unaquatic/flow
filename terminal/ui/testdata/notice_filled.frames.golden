@@ -26,8 +26,8 @@
 |                                        |
 |                                        |
 |  A AAAAA  BB CC                        |
-|  DDDDDDDDDDDDDDDDDD  BB CC             |
-|  DDDDDDDDDDDDDDDDDDDDDDD  BB CC        |
+|  AAAAAAAAAAAAAAAAAA  BB CC             |
+|  AAAAAAAAAAAAAAAAAAAAAAA  BB CC        |
 |                                        |
 |                                        |
 |                                        |
@@ -53,6 +53,5 @@
 A #e6e6e6
 B #5fc882
 C #dc646e
-D #dcdcdc
 ░ #232323 BoxBg
 ▒ #1f1f1f SurfaceRaised/SuccessSurface

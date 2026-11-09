@@ -16,14 +16,14 @@
 |                                                                        |
 |                                                                        |
 === fg ===
-|A BBB BBB BBBBB                                                         |
+|A AAA AAA AAAAA                                                         |
 |                                                                        |
-|B BBB BBBBB BBBBB                                                       |
+|B AAA AAAAA AAAAA                                                       |
 |                                                                        |
-|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                                      |
+|A AAAAAAAA CCCC CCCCC CCCC CCCCCCC                                      |
 |                                                                        |
 |  DDD DDDDDD  DDDDDDDDDDDDD  DDDDDDDDDD DDDDDDDD  DDDDDDDDDDDDDDDDDDDD  |
-|  BBBBBBBB    BBBBBBBBBBBBB  BBBBBBBBBB BBBBBBBB  BBBBBBBBBBBBBBBBBBBB  |
+|  AAAAAAAA    AAAAAAAAAAAAA  AAAAAAAAAA AAAAAAAA  AAAAAAAAAAAAAAAAAAAA  |
 |                                                                        |
 |  CCCCCCCCC                                                             |
 |                                                                        |
@@ -50,8 +50,8 @@
 |                                                                        |
 |                                                                        |
 === legend ===
-A #ff5f00
-B #e6e6e6
-C #707070
+A #e6e6e6
+B #eb7513
+C #8a8a8a
 D #232323 BoxBg
 ░ #ff5f00

@@ -15,13 +15,13 @@
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  CCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                            |
-|  BB CCCC DDDD DDD DDDDD                                                |
-|  E                                                                     |
-|  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                |
+|  AAAA BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
+|  BB AAAA BBBB BBB BBBBB                                                |
+|  C                                                                     |
+|  DD DDDD DDD DDDDDDDDDDDD DDDDD DDDDDDD                                |
 |  BBBBBB                                                                |
 |                                                                        |
-|F                                                                       |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 === bg ===
@@ -39,9 +39,7 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
-C #eb7513
-D #b4b4b4
-E #232323 BoxBg
-F #ff5f00
+B #8a8a8a
+C #232323 BoxBg
+D #313132
 ░ #ff5f00

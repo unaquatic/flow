@@ -12,15 +12,15 @@
 === fg ===
 |A AAAAAAA AA AAAAAA                     |
 |                                        |
-|B CCC CCC CCCCC                         |
+|B BBB BBB BBBBB                         |
 |                                        |
-|C CCC CCCCC CCCCC                       |
+|C BBB BBBBB BBBBB                       |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #8c8c8c
-B #ff5f00
-C #e6e6e6
+A #8a8a8a
+B #e6e6e6
+C #eb7513

@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/unaquatic/fluid/layout"
-	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
@@ -49,7 +48,7 @@ func QueueHints(i int) string {
 // short terminal sets, as QueuePart bounds it, the prompts sent first, each
 // in a box like the input box, followed by a row of the canvas. A box shows
 // the first line of its prompt, in the input's text color and cut to fit,
-// then its hints, as QueueHints gives them, in PanelDimFg.
+// then its hints, as QueueHints gives them, in mutedFg.
 func (ui *UI) DrawQueue() {
 	for _, child := range ui.queueBox.Children() {
 		ui.queueBox.Remove(child.ID())
@@ -66,7 +65,7 @@ func (ui *UI) DrawQueue() {
 			widget.TextWithLayout(layout.WithFlexShrink(1)),
 		)
 		hints := widget.NewText(QueueHints(i),
-			widget.TextWithFg(PanelDimFg),
+			widget.TextWithFg(mutedFg),
 			widget.TextWithLayout(layout.WithFlexShrink(0)),
 		)
 		// The prompt is cut short, so that its hints stay whole.
@@ -78,10 +77,10 @@ func (ui *UI) DrawQueue() {
 			widget.Children(text, hints),
 		)
 		box, middle := StreamableMessageBox(ui.BorderFg(), ui.InputBg(), line)
-		// On the canvas, a queued prompt starts with the primary color marker,
-		// as the input and a prompt sent do.
+		// On the canvas, a queued prompt starts with the marker in
+		// PromptMarkerFg, as the input and a prompt sent do.
 		if edge := LeftEdge(middle.Children()[0].(*widget.Box)); edge != nil {
-			edge.RenderAfterHook = ui.EdgeMarker(edge, func() style.Color { return productFg })
+			edge.RenderAfterHook = ui.EdgeMarker(edge, ui.PromptMarkerFg)
 		}
 		// On the canvas, it leaves out its blank edge rows, so that a single
 		// blank row, the gap under it, parts it from the row under it.

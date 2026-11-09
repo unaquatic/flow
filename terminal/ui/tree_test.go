@@ -405,9 +405,9 @@ func TestNewTreeEntry(t *testing.T) {
 }
 
 // TestTreeLinesDimOtherBranches checks that the transcript's rows keep their
-// colors, "User" in the accent and "Agent" in a reply's prose color, and
-// other branches' rows are dim, the selected one too, which the insert line
-// marks rather than its colors.
+// colors, "User" and "Agent" in those of their markers in the transcript,
+// and other branches' rows are in TextWeak, the selected one too, which the
+// insert line marks rather than its colors.
 func TestTreeLinesDimOtherBranches(t *testing.T) {
 	theme := DefaultTheme()
 	st := NewSessionTree(forkedTree("a2"))
@@ -428,10 +428,10 @@ func TestTreeLinesDimOtherBranches(t *testing.T) {
 		id   message.ID
 		want style.Color
 	}{
-		{id: "u2", want: theme.Accent},
-		{id: "a2", want: RoleFg(theme, message.RoleAgent)},
-		{id: "u3", want: PanelDimFg},
-		{id: "a4", want: PanelDimFg},
+		{id: "u2", want: theme.ResolveTextBase()},
+		{id: "a2", want: theme.Accent},
+		{id: "u3", want: theme.TextWeak},
+		{id: "a4", want: theme.TextWeak},
 	}
 	for _, tt := range tests {
 		if got := labelFg(tt.id); got != tt.want {

@@ -8,14 +8,13 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A BBBBB BBBB                                                |
-|  BBBBBB BBBB                                               |
-|  BBBBB BBBB                                                |
-|  BBBBBB BBBB                                               |
-|  BBBBB BBBB                                                |
-|  BBBB BBBB                                                 |
+|A AAAAA AAAA                                                |
+|  AAAAAA AAAA                                               |
+|  AAAAA AAAA                                                |
+|  AAAAAA AAAA                                               |
+|  AAAAA AAAA                                                |
+|  AAAA AAAA                                                 |
 |                                                            |
 |                                                            |
 === legend ===
-A #ff5f00
-B #e6e6e6
+A #e6e6e6

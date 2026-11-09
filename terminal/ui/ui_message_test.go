@@ -631,6 +631,7 @@ func TestToolColorSet(t *testing.T) {
 			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}
 	}
 	ui.AddMessage(agentParts("a1", bash("t1")))
+	muted := ui.theme.TextMuted
 	check := func(when string, want style.Color, calls int) {
 		t.Helper()
 		n := 0
@@ -642,9 +643,9 @@ func TestToolColorSet(t *testing.T) {
 			for box := range cm.ToolBoxes() {
 				n++
 				chunks := box.Header.Content().Chunks
-				if box.Marker.Fg() != want || chunks[0].Fg != want || chunks[len(chunks)-1].Fg != ToolFg {
+				if box.Marker.Fg() != want || chunks[0].Fg != want || chunks[len(chunks)-1].Fg != muted {
 					t.Errorf("%s: marker %v, name %v, input %v; want the marker and the name %v, the input %v",
-						when, box.Marker.Fg(), chunks[0].Fg, chunks[len(chunks)-1].Fg, want, ToolFg)
+						when, box.Marker.Fg(), chunks[0].Fg, chunks[len(chunks)-1].Fg, want, muted)
 				}
 			}
 		}
@@ -653,13 +654,13 @@ func TestToolColorSet(t *testing.T) {
 		}
 	}
 
-	check("new", ToolFg, 1)
+	check("new", muted, 1)
 	ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 	check("white", titleFg, 1)
 	ui.AddMessage(agentParts("a2", bash("t2")))
 	check("added white", titleFg, 2)
 	ui.Apply(ui.service.SetToolColor(ToolNameGray))
-	check("gray", ToolFg, 2)
+	check("gray", muted, 2)
 }
 
 // TestExpandStyleSet checks that the expanded style applies to the calls

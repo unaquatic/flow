@@ -8,14 +8,14 @@
 |■ turn 100, step 2                                                              |
 |                                                                                |
 === fg ===
-|A BBBBBB BBB                                                                    |
+|A AAAAAA AAA                                                                    |
 |                                                                                |
-|B BBBB BBBB BBBB B                                                              |
+|B AAAA AAAA AAAA A                                                              |
 |                                                                                |
-|B BBBB BBBB BBBB B                                                              |
+|B AAAA AAAA AAAA A                                                              |
 |                                                                                |
-|B BBBB BBBB BBBB B                                                              |
+|B AAAA AAAA AAAA A                                                              |
 |                                                                                |
 === legend ===
-A #ff5f00
-B #e6e6e6
+A #e6e6e6
+B #eb7513

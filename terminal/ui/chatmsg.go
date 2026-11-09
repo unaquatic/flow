@@ -246,6 +246,18 @@ func RoleFg(t *style.Theme, role message.Role) style.Color {
 	}
 }
 
+// RoleMarkerFg returns the color of the marker that the text of role starts
+// with in the transcript, and of the label that names role in the session
+// tree and the session list's preview: the theme's Accent for a reply, and
+// its TextBase for a prompt.
+func RoleMarkerFg(t *style.Theme, role message.Role) style.Color {
+	t = themeOrDefault(t)
+	if role == message.RoleAgent {
+		return t.Accent
+	}
+	return t.ResolveTextBase()
+}
+
 // Filled reports whether the bubble's prose fills a background, as a
 // prompt's does, and so shows as blocks that pad themselves.
 func (cm *ChatMessageBox) Filled() bool { return !cm.bg.IsTransparent() }
@@ -499,13 +511,13 @@ func (cm *ChatMessageBox) BuildSegment(msg ChatMessage) *MessageSegment {
 	// them, under the views.
 	cache := NewCacheBox()
 	cm.AdoptBox(cache.PartBox)
-	// The turn's time and cache use show in ToolFg, as a tool call's status
-	// does.
-	footer := NewFooterBox(cm.TurnWorked(msg), ToolFg)
+	// The turn's time and cache use show in the theme's TextMuted, as a tool
+	// call's status does.
+	footer := NewFooterBox(cm.TurnWorked(msg), cm.theme.TextMuted)
 	// The footer takes the marker of the bubble's tool calls, in their color.
 	// It has nothing to expand, so it keeps the marker while they expand.
 	footer.SetMarker(cm.FooterMarker())
-	footer.SetMarkerStyle(cm.MarkerShape, cm.ToolColor.Fg())
+	footer.SetMarkerStyle(cm.MarkerShape, cm.ToolColor.Fg(cm.theme))
 	// The views and the cache row sit beside ContentBox rather than inside
 	// it, so that the content children stay aligned one-to-one with the
 	// message's parts.
@@ -845,10 +857,10 @@ func TextMarkerHost(sm *widget.StreamMarkdown) *render.BaseRenderable {
 
 // DrawTextMarker draws the marker of the bubble's tool calls at the left
 // edge of the first row of sm, a text part of a reply, in the left padding
-// before its prose, while the tool marker shows: its MarkerShape in the
-// color of the reply's prose, as a tool call's marker is in the color of its
-// name. A part that has yet to stream any text gets none, and one the reply
-// is writing gets none while the blink hides it, as TextMarkerBlinks says.
+// before its prose, while the tool marker shows: its MarkerShape in
+// RoleMarkerFg. A part that has yet to stream any text gets none, and one the
+// reply is writing gets none while the blink hides it, as TextMarkerBlinks
+// says.
 func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMarkdown) {
 	x, y := sm.X(), sm.Y()
 	if !cm.ToolMarkers || sm.Height() == 0 || strings.TrimSpace(sm.Content()) == "" {
@@ -857,7 +869,7 @@ func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMa
 	if cm.TextMarkerBlinks(sm) && cm.Blink.Off {
 		return
 	}
-	fg, bg := cm.fg, buf.Cell(x, y).Bg
+	fg, bg := RoleMarkerFg(cm.theme, message.RoleAgent), buf.Cell(x, y).Bg
 	if cm.MarkerShape.Filled() {
 		bg = fg
 	}
@@ -1037,7 +1049,7 @@ func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
 	box.Blink = cm.Blink
 	box.SetStyle(cm.ExpandStyle)
 	box.SetMarker(cm.ToolMarkers)
-	box.SetNameFg(cm.ToolColor.Fg())
+	box.SetNameFg(cm.ToolColor.Fg(cm.theme))
 	box.SetMarkerShape(cm.MarkerShape)
 	box.SetExpanded(cm.ToolsExpanded || box.KeepExpanded)
 	// A click that expands the box, or collapses it, changes whether it
@@ -1123,10 +1135,10 @@ func (cm *ChatMessageBox) SetToolColor(c ToolNameColor) {
 	}
 	cm.ToolColor = c
 	for b := range cm.Boxes() {
-		b.SetNameFg(c.Fg())
+		b.SetNameFg(c.Fg(cm.theme))
 	}
 	for _, seg := range cm.segments {
-		seg.Footer.SetMarkerStyle(cm.MarkerShape, c.Fg())
+		seg.Footer.SetMarkerStyle(cm.MarkerShape, c.Fg(cm.theme))
 	}
 	cm.RepaintTextMarkers()
 	cm.RestyleViews()
@@ -1147,7 +1159,7 @@ func (cm *ChatMessageBox) SetMarkerShape(m MarkerShape) {
 		cm.PromptRail.SetShape(m)
 	}
 	for _, seg := range cm.segments {
-		seg.Footer.SetMarkerStyle(m, cm.ToolColor.Fg())
+		seg.Footer.SetMarkerStyle(m, cm.ToolColor.Fg(cm.theme))
 	}
 	cm.RepaintTextMarkers()
 	cm.RestyleViews()
@@ -1168,7 +1180,7 @@ func (cm *ChatMessageBox) SetDebug(on bool) {
 // ViewStyle returns how the bubble shows its parts, which the views of
 // extensions follow.
 func (cm *ChatMessageBox) ViewStyle() ViewStyle {
-	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(), Debug: cm.Debug}
+	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug}
 }
 
 // RestyleViews shows the bubble's StyledViews in its ViewStyle.

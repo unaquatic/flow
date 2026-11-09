@@ -81,9 +81,10 @@ const statusLabelWidth = 10
 // request, the model's window and the share of it they fill, such as
 // "18K / 400K 5%", or the tokens alone when the window is not known, in th's
 // warning or danger color once they fill most of the window, as the slash
-// menu's status row colors them.
+// menu's status row colors them. The labels are in th's TextMuted. A nil th
+// uses the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
-	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
+	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
 	var lines []style.StyledText
 	add := func(label string, value style.TextChunk) {
 		lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("%-*s", statusLabelWidth, label)), value))

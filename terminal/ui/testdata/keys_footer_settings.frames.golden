@@ -13,8 +13,8 @@
 |  BBBBBBBBBB              BB                                            |
 |  AAAAA                   CCC                                           |
 |                                                                        |
-|D                                                                       |
-|  EEE CCCCCC  EEE CCCC  EEE CCCCCC  EEEE CCCCCC                         |
+|A                                                                       |
+|  CCC CCCCCC  CCC CCCC  CCC CCCCCC  CCCC CCCCCC                         |
 |                                                                        |
 === bg ===
 |                                                                        |
@@ -28,7 +28,5 @@
 === legend ===
 A #e6e6e6
 B #232323 BoxBg
-C #707070
-D #ff5f00
-E #b4b4b4
+C #8a8a8a
 ░ #ff5f00

@@ -20,18 +20,18 @@
 |                                                                        |
 |                                                                        |
 === fg ===
-|A BBB BBB BBBBB                                                         |
+|A AAA AAA AAAAA                                                         |
 |                                                                        |
-|B BBB BBBBB BBBBB                                                       |
+|B AAA AAAAA AAAAA                                                       |
 |                                                                        |
-|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                                      |
+|A AAAAAAAA CCCC CCCCC CCCC CCCCCCC                                      |
 |                                                                        |
 |  DDD DDDDDD  DDDDDDDDDDDDD  DDDDDDDDDD DDDDDDDD  DDDDDDDDDDDDDDDDDDDD  |
-|  BBBBBBBB    BBBBBBBBBBBBB  BBBBBBBBBB BBBBBBBB  BBBBBBBBBBBBBBBBBBBB  |
+|  AAAAAAAA    AAAAAAAAAAAAA  AAAAAAAAAA AAAAAAAA  AAAAAAAAAAAAAAAAAAAA  |
 |                                                                        |
-|  EEEE FFF F FFFFFF FFFFFF FF FFF FFFFFFFFFF                            |
-|  EEEE FFFF FFF FFFFF                                                   |
-|  EEEE FFF FFFFFFFFFFFF FFFFF FFFFFFF                                   |
+|  AAAA CCC C CCCCCC CCCCCC CC CCC CCCCCCCCCC                            |
+|  AAAA CCCC CCC CCCCC                                                   |
+|  AAAA CCC CCCCCCCCCCCC CCCCC CCCCCCC                                   |
 |                                                                        |
 |A                                                                       |
 |                                                                        |
@@ -62,10 +62,8 @@
 |                                                                        |
 |                                                                        |
 === legend ===
-A #ff5f00
-B #e6e6e6
-C #707070
+A #e6e6e6
+B #eb7513
+C #8a8a8a
 D #232323 BoxBg
-E #eb7513
-F #b4b4b4
 ░ #ff5f00

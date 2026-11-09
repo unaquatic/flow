@@ -18,17 +18,17 @@
 |                                        |
 |                                        |
 === fg ===
-|A AAAAAAA AAA AAAAAA                    |
+|A BBBBBBB BBB BBBBBB                    |
 |                                        |
-|B BBBB BB BBBB BBBBB BBBBB BB           |
+|C CCCC CC CCCC CCCCC CCCCC CC           |
 |                                        |
-|B BBBB BBBBBBB                          |
+|C CCCC CCCCCCC                          |
 |                                        |
-|  CCCCCCC AAAA                          |
+|  AAAAAAA BBBB                          |
 |                                        |
-|B BBBB BBBBBB BB BBBBBB                 |
+|C CCCC CCCCCC CC CCCCCC                 |
 |                                        |
-|A AAAAA AAA AAAA AAAAAA                 |
+|A BBBBB BBB BBBB BBBBBB                 |
 |                                        |
 |                                        |
 |                                        |
@@ -56,6 +56,6 @@
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
-C #eb7513
+A #eb7513
+B #e6e6e6
+C #8a8a8a

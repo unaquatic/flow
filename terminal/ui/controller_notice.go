@@ -166,8 +166,8 @@ func DiffSummary(files, add, del int) []style.TextChunk {
 func BuildDiffToastLines(files []app.FileDiff) []style.StyledText {
 	const maxFiles = 6
 
-	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
-	pathFn := style.New().WithFg(style.ColorFromInts(220, 220, 220, 255)).Func()
+	dim := style.New().WithFg(mutedFg).Func()
+	pathFn := style.New().WithFg(textFg).Func()
 
 	totalAdd, totalDel := 0, 0
 	for _, f := range files {

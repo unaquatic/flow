@@ -32,7 +32,7 @@ func mustHash(s string) snapshot.Hash {
 // other parts to the transcript.
 func TestNewPartView(t *testing.T) {
 	e := New(t.Context(), nil)
-	host := ui.ViewHost{Style: ui.ViewStyle{Debug: true, NameFg: ui.PanelDimFg}}
+	host := ui.ViewHost{Style: ui.ViewStyle{Debug: true, NameFg: ui.DefaultTheme().TextMuted}}
 	box, ok := e.NewPartView(snapshot.SnapshotPart{ID: "s", Tree: tree}, host).(*SnapshotBox)
 	if !ok || !box.Visible() {
 		t.Fatalf("view of a snapshot part = %T, want a SnapshotBox shown, as debug is on", box)

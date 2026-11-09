@@ -22,7 +22,7 @@ type MenuItem struct {
 	// Aliases are other names the search finds the row by, such as a
 	// model's whole ID.
 	Aliases []string
-	// Hint is shown right after the name in PanelDimFg, on the selected row
+	// Hint is shown right after the name in mutedFg, on the selected row
 	// too, such as "[default]", or is "".
 	Hint string
 	// Desc is shown in a column after the names.

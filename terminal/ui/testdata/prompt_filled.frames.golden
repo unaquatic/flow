@@ -15,7 +15,7 @@
 |  AAAAAAAAAA AAAAA AAAAA                |
 |                                        |
 |                                        |
-|A AAAAA AAA AAAAAAAAAAAAAA AAAAAA       |
+|B AAAAA AAA AAAAAAAAAAAAAA AAAAAA       |
 |                                        |
 |                                        |
 |                                        |
@@ -33,4 +33,5 @@
 |                                        |
 === legend ===
 A #e6e6e6
+B #eb7513
 ░ #232323 BoxBg

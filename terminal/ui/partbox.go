@@ -71,7 +71,7 @@ type PartBox struct {
 	// box's shows through it.
 	Header *widget.Text
 	// Status shows the content's status, such as "[queued]", right after
-	// Header, in ToolFg. It is gone while the status is empty.
+	// Header, in the theme's TextMuted. It is gone while the status is empty.
 	Status *widget.Text
 	// Details holds the widgets the Content shows while the box is Open.
 	Details *widget.Box
@@ -98,7 +98,8 @@ type PartBox struct {
 	// MarkerOn reports that SetMarker shows Marker. It is off by default.
 	MarkerOn bool
 	// NameFg colors the name the Content writes in Header, and Marker unless
-	// MarkerFg is set, as SetNameFg sets it. It is ToolFg by default.
+	// MarkerFg is set, as SetNameFg sets it. It is the theme's TextMuted by
+	// default.
 	NameFg style.Color
 	// MarkerFg, when set, colors Marker in place of NameFg, as for a box
 	// whose header starts with a title rather than a tool's name.
@@ -154,10 +155,10 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 		HeaderRow: widget.NewBox(
 			widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
 		),
-		Marker: NewMarker(MarkerSquare, ToolFg),
+		Marker: NewMarker(MarkerSquare, theme.TextMuted),
 		Header: widget.NewText("", widget.TextWithFg(fg)),
 		Status: widget.NewText("",
-			widget.TextWithFg(ToolFg),
+			widget.TextWithFg(theme.TextMuted),
 			widget.TextWithTruncate(true),
 			widget.TextWithLayout(layout.WithFlexShrink(0)),
 		),
@@ -170,7 +171,7 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 		),
 		Expandable: true,
 		Marked:     true,
-		NameFg:     ToolFg,
+		NameFg:     theme.TextMuted,
 		Surface:    surface,
 	}
 	// Header shrinks, and Status does not, when the two do not fit.

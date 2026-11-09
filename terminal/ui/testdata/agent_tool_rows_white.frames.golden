@@ -10,16 +10,17 @@
 |                                        |
 |                                        |
 === fg ===
-|A AAAAAAA AAA AAAAAA                    |
+|A BBBBBBB BBB BBBBBB                    |
 |                                        |
-|A AAAA BB BBBB BBBBB BBBBB BB           |
-|A AAAA BBBBBBB                          |
-|A AAAA BBBBBB BB BBBBBB                 |
+|B BBBB CC CCCC CCCCC CCCCC CC           |
+|B BBBB CCCCCCC                          |
+|B BBBB CCCCCC CC CCCCCC                 |
 |                                        |
-|A AAAAA AAA AAAA AAAAAA                 |
+|A BBBBB BBB BBBB BBBBBB                 |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
+A #eb7513
+B #e6e6e6
+C #8a8a8a

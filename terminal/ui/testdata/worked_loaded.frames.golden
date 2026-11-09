@@ -20,27 +20,27 @@
 |                                                                                |
 |                                                                                |
 === fg ===
-|A BBB BBB BBBBB                                                                 |
+|A AAA AAA AAAAA                                                                 |
 |                                                                                |
-|C CCCC CC CCCC CCCCC                                                            |
-|C CCCCC CCCC CC CCCCC CC                                                        |
+|B BBBB BB BBBB BBBBB                                                            |
+|B BBBBB BBBB BB BBBBB BB                                                        |
 |                                                                                |
-|B BBB BBBBB BBBBB                                                               |
+|C AAA AAAAA AAAAA                                                               |
 |                                                                                |
-|C CCCCC CCCC CCCC CCCCC CCCC                                                    |
+|B BBBBB BBBB BBBB BBBBB BBBB                                                    |
 |                                                                                |
-|C CCCC CCCCC                                                                    |
+|B BBBB BBBBB                                                                    |
 |                                                                                |
-|A BBBBBB BB                                                                     |
+|A AAAAAA AA                                                                     |
 |                                                                                |
-|B BBBBBBBBBB                                                                    |
+|C AAAAAAAAAA                                                                    |
 |                                                                                |
-|C CCCC CCCC                                                                     |
+|B BBBB BBBB                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === legend ===
-A #ff5f00
-B #e6e6e6
-C #8c8c8c
+A #e6e6e6
+B #8a8a8a
+C #eb7513

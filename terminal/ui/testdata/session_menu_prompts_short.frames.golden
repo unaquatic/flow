@@ -22,14 +22,14 @@
 |  AAAAAAAA    AAAAAAAAAAAAA  AAAAAAAAAA AAAAAAAA  AAAAAAAAAAAAAAAAAAAA  |
 |                                                                        |
 |  BB BBBBBBBB                                                           |
-|  DDDD EEE EEEEEEEEEEEE EEEEE EEEEEEE                                   |
-|  DDDD EEE EEEE                                                         |
-|  DDDD EEE E EEEEEEEEE EEE EEEEEE                                       |
-|  DDDD EEEEEEEE EEE EEEE EEEEE                                          |
-|  DDDD EEE EEE EE EEE                                                   |
-|  DDDD EEEEEE EE                                                        |
+|  AAAA BBB BBBBBBBBBBBB BBBBB BBBBBBB                                   |
+|  AAAA BBB BBBB                                                         |
+|  AAAA BBB B BBBBBBBBB BBB BBBBBB                                       |
+|  AAAA BBBBBBBB BBB BBBB BBBBB                                          |
+|  AAAA BBB BBB BB BBB                                                   |
+|  AAAA BBBBBB BB                                                        |
 |                                                                        |
-|F                                                                       |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 === bg ===
@@ -51,9 +51,6 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8a8a8a
 C #232323 BoxBg
-D #eb7513
-E #b4b4b4
-F #ff5f00
 ░ #ff5f00

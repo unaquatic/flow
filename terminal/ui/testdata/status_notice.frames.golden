@@ -27,17 +27,16 @@
 |AA AA   BBBB BBBBBBBB BBBBBBBB          |
 |AAAAA   BBBB  BBBBBB   BB  BB           |
 |                                        |
-|C CCCCCC                                |
-|  DDDDDDD   CCCC CCCCCC                 |
-|  DDDDDDD   CCCCCCCCCCCCCCCCCCCCCCCCCC  |
-|  DDDDDDDD  C                           |
-|  DDDDD     CCCCCCCCCCCCCC              |
-|  DDDDDDD   CCC C CCCC CC               |
-|  DDDDDDDDD CCCCCCCCCCCCC               |
+|B BBBBBB                                |
+|  CCCCCCC   BBBB BBBBBB                 |
+|  CCCCCCC   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
+|  CCCCCCCC  B                           |
+|  CCCCC     BBBBBBBBBBBBBB              |
+|  CCCCCCC   BBB B BBBB BB               |
+|  CCCCCCCCC BBBBBBBBBBBBB               |
 |                                        |
 |                                        |
 === legend ===
 A #ff5f00
-B #e4e4e4
-C #e6e6e6
-D #8c8c8c
+B #e6e6e6
+C #8a8a8a

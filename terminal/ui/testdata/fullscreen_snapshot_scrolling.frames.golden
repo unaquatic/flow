@@ -13,17 +13,17 @@
 |  five                                  |
 === fg ===
 |                                        |
-|A BBB BBB BBBBB                         |
+|A AAA AAA AAAAA                         |
 |                                        |
-|B BBB                                   |
+|B AAA                                   |
 |                                        |
-|  BBB                                   |
+|  AAA                                   |
 |                                        |
-|  BBBBB                                 |
+|  AAAAA                                 |
 |                                        |
-|  BBBB                                  |
+|  AAAA                                  |
 |                                        |
-|  BBBB                                  |
+|  AAAA                                  |
 === legend ===
-A #ff5f00
-B #e6e6e6
+A #e6e6e6
+B #eb7513

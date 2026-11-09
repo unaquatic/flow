@@ -70,75 +70,75 @@
 |                                                              |
 |■ Done [36s]                                                  |
 === fg ===
-|A BBB B BBBBBB BBBBBB BBBB BBBBBBB B BBBB BBBBBBB             |
+|A AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
 |                                                              |
-|B BBBB BBBBBBB BBB BBBBBBBBBB BBBBBBBB BBB BBBBBBBB BBBB BB   |
-|  BBBBBBBB BBBBB BBB B BBBB BBBBBBBB BBBB BBBBB BBBBB BBB     |
-|  BBB BBBBB                                                   |
+|B AAAA AAAAAAA AAA AAAAAAAAAA AAAAAAAA AAA AAAAAAAA AAAA AA   |
+|  AAAAAAAA AAAAA AAA A AAAA AAAAAAAA AAAA AAAAA AAAAA AAA     |
+|  AAA AAAAA                                                   |
 |                                                              |
-|  CC BBBB BBB BBBBBB BBB BBBBBB                               |
-|  CC BBBB BBB BBBBBBBB BBBBBBBBBBBBBBB                        |
-|  CC BBB BBB BBBBBB BBB BBBBBBBBBB BBBBBB                     |
-|  CC BBB BBB BBBBBBB BBBBBB                                   |
+|  CC AAAA AAA AAAAAA AAA AAAAAA                               |
+|  CC AAAA AAA AAAAAAAA AAAAAAAAAAAAAAA                        |
+|  CC AAA AAA AAAAAA AAA AAAAAAAAAA AAAAAA                     |
+|  CC AAA AAA AAAAAAA AAAAAA                                   |
 |                                                              |
-|D DDDD DDDDDDDDDDDDDDD                                        |
+|C CCCC CCCCCCCCCCCCCCC                                        |
 |                                                              |
-|B BBB BBBBBBB BBB B BBBBBB BBBB BBB B BBBB BBBBB BBBB BBBB    |
-|  BBB BBBBBBBB BBBBBBB BB BBBBB BBBBB BBBBBB                  |
+|B AAA AAAAAAA AAA A AAAAAA AAAA AAA A AAAA AAAAA AAAA AAAA    |
+|  AAA AAAAAAAA AAAAAAA AA AAAAA AAAAA AAAAAA                  |
 |                                                              |
-|D DDDD DDDDD DDD DDDDDDDDDDDDDD DD DDDDDDDD                   |
+|C CCCC CCCCC CCC CCCCCCCCCCCCCC CC CCCCCCCC                   |
 |                                                              |
-|B BBBBB BBBBBB BBBBB BB EEEEEEEB BBBB BBBBB BBBBBBB B         |
-|  BBBBBB BBBB BBBBBB BBBBBBBB                                 |
+|B AAAAA AAAAAA AAAAA AA DDDDDDDA AAAA AAAAA AAAAAAA A         |
+|  AAAAAA AAAA AAAAAA AAAAAAAA                                 |
 |                                                              |
-|D DDDD DDDDDDDDDDDDDDDDDDDD DDDDD DDDDDDDDD DDDDDDD           |
+|C CCCC CCCCCCCCCCCCCCCCCCCC CCCCC CCCCCCCCC CCCCCCC           |
 |                                                              |
-|B BBBBB BB BB BBBBBB BBBBB BB EEEEEE BBBBBBB BB EEEEEEEB      |
-|  BBBB BBBB BBB                                               |
+|B AAAAA AA AA AAAAAA AAAAA AA DDDDDD AAAAAAA AA DDDDDDDA      |
+|  AAAA AAAA AAA                                               |
 |                                                              |
-|D DDDD DDDDDDDDDDDDDDDDDD                                     |
+|C CCCC CCCCCCCCCCCCCCCCCC                                     |
 |                                                              |
-|B EEEEEEE BBB BB BBBBBBB BBBB BB BBBB BBB BBB BBBBBB BBBBB    |
-|  BBB BBBBBBB BBBBBBB                                         |
+|B DDDDDDD AAA AA AAAAAAA AAAA AA AAAA AAA AAA AAAAAA AAAAA    |
+|  AAA AAAAAAA AAAAAAA                                         |
 |                                                              |
-|D DDDD DDDDDDDDDDDDDDDDDD                                     |
-|D DDDD DDDDDDDDDDDDDDDDDD                                     |
+|C CCCC CCCCCCCCCCCCCCCCCC                                     |
+|C CCCC CCCCCCCCCCCCCCCCCC                                     |
 |                                                              |
-|B BBB BBBBBB BBBBBBB EEEEEEEEE EEEEEE BBB BBBBBBB B BBBB      |
-|  BBBBBBB BBBBBBB BBBBBBBB BBB BBBBB BBBBBBBBBBB BBBB BBBBB   |
-|  BBB BBBBBBBB BBBB BBBBB BBBBBB BBBBBB BBBBBBBBB             |
+|B AAA AAAAAA AAAAAAA DDDDDDDDD DDDDDD AAA AAAAAAA A AAAA      |
+|  AAAAAAA AAAAAAA AAAAAAAA AAA AAAAA AAAAAAAAAAA AAAA AAAAA   |
+|  AAA AAAAAAAA AAAA AAAAA AAAAAA AAAAAA AAAAAAAAA             |
 |                                                              |
-|D DDDD DDDDDDDDDDDDDDDDDDDDDDD                                |
+|C CCCC CCCCCCCCCCCCCCCCCCCCCCC                                |
 |                                                              |
-|B BBBB BBB B BBBBBBBB BBBB BBBB BBB BBBBBBBBBB BBBBBBBB BBB   |
-|  BBB BBBBBBBBBBBB BBBBBB BBB BBBBBBBBBB BBBB BBBBB BBBB      |
-|  BBBBBB BBBBBBB                                              |
+|B AAAA AAA A AAAAAAAA AAAA AAAA AAA AAAAAAAAAA AAAAAAAA AAA   |
+|  AAA AAAAAAAAAAAA AAAAAA AAA AAAAAAAAAA AAAA AAAAA AAAA      |
+|  AAAAAA AAAAAAA                                              |
 |                                                              |
-|D DDDDD DDDDDDDDDDDDDDDDDDDDDDDDD                             |
+|C CCCCC CCCCCCCCCCCCCCCCCCCCCCCCC                             |
 |                                                              |
-|B BBBB BBB BBBB BBB BBB BBBBB BBBBBB                          |
+|B AAAA AAA AAAA AAA AAA AAAAA AAAAAA                          |
 |                                                              |
-|D DDDD DD DDDD DDDDDDDDDDDDDDDD DDDD DDDDDDDDDDDDDD DDDDD DD  |
+|C CCCC CC CCCC CCCCCCCCCCCCCCCC CCCC CCCCCCCCCCCCCC CCCCC CC  |
 |                                                              |
-|B EEEEEEEEEE BBBBBBBB BBBBBBB BBBBBBBBB BBB EEEEEE BBBBBBB    |
-|  B EEEEEEEB BBBB BBB BBB BBBBBBBBBBBB                        |
+|B DDDDDDDDDD AAAAAAAA AAAAAAA AAAAAAAAA AAA DDDDDD AAAAAAA    |
+|  A DDDDDDDA AAAA AAA AAA AAAAAAAAAAAA                        |
 |                                                              |
-|D DDDD DDDDDDDDDDDDDDDDDDDDDDDDD                              |
+|C CCCC CCCCCCCCCCCCCCCCCCCCCCCCC                              |
 |                                                              |
-|B BBBB BBB BBB BBBBB BBBBBBB BBBB BBBBBBB BBBBBBB             |
+|B AAAA AAA AAA AAAAA AAAAAAA AAAA AAAAAAA AAAAAAA             |
 |                                                              |
-|D DDDD DD DDDD DDDDDDDDDDDDDDDD DD                            |
+|C CCCC CC CCCC CCCCCCCCCCCCCCCC CC                            |
 |                                                              |
-|B BBB BBBBB BBBBB                                             |
+|B AAA AAAAA AAAAA                                             |
 |                                                              |
-|  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF   |
-|  F BBBB                      F BBBBBB                    F   |
-|  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF   |
-|  F EEEEEEEEEEEEEEEEEE        F BBBBBB BBB BBB BBBB BBBBB F   |
-|  F EEEEEEEEEEEEEEEEEEEEEEEEE F BBBBBBB BBB BBBBB BBBBB   F   |
-|  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF   |
+|  EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE   |
+|  E AAAA                      E AAAAAA                    E   |
+|  EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE   |
+|  E DDDDDDDDDDDDDDDDDD        E AAAAAA AAA AAA AAAA AAAAA E   |
+|  E DDDDDDDDDDDDDDDDDDDDDDDDD E AAAAAAA AAA AAAAA AAAAA   E   |
+|  EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE   |
 |                                                              |
-|D DDDD DDDDD                                                  |
+|C CCCC CCCCC                                                  |
 === bg ===
 |                                                              |
 |                                                              |
@@ -280,12 +280,11 @@
 |                                                              |
 |                                                              |
 === legend ===
-A #ff5f00
-B #e6e6e6
+A #e6e6e6
+B #eb7513
 C #8a8a8a
-D #8c8c8c
-E #91b557
-F #2c2c2d
+D #91b557
+E #2c2c2d
 ░ #1a1a1a Bg
 === step: typed ===
 === text ===
@@ -295,14 +294,13 @@ F #2c2c2d
 |                                                              |
 |                                                              |
 === fg ===
-|A BBB B BBBBBB BBBBBB BBBB BBBBBBB B BBBB BBBBBBB             |
+|A AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
 === legend ===
-A #ff5f00
-B #e6e6e6
+A #e6e6e6
 === step: running ===
 === text ===
 |■ Working [12s] [esc cancel] [ctrl+o expand]                  |
@@ -321,8 +319,8 @@ B #e6e6e6
 |                                                              |
 |                                                              |
 === legend ===
-A #707070
-B #ff5f00
+A #8a8a8a
+B #e6e6e6
 === step: idle ===
 === text ===
 |■                                                             |
@@ -337,4 +335,4 @@ B #ff5f00
 |                                                              |
 |                                                              |
 === legend ===
-A #ff5f00
+A #e6e6e6
