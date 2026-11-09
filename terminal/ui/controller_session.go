@@ -361,7 +361,9 @@ func Prompts(msgs []message.Content) iter.Seq[string] {
 }
 
 // HandleSessionSelect stops the active run, activates a session, loads its
-// persisted messages, and takes the model variant they last ran. Prompts
+// persisted messages, and takes the model variant they last ran, as
+// RestoreSessionModel does, for that session alone: the default model stays
+// as it was. Prompts
 // queued in the session left are dropped. A listed session of another
 // folder is not opened here: its tools and files are that folder's, so the
 // UI closes to reopen it there, as RelaunchIn does.
@@ -512,14 +514,18 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 }
 
 // ClearMessages stops the active run, empties the chat, and starts a fresh
-// session, whose /status notice then heads the transcript as at startup.
-// Prompts queued in the session left are dropped.
+// session on the terminal's DefaultModel, not the model of the session left,
+// whose /status notice then heads the transcript as at startup. Prompts
+// queued in the session left are dropped.
 func (s *Service) ClearMessages() []UIEvent {
 	s.Stop()
 	s.state.Messages = nil
 	s.NewSession()
+	// The model must be set before ShowInfo, which reads it.
+	restored := s.RestoreDefaultModel()
 	return slices.Concat(
 		[]UIEvent{EventClearMessages{}},
+		restored,
 		s.ShowInfo(),
 		s.UpdateUsage(),
 		s.ResetError(),

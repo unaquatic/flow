@@ -608,6 +608,13 @@ type UIState struct {
 	// "provider/model:option:effort" format, at the level it runs at. The
 	// model menu and its effort page change it for this terminal alone.
 	Model string
+	// DefaultModel is the model variant, in Model's format, that a new
+	// session starts with, and that a session whose transcript names no
+	// model runs: the default model of the config file, or the model the
+	// command line chose. Only choosing a model in the model menu or on its
+	// effort page changes it; opening a session, which runs the model its
+	// transcript last ran, does not.
+	DefaultModel string
 	// ReasoningEffort is the reasoning effort chosen for the terminal, or
 	// empty for the default effort of the model's provider. Model runs at it
 	// where the catalog lists it for the model, and a model switch keeps it

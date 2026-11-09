@@ -200,9 +200,10 @@ func (s *Service) ModelsListFailed(reason string) []UIEvent {
 // model this terminal sends its prompts to, and saves it as the default
 // model in the config file, which a request that names no model goes to and
 // a new terminal starts with, so that the model chosen is the one flow keeps
-// using. A level model names becomes the terminal's chosen level; a model
-// that names none runs at the chosen level, as SetVariant fits it, and is
-// saved at that level. A notice says what it switched to, or, when the
+// using. It is also the terminal's DefaultModel, which its new sessions
+// start with. A level model names becomes the terminal's chosen level; a
+// model that names none runs at the chosen level, as SetVariant fits it, and
+// is saved at that level. A notice says what it switched to, or, when the
 // config file cannot be written, that it switched but could not save.
 func (s *Service) SelectModel(model string) []UIEvent {
 	v := s.app.Models().ParseVariant(model)
@@ -210,6 +211,7 @@ func (s *Service) SelectModel(model string) []UIEvent {
 		s.state.ReasoningEffort = v.Effort
 	}
 	events := s.SetVariant(v)
+	s.state.DefaultModel = s.state.Model
 	if err := s.app.Models().SaveDefault(s.state.Model); err != nil {
 		return slices.Concat(events,
 			s.ShowKeywordToast("Switched to ", s.state.Model, ""),
@@ -228,8 +230,10 @@ func (s *Service) SetVariant(v agent.Variant) []UIEvent {
 
 // RestoreSessionModel makes the model variant the active session's
 // transcript last ran, as its newest message that names a model records it,
-// the terminal's model, with its level as the chosen one. It does nothing
-// for a transcript that names no model.
+// the terminal's model, with its level as the chosen one, or, for a
+// transcript that names no model, the terminal's DefaultModel, as
+// RestoreDefaultModel does. It leaves DefaultModel, and the config file's
+// default model, as they are.
 func (s *Service) RestoreSessionModel() []UIEvent {
 	for _, m := range slices.Backward(s.state.Messages) {
 		if m.Model == "" {
@@ -239,5 +243,17 @@ func (s *Service) RestoreSessionModel() []UIEvent {
 		s.state.ReasoningEffort = v.Effort
 		return s.SetVariant(v)
 	}
-	return nil
+	return s.RestoreDefaultModel()
+}
+
+// RestoreDefaultModel makes the terminal's DefaultModel its model, with its
+// level as the chosen one, as a new session starts. It does nothing while
+// DefaultModel is empty.
+func (s *Service) RestoreDefaultModel() []UIEvent {
+	if s.state.DefaultModel == "" {
+		return nil
+	}
+	v := s.app.Models().ParseVariant(s.state.DefaultModel)
+	s.state.ReasoningEffort = v.Effort
+	return s.SetVariant(v)
 }

@@ -46,13 +46,15 @@ func (s *Service) CommandList() []SlashCommand {
 // NewService creates a Service and initializes its status and model labels.
 // The terminal sends its prompts to state.Model, at the reasoning effort it
 // names, or the default level when it names none, fitted to the model as
-// Models.FitEffort fits it. Operations started by the service use ctx.
+// Models.FitEffort fits it, which is also the default model of its new
+// sessions. Operations started by the service use ctx.
 func NewService(ctx context.Context, a *app.App, state *UIState) *Service {
 	s := &Service{app: a, ctx: ctx, state: state, Settings: a}
 	state.StatusContent = StatusHintStyled()
 	v := a.Models().ParseVariant(state.Model)
 	state.ReasoningEffort = v.Effort
 	state.Model = a.Models().FitEffort(v).String()
+	state.DefaultModel = state.Model
 	state.ModelLabel = state.Model
 	return s
 }
