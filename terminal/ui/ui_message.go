@@ -89,7 +89,7 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 		ChatMessageWithBar(bar),
 		ChatMessageWithToolsExpanded(ui.service.state.ToolsExpanded),
 		ChatMessageWithExpandStyle(ui.service.state.ExpandStyle),
-		ChatMessageWithToolMarkers(ui.service.state.ToolMarkers),
+		ChatMessageWithToolMarkers(!ui.service.state.HideToolMarkers),
 		ChatMessageWithToolColor(ui.service.state.ToolColor),
 		ChatMessageWithMarkerShape(ui.service.state.MarkerShape),
 		ChatMessageWithDebug(ui.service.state.Debug),
@@ -155,7 +155,7 @@ func (ui *UI) ShowStatusMarker() {
 		return // The UI was built without its input box.
 	}
 	st := ui.service.state
-	ui.statusRow.SetMarker(st.ToolMarkers)
+	ui.statusRow.SetMarker(!st.HideToolMarkers)
 	ui.statusRow.SetNameFg(st.ToolColor.Fg())
 	ui.statusRow.SetMarkerShape(st.MarkerShape)
 	ui.SyncSlashStatus()

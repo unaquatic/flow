@@ -590,29 +590,35 @@ func TestToolMarkersSet(t *testing.T) {
 		return -1
 	}
 
-	check("new", false)
+	check("new", true)
 	shown := headerX()
 	if shown != PaddingX {
 		t.Fatalf("header at column %d, want %d, where prose starts", shown, PaddingX)
 	}
-	ui.Apply(ui.service.SetToolMarkers(true))
-	check("shown", true)
+	ui.Apply(ui.service.SetToolMarkers(false))
+	check("hidden", false)
 	if x := headerX(); x != shown {
-		t.Errorf("header at column %d with the marker, want %d, as without it", x, shown)
+		t.Errorf("header at column %d without the marker, want %d, as with it", x, shown)
 	}
 	ui.AddMessage(agentParts("a2", bash("t2")))
-	check("added shown", true, true)
-	// An expanded call shows no marker, and its name stays in its column.
+	check("added hidden", false, false)
+	ui.Apply(ui.service.SetToolMarkers(true))
+	check("shown", true, true)
+	// An expanded call keeps its marker while plain, and shows none while
+	// boxed, and its name stays in its column.
 	expandTools(ui)
-	check("expanded", false, false)
+	check("expanded plain", true, true)
 	if x := headerX(); x != shown {
 		t.Errorf("expanded header at column %d, want %d, as collapsed", x, shown)
+	}
+	ui.Apply(ui.service.SetExpandStyle(ExpandedBoxed))
+	check("expanded boxed", false, false)
+	if x := headerX(); x != shown {
+		t.Errorf("expanded boxed header at column %d, want %d, as collapsed", x, shown)
 	}
 	ui.service.SetToolsExpanded(false)
 	ui.SetToolsExpanded(false)
 	check("collapsed again", true, true)
-	ui.Apply(ui.service.SetToolMarkers(false))
-	check("hidden", false, false)
 }
 
 // TestToolColorSet checks that the tool name color applies to the marker and
@@ -694,12 +700,12 @@ func TestExpandStyleSet(t *testing.T) {
 	}
 
 	check("new", "row")
-	ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
-	check("plain collapsed", "row")
-	expandTools(ui)
-	check("plain expanded", "plain")
-	ui.AddMessage(agentParts("a2", bash("t2")))
-	check("added plain expanded", "plain", "plain")
 	ui.Apply(ui.service.SetExpandStyle(ExpandedBoxed))
-	check("boxed expanded", "boxed", "boxed")
+	check("boxed collapsed", "row")
+	expandTools(ui)
+	check("boxed expanded", "boxed")
+	ui.AddMessage(agentParts("a2", bash("t2")))
+	check("added boxed expanded", "boxed", "boxed")
+	ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+	check("plain expanded", "plain", "plain")
 }

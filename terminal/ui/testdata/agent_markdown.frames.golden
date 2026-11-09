@@ -1,5 +1,5 @@
 === text ===
-|  ## Plan                               |
+|■ ## Plan                               |
 |                                        |
 |  1. Read calc.go.                      |
 |  2. Add Divide with a zero check.      |
@@ -8,12 +8,12 @@
 |                                        |
 |                                        |
 === fg ===
-|  AA AAAA                               |
+|A BB BBBB                               |
 |                                        |
-|  BB CCCC DDDDDDDC                      |
-|  BB CCC AAAAAA CCCC C CCCC CCCCCC      |
-|  A CCCC DDD CC CC CCC                  |
-|  A CCC CCC CCCCCC                      |
+|  CC AAAA DDDDDDDA                      |
+|  CC AAA BBBBBB AAAA A AAAA AAAAAA      |
+|  B AAAA DDD AA AA AAA                  |
+|  B AAA AAA AAAAAA                      |
 |                                        |
 |                                        |
 === bg ===
@@ -35,8 +35,8 @@
 |                                        |
 |                                        |
 === legend ===
-A #eb7513
-B #8a8a8a
-C #e6e6e6
+A #e6e6e6
+B #eb7513
+C #8a8a8a
 D #91b557
 ░ #1a1a1a Bg

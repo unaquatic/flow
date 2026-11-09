@@ -1,52 +1,36 @@
 === text ===
+|■ fix the divide test                                       |
 |                                                            |
-|  fix the divide test                                       |
+|■ Running the tests.                                        |
+|                                                            |
+|■ Bash go test ./... [exit 1]                               |
+|■ Cache read 18K write 4.0K                                 |
+|                                                            |
+|■ Fixed the divide-by-zero check.                           |
+|                                                            |
+|■ Cache read 22K write 0K                                   |
+|                                                            |
+|■ Done [39s]                                                |
 |                                                            |
 |                                                            |
-|  Running the tests.                                        |
-|                                                            |
-|  Bash go test ./... [exit 1]                               |
-|  Cache read 18K write 4.0K                                 |
-|                                                            |
-|  Fixed the divide-by-zero check.                           |
-|                                                            |
-|  Cache read 22K write 0K                                   |
-|                                                            |
-|  Done [39s]                                                |
 |                                                            |
 === fg ===
+|A BBB BBB BBBBBB BBBB                                       |
 |                                                            |
-|  AAA AAA AAAAAA AAAA                                       |
+|B BBBBBBB BBB BBBBBB                                        |
 |                                                            |
+|C CCCC CC CCCC CCCCC CCCCC CC                               |
+|C CCCCC CCCC CCC CCCCC CCCC                                 |
 |                                                            |
-|  AAAAAAA AAA AAAAAA                                        |
+|B BBBBB BBB BBBBBBBBBBBBBB BBBBBB                           |
 |                                                            |
-|  BBBB BB BBBB BBBBB BBBBB BB                               |
-|  BBBBB BBBB BBB BBBBB BBBB                                 |
+|C CCCCC CCCC CCC CCCCC CC                                   |
 |                                                            |
-|  AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
-|                                                            |
-|  BBBBB BBBB BBB BBBBB BB                                   |
-|                                                            |
-|  BBBB BBBBB                                                |
-|                                                            |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
+|C CCCC CCCCC                                                |
 |                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #e6e6e6
-B #8c8c8c
-░ #232323 BoxBg
+A #ff5f00
+B #e6e6e6
+C #8c8c8c

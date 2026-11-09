@@ -157,7 +157,7 @@ func ChatMessageWithToolsExpanded(expanded bool) ChatMessageOption {
 }
 
 // ChatMessageWithExpandStyle sets how the bubble's expanded tool calls show.
-// They are ExpandedBoxed by default.
+// They are ExpandedPlain by default.
 func ChatMessageWithExpandStyle(ts ExpandedStyle) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.ExpandStyle = ts }
 }

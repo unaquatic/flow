@@ -2,14 +2,14 @@
 |  The divisor can be zero, so Divide    |
 |  needs a guard.                        |
 |                                        |
-|  I'll add the guard.                   |
+|■ I'll add the guard.                   |
 |                                        |
 |                                        |
 === fg ===
 |  AAA AAAAAAA AAA AA AAAAA AA AAAAAA    |
 |  AAAAA A AAAAAA                        |
 |                                        |
-|  BBBB BBB BBB BBBBBB                   |
+|B BBBB BBB BBB BBBBBB                   |
 |                                        |
 |                                        |
 === legend ===

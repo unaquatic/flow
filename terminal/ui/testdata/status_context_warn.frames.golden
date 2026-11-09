@@ -1,5 +1,5 @@
 === text ===
-|                                        |
+|■ Status                                |
 |  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
 |  Messages  4                           |
@@ -9,27 +9,16 @@
 |                                        |
 |                                        |
 === fg ===
+|A AAAAAA                                |
+|  BBBBBBB   AAAA AAAAAA                 |
+|  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
+|  BBBBBBBB  A                           |
+|  BBBBB     AAAAAAAAAAAAAA              |
+|  BBBBBBB   CCCC C CCCC CCC             |
+|  BBBBBBBBB AAAAAAAAAAAAA               |
 |                                        |
-|  AAAAAAA   BBBB BBBBBB                 |
-|  AAAAAAA   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|  AAAAAAAA  B                           |
-|  AAAAA     BBBBBBBBBBBBBB              |
-|  AAAAAAA   CCCC C CCCC CCC             |
-|  AAAAAAAAA BBBBBBBBBBBBB               |
-|                                        |
-|                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 === legend ===
-A #8c8c8c
-B #e6e6e6
+A #e6e6e6
+B #8c8c8c
 C #eb7513
-░ #1f1f1f SurfaceRaised/SuccessSurface

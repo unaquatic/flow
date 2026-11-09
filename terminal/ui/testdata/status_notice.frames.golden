@@ -8,7 +8,7 @@
 |▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████          |
 |▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀           |
 |                                        |
-|                                        |
+|■ Status                                |
 |  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
 |  Messages  4                           |
@@ -27,37 +27,17 @@
 |AA AA   BBBB BBBBBBBB BBBBBBBB          |
 |AAAAA   BBBB  BBBBBB   BB  BB           |
 |                                        |
+|C CCCCCC                                |
+|  DDDDDDD   CCCC CCCCCC                 |
+|  DDDDDDD   CCCCCCCCCCCCCCCCCCCCCCCCCC  |
+|  DDDDDDDD  C                           |
+|  DDDDD     CCCCCCCCCCCCCC              |
+|  DDDDDDD   CCC C CCCC CC               |
+|  DDDDDDDDD CCCCCCCCCCCCC               |
 |                                        |
-|  CCCCCCC   DDDD DDDDDD                 |
-|  CCCCCCC   DDDDDDDDDDDDDDDDDDDDDDDDDD  |
-|  CCCCCCCC  D                           |
-|  CCCCC     DDDDDDDDDDDDDD              |
-|  CCCCCCC   DDD D DDDD DD               |
-|  CCCCCCCCC DDDDDDDDDDDDD               |
-|                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 === legend ===
 A #ff5f00
 B #e4e4e4
-C #8c8c8c
-D #e6e6e6
-░ #1f1f1f SurfaceRaised/SuccessSurface
+C #e6e6e6
+D #8c8c8c

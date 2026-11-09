@@ -1,45 +1,30 @@
 === text ===
-|  Planning the change.                  |
+|■ Planning the change.                  |
 |                                        |
-|  Read calc.go                          |
+|■ Read calc.go                          |
 |                                        |
-|                                        |
-|  Todo [1/3]                            |
+|■ Todo [1/3]                            |
 |                                        |
 |  [✓] Read calc.go                      |
 |  [–] Add Divide                        |
 |  [ ] Run the tests                     |
 |                                        |
+|■ Bash go test ./...                    |
 |                                        |
-|  Bash go test ./...                    |
+|                                        |
 |                                        |
 === fg ===
-|  AAAAAAAA AAA AAAAAAA                  |
+|A AAAAAAAA AAA AAAAAAA                  |
 |                                        |
-|  BBBB BBBBBBB                          |
+|B BBBB BBBBBBB                          |
 |                                        |
-|                                        |
-|  BBBB BBBBB                            |
+|B BBBB BBBBB                            |
 |                                        |
 |  CCC CCCC CCCCCCC                      |
 |  AAA AAA AAAAAA                        |
 |  C C CCC CCC CCCCC                     |
 |                                        |
-|                                        |
-|  BBBB BB BBBB BBBBB                    |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|B BBBB BB BBBB BBBBB                    |
 |                                        |
 |                                        |
 |                                        |
@@ -47,4 +32,3 @@
 A #e6e6e6
 B #8c8c8c
 C #8a8a8a
-░ #1f1f1f SurfaceRaised/SuccessSurface

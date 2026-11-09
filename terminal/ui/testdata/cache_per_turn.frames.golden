@@ -1,46 +1,32 @@
 === text ===
+|■ fix the divide test                                       |
 |                                                            |
-|  fix the divide test                                       |
+|■ Running the tests.                                        |
+|                                                            |
+|■ Bash go test ./... [exit 1]                               |
+|                                                            |
+|■ Fixed the divide-by-zero check.                           |
+|                                                            |
+|■ Done [39s] [cache 22K write 0K]                           |
 |                                                            |
 |                                                            |
-|  Running the tests.                                        |
-|                                                            |
-|  Bash go test ./... [exit 1]                               |
-|                                                            |
-|  Fixed the divide-by-zero check.                           |
-|                                                            |
-|  Done [39s] [cache 22K write 0K]                           |
 |                                                            |
 |                                                            |
 === fg ===
+|A BBB BBB BBBBBB BBBB                                       |
 |                                                            |
-|  AAA AAA AAAAAA AAAA                                       |
+|B BBBBBBB BBB BBBBBB                                        |
 |                                                            |
+|C CCCC CC CCCC CCCCC CCCCC CC                               |
 |                                                            |
-|  AAAAAAA AAA AAAAAA                                        |
+|B BBBBB BBB BBBBBBBBBBBBBB BBBBBB                           |
 |                                                            |
-|  BBBB BB BBBB BBBBB BBBBB BB                               |
-|                                                            |
-|  AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
-|                                                            |
-|  BBBB BBBBB BBBBBB BBB BBBBB BBB                           |
-|                                                            |
-|                                                            |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
-|                                                            |
+|C CCCC CCCCC CCCCCC CCC CCCCC CCC                           |
 |                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === legend ===
-A #e6e6e6
-B #8c8c8c
-░ #232323 BoxBg
+A #ff5f00
+B #e6e6e6
+C #8c8c8c

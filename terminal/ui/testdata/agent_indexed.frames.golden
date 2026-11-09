@@ -1,14 +1,14 @@
 === text ===
-|  Running the tests.                    |
+|■ Running the tests.                    |
 |                                        |
-|  Bash go test ./... [interrupted]      |
+|■ Bash go test ./... [interrupted]      |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAA                    |
+|A AAAAAAA AAA AAAAAA                    |
 |                                        |
-|  BBBB BB BBBB BBBBB BBBBBBBBBBBBB      |
+|B BBBB BB BBBB BBBBB BBBBBBBBBBBBB      |
 |                                        |
 |                                        |
 |                                        |

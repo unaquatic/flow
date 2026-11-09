@@ -1,11 +1,11 @@
 === text ===
-|  Reading the file.                     |
+|■ Reading the file.                     |
 |                                        |
 |■ Error connection reset by peer        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAA                     |
+|A AAAAAAA AAA AAAAA                     |
 |                                        |
 |B BBBBB CCCCCCCCCC CCCCC CC CCCC        |
 |                                        |

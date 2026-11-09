@@ -152,6 +152,8 @@ func TestBannerSearchesFromTheInput(t *testing.T) {
 // no values.
 func TestBannerArrowsChangeSetting(t *testing.T) {
 	ui := newBannerTestUI(t)
+	// The cache usage row shows while debug is on.
+	ui.service.state.Debug = true
 	ui.Apply(ui.service.ShowSettingsMenu())
 	ui.bannerMenu.MoveDown()
 	if got := ui.bannerHeader.Keys.Hints; !slices.Contains(got, HintChange) {

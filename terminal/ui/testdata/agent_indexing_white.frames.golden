@@ -1,13 +1,13 @@
 === text ===
-|  All tests pass.                       |
+|■ All tests pass.                       |
 |                                        |
-|  Snapshot [indexing]                   |
+|■ Snapshot [indexing]                   |
 |                                        |
 |                                        |
 === fg ===
-|  AAA AAAAA AAAAA                       |
+|A AAA AAAAA AAAAA                       |
 |                                        |
-|  AAAAAAAA BBBBBBBBBB                   |
+|A AAAAAAAA BBBBBBBBBB                   |
 |                                        |
 |                                        |
 === legend ===

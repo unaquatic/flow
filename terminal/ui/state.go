@@ -224,29 +224,29 @@ func (m CacheMode) String() string {
 type ExpandedStyle int
 
 const (
-	// ExpandedBoxed shows an expanded call as a block on the success
-	// surface, its content between two rows of padding. It is the default.
-	ExpandedBoxed ExpandedStyle = iota
 	// ExpandedPlain shows an expanded call on the canvas, with no
-	// background and no padding.
-	ExpandedPlain
+	// background and no padding. It is the default.
+	ExpandedPlain ExpandedStyle = iota
+	// ExpandedBoxed shows an expanded call as a block on the success
+	// surface, its content between two rows of padding.
+	ExpandedBoxed
 )
 
 // ExpandedStyles lists the expanded styles in the order /settings offers
 // them.
-var ExpandedStyles = [...]ExpandedStyle{ExpandedBoxed, ExpandedPlain}
+var ExpandedStyles = [...]ExpandedStyle{ExpandedPlain, ExpandedBoxed}
 
 // Next returns the style step places after s in ExpandedStyles, going round.
 func (s ExpandedStyle) Next(step int) ExpandedStyle {
 	return Cycle(ExpandedStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Boxed" or "Plain".
+// String returns the name /settings shows for s: "Plain" or "Boxed".
 func (s ExpandedStyle) String() string {
-	if s == ExpandedPlain {
-		return "Plain"
+	if s == ExpandedBoxed {
+		return "Boxed"
 	}
-	return "Boxed"
+	return "Plain"
 }
 
 // ToolNameColor is the color of the marker and the name of each tool call,
@@ -421,29 +421,29 @@ func (p CountPlace) String() string {
 type PromptStyle int
 
 const (
-	// PromptFilled shows a prompt as a block on the box background, padded
-	// by a row above and below. It is the default.
-	PromptFilled PromptStyle = iota
 	// PromptBar shows a prompt on the canvas, with the marker shape in the
 	// product's primary color at the left edge of each of its rows, or for
-	// the block shape a cell filled with it.
-	PromptBar
+	// the block shape a cell filled with it. It is the default.
+	PromptBar PromptStyle = iota
+	// PromptFilled shows a prompt as a block on the box background, padded
+	// by a row above and below.
+	PromptFilled
 )
 
 // PromptStyles lists the prompt styles in the order /settings offers them.
-var PromptStyles = [...]PromptStyle{PromptFilled, PromptBar}
+var PromptStyles = [...]PromptStyle{PromptBar, PromptFilled}
 
 // Next returns the style step places after s in PromptStyles, going round.
 func (s PromptStyle) Next(step int) PromptStyle {
 	return Cycle(PromptStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Filled" or "Bar".
+// String returns the name /settings shows for s: "Bar" or "Filled".
 func (s PromptStyle) String() string {
-	if s == PromptBar {
-		return "Bar"
+	if s == PromptFilled {
+		return "Filled"
 	}
-	return "Filled"
+	return "Bar"
 }
 
 // InputStyle is how the input box, and the panels that open in it, such as
@@ -468,7 +468,7 @@ func (s InputStyle) Next(step int) InputStyle {
 	return Cycle(InputStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Filled" or "Bar".
+// String returns the name /settings shows for s: "Bar" or "Filled".
 func (s InputStyle) String() string {
 	if s == InputBar {
 		return "Bar"
@@ -627,11 +627,11 @@ type UIState struct {
 	// show their details, which Ctrl+O toggles. They start collapsed.
 	ToolsExpanded bool
 	// ExpandStyle is how expanded tool calls show, which /settings sets. It
-	// is ExpandedBoxed by default.
+	// is ExpandedPlain by default.
 	ExpandStyle ExpandedStyle
-	// ToolMarkers reports that tool calls show ToolMarker before their name,
-	// which /settings sets. They show none by default.
-	ToolMarkers bool
+	// HideToolMarkers reports that tool calls show no ToolMarker before
+	// their name, which /settings sets. They show it by default.
+	HideToolMarkers bool
 	// MarkerShape is the symbol of each tool call's marker, which /settings
 	// sets. It is MarkerSquare by default.
 	MarkerShape MarkerShape
@@ -658,7 +658,7 @@ type UIState struct {
 	// sets. It is SelectionFullWidth by default.
 	Selection SelectionStyle
 	// PromptStyle is how the transcript marks a prompt, which /settings
-	// sets. It is PromptFilled by default.
+	// sets. It is PromptBar by default.
 	PromptStyle PromptStyle
 	// InputStyle is how the input box and its panels show, which /settings
 	// sets. It is InputBar by default.

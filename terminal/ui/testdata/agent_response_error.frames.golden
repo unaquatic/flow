@@ -1,5 +1,5 @@
 === text ===
-|  Reading the file.                     |
+|■ Reading the file.                     |
 |                                        |
 |■ Error gw response error (401)         |
 |  {                                     |
@@ -14,7 +14,7 @@
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAA                     |
+|A AAAAAAA AAA AAAAA                     |
 |                                        |
 |B BBBBB CC CCCCCCCC CCCCC CCCCC         |
 |  A                                     |

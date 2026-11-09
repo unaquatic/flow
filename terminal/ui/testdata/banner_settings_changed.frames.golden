@@ -3,14 +3,14 @@
 |                                                                        |
 |  Fullscreen              On                                            |
 |  Cache usage             Per turn                                      |
-|  Expanded tools          Boxed                                         |
-|  Tool marker             Off                                           |
+|  Expanded tools          Plain                                         |
+|  Tool marker             On                                            |
 |  Marker shape            ■ Square                                      |
 |  Tool name color         Gray                                          |
 |  Key hints               Title                                         |
 |  List count              Below                                         |
 |  Selection               Full width                                    |
-|  Prompt style            Filled                                        |
+|  Prompt style            Bar                                           |
 |  Input style             Bar                                           |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
@@ -18,13 +18,13 @@
 |  AAAAAAAAAA              BB                                            |
 |  CCCCC CCCCC             CCC CCCC                                      |
 |  AAAAAAAA AAAAA          BBBBB                                         |
-|  AAAA AAAAAA             BBB                                           |
+|  AAAA AAAAAA             BB                                            |
 |  AAAAAA AAAAA            B BBBBBB                                      |
 |  AAAA AAAA AAAAA         BBBB                                          |
 |  AAA AAAAA               BBBBB                                         |
 |  AAAA AAAAA              BBBBB                                         |
 |  AAAAAAAAA               BBBB BBBBB                                    |
-|  AAAAAA AAAAA            BBBBBB                                        |
+|  AAAAAA AAAAA            BBB                                           |
 |  AAAAA AAAAA             BBB                                           |
 === bg ===
 |                                                                        |

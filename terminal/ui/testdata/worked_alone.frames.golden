@@ -1,15 +1,15 @@
 === text ===
-|  Bash go test ./...                                                            |
+|■ Bash go test ./...                                                            |
 |                                                                                |
-|  Done [3s]                                                                     |
+|■ Done [3s]                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === fg ===
-|  AAAA AA AAAA AAAAA                                                            |
+|A AAAA AA AAAA AAAAA                                                            |
 |                                                                                |
-|  AAAA AAAA                                                                     |
+|A AAAA AAAA                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |

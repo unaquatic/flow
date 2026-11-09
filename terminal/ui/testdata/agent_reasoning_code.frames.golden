@@ -1,7 +1,7 @@
 === text ===
 |  Divide needs a guard in calc.go.      |
 |                                        |
-|  I'll add the guard in calc.go.        |
+|■ I'll add the guard in calc.go.        |
 |                                        |
 |                                        |
 |                                        |
@@ -9,7 +9,7 @@
 === fg ===
 |  AAAAAA AAAAA A AAAAA AA BBBBBBBA      |
 |                                        |
-|  CCCC CCC CCC CCCCC CC DDDDDDDC        |
+|C CCCC CCC CCC CCCCC CC DDDDDDDC        |
 |                                        |
 |                                        |
 |                                        |

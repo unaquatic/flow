@@ -156,54 +156,13 @@ type Agent struct {
 }
 
 // Terminal holds the settings of the terminal UI, which its /settings
-// menu sets and saves. A setting left out, or set to a value the terminal
-// does not know, takes its default, the first value each lists.
+// menu sets and saves. The terminal's style settings, which /settings shows
+// while debug is on, are not saved: each terminal starts with their
+// defaults.
 type Terminal struct {
 	// Fullscreen starts the terminal on the alternate screen rather than
 	// inline.
 	Fullscreen bool `json:"fullscreen,omitempty"`
-
-	// CacheUsage is where replies show the cache use of their requests:
-	// "off", "per_turn", or "per_message".
-	CacheUsage string `json:"cache_usage,omitempty"`
-
-	// ExpandedTools is how expanded tool calls show: "boxed", on a surface,
-	// or "plain", on the canvas.
-	ExpandedTools string `json:"expanded_tools,omitempty"`
-
-	// ToolMarker shows the marker before the name of each tool call.
-	ToolMarker bool `json:"tool_marker,omitempty"`
-
-	// ToolMarkerShape is the symbol of the marker: "square", "square_outline",
-	// "rounded_outline", "circle", "circle_outline", "diamond",
-	// "diamond_outline", or "block", a space filled with the marker's color.
-	ToolMarkerShape string `json:"tool_marker_shape,omitempty"`
-
-	// ToolNameColor is the color of each tool call's marker and name:
-	// "gray" or "white".
-	ToolNameColor string `json:"tool_name_color,omitempty"`
-
-	// KeyHints is where the panels name their keys: "title", "subtitle", or
-	// "footer".
-	KeyHints string `json:"key_hints,omitempty"`
-
-	// ListCount is where a list whose rows do not all fit counts them:
-	// "below" or "title".
-	ListCount string `json:"list_count,omitempty"`
-
-	// PromptStyle is how the transcript marks a prompt: "filled", on the box
-	// background, or "bar", with a primary color cell at its left edge.
-	PromptStyle string `json:"prompt_style,omitempty"`
-
-	// InputStyle is how the input box and the panels that open in it show:
-	// "bar", the default, on the canvas, with a marker at the left edge of
-	// the input and of each panel's title, or "filled", on the box
-	// background.
-	InputStyle string `json:"input_style,omitempty"`
-
-	// Selection is how the menus mark their selected row: "full_width",
-	// "fill", or "arrow".
-	Selection string `json:"selection,omitempty"`
 }
 
 // versionKey is the key of the config file that holds its format version.

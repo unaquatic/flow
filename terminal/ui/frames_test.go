@@ -337,12 +337,10 @@ func TestTranscriptFrames(t *testing.T) {
 			systemTurn(ui)
 			clickSystem(ui, "s1")
 		}},
-		// Ctrl+O expands it with the tool calls, and the marker /settings
-		// shows marks it as it marks them.
+		// Ctrl+O expands it with the tool calls, and the tool marker marks
+		// it as it marks them.
 		{name: "system_expanded_plain_marker", h: 15, add: func(ui *UI) {
 			systemTurn(ui)
-			ui.Apply(ui.service.SetToolMarkers(true))
-			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
 			expandTools(ui)
 		}},
 		// Tool calls start collapsed to their header, and Ctrl+O expands them.
@@ -375,11 +373,11 @@ func TestTranscriptFrames(t *testing.T) {
 			todoTurn(ui)
 			clickTool(ui, "a1", 1)
 		}},
-		// Showing the tool marker in /settings puts it in the padding before
-		// each row, leaving the rows' text where it was.
-		{name: "agent_tool_rows_marker", h: 10, add: func(ui *UI) {
+		// Hiding the tool marker in /settings leaves the padding before each
+		// row blank, and the rows' text where it was.
+		{name: "agent_tool_rows_no_marker", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
-			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.Apply(ui.service.SetToolMarkers(false))
 		}},
 		// The white tool name color shows the names as a panel shows its
 		// title, and the input after them gray.
@@ -387,25 +385,31 @@ func TestTranscriptFrames(t *testing.T) {
 			toolRowsTurn(ui)
 			ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 		}},
-		// Expanded plain, as /settings sets them, the calls show their
-		// details on the canvas, with no surface and no padding.
-		{name: "agent_tool_expanded_plain", h: 24, add: func(ui *UI) {
+		// Expanded boxed, as /settings sets them, the calls show their
+		// details in a block on the success surface, between rows of
+		// padding.
+		{name: "agent_tool_expanded_boxed", h: 24, add: func(ui *UI) {
 			toolRowsTurn(ui)
-			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+			ui.Apply(ui.service.SetExpandStyle(ExpandedBoxed))
 			expandTools(ui)
 		}},
-		// With the prompt style a bar, a prompt sits on the canvas with the
-		// marker shape in the primary color at the left edge of each of its
-		// rows, ■ by default.
+		// With the prompt style a bar, the default, a prompt sits on the
+		// canvas with the marker shape in the primary color at the left edge
+		// of each of its rows, ■ by default.
 		{name: "prompt_bar", h: 10, add: func(ui *UI) {
-			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
+			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
+		}},
+		// With the prompt style filled, a prompt shows as a block on the box
+		// background, padded by a row above and below.
+		{name: "prompt_filled", h: 10, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
 			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
 		}},
 		// The block shape fills the bar's cells, and a shape set later
 		// reaches a prompt already shown.
 		{name: "prompt_bar_block", h: 10, add: func(ui *UI) {
-			ui.Apply(ui.service.SetPromptStyle(PromptBar))
 			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
 			ui.Apply(ui.service.SetMarkerShape(MarkerBlock))
@@ -416,21 +420,27 @@ func TestTranscriptFrames(t *testing.T) {
 		// with a title is headed by the title instead, as the files a history
 		// move changed are by the snapshot it checked out.
 		{name: "notice_bar", h: 14, add: func(ui *UI) {
-			ui.Apply(ui.service.SetPromptStyle(PromptBar))
 			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
 		}},
-		// With the prompt style a bar, the session info under the logo is
-		// headed by a marked StatusTitle, its lines unmarked under it.
-		{name: "status_notice_bar", h: 18, add: func(ui *UI) {
-			ui.Apply(ui.service.SetPromptStyle(PromptBar))
+		// With the prompt style filled, the same notices fill boxes on the
+		// box background, as the prompt does.
+		{name: "notice_filled", h: 16, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
+			ui.AddMessage(userText("u1", "Run the tests"))
+			ui.AddNotice(Notice{Text: "Chat cleared"})
+			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
+		}},
+		// With the prompt style filled, the session info under the logo fills
+		// a box, unmarked.
+		{name: "status_notice_filled", h: 18, add: func(ui *UI) {
+			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
 			ui.AddNotice(StatusNotice(statusLines())...)
 		}},
 		// A marker shape and a tool name color set later reach a notice
 		// already shown.
 		{name: "notice_bar_restyled", h: 4, add: func(ui *UI) {
-			ui.Apply(ui.service.SetPromptStyle(PromptBar))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.Apply(ui.service.SetMarkerShape(MarkerCircle))
 			ui.Apply(ui.service.SetToolColor(ToolNameWhite))
@@ -438,7 +448,6 @@ func TestTranscriptFrames(t *testing.T) {
 		// A reply's text starts with the marker on its first row alone, and
 		// a prompt shows none.
 		{name: "agent_text_marker", h: 10, add: func(ui *UI) {
-			ui.Apply(ui.service.SetToolMarkers(true))
 			ui.AddMessage(userText("u1", "fix the divide test"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check.\n\nThe tests pass now."))
 		}},
@@ -446,20 +455,16 @@ func TestTranscriptFrames(t *testing.T) {
 		// and the footer alike: here an unfilled circle.
 		{name: "agent_tool_rows_circle", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
-			ui.Apply(ui.service.SetToolMarkers(true))
 			ui.Apply(ui.service.SetMarkerShape(MarkerCircleOutline))
 		}},
 		// Block fills a space with the marker's color.
 		{name: "agent_tool_rows_block", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
-			ui.Apply(ui.service.SetToolMarkers(true))
 			ui.Apply(ui.service.SetMarkerShape(MarkerBlock))
 		}},
-		// Expanded plain, the calls keep the marker, as rows do.
+		// Expanded plain, the default, the calls keep the marker, as rows do.
 		{name: "agent_tool_expanded_plain_marker", h: 24, add: func(ui *UI) {
 			toolRowsTurn(ui)
-			ui.Apply(ui.service.SetToolMarkers(true))
-			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
 			expandTools(ui)
 		}},
 		// Inline, text that streams shows its blocks once each is whole, and
@@ -496,7 +501,6 @@ func TestTranscriptFrames(t *testing.T) {
 		// While a run is in progress, the marker of a call that executes
 		// blinks, here hidden, and the call that has ended keeps its own.
 		{name: "agent_tool_marker_blink_off", h: 4, add: func(ui *UI) {
-			ui.Apply(ui.service.SetToolMarkers(true))
 			ui.blink.On.Store(true)
 			ui.blink.Off = true
 			msg := agentParts("a1",
@@ -512,7 +516,6 @@ func TestTranscriptFrames(t *testing.T) {
 		// row may scroll into the scrollback, where it cannot be redrawn.
 		{name: "agent_text_marker_blink_off", h: 4, add: func(ui *UI) {
 			ui.inline = true
-			ui.Apply(ui.service.SetToolMarkers(true))
 			ui.blink.On.Store(true)
 			ui.blink.Off = true
 			msg := agentText("a1", "Running the tests.\n\nThen")
@@ -576,9 +579,9 @@ func TestToolBoxFrames(t *testing.T) {
 			State: message.ToolStateError{Input: bashInput, Error: "--- FAIL: TestDivide (0.00s)\nFAIL\n\n[exit 1]"}}},
 		{name: "toolbox_bash_interrupted", h: 6, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStateError{Input: bashInput, Error: message.InterruptedError}}},
-		// Expanded plain, the call shows on the canvas, with no surface and
-		// no padding.
-		{name: "toolbox_bash_error_plain", h: 7, style: ExpandedPlain, tool: message.ToolPart{Name: "bash",
+		// Expanded boxed, the call shows as a block on the success surface,
+		// between rows of padding.
+		{name: "toolbox_bash_error_boxed", h: 9, style: ExpandedBoxed, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStateError{Input: bashInput, Error: "--- FAIL: TestDivide (0.00s)\nFAIL\n\n[exit 1]"}}},
 		// A call interrupted before its output shows its input in its params,
 		// each param after the main one as a note in the muted text color.
@@ -665,7 +668,7 @@ func TestToolBoxHeaderFrames(t *testing.T) {
 // TestUsageBoxFrames draws a usage box once shown, which it is not by
 // default, as /settings shows tool calls: collapsed to its header, a row,
 // with the marker when it is on, and expanded to every count the provider
-// reported, in a block on the surface, or on the canvas when plain.
+// reported, on the canvas, or in a block on the surface when boxed.
 func TestUsageBoxFrames(t *testing.T) {
 	part := message.UsagePart{ID: "a1-usage", Usage: message.Usage{
 		InputTokens: 1200, CachedInputTokens: 1024, CacheCreationInputTokens: 176,
@@ -680,7 +683,7 @@ func TestUsageBoxFrames(t *testing.T) {
 	}{
 		{name: "usagebox_collapsed", h: 1},
 		{name: "usagebox_marker", h: 1, marker: true},
-		{name: "usagebox_plain", h: 8, style: ExpandedPlain, expanded: true},
+		{name: "usagebox_boxed", h: 10, style: ExpandedBoxed, expanded: true},
 		{name: "usagebox_expanded", h: 10, marker: true, expanded: true},
 	}
 	for _, tt := range tests {
@@ -895,23 +898,24 @@ func TestSlashStatusFrames(t *testing.T) {
 		usage SessionUsage
 		// pinned pins the box and draws it with the slash menu closed.
 		pinned bool
-		// marker shows the tool marker, as /settings does.
-		marker bool
+		// noMarker hides the tool marker, as /settings does.
+		noMarker bool
 		// expanded expands tool calls, as Ctrl+O does.
 		expanded bool
 	}{
+		// Collapsed, the box is a row like a collapsed tool call's, with no
+		// background, and the marker before it while the tool marker is on.
 		{name: "slash_status", w: 84, usage: usage},
 		// A narrow terminal cuts the row off at its right end.
 		{name: "slash_status_narrow", w: 60, usage: usage},
 		// Pinned, the box stays with the menu closed, and names no key, which
 		// the menu names while it is open.
 		{name: "slash_status_pinned", w: 84, usage: usage, pinned: true},
-		// Collapsed, the box is a row like a collapsed tool call's, with no
-		// background, and the marker before it while the tool marker is on.
-		{name: "slash_status_marker", w: 84, usage: usage, marker: true},
+		// With the tool marker hidden, the box's row shows none either.
+		{name: "slash_status_no_marker", w: 84, usage: usage, noMarker: true},
 		// With tool calls expanded, the box stays a row, with the marker, as
 		// a row with nothing to expand does.
-		{name: "slash_status_expanded", w: 84, usage: usage, marker: true, expanded: true},
+		{name: "slash_status_expanded", w: 84, usage: usage, expanded: true},
 		// A nearly full context turns the danger color.
 		{name: "slash_status_context_full", w: 84, usage: SessionUsage{Input: 180_000, Output: 2_000,
 			Cost: 0.57, Context: 182_000, Window: 200_000}},
@@ -923,8 +927,8 @@ func TestSlashStatusFrames(t *testing.T) {
 			ui.SetModelLabel("provider-a/provider-a/model-h:medium")
 			ui.SetUsage(tt.usage)
 			ui.service.state.Messages = []ChatMessage{{ID: "a1", Role: message.RoleAgent, Worked: 3*time.Minute + 12*time.Second}}
-			if tt.marker {
-				ui.Apply(ui.service.SetToolMarkers(true))
+			if tt.noMarker {
+				ui.Apply(ui.service.SetToolMarkers(false))
 			}
 			if tt.expanded {
 				ui.Apply(ui.service.SetToolsExpanded(true))
@@ -1236,10 +1240,10 @@ func TestCacheFrames(t *testing.T) {
 			ui.Apply(ui.service.SetCacheMode(CachePerTurn))
 			cacheTurn(ui)
 		}},
-		// The row starts with the marker, as tool calls do, and so does the
-		// footer.
-		{name: "cache_marker", w: 60, h: 15, add: func(ui *UI) {
-			ui.Apply(ui.service.SetToolMarkers(true))
+		// With the tool marker hidden, the row starts without it, as tool
+		// calls do, and so does the footer.
+		{name: "cache_no_marker", w: 60, h: 15, add: func(ui *UI) {
+			ui.Apply(ui.service.SetToolMarkers(false))
 			cacheTurn(ui)
 		}},
 		// A reply that ends with a code block, a block of its own, is parted
@@ -1296,7 +1300,7 @@ func TestKeyHintsModeFrames(t *testing.T) {
 		{name: "keys_footer_session_menu", w: 72, h: 11, open: func(ui *UI) {
 			ui.ShowSessionMenu(EventSessionMenuShow{Items: sessions})
 		}},
-		{name: "keys_footer_settings", w: 72, h: 16, open: func(ui *UI) {
+		{name: "keys_footer_settings", w: 72, h: 8, open: func(ui *UI) {
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
 		{name: "keys_footer_tree", w: 72, h: 15, open: func(ui *UI) {
@@ -1627,18 +1631,25 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_loading", h: 7, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{Title: "Models", Text: "Loading models..."})
 		}},
-		{name: "banner_settings_menu", h: 13, open: func(ui *UI) {
+		// While debug is off, /settings shows fullscreen and debug alone.
+		{name: "banner_settings_menu", h: 7, open: func(ui *UI) {
+			ui.Apply(ui.service.ShowSettingsMenu())
+		}},
+		// While debug is on, the style settings show between the two.
+		{name: "banner_settings_debug", h: 17, open: func(ui *UI) {
+			ui.Apply(ui.service.SetDebug(true))
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
 		// In the filled input style, /settings fills the box, its title
 		// unmarked.
-		{name: "banner_settings_filled", h: 13, open: func(ui *UI) {
+		{name: "banner_settings_filled", h: 7, open: func(ui *UI) {
 			ui.Apply(ui.service.SetInputStyle(InputFilled))
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
 		// → moves the selected setting to its next value, and the setting
 		// stays selected: cache usage goes from off to per turn.
 		{name: "banner_settings_changed", h: 13, open: func(ui *UI) {
+			ui.Apply(ui.service.SetDebug(true))
 			ui.Apply(ui.service.ShowSettingsMenu())
 			ui.HandleBannerKey(&input.KeyEvent{Name: input.KeyDown})
 			ui.HandleBannerKey(&input.KeyEvent{Name: input.KeyRight})
@@ -1673,6 +1684,7 @@ func TestMenuFrames(t *testing.T) {
 		// the selected row in the primary color, a cell in from either edge,
 		// with no arrow, its name and value in the box's fill.
 		{name: "banner_settings_fill", h: 16, open: func(ui *UI) {
+			ui.Apply(ui.service.SetDebug(true))
 			out := ui.service.ShowSettingsMenu()
 			ui.Apply(out)
 			var names []string

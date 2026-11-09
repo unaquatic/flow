@@ -1,5 +1,5 @@
 === text ===
-|  1. Run it:                            |
+|■ 1. Run it:                            |
 |                                        |
 |     go test ./...                      |
 |                                        |
@@ -20,17 +20,17 @@
 |                                        |
 |                                        |
 === fg ===
-|  AA BBB BBB                            |
+|A BB AAA AAA                            |
 |                                        |
-|     BB BBBB BBBBB                      |
+|     AA AAAA AAAAA                      |
 |                                        |
-|  C BB BBBBB                            |
+|  C AA AAAAA                            |
 |                                        |
-|    BB BBB BBBBB                        |
+|    AA AAA AAAAA                        |
 |                                        |
-|  D AAAAAAA                             |
+|  D BBBBBBB                             |
 |  D                                     |
-|  D B BB B                              |
+|  D A AA A                              |
 |                                        |
 |                                        |
 |                                        |
@@ -62,7 +62,7 @@
 |                                        |
 |                                        |
 === legend ===
-A #8a8a8a
-B #e6e6e6
+A #e6e6e6
+B #8a8a8a
 C #eb7513
 D #3d3e40

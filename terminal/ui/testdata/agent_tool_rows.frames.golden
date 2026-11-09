@@ -1,22 +1,22 @@
 === text ===
-|  Running the tests.                    |
+|■ Running the tests.                    |
 |                                        |
-|  Bash go test ./... [exit 1]           |
-|  Read calc.go                          |
-|  Grep Divide [1 match]                 |
+|■ Bash go test ./... [exit 1]           |
+|■ Read calc.go                          |
+|■ Grep Divide [1 match]                 |
 |                                        |
-|  Fixed the zero check.                 |
+|■ Fixed the zero check.                 |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAA                    |
+|A AAAAAAA AAA AAAAAA                    |
 |                                        |
-|  BBBB BB BBBB BBBBB BBBBB BB           |
-|  BBBB BBBBBBB                          |
-|  BBBB BBBBBB BB BBBBBB                 |
+|B BBBB BB BBBB BBBBB BBBBB BB           |
+|B BBBB BBBBBBB                          |
+|B BBBB BBBBBB BB BBBBBB                 |
 |                                        |
-|  AAAAA AAA AAAA AAAAAA                 |
+|A AAAAA AAA AAAA AAAAAA                 |
 |                                        |
 |                                        |
 |                                        |

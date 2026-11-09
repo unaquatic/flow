@@ -2,7 +2,7 @@
 |■ fix the divide test, then run the     |
 |■ calculator tests again                |
 |                                        |
-|  Fixed the divide-by-zero check.       |
+|■ Fixed the divide-by-zero check.       |
 |                                        |
 |                                        |
 |                                        |
@@ -13,7 +13,7 @@
 |A BBB BBB BBBBBB BBBBB BBBB BBB BBB     |
 |A BBBBBBBBBB BBBBB BBBBB                |
 |                                        |
-|  BBBBB BBB BBBBBBBBBBBBBB BBBBBB       |
+|B BBBBB BBB BBBBBBBBBBBBBB BBBBBB       |
 |                                        |
 |                                        |
 |                                        |

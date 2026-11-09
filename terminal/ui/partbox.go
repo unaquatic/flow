@@ -131,11 +131,12 @@ type PartBox struct {
 
 var _ Framed = (*PartBox)(nil)
 
-// NewPartBox creates a collapsed, expandable box, a block on surface, padded
-// by a row above and below and by PaddingX at the sides, whose Header is in
-// fg. Its Shape is ShapeByStyle and its Style ExpandedBoxed, so that it
-// shows as a row until the caller says otherwise and calls ShowShape. The
-// caller sets Content before the box shows its header.
+// NewPartBox creates a collapsed, expandable box whose Header is in fg, and
+// whose block, in ExpandedBoxed, fills surface, padded by a row above and
+// below and by PaddingX at the sides. Its Shape is ShapeByStyle and its Style
+// ExpandedPlain, so that it shows as a row until the caller says otherwise
+// and calls ShowShape. The caller sets Content before the box shows its
+// header.
 func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 	theme = themeOrDefault(theme)
 	b := &PartBox{

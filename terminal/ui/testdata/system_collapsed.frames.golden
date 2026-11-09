@@ -1,31 +1,20 @@
 === text ===
-|  Context [4 lines]                     |
+|■ Context [4 lines]                     |
+|                                        |
+|■ Run the tests                         |
+|                                        |
+|■ All tests pass.                       |
 |                                        |
 |                                        |
-|  Run the tests                         |
-|                                        |
-|                                        |
-|  All tests pass.                       |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AA AAAAAA                     |
+|A AAAAAAA AA AAAAAA                     |
 |                                        |
+|B CCC CCC CCCCC                         |
 |                                        |
-|  BBB BBB BBBBB                         |
-|                                        |
-|                                        |
-|  BBB BBBBB BBBBB                       |
-|                                        |
-|                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|C CCC CCCCC CCCCC                       |
 |                                        |
 |                                        |
 |                                        |
@@ -33,5 +22,5 @@
 |                                        |
 === legend ===
 A #8c8c8c
-B #e6e6e6
-░ #232323 BoxBg
+B #ff5f00
+C #e6e6e6

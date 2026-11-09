@@ -265,15 +265,17 @@ const (
 )
 
 // ShowSettingsMenu lists the settings with their values, searched from the
-// input. Each change is saved, as PersistTerminal and PersistDebug save it,
-// so that the terminal starts with it next time. Choosing one moves it to its next value, after the last back to the
+// input. Choosing one moves it to its next value, after the last back to the
 // first, and ←/→ move it back and forth; the menu stays open with the same
-// search, on the setting. Fullscreen is on or off, cache usage one of
-// CacheModes, expanded tools one of ExpandedStyles, the tool marker on or off,
-// the marker shape one of MarkerShapes, the tool name color one of
-// ToolNameColors, key hints one of KeyHintsModes,
-// list count one of CountPlaces, selection one of SelectionStyles, in their
-// order, and debug on or off.
+// search, on the setting. Fullscreen is on or off, and debug, the last row,
+// on or off; each is saved, as PersistTerminal and PersistDebug save it, so
+// that the terminal starts with it next time. While debug is on, the style
+// settings show between them, for this terminal alone: cache usage one of
+// CacheModes, expanded tools one of ExpandedStyles, the tool marker on or
+// off, the marker shape one of MarkerShapes, the tool name color one of
+// ToolNameColors, key hints one of KeyHintsModes, list count one of
+// CountPlaces, selection one of SelectionStyles, the prompt style one of
+// PromptStyles, and the input style one of InputStyles, in their order.
 func (s *Service) ShowSettingsMenu() []UIEvent {
 	menu := &SearchMenu{Title: "Settings", NameWidth: settingValueColumn}
 	setting := func(name, value string, change func(step int) []UIEvent) MenuItem {
@@ -281,16 +283,23 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 		return MenuItem{Name: name, Desc: value, Choose: func() []UIEvent { return move(1) }, Change: move}
 	}
 	menu.Items = func() []MenuItem {
+		fullscreen := setting(fullscreenSetting, onOff(!s.state.Inline), func(int) []UIEvent { return s.ToggleInlineMode() })
+		debug := setting(debugSetting, onOff(s.state.Debug), func(int) []UIEvent {
+			return s.SetDebug(!s.state.Debug)
+		})
+		if !s.state.Debug {
+			return []MenuItem{fullscreen, debug}
+		}
 		return []MenuItem{
-			setting(fullscreenSetting, onOff(!s.state.Inline), func(int) []UIEvent { return s.ToggleInlineMode() }),
+			fullscreen,
 			setting(cacheUsageSetting, s.state.CacheMode.String(), func(step int) []UIEvent {
 				return s.SetCacheMode(s.state.CacheMode.Next(step))
 			}),
 			setting(expandedSetting, s.state.ExpandStyle.String(), func(step int) []UIEvent {
 				return s.SetExpandStyle(s.state.ExpandStyle.Next(step))
 			}),
-			setting(toolMarkerSetting, onOff(s.state.ToolMarkers), func(int) []UIEvent {
-				return s.SetToolMarkers(!s.state.ToolMarkers)
+			setting(toolMarkerSetting, onOff(!s.state.HideToolMarkers), func(int) []UIEvent {
+				return s.SetToolMarkers(s.state.HideToolMarkers)
 			}),
 			setting(markerShapeSetting, s.state.MarkerShape.String(), func(step int) []UIEvent {
 				return s.SetMarkerShape(s.state.MarkerShape.Next(step))
@@ -313,9 +322,7 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			setting(inputSetting, s.state.InputStyle.String(), func(step int) []UIEvent {
 				return s.SetInputStyle(s.state.InputStyle.Next(step))
 			}),
-			setting(debugSetting, onOff(s.state.Debug), func(int) []UIEvent {
-				return s.SetDebug(!s.state.Debug)
-			}),
+			debug,
 		}
 	}
 	return s.ShowSearchMenu(menu)
@@ -325,29 +332,29 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 // those added later, where mode says.
 func (s *Service) SetCacheMode(mode CacheMode) []UIEvent {
 	s.state.CacheMode = mode
-	return append([]UIEvent{EventCacheModeSet{Mode: mode}}, s.PersistTerminal()...)
+	return []UIEvent{EventCacheModeSet{Mode: mode}}
 }
 
 // SetExpandStyle shows every expanded tool call in the transcript, and those
 // added later, as ts says.
 func (s *Service) SetExpandStyle(ts ExpandedStyle) []UIEvent {
 	s.state.ExpandStyle = ts
-	return append([]UIEvent{EventExpandStyleSet{Style: ts}}, s.PersistTerminal()...)
+	return []UIEvent{EventExpandStyleSet{Style: ts}}
 }
 
 // SetToolMarkers shows ToolMarker before the name of every tool call in the
 // transcript, and of those added later, or hides it,
 // as show says.
 func (s *Service) SetToolMarkers(show bool) []UIEvent {
-	s.state.ToolMarkers = show
-	return append([]UIEvent{EventToolMarkersSet{Show: show}}, s.PersistTerminal()...)
+	s.state.HideToolMarkers = !show
+	return []UIEvent{EventToolMarkersSet{Show: show}}
 }
 
 // SetMarkerShape shows the marker of every tool call in the transcript, and
 // of those added later, in m.
 func (s *Service) SetMarkerShape(m MarkerShape) []UIEvent {
 	s.state.MarkerShape = m
-	return append([]UIEvent{EventMarkerShapeSet{Shape: m}}, s.PersistTerminal()...)
+	return []UIEvent{EventMarkerShapeSet{Shape: m}}
 }
 
 // SetToolColor shows the marker and the name of every tool call in the
@@ -355,21 +362,21 @@ func (s *Service) SetMarkerShape(m MarkerShape) []UIEvent {
 // c names.
 func (s *Service) SetToolColor(c ToolNameColor) []UIEvent {
 	s.state.ToolColor = c
-	return append([]UIEvent{EventToolColorSet{Color: c}}, s.PersistTerminal()...)
+	return []UIEvent{EventToolColorSet{Color: c}}
 }
 
 // SetKeyHintsMode names the keys of every panel where mode says: after its
 // title, under it, or in the footer under the input box.
 func (s *Service) SetKeyHintsMode(mode KeyHintsMode) []UIEvent {
 	s.state.KeyHints = mode
-	return append([]UIEvent{EventKeyHintsModeSet{Mode: mode}}, s.PersistTerminal()...)
+	return []UIEvent{EventKeyHintsModeSet{Mode: mode}}
 }
 
 // SetCountPlace counts the rows of every list that does not all fit where
 // place says: after its title, or on a line under its rows.
 func (s *Service) SetCountPlace(place CountPlace) []UIEvent {
 	s.state.Count = place
-	return append([]UIEvent{EventCountPlaceSet{Place: place}}, s.PersistTerminal()...)
+	return []UIEvent{EventCountPlaceSet{Place: place}}
 }
 
 // SetPromptStyle shows every prompt in the transcript, and those added
@@ -377,7 +384,7 @@ func (s *Service) SetCountPlace(place CountPlace) []UIEvent {
 // primary color at its left edge.
 func (s *Service) SetPromptStyle(style PromptStyle) []UIEvent {
 	s.state.PromptStyle = style
-	return append([]UIEvent{EventPromptStyleSet{Style: style}}, s.PersistTerminal()...)
+	return []UIEvent{EventPromptStyleSet{Style: style}}
 }
 
 // SetInputStyle shows the input box and the panels that open in it as style
@@ -385,7 +392,7 @@ func (s *Service) SetPromptStyle(style PromptStyle) []UIEvent {
 // edge of the input and of each panel's title.
 func (s *Service) SetInputStyle(style InputStyle) []UIEvent {
 	s.state.InputStyle = style
-	return append([]UIEvent{EventInputStyleSet{Style: style}}, s.PersistTerminal()...)
+	return []UIEvent{EventInputStyleSet{Style: style}}
 }
 
 // SetSelectionStyle marks the selected row of every menu as style says: with
@@ -393,7 +400,7 @@ func (s *Service) SetInputStyle(style InputStyle) []UIEvent {
 // an arrow.
 func (s *Service) SetSelectionStyle(style SelectionStyle) []UIEvent {
 	s.state.Selection = style
-	return append([]UIEvent{EventSelectionStyleSet{Style: style}}, s.PersistTerminal()...)
+	return []UIEvent{EventSelectionStyleSet{Style: style}}
 }
 
 // SetDebug shows what helps debug flow, in the transcript and in what is

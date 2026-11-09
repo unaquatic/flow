@@ -1,19 +1,19 @@
 === text ===
-|  Run this:                             |
+|■ Run this:                             |
 |                                        |
 |  go test ./...                         |
 |                                        |
-|  Cache read 7.7K write 0K              |
+|■ Cache read 7.7K write 0K              |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAA AAAAA                             |
+|A AAA AAAAA                             |
 |                                        |
 |  AA AAAA AAAAA                         |
 |                                        |
-|  BBBBB BBBB BBBB BBBBB BB              |
+|B BBBBB BBBB BBBB BBBBB BB              |
 |                                        |
 |                                        |
 |                                        |

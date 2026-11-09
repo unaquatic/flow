@@ -1,16 +1,16 @@
 === text ===
-|  Planning the change.                  |
+|■ Planning the change.                  |
 |                                        |
-|  Read calc.go                          |
-|  Todo [1/3]                            |
-|  Bash go test ./...                    |
+|■ Read calc.go                          |
+|■ Todo [1/3]                            |
+|■ Bash go test ./...                    |
 |                                        |
 === fg ===
-|  AAAAAAAA AAA AAAAAAA                  |
+|A AAAAAAAA AAA AAAAAAA                  |
 |                                        |
-|  BBBB BBBBBBB                          |
-|  BBBB BBBBB                            |
-|  BBBB BB BBBB BBBBB                    |
+|B BBBB BBBBBBB                          |
+|B BBBB BBBBB                            |
+|B BBBB BB BBBB BBBBB                    |
 |                                        |
 === legend ===
 A #e6e6e6

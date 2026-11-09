@@ -1,9 +1,7 @@
 === text ===
+|■ Run the tests                                                         |
 |                                                                        |
-|  Run the tests                                                         |
-|                                                                        |
-|                                                                        |
-|  All tests pass.                                                       |
+|■ All tests pass.                                                       |
 |                                                                        |
 |    ▄▄▄ ▄▄▄                                                             |
 |   ██▀▀ ▀██                                                             |
@@ -21,45 +19,24 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
+|A BBB BBB BBBBB                                                         |
 |                                                                        |
-|  AAA AAA AAAAA                                                         |
+|B BBB BBBBB BBBBB                                                       |
 |                                                                        |
+|    AAA CCC                                                             |
+|   AAAA CCC                                                             |
+| AAAAAA  CC   CCCCCC  CC    CC                                          |
+| AAAAAA  CC  CCCCCCCC CC    CC                                          |
+|   AA    CC  CC    CC CC    CC                                          |
+|   AA    CC  CC    CC CC CC CC                                          |
+|AA AA   CCCC CCCCCCCC CCCCCCCC                                          |
+|AAAAA   CCCC  CCCCCC   CC  CC                                           |
 |                                                                        |
-|  AAA AAAAA AAAAA                                                       |
-|                                                                        |
-|    BBB CCC                                                             |
-|   BBBB CCC                                                             |
-| BBBBBB  CC   CCCCCC  CC    CC                                          |
-| BBBBBB  CC  CCCCCCCC CC    CC                                          |
-|   BB    CC  CC    CC CC    CC                                          |
-|   BB    CC  CC    CC CC CC CC                                          |
-|BB BB   CCCC CCCCCCCC CCCCCCCC                                          |
-|BBBBB   CCCC  CCCCCC   CC  CC                                           |
-|                                                                        |
-|AAAAAA AAAA AAAAAAA AAAAA                                               |
-|  BBBB AAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA                   |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|BBBBBB BBBB BBBBBBB BBBBB                                               |
+|  AAAA BBBBBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                   |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -81,8 +58,6 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
-|                                                                        |
 |BBBBBBBBBBBBBBBBBBBBBBBBB                                               |
 |  BBBB                                                                  |
 |                                                                        |
@@ -90,8 +65,9 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
 === legend ===
-A #e6e6e6
-B #ff5f00
+A #ff5f00
+B #e6e6e6
 C #e4e4e4
-░ #232323 BoxBg

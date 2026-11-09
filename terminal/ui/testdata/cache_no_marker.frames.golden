@@ -1,0 +1,36 @@
+=== text ===
+|■ fix the divide test                                       |
+|                                                            |
+|  Running the tests.                                        |
+|                                                            |
+|  Bash go test ./... [exit 1]                               |
+|  Cache read 18K write 4.0K                                 |
+|                                                            |
+|  Fixed the divide-by-zero check.                           |
+|                                                            |
+|  Cache read 22K write 0K                                   |
+|                                                            |
+|  Done [39s]                                                |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|A BBB BBB BBBBBB BBBB                                       |
+|                                                            |
+|  BBBBBBB BBB BBBBBB                                        |
+|                                                            |
+|  CCCC CC CCCC CCCCC CCCCC CC                               |
+|  CCCCC CCCC CCC CCCCC CCCC                                 |
+|                                                            |
+|  BBBBB BBB BBBBBBBBBBBBBB BBBBBB                           |
+|                                                            |
+|  CCCCC CCCC CCC CCCCC CC                                   |
+|                                                            |
+|  CCCC CCCCC                                                |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #ff5f00
+B #e6e6e6
+C #8c8c8c

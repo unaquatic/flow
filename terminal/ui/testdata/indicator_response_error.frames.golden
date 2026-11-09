@@ -1,7 +1,5 @@
 === text ===
-|                                                                        |
-|  ok                                                                    |
-|                                                                        |
+|■ ok                                                                    |
 |                                                                        |
 |■ Error provider-b response error (429)                                 |
 |  {                                                                     |
@@ -19,41 +17,22 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
+|A BB                                                                    |
 |                                                                        |
-|  AA                                                                    |
+|C CCCCC DDDDDDDDDD DDDDDDDD DDDDD DDDDD                                 |
+|  B                                                                     |
+|    BBBBBBB EEEEEEEB                                                    |
+|    BBBBBBBB B                                                          |
+|      BBBBBBB EEEEEEEEEEEEEEEEEEB                                       |
+|      BBBBBBBBBB EEEEEEE                                                |
+|    BB                                                                  |
+|    BBBBBBBBBBBBB EEEEEEEEEEEEEEEE                                      |
+|  B                                                                     |
 |                                                                        |
-|                                                                        |
-|B BBBBB CCCCCCCCCC CCCCCCCC CCCCC CCCCC                                 |
-|  A                                                                     |
-|    AAAAAAA DDDDDDDA                                                    |
-|    AAAAAAAA A                                                          |
-|      AAAAAAA DDDDDDDDDDDDDDDDDDA                                       |
-|      AAAAAAAAAA DDDDDDD                                                |
-|    AA                                                                  |
-|    AAAAAAAAAAAAA DDDDDDDDDDDDDDDD                                      |
-|  A                                                                     |
-|                                                                        |
-|E                                                                       |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -62,9 +41,8 @@
 |                                                                        |
 |                                                                        |
 === legend ===
-A #e6e6e6
-B #ff7c78
-C #787878
-D #91b557
-E #ff5f00
-░ #232323 BoxBg
+A #ff5f00
+B #e6e6e6
+C #ff7c78
+D #787878
+E #91b557
