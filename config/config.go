@@ -16,8 +16,8 @@ import (
 	"github.com/unaquatic/flow/product"
 )
 
-// LogLevel controls logging verbosity. The config file names it in lower
-// case, as "debug", and reads it in any case, as "DEBUG".
+// LogLevel controls logging verbosity. The config file names it as one of
+// the constants below, in lower case, as "debug".
 type LogLevel string
 
 const (
@@ -30,6 +30,16 @@ const (
 	// LogError enables error logging only.
 	LogError LogLevel = "error"
 )
+
+// Valid reports whether l is one of LogDebug, LogInfo, LogWarn and
+// LogError.
+func (l LogLevel) Valid() bool {
+	switch l {
+	case LogDebug, LogInfo, LogWarn, LogError:
+		return true
+	}
+	return false
+}
 
 // Level returns the slog level that l names, or slog.LevelInfo, the
 // default, when l names none.
@@ -435,7 +445,12 @@ func mergeFromFile(cfg *Config, f File) error {
 		return fmt.Errorf("parsing %s: %w", path, err)
 	}
 	if _, ok := raw["log_level"]; ok {
-		cfg.LogLevel = LogLevel(strings.ToLower(string(overlay.LogLevel)))
+		if !overlay.LogLevel.Valid() {
+			path, _ := f.Path()
+			return fmt.Errorf("parsing %s: log_level %q is none of %q, %q, %q and %q",
+				path, overlay.LogLevel, LogDebug, LogInfo, LogWarn, LogError)
+		}
+		cfg.LogLevel = overlay.LogLevel
 	}
 
 	if _, ok := raw["provider"]; ok && overlay.Provider != nil {
