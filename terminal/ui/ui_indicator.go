@@ -98,24 +98,10 @@ func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
 	}
 }
 
-// DetailText returns detail as the indicator shows it under its line: in
-// textFg, and, when isJSON reports it is JSON, highlighted as JSON code is.
-// JSON the highlighter fails on shows in textFg.
+// DetailText returns detail as the indicator shows it under its line, as
+// HighlightDetail gives it with the UI's highlighter.
 func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {
-	if isJSON && ui.highlighter != nil {
-		lines, err := ui.highlighter.Highlight(detail, "json", textFg, style.ColorTransparent)
-		if err == nil && len(lines) > 0 {
-			var chunks []style.TextChunk
-			for i, line := range lines {
-				if i > 0 {
-					chunks = append(chunks, style.Plain("\n"))
-				}
-				chunks = AppendSpans(chunks, line)
-			}
-			return style.NewStyledText(chunks...)
-		}
-	}
-	return style.NewStyledText(style.TextChunk{Text: detail, Fg: textFg})
+	return HighlightDetail(ui.highlighter, detail, isJSON)
 }
 
 // HideIndicator dismisses the indicator.

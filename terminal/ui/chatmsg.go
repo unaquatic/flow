@@ -781,6 +781,8 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		box := NewUsageBox(p, cm.theme, cm.fg)
 		cm.AdoptBox(box.PartBox)
 		return box
+	case ErrorPart:
+		return NewErrorView(p, cm.theme, cm.MarkerShape)
 	}
 	if view := cm.NewPartView(part); view != nil {
 		if f, ok := view.(Framed); ok {

@@ -317,6 +317,16 @@ func TestTranscriptFrames(t *testing.T) {
 			msg.Error = errors.New("connection reset by peer")
 			ui.UpdateMessage(msg)
 		}},
+		// An error response reads as the indicator shows it: the provider
+		// and the status, and right under them, with no row between, the
+		// body it answered with, highlighted.
+		{name: "agent_response_error", h: 14, add: func(ui *UI) {
+			msg := agentText("a1", "Reading the file.")
+			ui.AddMessage(msg)
+			msg.Error = &agent.ResponseError{Provider: "gw", StatusCode: 401,
+				ResponseBody: `{"error":{"type":"authentication_error","message":"invalid key"}}`}
+			ui.UpdateMessage(msg)
+		}},
 		// The system message a session opens with shows above its first
 		// prompt as a collapsed row, as a tool call does: its name, then the
 		// number of lines of its text as its status.
@@ -999,6 +1009,9 @@ func TestIndicatorFrames(t *testing.T) {
 		show EventIndicatorShow
 		// working shows the indicator as the time of a run in progress.
 		working bool
+		// fail, when set, is a failed login that the indicator shows, as
+		// Service.FailLogin shows it, in place of show.
+		fail *app.EventLoginFailed
 	}{
 		// A reply that shows nothing yet takes no rows, and the prompt's blank
 		// row parts it from the indicator.
@@ -1024,7 +1037,7 @@ func TestIndicatorFrames(t *testing.T) {
 		// An error starts with a marker and Error, in the danger color, as a
 		// tool call's row starts with its marker and name.
 		{name: "indicator_error", h: 11, add: replyStarted,
-			show: ErrorIndicator(app.NewError(app.CodeProviderError, `Request Failed: Post "https://api.example.com/v1/messages": EOF`))},
+			show: ErrorIndicator(app.ErrorOf(&agent.RequestError{Err: &url.Error{Op: "Post", URL: "https://api.example.com/v1/messages", Err: io.EOF}}))},
 		// A provider's error names the provider and status, over the body it
 		// answered with, formatted and highlighted, in a box filled as a
 		// tool's is.
@@ -1035,6 +1048,15 @@ func TestIndicatorFrames(t *testing.T) {
 		{name: "indicator_response_error_text", h: 13, add: replyStarted,
 			show: ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 502,
 				ResponseBody: "upstream connect error or disconnect/reset before headers. reset reason: connection termination"}))},
+		// A streaming error has no status to show, only its message.
+		{name: "indicator_stream_error", h: 11, add: replyStarted,
+			show: ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "provider-b", Message: "Overloaded"}))},
+		// A login that a token endpoint failed shows as a provider's error
+		// does: the login, the endpoint and its status, over the body.
+		{name: "indicator_login_error", h: 12, add: func(*UI) {}, fail: &app.EventLoginFailed{
+			Provider: providerA, Account: "work",
+			Error: app.ErrorOf(&agent.TokenEndpointError{StatusCode: 401, Body: `{"error":"invalid_grant","error_description":"The code has expired."}`}),
+		}},
 		// Ctrl+O says what it is doing while it lays out a long transcript
 		// again with every tool call expanded.
 		{name: "indicator_expanding_tools", h: 13, add: func(ui *UI) {
@@ -1049,7 +1071,11 @@ func TestIndicatorFrames(t *testing.T) {
 			ui.inline = true
 			tt.add(ui)
 			ui.service.state.Working = tt.working
-			ui.ShowIndicator(tt.show)
+			if tt.fail != nil {
+				ui.Apply(ui.service.FailLogin(*tt.fail))
+			} else {
+				ui.ShowIndicator(tt.show)
+			}
 			rows := slices.Concat(detachTranscript(ui), []*widget.Box{detachFromRoot(ui, ui.indicatorBox), ui.inputWrapper})
 			buf := renderFrames(72, tt.h, rows...)
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
@@ -1568,6 +1594,11 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_demo_search", h: 10, open: func(ui *UI) {
 			ui.Apply(runCommand(t, ui.service, "demo"))
 			ui.input.InsertText("err")
+		}},
+		// Its Error row opens a menu of the errors in its place.
+		{name: "banner_demo_errors", h: 14, open: func(ui *UI) {
+			ui.Apply(runCommand(t, ui.service, "demo"))
+			ui.Apply(ui.service.HandleBannerSelect(1))
 		}},
 		// A divider parts the header from the text and menu below it. Without
 		// a search the input row is hidden, since it takes no keys.

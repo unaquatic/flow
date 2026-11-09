@@ -1,14 +1,16 @@
 === text ===
 |  Reading the file.                     |
 |                                        |
-|  Error connection reset by peer        |
+|■ Error connection reset by peer        |
 |                                        |
 |                                        |
 === fg ===
 |  AAAAAAA AAA AAAAA                     |
 |                                        |
-|  AAAAA AAAAAAAAAA AAAAA AA AAAA        |
+|B BBBBB CCCCCCCCCC CCCCC CC CCCC        |
 |                                        |
 |                                        |
 === legend ===
 A #e6e6e6
+B #ff7c78
+C #787878

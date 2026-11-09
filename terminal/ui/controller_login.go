@@ -140,3 +140,30 @@ func (s *Service) SettleLogin(text string) []UIEvent {
 	}
 	return append(s.CancelBanner(), s.ShowToast(text)...)
 }
+
+// FailLogin hides an open login banner and shows the error e reports in the
+// indicator, as a run's error shows: ErrorIndicator of it, after
+// LoginFailedPrefix, such as "login to provider-a account demo failed:
+// token endpoint error (401)" over the body the endpoint answered with.
+// While a run is in progress, whose time the indicator shows, it reports the
+// error in the transcript instead, on one line, as SettleLogin does.
+func (s *Service) FailLogin(e app.EventLoginFailed) []UIEvent {
+	prefix := s.LoginFailedPrefix(e.Provider, e.Account)
+	if s.Streaming() {
+		return s.SettleLogin(prefix + e.Error.Message)
+	}
+	var out []UIEvent
+	if s.state.Banner == LoginBanner {
+		out = s.CancelBanner()
+	}
+	s.state.Working = false
+	ind := ErrorIndicator(e.Error)
+	ind.Text = prefix + ind.Text
+	return append(out, ind)
+}
+
+// LoginFailedPrefix returns what heads the error of a failed login to
+// account of pt, such as "login to provider-a account demo failed: ".
+func (s *Service) LoginFailedPrefix(pt agent.ProviderID, account agent.AccountID) string {
+	return fmt.Sprintf("login to %s account %s failed: ", s.ProviderName(pt), account)
+}

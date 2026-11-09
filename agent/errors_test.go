@@ -1,13 +1,15 @@
 package agent
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
 
 // TestResponseErrorError checks that a response error shows the provider's
 // raw body on one line, compacted when it is JSON and cut short when it is
-// long, and its message when it has no body.
+// long, and its message when it has no body, after a headline that has no
+// status when the error has none, as a streaming error does.
 func TestResponseErrorError(t *testing.T) {
 	long := strings.Repeat("é", MaxErrorBody)
 	for _, tt := range []struct {
@@ -18,7 +20,7 @@ func TestResponseErrorError(t *testing.T) {
 		{
 			name: "no body",
 			err:  &ResponseError{Provider: "provider-b", StatusCode: 0, Message: "Overloaded"},
-			want: "provider-b response error (0): Overloaded",
+			want: "provider-b response error: Overloaded",
 		},
 		{
 			name: "json body",
@@ -41,6 +43,31 @@ func TestResponseErrorError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.err.Error(); got != tt.want {
 				t.Errorf("Error() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestTokenEndpointError checks that a token endpoint's error response
+// shows as a provider's does, its status in brackets after
+// ErrTokenEndpoint and then its body on one line, and that it is
+// ErrTokenEndpoint.
+func TestTokenEndpointError(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		err  *TokenEndpointError
+		want string
+	}{
+		{name: "json body", err: &TokenEndpointError{StatusCode: 401, Body: "{\n  \"error\": \"invalid_grant\"\n}\n"},
+			want: `token endpoint error (401): {"error":"invalid_grant"}`},
+		{name: "no body", err: &TokenEndpointError{StatusCode: 503}, want: "token endpoint error (503)"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.err.Error(); got != tt.want {
+				t.Errorf("Error() = %q, want %q", got, tt.want)
+			}
+			if !errors.Is(tt.err, ErrTokenEndpoint) {
+				t.Errorf("errors.Is(%v, ErrTokenEndpoint) = false", tt.err)
 			}
 		})
 	}

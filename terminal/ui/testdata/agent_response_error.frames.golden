@@ -1,0 +1,35 @@
+=== text ===
+|  Reading the file.                     |
+|                                        |
+|■ Error gw response error (401)         |
+|  {                                     |
+|    "error": {                          |
+|      "type": "authentication_error",   |
+|      "message": "invalid key"          |
+|    }                                   |
+|  }                                     |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|  AAAAAAA AAA AAAAA                     |
+|                                        |
+|B BBBBB CC CCCCCCCC CCCCC CCCCC         |
+|  A                                     |
+|    AAAAAAAA A                          |
+|      AAAAAAA DDDDDDDDDDDDDDDDDDDDDDA   |
+|      AAAAAAAAAA DDDDDDDD DDDD          |
+|    A                                   |
+|  A                                     |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #ff7c78
+C #787878
+D #91b557

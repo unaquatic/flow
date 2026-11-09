@@ -216,7 +216,7 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 		if e.Error.Message == context.Canceled.Error() {
 			out = s.SettleLogin(fmt.Sprintf("login to %s account %s cancelled.", s.ProviderName(e.Provider), e.Account))
 		} else {
-			out = s.SettleLogin(fmt.Sprintf("login to %s account %s failed: %v", s.ProviderName(e.Provider), e.Account, e.Error.Message))
+			out = s.FailLogin(e)
 		}
 
 	case app.EventModelsListed:

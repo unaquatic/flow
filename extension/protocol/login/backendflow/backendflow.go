@@ -170,8 +170,8 @@ func (o *OAuth) pollDevice(ctx context.Context, deviceAuthID, userCode string) (
 		"device_auth_id": deviceAuthID,
 		"user_code":      userCode,
 	}, &grant)
-	if statusErr, ok := errors.AsType[*statusError](err); ok &&
-		(statusErr.code == http.StatusForbidden || statusErr.code == http.StatusNotFound) {
+	if statusErr, ok := errors.AsType[*agent.TokenEndpointError](err); ok &&
+		(statusErr.StatusCode == http.StatusForbidden || statusErr.StatusCode == http.StatusNotFound) {
 		return deviceGrant{}, errDevicePending
 	}
 	return grant, err
@@ -199,20 +199,8 @@ func (o *OAuth) exchange(ctx context.Context, code, verifier, redirectURI string
 	return tok, nil
 }
 
-// statusError reports an unsuccessful response of the issuer.
-type statusError struct {
-	code int
-	body []byte
-}
-
-func (e *statusError) Error() string {
-	return fmt.Sprintf("%v (%d): %s", agent.ErrTokenEndpoint, e.code, e.body)
-}
-
-func (e *statusError) Unwrap() error { return agent.ErrTokenEndpoint }
-
 // postJSON posts in as JSON to path on the issuer and decodes the response
-// into out.
+// into out. A status other than 200 OK is an *agent.TokenEndpointError.
 func (o *OAuth) postJSON(ctx context.Context, path string, in, out any) error {
 	body, err := json.Marshal(in)
 	if err != nil {
@@ -234,7 +222,7 @@ func (o *OAuth) postJSON(ctx context.Context, path string, in, out any) error {
 		return err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return &statusError{code: resp.StatusCode, body: data}
+		return &agent.TokenEndpointError{StatusCode: resp.StatusCode, Body: string(data)}
 	}
 	return json.Unmarshal(data, out)
 }

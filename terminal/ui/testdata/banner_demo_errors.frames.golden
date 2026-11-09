@@ -1,0 +1,51 @@
+=== text ===
+|■ Errors [↑/↓ move] [esc cancel]                                        |
+|                                                                        |
+|  Response JSON   A 401 response with a JSON error object               |
+|  Response HTML   A 502 response with a gateway's HTML page             |
+|  Stream error    An error event mid-stream, without a status           |
+|  Request failed  A connection closed before any response               |
+|  Login failed    A token endpoint that answers 401                     |
+|  Message error   An error under a reply                                |
+|                                                                        |
+|■                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== fg ===
+|A AAAAAA BBBB BBBBB BBBB BBBBBBB                                        |
+|                                                                        |
+|  CCCCCCCC CCCC   C CCC CCCCCCCC CCCC C CCCC CCCCC CCCCCC               |
+|  AAAAAAAA AAAA   B BBB BBBBBBBB BBBB B BBBBBBBBB BBBB BBBB             |
+|  AAAAAA AAAAA    BB BBBBB BBBBB BBBBBBBBBBB BBBBBBB B BBBBBB           |
+|  AAAAAAA AAAAAA  B BBBBBBBBBB BBBBBB BBBBBB BBB BBBBBBBB               |
+|  AAAAA AAAAAA    B BBBBB BBBBBBBB BBBB BBBBBBB BBB                     |
+|  AAAAAAA AAAAA   BB BBBBB BBBBB B BBBBB                                |
+|                                                                        |
+|D                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #232323 BoxBg
+D #ff5f00
+░ #ff5f00

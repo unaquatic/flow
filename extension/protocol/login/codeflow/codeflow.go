@@ -270,7 +270,7 @@ func (a *OAuth) postForm(ctx context.Context, endpoint string, form url.Values) 
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return body, fmt.Errorf("%w (%d): %s", agent.ErrTokenEndpoint, resp.StatusCode, body)
+		return body, &agent.TokenEndpointError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 	return body, nil
 }

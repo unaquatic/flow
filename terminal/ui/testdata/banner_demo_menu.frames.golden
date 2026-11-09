@@ -2,7 +2,7 @@
 |■ Demos [↑/↓ move] [esc cancel]                                         |
 |                                                                        |
 |  Stream    Run a streamed demo reply                                   |
-|  Error     Run a simulated network error                               |
+|  Error     Show each kind of error flow reports                        |
 |  Grapheme  Run a grapheme width check on this terminal                 |
 |  Palette   Run a demo of the xterm 256-color palette                   |
 |                                                                        |
@@ -15,7 +15,7 @@
 |A AAAAA BBBB BBBBB BBBB BBBBBBB                                         |
 |                                                                        |
 |  CCCCCC    CCC C CCCCCCCC CCCC CCCCC                                   |
-|  AAAAA     BBB B BBBBBBBBB BBBBBBB BBBBB                               |
+|  AAAAA     BBBB BBBB BBBB BB BBBBB BBBB BBBBBBB                        |
 |  AAAAAAAA  BBB B BBBBBBBB BBBBB BBBBB BB BBBB BBBBBBBB                 |
 |  AAAAAAA   BBB B BBBB BB BBB BBBBB BBBBBBBBB BBBBBBB                   |
 |                                                                        |

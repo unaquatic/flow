@@ -3,7 +3,7 @@
 |  ok                                                                    |
 |                                                                        |
 |                                                                        |
-|■ Error Request Failed: Post "https://api.example.com/v1/messages":     |
+|■ Error request failed: Post "https://api.example.com/v1/messages":     |
 |  EOF                                                                   |
 |                                                                        |
 |■                                                                       |

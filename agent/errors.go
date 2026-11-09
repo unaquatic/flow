@@ -74,16 +74,61 @@ type ResponseError struct {
 // shows before it cuts the body short with an ellipsis.
 const MaxErrorBody = 1000
 
-// Error returns the provider, the status, and the raw response body as the
-// provider sent it, on one line, or the message when there is no body. A
-// JSON body is compacted, any other has its runs of white space collapsed,
-// and either is cut to MaxErrorBody bytes.
+// Title returns the headline of the error: the provider, and the status in
+// brackets when there is one, such as "provider-a response error (401)", or
+// "provider-a response error" for a streaming error.
+func (e *ResponseError) Title() string {
+	return StatusTitle(e.Provider+" response error", e.StatusCode)
+}
+
+// Error returns Title, then the raw response body as the provider sent it,
+// on one line, or the message when there is no body. A JSON body is
+// compacted, any other has its runs of white space collapsed, and either is
+// cut to MaxErrorBody bytes.
 func (e *ResponseError) Error() string {
 	detail := e.Message
 	if body := OneLineBody(e.ResponseBody); body != "" {
 		detail = body
 	}
-	return fmt.Sprintf("%s response error (%d): %s", e.Provider, e.StatusCode, detail)
+	return e.Title() + ": " + detail
+}
+
+// TokenEndpointError reports an OAuth token endpoint that answered with a
+// status other than 200 OK. It wraps ErrTokenEndpoint.
+type TokenEndpointError struct {
+	// StatusCode is the HTTP status of the response.
+	StatusCode int
+	// Body is the response body as the endpoint sent it.
+	Body string
+}
+
+// Title returns the headline of the error: ErrTokenEndpoint and the status
+// in brackets, such as "token endpoint error (401)".
+func (e *TokenEndpointError) Title() string {
+	return StatusTitle(ErrTokenEndpoint.Error(), e.StatusCode)
+}
+
+// Error returns Title, then the body on one line, as OneLineBody puts it,
+// when there is one.
+func (e *TokenEndpointError) Error() string {
+	if body := OneLineBody(e.Body); body != "" {
+		return e.Title() + ": " + body
+	}
+	return e.Title()
+}
+
+// Unwrap returns ErrTokenEndpoint.
+func (e *TokenEndpointError) Unwrap() error { return ErrTokenEndpoint }
+
+// StatusTitle returns the headline of an error that an HTTP response
+// answered with: what, and then status in brackets, such as
+// "token endpoint error (401)", or what alone when status is zero, as for
+// an error that a stream sends after its 200.
+func StatusTitle(what string, status int) string {
+	if status == 0 {
+		return what
+	}
+	return fmt.Sprintf("%s (%d)", what, status)
 }
 
 // OneLineBody returns body on one line: compacted when it is JSON, with its

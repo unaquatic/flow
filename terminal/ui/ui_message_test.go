@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/extension/snapshot"
@@ -99,6 +101,36 @@ func TestMessageUpdatesKeepOneWidgetPerPart(t *testing.T) {
 	}
 	if done, ok := tools[0].State.(message.ToolStateCompleted); !ok || done.Output != "ok  \tcalc\t0.003s" {
 		t.Errorf("tool widget state = %+v, want completed with its output", tools[0].State)
+	}
+}
+
+// TestMessageErrorKeepsOneView checks that the error a message failed with
+// shows in one ErrorView after its parts, whose line and body read as the
+// indicator's do, however often the message updates, and that the latest
+// error replaces the one before it.
+func TestMessageErrorKeepsOneView(t *testing.T) {
+	ui := newInlineTestUI(t)
+	msg := agentText("a1", "Reading the file.")
+	ui.AddMessage(msg)
+	msg.Error = errors.New("connection reset by peer")
+	ui.UpdateMessage(msg)
+	msg.Error = &agent.ResponseError{Provider: "gw", StatusCode: 401, ResponseBody: `{"error":"bad key"}`}
+	ui.UpdateMessage(msg)
+
+	var views []*ErrorView
+	for _, child := range ui.messageWidgets["a1"].SegmentFor("a1").ContentBox.Children() {
+		if v, ok := child.(*ErrorView); ok {
+			views = append(views, v)
+		}
+	}
+	if len(views) != 1 {
+		t.Fatalf("got %d error views, want 1", len(views))
+	}
+	if got, want := views[0].Label.Content().PlainText(), IndicatorErrorTitle+" gw response error (401)"; got != want {
+		t.Errorf("line = %q, want %q", got, want)
+	}
+	if got, want := views[0].Detail.Content().PlainText(), "{\n  \"error\": \"bad key\"\n}"; !views[0].Detail.Visible() || got != want {
+		t.Errorf("body = %q (shown %v), want %q", got, views[0].Detail.Visible(), want)
 	}
 }
 
