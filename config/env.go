@@ -36,6 +36,10 @@ const (
 	// auto_update does off, whatever the file says. flow update still does
 	// both on request.
 	EnvDisableAutoUpdate = "FLOW_DISABLE_AUTOUPDATE"
+	// EnvManagedBy names the package manager that installed flow, npm or
+	// pnpm, which flow updates itself with. The launcher of flow's npm
+	// package sets it.
+	EnvManagedBy = "FLOW_MANAGED_BY"
 )
 
 // An EnvVar is an environment variable that flow reads.
@@ -58,8 +62,13 @@ func EnvVars() []EnvVar {
 		{Name: EnvServerPassword, Usage: "Password for HTTP basic authentication"},
 		{Name: EnvServerUsername, Usage: "User name that goes with the server password (default flow)"},
 		{Name: EnvDisableAutoUpdate, Usage: "Stop checking for and installing updates in the background"},
+		{Name: EnvManagedBy, Usage: "Package manager that installed flow, npm or pnpm (set by its npm launcher)"},
 	}
 }
+
+// ManagedBy returns the package manager that EnvManagedBy names, or "" when
+// it is unset.
+func ManagedBy() string { return os.Getenv(EnvManagedBy) }
 
 // AutoUpdateDisabled reports whether EnvDisableAutoUpdate turns off the
 // background check for updates.

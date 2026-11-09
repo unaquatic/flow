@@ -1,10 +1,19 @@
 package main
 
 import (
+	"archive/tar"
+	"archive/zip"
+	"bytes"
+	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"os"
@@ -136,6 +145,12 @@ const (
 	demoReadOnly
 	// demoUnmanaged is a folder of no package manager's.
 	demoUnmanaged
+	// demoScript is the folder the install script installed flow in, which
+	// updates from its GitHub release.
+	demoScript
+	// demoInterrupted is demoScript's, whose download breaks off just
+	// before it is done.
+	demoInterrupted
 )
 
 // demoGlobalRoot is the global folder of npm in the update demos.
@@ -165,8 +180,10 @@ var updateDemoCases = []updateDemo{
 	{name: "latest", desc: "Up to date", current: demoui.UpdateVersion},
 	{name: "check", desc: "A newer release, only checked for", current: demoOlder, opts: updateOptions{check: true}},
 	{name: "install", desc: "A newer release, installed with npm", current: demoOlder},
+	{name: "script", desc: "A newer release, downloaded from GitHub for a flow the install script installed", current: demoOlder, install: demoScript},
+	{name: "interrupted", desc: "A newer release, whose download breaks off", current: demoOlder, install: demoInterrupted},
 	{name: "readonly", desc: "A newer release, into a global folder the user cannot write to", current: demoOlder, install: demoReadOnly},
-	{name: "unmanaged", desc: "A newer release, for a flow no package manager installed", current: demoOlder, install: demoUnmanaged},
+	{name: "unmanaged", desc: "A newer release, for a flow installed by neither a package manager nor the install script", current: demoOlder, install: demoUnmanaged},
 	{name: "devel", desc: "A development build", current: "(devel)"},
 }
 
@@ -187,11 +204,11 @@ func updateDemos() []demoCase {
 }
 
 // run writes what flow update prints in the case d to w: the output of the
-// command itself, run against a canned registry, which names
+// command itself, run against a canned registry and GitHub, which name
 // demoui.UpdateVersion the latest release, and a package manager that
-// installs nothing, so that nothing is checked or installed. Where w is a
-// terminal, the registry and the package manager take a while, as they do
-// over the network, so that the live lines show.
+// installs nothing, so that nothing is checked or installed but a flow in a
+// new temporary folder. Where w is a terminal, the canned replies take a
+// while, as the network's do, so that its live lines show.
 func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 	dir, err := os.MkdirTemp("", product.ID+"-demo-update-")
 	if err != nil {
@@ -199,6 +216,13 @@ func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 	}
 	defer os.RemoveAll(dir)
 	slow := newLiveLine(w).live
+	if d.install == demoScript || d.install == demoInterrupted {
+		u, err := scriptUpdater(dir, d, slow)
+		if err != nil {
+			return err
+		}
+		return runUpdate(ctx, w, u, d.opts, demoInstall)
+	}
 	// The executable is in the folder as the package manager's own report
 	// of it resolves, where it is a symbolic link on this machine.
 	root := demoGlobalRoot
@@ -231,6 +255,79 @@ func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 	return runUpdate(ctx, w, u, d.opts, install)
 }
 
+// demoReleaseURL is where the canned GitHub of the update demos serves the
+// release asset of demoui.UpdateVersion, as GitHub serves a release's.
+var demoReleaseURL = "https://github.com/" + update.Repository + "/releases/download/" + demoui.UpdateVersion + "/" + update.ReleaseAsset()
+
+// scriptUpdater returns the Updater of case d, a flow that the install script
+// installed in dir, with its marker beside it, which updates from a canned
+// GitHub: its latest release is demoui.UpdateVersion, whose asset holds a
+// demo binary, sent in parts, a while apart when slow is set, and broken
+// off before its last part in the demoInterrupted case.
+func scriptUpdater(dir string, d updateDemo, slow bool) (*update.Updater, error) {
+	exe := filepath.Join(dir, "bin", update.ExecutableName())
+	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
+		return nil, err
+	}
+	if err := errors.Join(
+		os.WriteFile(exe, []byte("old"), 0o755),
+		os.WriteFile(filepath.Join(filepath.Dir(exe), update.MarkerName), nil, 0o644),
+	); err != nil {
+		return nil, err
+	}
+	asset, err := demoAsset()
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(asset)
+	release, err := json.Marshal(map[string]any{"tag_name": demoui.UpdateVersion, "assets": []map[string]string{{
+		"name":                 update.ReleaseAsset(),
+		"digest":               "sha256:" + hex.EncodeToString(sum[:]),
+		"browser_download_url": demoReleaseURL,
+	}}})
+	if err != nil {
+		return nil, err
+	}
+	github := demoTransport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.String() != demoReleaseURL {
+			return demoResponse(r, bytes.NewReader(release), int64(len(release))), nil
+		}
+		parts := &demoParts{data: asset, size: len(asset) / 50, slow: slow, breakOff: d.install == demoInterrupted}
+		return demoResponse(r, parts, int64(len(asset))), nil
+	})
+	return &update.Updater{Dir: dir, Current: d.current, Executable: exe,
+		GitHubAPI: "https://api.github.com", Client: &http.Client{Transport: demoSlow(slow, github)}}, nil
+}
+
+// demoAsset returns a release asset of the platform, as update.ReleaseAsset
+// names it, which holds a demo binary of 256 KiB of bytes that do not
+// compress, so that its download takes some parts.
+func demoAsset() ([]byte, error) {
+	binary := make([]byte, 256<<10)
+	rand.NewChaCha8([32]byte{}).Read(binary)
+	var buf bytes.Buffer
+	if strings.HasSuffix(update.ReleaseAsset(), ".zip") {
+		zw := zip.NewWriter(&buf)
+		f, err := zw.Create(update.ExecutableName())
+		if err != nil {
+			return nil, err
+		}
+		if _, err := f.Write(binary); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), zw.Close()
+	}
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	err := errors.Join(
+		tw.WriteHeader(&tar.Header{Name: update.ExecutableName(), Mode: 0o755, Size: int64(len(binary)), Typeflag: tar.TypeReg}),
+		func() error { _, err := tw.Write(binary); return err }(),
+		tw.Close(),
+		gz.Close(),
+	)
+	return buf.Bytes(), err
+}
+
 // demoTransport answers each request with what the func returns.
 type demoTransport func(*http.Request) (*http.Response, error)
 
@@ -246,6 +343,38 @@ func demoSlow(slow bool, rt http.RoundTripper) http.RoundTripper {
 		time.Sleep(600 * time.Millisecond)
 		return rt.RoundTrip(r)
 	})
+}
+
+// demoResponse returns a 200 OK answer to r whose body is body, of size
+// bytes.
+func demoResponse(r *http.Request, body io.Reader, size int64) *http.Response {
+	return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Proto: "HTTP/1.1", ProtoMajor: 1, ProtoMinor: 1,
+		Header: http.Header{}, Body: io.NopCloser(body), ContentLength: size, Request: r}
+}
+
+// demoParts reads data in parts of size bytes, a while apart when slow is
+// set, and, with breakOff set, fails with io.ErrUnexpectedEOF in place of
+// its last part, as a connection that drops does.
+type demoParts struct {
+	data     []byte
+	size     int
+	slow     bool
+	breakOff bool
+}
+
+func (p *demoParts) Read(b []byte) (int, error) {
+	if len(p.data) == 0 {
+		return 0, io.EOF
+	}
+	if p.breakOff && len(p.data) <= p.size {
+		return 0, io.ErrUnexpectedEOF
+	}
+	if p.slow {
+		time.Sleep(40 * time.Millisecond)
+	}
+	n := copy(b[:min(len(b), p.size)], p.data)
+	p.data = p.data[n:]
+	return n, nil
 }
 
 // demoInstall stands in for the package manager that cmd runs, and writes

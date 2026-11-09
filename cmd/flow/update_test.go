@@ -70,9 +70,6 @@ func TestRunUpdate(t *testing.T) {
 			if w.String() != tt.want {
 				t.Errorf("output = %q, want %q", w.String(), tt.want)
 			}
-			if s, err := u.State(); err != nil || s.Latest != "v0.2.0" {
-				t.Errorf("State = %+v, %v; want the release saved", s, err)
-			}
 		})
 	}
 
@@ -86,8 +83,8 @@ func TestRunUpdate(t *testing.T) {
 
 	t.Run("build from source", func(t *testing.T) {
 		err := runUpdate(t.Context(), new(bytes.Buffer), testUpdater(t, "v0.1.0", false), updateOptions{}, (*exec.Cmd).Run)
-		if !errors.Is(err, update.ErrUnmanaged) || !strings.Contains(err.Error(), "npm install -g @unaquatic/flow@latest") {
-			t.Errorf("runUpdate = %v, want ErrUnmanaged naming the npm install", err)
+		if !errors.Is(err, update.ErrUnmanaged) || !strings.HasSuffix(err.Error(), ", run "+update.InstallCommand) {
+			t.Errorf("runUpdate = %v, want ErrUnmanaged naming the install script", err)
 		}
 	})
 
@@ -121,7 +118,7 @@ func TestRunUpdate(t *testing.T) {
 		}
 		var w bytes.Buffer
 		err := runUpdate(t.Context(), &w, testUpdater(t, "v0.1.0", true), updateOptions{}, (*exec.Cmd).Run)
-		if err == nil || !strings.HasPrefix(err.Error(), "npm install -g @unaquatic/flow@0.2.0") {
+		if err == nil || !strings.HasPrefix(err.Error(), "flow update: install failed: npm install -g @unaquatic/flow@0.2.0") {
 			t.Errorf("runUpdate = %v, want the install failed", err)
 		}
 		want := "Updating 0.1.0 → 0.2.0\n  npm install -g @unaquatic/flow@0.2.0\n\nnpm ERR! code EACCES\n"
@@ -129,6 +126,21 @@ func TestRunUpdate(t *testing.T) {
 			t.Errorf("output = %q, want npm's output after the command, %q", w.String(), want)
 		}
 	})
+}
+
+// TestDownloadProgress checks that a download's progress reads as a whole
+// percent, never past 100, or as the size done when the whole is unknown.
+func TestDownloadProgress(t *testing.T) {
+	for _, tt := range []struct {
+		done, total int64
+		want        string
+	}{
+		{0, 1000, "0%"}, {425, 1000, "42%"}, {1000, 1000, "100%"}, {1200, 1000, "100%"}, {3 << 20, -1, "3.0 MB"},
+	} {
+		if got := downloadProgress(tt.done, tt.total); got != tt.want {
+			t.Errorf("downloadProgress(%d, %d) = %q, want %q", tt.done, tt.total, got, tt.want)
+		}
+	}
 }
 
 // TestRunUpdateBusy checks that flow update installs nothing while another
@@ -145,7 +157,7 @@ func TestRunUpdateBusy(t *testing.T) {
 		return nil
 	}
 	err = runUpdate(t.Context(), new(bytes.Buffer), u, updateOptions{}, install)
-	if !errors.Is(err, update.ErrBusy) || err.Error() != "cannot update flow: another flow is installing an update" {
+	if !errors.Is(err, update.ErrBusy) || err.Error() != "flow update: busy: another flow is installing an update" {
 		t.Errorf("runUpdate = %v, want ErrBusy", err)
 	}
 

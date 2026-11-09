@@ -24,6 +24,10 @@ const (
 	MethodNPM Method = "npm"
 	// MethodPNPM is a flow that pnpm installed.
 	MethodPNPM Method = "pnpm"
+	// MethodStandalone is a flow that the install script installed, as
+	// IsStandalone tells, which updates itself from its GitHub release, as
+	// Updater.Replace does.
+	MethodStandalone Method = "standalone"
 )
 
 // DetectMethod returns the package manager that installed the executable at
@@ -58,18 +62,26 @@ func (m Method) InstallArgs(version string) []string {
 }
 
 // Install is how the running flow updates to a release: the command line
-// of its package manager that installs it.
+// of its package manager that installs it, or, for MethodStandalone, the
+// download that Updater.Replace makes.
 type Install struct {
 	// Method is the package manager that installed flow.
 	Method Method
 	// Version is the release it installs, in Canonical form.
 	Version string
-	// Args is the command line, as Method.InstallArgs returns it.
+	// Args is the command line, as Method.InstallArgs returns it, and nil
+	// for MethodStandalone.
 	Args []string
 }
 
-// String returns the command line of i, as a shell takes it.
-func (i Install) String() string { return strings.Join(i.Args, " ") }
+// String returns the command line of i, as a shell takes it, or, for
+// MethodStandalone, InstallCommand, which the user runs to the same end.
+func (i Install) String() string {
+	if i.Method == MethodStandalone {
+		return InstallCommand
+	}
+	return strings.Join(i.Args, " ")
+}
 
 // Command returns the command that runs i, which ctx kills when it is done
 // first.
@@ -77,9 +89,10 @@ func (i Install) Command(ctx context.Context) *exec.Cmd {
 	return exec.CommandContext(ctx, i.Args[0], i.Args[1:]...)
 }
 
-// ErrUnmanaged reports a flow that no package manager Method names
-// installed globally, which updates the way it was installed.
-var ErrUnmanaged = errors.New("not a global npm or pnpm install")
+// ErrUnmanaged reports a flow that neither a package manager Method names
+// installed globally nor the install script installed, which updates the
+// way it was installed.
+var ErrUnmanaged = errors.New("not installed by npm, pnpm or the install script")
 
 // NotWritableError reports a global install that the user running flow
 // cannot write to, such as one under a prefix that root owns, which the
@@ -92,31 +105,43 @@ type NotWritableError struct {
 }
 
 func (e *NotWritableError) Error() string {
-	return fmt.Sprintf("%s is not writable, run %s", e.Dir, e.Install)
+	return fmt.Sprintf("not writable: %s, run %s", e.Dir, e.Install)
 }
 
-// Plan returns the Install that updates the running flow to version. It
-// fails with ErrUnmanaged when no package manager installed flow globally:
-// when the executable is in no package manager's folders, or not in the
-// global folder that the package manager whose folders it is in reports,
-// as a project's node_modules is not. It fails with a NotWritableError when
-// the global folder is not writable.
+// Plan returns the Install that updates the running flow to version: from
+// its GitHub release when the install script installed it, as IsStandalone
+// tells, and otherwise with the package manager of u's Method, or else the
+// one the folders of the executable tell, as DetectMethod reads them. It
+// fails with ErrUnmanaged when neither installed it: when the executable is
+// in no node_modules folder, or not in the global folder that the package
+// manager reports, as a project's node_modules is not. It fails with a
+// NotWritableError when the folder it would write to is not writable.
 func (u *Updater) Plan(ctx context.Context, version string) (Install, error) {
+	writable := u.Writable
+	if writable == nil {
+		writable = Writable
+	}
+	if IsStandalone(u.Executable) {
+		inst := Install{Method: MethodStandalone, Version: Canonical(version)}
+		if dir := filepath.Dir(u.Executable); !writable(dir) {
+			return Install{}, &NotWritableError{Dir: dir, Install: inst}
+		}
+		return inst, nil
+	}
 	m := DetectMethod(u.Executable)
+	if m != MethodNone && u.Method != MethodNone {
+		m = u.Method
+	}
 	if m == MethodNone {
-		return Install{}, fmt.Errorf("%s is %w", u.Executable, ErrUnmanaged)
+		return Install{}, fmt.Errorf("%w: %s", ErrUnmanaged, u.Executable)
 	}
 	inst := Install{Method: m, Version: Canonical(version), Args: m.InstallArgs(version)}
 	root, err := u.GlobalRoot(ctx, m)
 	if err != nil {
-		return Install{}, fmt.Errorf("%s is %w: %w", u.Executable, ErrUnmanaged, err)
+		return Install{}, fmt.Errorf("%w: %s (%w)", ErrUnmanaged, u.Executable, err)
 	}
 	if rel, err := filepath.Rel(root, u.Executable); err != nil || !filepath.IsLocal(rel) {
-		return Install{}, fmt.Errorf("%s is %w (outside %s)", u.Executable, ErrUnmanaged, root)
-	}
-	writable := u.Writable
-	if writable == nil {
-		writable = Writable
+		return Install{}, fmt.Errorf("%w: %s (outside %s)", ErrUnmanaged, u.Executable, root)
 	}
 	if !writable(root) {
 		return Install{}, &NotWritableError{Dir: root, Install: inst}
@@ -125,8 +150,10 @@ func (u *Updater) Plan(ctx context.Context, version string) (Install, error) {
 }
 
 // GlobalRoot returns the folder that m installs global packages in, its
-// symbolic links resolved, as m root -g reports it, such as
-// /usr/local/lib/node_modules of npm. It fails when m is not on the path.
+// symbolic links resolved, as m root -g reports it: npm's node_modules,
+// such as /usr/local/lib/node_modules, and for pnpm the folder that holds
+// its node_modules and the store, .pnpm, beside it, which the packages are
+// in. It fails when m is not on the path.
 func (u *Updater) GlobalRoot(ctx context.Context, m Method) (string, error) {
 	if m != MethodNPM && m != MethodPNPM {
 		return "", ErrUnmanaged
@@ -134,6 +161,9 @@ func (u *Updater) GlobalRoot(ctx context.Context, m Method) (string, error) {
 	dir, err := u.output(ctx, string(m), "root", "-g")
 	if err != nil {
 		return "", err
+	}
+	if m == MethodPNPM {
+		dir = filepath.Dir(dir)
 	}
 	if real, err := filepath.EvalSymlinks(dir); err == nil {
 		dir = real

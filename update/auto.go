@@ -17,7 +17,8 @@ import (
 
 const (
 	// StateName is the name of the file in the data directory that keeps
-	// what the last check found, as State holds it.
+	// the version of flow that ran last, as Updated reads and writes it:
+	// {"last_version": "v1.2.3"}.
 	StateName = "update.json"
 
 	// InstallLockName is the name of the lock file in the data directory
@@ -30,116 +31,43 @@ const (
 // the output of every background install is appended to.
 func LogPath(dir string) string { return filepath.Join(dir, "logs", "update.log") }
 
-// State is what the last check for updates found, which the state file
-// StateName keeps between runs.
-type State struct {
-	// CheckedAt is when the registry was last asked for the latest release.
-	CheckedAt time.Time `json:"checked_at,omitzero"`
-	// Latest is the latest release it named, in Canonical form.
-	Latest string `json:"latest,omitempty"`
-	// Failed is the release a background install last failed to install,
-	// which Auto does not install again.
-	Failed string `json:"failed,omitempty"`
-	// Installed is the release an update installed last, until its first
-	// start tells of it, as TakeInstalled reports it.
-	Installed string `json:"installed,omitempty"`
-}
-
 // File returns the state file of the data directory.
 func (u *Updater) File() config.File { return config.File{Dir: u.Dir, Name: StateName} }
 
-// State returns what the state file keeps, or the zero State when there is
-// no state file.
-func (u *Updater) State() (State, error) {
-	var s State
-	keys, err := u.File().Read()
-	if err != nil || len(keys) == 0 {
-		return s, err
-	}
-	data, err := json.Marshal(keys)
-	if err != nil {
-		return s, err
-	}
-	return s, json.Unmarshal(data, &s)
-}
-
-// SaveState applies change to what the state file keeps, and saves it, as
-// config.File.Edit saves a file.
-func (u *Updater) SaveState(change func(*State)) error {
-	return u.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
-		var s State
-		if len(keys) > 0 {
-			data, err := json.Marshal(keys)
-			if err != nil {
-				return err
-			}
-			if err := json.Unmarshal(data, &s); err != nil {
-				return err
-			}
-		}
-		change(&s)
-		data, err := json.Marshal(s)
-		if err != nil {
-			return err
-		}
-		clear(keys)
-		return json.Unmarshal(data, &keys)
-	})
-}
-
-// RecordInstalled saves version as the release an update installed, which
-// TakeInstalled reports at its first start, and clears it as failed.
-func (u *Updater) RecordInstalled(version string) error {
-	return u.SaveState(func(s *State) { s.Installed, s.Failed = Canonical(version), "" })
-}
-
-// TakeInstalled returns the release an update installed, as
-// RecordInstalled saved it, when it is the running flow, and clears it in
-// the same write, so that only the first start of the release, of all the
-// flows that start at once, reports it. It returns "" otherwise, and when
-// the state file cannot be read or written, which it logs.
-func (u *Updater) TakeInstalled() string {
+// Updated returns the running flow's version when it is a release newer than
+// the one that ran last, as the state file keeps it, which an update, of any
+// kind, brought, and "" otherwise. It saves the running release as the one
+// that ran last, in the same write, under the file's lock, so that of the
+// flows of a release that start at once only the first reports it. A first
+// start, with no state file yet, reports none; so does a build that is no
+// release, which it does not save. It logs what fails, and reports none then.
+func (u *Updater) Updated() string {
 	current := Canonical(u.Current)
-	if s, err := u.State(); err != nil || s.Installed == "" || s.Installed != current {
+	if !IsRelease(current) {
 		return ""
 	}
-	var taken string
-	err := u.SaveState(func(s *State) {
-		if s.Installed != "" && s.Installed == current {
-			taken, s.Installed = s.Installed, ""
+	var updated string
+	err := u.File().Edit(context.Background(), func(keys map[string]json.RawMessage) error {
+		var last string
+		if raw, ok := keys["last_version"]; ok {
+			if err := json.Unmarshal(raw, &last); err != nil {
+				return err
+			}
 		}
+		if last != "" && Newer(current, last) {
+			updated = current
+		}
+		// What older builds kept goes with the first write.
+		clear(keys)
+		data, err := json.Marshal(current)
+		keys["last_version"] = data
+		return err
 	})
 	if err != nil {
 		slog.Warn("saving the update state", "err", err)
 		return ""
 	}
-	return taken
-}
-
-// Check returns the latest release, as Latest finds it, and saves it with
-// the time in the state file; but while the state file holds a release
-// found less than Interval ago, it returns that one without asking the
-// registry.
-func (u *Updater) Check(ctx context.Context) (string, error) {
-	interval := u.Interval
-	if interval == 0 {
-		interval = CheckInterval
-	}
-	s, err := u.State()
-	if err != nil {
-		slog.Warn("reading the update state", "err", err)
-	}
-	if age := time.Since(s.CheckedAt); err == nil && s.Latest != "" && age >= 0 && age < interval {
-		return s.Latest, nil
-	}
-	latest, err := u.Latest(ctx)
-	if err != nil {
-		return "", err
-	}
-	if err := u.SaveState(func(s *State) { s.CheckedAt, s.Latest = time.Now().UTC(), latest }); err != nil {
-		slog.Warn("saving the update state", "err", err)
-	}
-	return latest, nil
+	return updated
 }
 
 // Status is the outcome that Auto reports.
@@ -149,8 +77,7 @@ const (
 	// StatusAvailable reports a newer release that was not installed.
 	StatusAvailable Status = iota + 1
 	// StatusInstalled reports a newer release that was installed, which
-	// flow runs from its next start, and which RecordInstalled saved for
-	// that start to tell of.
+	// flow runs from its next start, which Updated tells of.
 	StatusInstalled
 	// StatusFailed reports a newer release that failed to install.
 	StatusFailed
@@ -166,20 +93,21 @@ type Result struct {
 	Err error
 }
 
-// Auto checks for a release newer than the running flow, as Check does,
+// Auto checks for a release newer than the running flow, as Latest does,
 // and installs it as Background does, and reports what came of it, which it
 // logs too. It reports false, having done nothing, when the running flow is
 // no release build, as IsRelease tells, or is up to date, when the check
 // fails, when another flow is installing an update, and on Windows, where
 // the executable of a running flow cannot be replaced, without checking.
+// A release that failed to install is tried again at the next start.
 //
 // It reports StatusAvailable, without installing, when Plan finds no
-// install that it may run, and when the release failed to install before.
+// install that it may run.
 func (u *Updater) Auto(ctx context.Context) (Result, bool) {
 	if !IsRelease(u.Current) || runtime.GOOS == "windows" {
 		return Result{}, false
 	}
-	latest, err := u.Check(ctx)
+	latest, err := u.Latest(ctx)
 	if err != nil {
 		slog.Info("update check", "err", err)
 		return Result{}, false
@@ -187,14 +115,10 @@ func (u *Updater) Auto(ctx context.Context) (Result, bool) {
 	if !Newer(latest, u.Current) {
 		return Result{}, false
 	}
-	available := Result{Status: StatusAvailable, Version: latest}
-	if s, err := u.State(); err != nil || s.Failed == latest {
-		return available, true
-	}
 	inst, err := u.Plan(ctx, latest)
 	if err != nil {
 		slog.Info("update not installed", "version", latest, "err", err)
-		return available, true
+		return Result{Status: StatusAvailable, Version: latest}, true
 	}
 	slog.Info("installing update", "version", latest, "command", inst.String())
 	switch err := u.Background(inst); {
@@ -202,20 +126,14 @@ func (u *Updater) Auto(ctx context.Context) (Result, bool) {
 		return Result{}, false
 	case err != nil:
 		slog.Warn("update failed", "version", latest, "err", err)
-		if err := u.SaveState(func(s *State) { s.Failed = latest }); err != nil {
-			slog.Warn("saving the update state", "err", err)
-		}
 		return Result{Status: StatusFailed, Version: latest, Err: err}, true
 	}
 	slog.Info("update installed", "version", latest)
-	if err := u.RecordInstalled(latest); err != nil {
-		slog.Warn("saving the update state", "err", err)
-	}
 	return Result{Status: StatusInstalled, Version: latest}, true
 }
 
 // ErrBusy reports an update that another flow is installing.
-var ErrBusy = errors.New("another flow is installing an update")
+var ErrBusy = errors.New("busy: another flow is installing an update")
 
 // LockInstall takes the lock file InstallLockName, which every install of
 // an update holds, so that no two run at once, and returns it, held until
@@ -242,7 +160,9 @@ func (u *Updater) LockInstall() (*os.File, error) {
 
 // Background runs inst and waits for it, apart from flow and its terminal,
 // so that it outlives flow and no key pressed there stops it, with its
-// output appended to the update log, LogPath. It holds the install lock
+// output appended to the update log, LogPath; for MethodStandalone it
+// replaces the executable itself, as Replace does, which flow exiting
+// meanwhile stops, leaving the executable as it was. It holds the install lock
 // meanwhile, as LockInstall takes it, which inst holds too where it can
 // inherit it, so that no other flow installs until inst is done, even once
 // this one has exited. It fails with ErrBusy when another holds the lock.
@@ -260,6 +180,14 @@ func (u *Updater) Background(inst Install) error {
 		return err
 	}
 	defer log.Close()
+	if inst.Method == MethodStandalone {
+		fmt.Fprintf(log, "%s replacing %s with %s\n", time.Now().UTC().Format(time.RFC3339), u.Executable, inst.Version)
+		if err := u.Replace(context.Background(), inst.Version); err != nil {
+			fmt.Fprintf(log, "failed: %v\n", err)
+			return fmt.Errorf("%w, see %s", err, log.Name())
+		}
+		return nil
+	}
 	fmt.Fprintf(log, "%s %s\n", time.Now().UTC().Format(time.RFC3339), inst)
 	// The install outlives flow, so no context stops it.
 	cmd := inst.Command(context.Background())
@@ -267,7 +195,7 @@ func (u *Updater) Background(inst Install) error {
 	detach(cmd, lock)
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(log, "failed: %v\n", err)
-		return fmt.Errorf("%s: %w, see %s", inst, err, log.Name())
+		return fmt.Errorf("install failed: %s: %w, see %s", inst, err, log.Name())
 	}
 	return nil
 }

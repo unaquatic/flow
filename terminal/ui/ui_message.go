@@ -379,19 +379,32 @@ func LogoLinesIn(c style.Color) iter.Seq[style.StyledText] {
 // the lines printed after fullscreen mode.
 const ResumeIndent = 2
 
+// IntroLine returns text, the line that introduces a command to run, bold,
+// in fg, as ResumeIntro introduces the resume command.
+func IntroLine(text string, fg style.Color) style.StyledText {
+	return style.NewStyledText(style.New().WithFg(fg).Bold().Func()(text))
+}
+
+// ProductCommand returns a command of the product: the product name bold in
+// productFg, then args, if any, in fg, as ResumeCommand is.
+func ProductCommand(args string, fg style.Color) style.StyledText {
+	name := style.New().WithFg(productFg).Bold().Func()(product.Name)
+	if args == "" {
+		return style.NewStyledText(name)
+	}
+	return style.NewStyledText(name, style.New().WithFg(fg).Func()(args))
+}
+
 // ResumeIntro returns the line that introduces the command that resumes a
 // session, bold, in fg.
 func ResumeIntro(fg style.Color) style.StyledText {
-	return style.NewStyledText(style.New().WithFg(fg).Bold().Func()("Resume this session with:"))
+	return IntroLine("Resume this session with:", fg)
 }
 
 // ResumeCommand returns the command that resumes session id: the product
 // name bold in productFg, then the flag that names id, in fg.
 func ResumeCommand(id message.SessionID, fg style.Color) style.StyledText {
-	return style.NewStyledText(
-		style.New().WithFg(productFg).Bold().Func()(product.Name),
-		style.New().WithFg(fg).Func()(" --session "+string(id)),
-	)
+	return ProductCommand(" --session "+string(id), fg)
 }
 
 // NewResumeNotice returns the notice that tells how to resume session id, on

@@ -1,0 +1,70 @@
+name: Release npm
+
+run-name: Release npm ${{ inputs.tag }}
+
+# Release npm publishes the GitHub release of a version tag, vX.Y.Z, to npm
+# as @unaquatic/flow X.Y.Z, with the flow binary of every platform, as
+# npm-package.sh builds it from the release's assets, once their release
+# attestation verifies them. ci-tag.yml starts it once the release is out.
+# It publishes by npm's trusted publishing, which names this file, and so it
+# always runs on its own rather than called by another workflow. A version
+# published before is left as it is.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to release, vX.Y.Z"
+        type: string
+        required: true
+
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
+
+permissions:
+  attestations: read
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: Release npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          registry-url: https://registry.npmjs.org
+
+      - name: Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "$TAG is no version vX.Y.Z" >&2
+            exit 1
+          fi
+          gh release download "$TAG" --repo "$REPO" --pattern 'flow-*.tar.gz' --dir "$RUNNER_TEMP/assets"
+          for asset in "$RUNNER_TEMP"/assets/*; do
+            gh release verify-asset "$TAG" "$asset" --repo "$REPO"
+          done
+          .github/scripts/npm-package.sh "$TAG" "$RUNNER_TEMP/assets" "$RUNNER_TEMP/npm"
+
+      - name: Publish
+        run: |
+          name=$(jq -r .name "$RUNNER_TEMP/npm/package.json")
+          version=$(jq -r .version "$RUNNER_TEMP/npm/package.json")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is published already"
+            exit 0
+          fi
+          npm publish "$RUNNER_TEMP/npm" --access public --provenance

@@ -1,0 +1,19 @@
+{
+  "name": "@unaquatic/flow",
+  "version": "0.0.0",
+  "description": "A tiny and fast agent written in golang.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unaquatic/flow.git"
+  },
+  "bin": {
+    "flow": "bin/flow.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

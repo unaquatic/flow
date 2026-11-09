@@ -1,0 +1,79 @@
+name: Release
+
+run-name: Release ${{ inputs.tag }}
+
+# Release creates the GitHub release of a version tag, vX.Y.Z, pushed by hand
+# on a commit of main, with the flow binary of each platform, as
+# release-assets.sh builds them. Its notes, as release-notes.sh writes them,
+# list every squash-merged pull request since the previous version with its
+# title and summary. The release is published once every asset is attached,
+# as it is immutable from then on, and GitHub attests it. A tag released
+# before is left as it is.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to release, vX.Y.Z"
+        type: string
+        required: true
+
+  workflow_call:
+    inputs:
+      tag:
+        description: "Version tag to release, vX.Y.Z"
+        type: string
+        required: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+          fetch-depth: 0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "$TAG is no version vX.Y.Z" >&2
+            exit 1
+          fi
+          sha=$(git rev-parse "$TAG^{commit}")
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "$TAG tags $sha, which is not on main" >&2
+            exit 1
+          fi
+          if draft=$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [ "$draft" = false ]; then
+              echo "$TAG is released already"
+              exit 0
+            fi
+            # A draft that a failed run left, which is not published yet.
+            gh release delete "$TAG" --repo "$REPO" --yes
+          fi
+          echo "releasing $sha as $TAG"
+
+          go generate ./internal/catalog
+          .github/scripts/release-assets.sh "$TAG" "$RUNNER_TEMP/assets"
+          .github/scripts/release-notes.sh "$TAG" > "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --repo "$REPO" --verify-tag --draft \
+            --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" "$RUNNER_TEMP"/assets/*
+          gh release edit "$TAG" --repo "$REPO" --draft=false

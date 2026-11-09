@@ -96,6 +96,7 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	Commands: []cmdline.Node{
 		versionCmd,
 		updateCmd,
+		uninstallCmd,
 		loginCmd,
 		logoutCmd,
 		accountCmd,
@@ -199,14 +200,13 @@ func highlighter(w io.Writer) func(string) string {
 }
 
 // introLine returns text, a line that introduces what follows it, bold as
-// ui.ResumeIntro draws the line that introduces the resume command, when
+// ui.IntroLine draws the line that introduces the resume command, when
 // color is set, and as it is otherwise.
 func introLine(text string, color bool) string {
 	if !color {
 		return text
 	}
-	bold := style.New().WithFg(style.ColorTransparent).Bold().Func()
-	return terminal.ANSI(style.NewStyledText(bold(text)), colorMode)
+	return terminal.ANSI(ui.IntroLine(text, style.ColorTransparent), colorMode)
 }
 
 // liveLine is a line that a terminal shows while a step runs, such as

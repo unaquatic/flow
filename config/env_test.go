@@ -63,13 +63,13 @@ func TestEnvVars(t *testing.T) {
 		}
 		listed[v.Name] = true
 	}
-	for _, name := range []string{EnvDataDir, EnvDebug, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvWidthProbe, EnvDisableAutoUpdate} {
+	for _, name := range []string{EnvDataDir, EnvDebug, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvWidthProbe, EnvDisableAutoUpdate, EnvManagedBy} {
 		if !listed[name] {
 			t.Errorf("EnvVars does not list %s", name)
 		}
 	}
 	prefix := strings.ToUpper(product.ID) + "_"
-	for _, name := range []string{EnvDataDir, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvDisableAutoUpdate} {
+	for _, name := range []string{EnvDataDir, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvDisableAutoUpdate, EnvManagedBy} {
 		if !strings.HasPrefix(name, prefix) {
 			t.Errorf("%s does not start with %s", name, prefix)
 		}
