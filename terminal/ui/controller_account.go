@@ -21,9 +21,9 @@ func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 
 	items := make([]MenuItem, 0, len(st.Accounts)+1)
 	for _, a := range st.Accounts {
-		desc := fmt.Sprintf("%s, %s", a.Kind, a.Source)
+		desc := Tag(string(a.Kind)) + " " + Tag(string(a.Source))
 		if a.ID == st.Active {
-			desc += ", active"
+			desc += " " + Tag("active")
 		}
 		items = append(items, MenuItem{
 			Name:     string(a.ID),

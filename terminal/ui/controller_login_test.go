@@ -405,6 +405,11 @@ func TestAccountMenu(t *testing.T) {
 	if show.SelectedIdx != 1 {
 		t.Errorf("menu selects %d, want the active newer account at 1", show.SelectedIdx)
 	}
+	for i, want := range []string{"[api_key] [store]", "[api_key] [store] [active]"} {
+		if got := show.Items[i].Description; got != want {
+			t.Errorf("account %d reads %q, want %q", i, got, want)
+		}
+	}
 
 	s.HandleBannerSelect(show.Items[0].Value)
 	if st := providerAStatus(t, a); st.Active != older {
