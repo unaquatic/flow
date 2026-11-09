@@ -526,9 +526,14 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 	}
 	// The logo and the session info head the transcript, above the messages
 	// they follow in. They show once the session and its model are set, so
-	// that the info reads them.
+	// that the info reads them. The update that started this release
+	// shows under them.
 	loaded := len(s.state.Messages)
 	s.ShowInfo()
+	if s.Updated != "" {
+		s.ShowUpdated(s.Updated)
+		s.Updated = ""
+	}
 	s.state.Messages = slices.Concat(s.state.Messages[loaded:], s.state.Messages[:loaded])
 	return slices.Concat(restored, []UIEvent{EventSessionLoad{Messages: s.state.Messages}}, s.UpdateUsage(), s.UpdateTitle())
 }

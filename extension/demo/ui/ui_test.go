@@ -147,3 +147,19 @@ func TestFormatTool(t *testing.T) {
 		t.Errorf("FormatTool(bash) = %+v, want it left to the box", view)
 	}
 }
+
+// TestShowUpdated checks that the update demo adds to the transcript the
+// notice of the first start of UpdateVersion.
+func TestShowUpdated(t *testing.T) {
+	var got []string
+	for _, ev := range ShowUpdated(newTestService(t)) {
+		if added, ok := ev.(ui.EventMessageAdded); ok && added.Msg.Notice != nil {
+			for _, line := range added.Msg.Notice.Lines {
+				got = append(got, line.PlainText())
+			}
+		}
+	}
+	if want := []string{"Updated to v1.2.3"}; !slices.Equal(got, want) {
+		t.Errorf("notice = %q, want %q", got, want)
+	}
+}

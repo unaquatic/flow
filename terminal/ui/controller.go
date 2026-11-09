@@ -33,6 +33,10 @@ type Service struct {
 	// as CommandsWith gives them for the UI's extensions, or nil for
 	// SlashCommands alone.
 	Commands []SlashCommand
+	// Updated is the release of flow that an update installed, when this
+	// is its first start, which InitSession tells of under the session
+	// info, as ShowUpdated words it, and then clears. Empty tells of none.
+	Updated string
 }
 
 // CommandList returns Commands, or SlashCommands when Commands is nil.

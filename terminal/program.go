@@ -55,6 +55,7 @@ func (p *Program) Run(ctx context.Context) error {
 		ColorMode:   p.start.ColorMode,
 		PickSession: p.start.Mode == StartPick,
 		Extensions:  p.views,
+		Updated:     p.start.Updated,
 	})
 	p.closed, p.relaunch = res.Closed, res.Relaunch
 	if err != nil || res.ResumeShown || p.relaunch != "" {

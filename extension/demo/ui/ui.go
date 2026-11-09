@@ -61,8 +61,9 @@ func Run(s *ui.Service) []ui.UIEvent {
 }
 
 // ShowMenu offers the demos, searched from the input: a streamed demo
-// session, the errors flow reports, which ShowErrorMenu offers, the
-// grapheme width report, and the 256-color palette.
+// session, the errors flow reports, which ShowErrorMenu offers, the notice
+// of an update, as ShowUpdated adds it, the grapheme width report, and the
+// 256-color palette.
 func ShowMenu(s *ui.Service) []ui.UIEvent {
 	item := func(name, desc string, run func() []ui.UIEvent) ui.MenuItem {
 		return ui.MenuItem{Name: name, Desc: desc, Choose: s.Closing(run)}
@@ -71,6 +72,7 @@ func ShowMenu(s *ui.Service) []ui.UIEvent {
 		item("Stream", "Run a streamed demo reply", func() []ui.UIEvent { return StartStream(s) }),
 		// It opens a menu of its own in place of this one.
 		{Name: "Error", Desc: "Show each kind of error flow reports", Choose: func() []ui.UIEvent { return ShowErrorMenu(s) }},
+		item("Update", "Show the notice of the first start after an update", func() []ui.UIEvent { return ShowUpdated(s) }),
 		item("Grapheme", "Run a grapheme width check on this terminal", s.ShowGraphemeReport),
 		item("Palette", "Run a demo of the xterm 256-color palette", s.ShowPalette),
 	}
@@ -112,6 +114,16 @@ func ErrorItems(s *ui.Service) []ui.MenuItem {
 		item("Login failed", "A token endpoint that answers 401", func() []ui.UIEvent { return ShowLoginError(s) }),
 		item("Message error", "An error under a reply", func() []ui.UIEvent { return ShowMessageError(s) }),
 	}
+}
+
+// UpdateVersion is the release of flow that the update demo's notices name.
+const UpdateVersion = "v1.2.3"
+
+// ShowUpdated adds to the transcript the notice under the session info at
+// the first start of UpdateVersion, a release that an update installed,
+// through ui.Service.ShowUpdated. Nothing is checked or installed.
+func ShowUpdated(s *ui.Service) []ui.UIEvent {
+	return s.ShowUpdated(UpdateVersion)
 }
 
 // LoginAccount is the account that the error demo's failed login names.

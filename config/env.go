@@ -31,6 +31,11 @@ const (
 	// EnvServerUsername sets the user name that goes with
 	// EnvServerPassword. Without it, the user name is flow.
 	EnvServerUsername = "FLOW_SERVER_USERNAME"
+	// EnvDisableAutoUpdate stops the terminal UI from checking for a newer
+	// release of flow, and from installing it, as the config file's
+	// auto_update does off, whatever the file says. flow update still does
+	// both on request.
+	EnvDisableAutoUpdate = "FLOW_DISABLE_AUTOUPDATE"
 )
 
 // An EnvVar is an environment variable that flow reads.
@@ -52,8 +57,13 @@ func EnvVars() []EnvVar {
 		{Name: EnvWidthProbe, Usage: "Measure character widths at startup"},
 		{Name: EnvServerPassword, Usage: "Password that flow serve asks every request for"},
 		{Name: EnvServerUsername, Usage: "User name that goes with the server password (default flow)"},
+		{Name: EnvDisableAutoUpdate, Usage: "Stop checking for and installing updates in the background"},
 	}
 }
+
+// AutoUpdateDisabled reports whether EnvDisableAutoUpdate turns off the
+// background check for updates.
+func AutoUpdateDisabled() bool { return envFlag(EnvDisableAutoUpdate) }
 
 // ServerCredentials returns the user name and password that EnvServerUsername
 // and EnvServerPassword set for flow serve, each empty when unset.

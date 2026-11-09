@@ -43,6 +43,10 @@ type Start struct {
 	// mode without colors, as where standard output shows none. The UI
 	// draws in colors all the same.
 	NoColor bool
+	// Updated is the release of flow that an update installed, when this
+	// is its first start, which shows under the session info. Empty shows
+	// none.
+	Updated string
 }
 
 // FirstSession returns the stored session that s opens first, or "" for a

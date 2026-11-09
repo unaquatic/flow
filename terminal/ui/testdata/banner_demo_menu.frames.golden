@@ -3,11 +3,11 @@
 |                                                                        |
 |  Stream    Run a streamed demo reply                                   |
 |  Error     Show each kind of error flow reports                        |
+|  Update    Show the notice of the first start after an update          |
 |  Grapheme  Run a grapheme width check on this terminal                 |
 |  Palette   Run a demo of the xterm 256-color palette                   |
 |                                                                        |
 |■                                                                       |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -16,11 +16,11 @@
 |                                                                        |
 |  CCCCCC    CCC C CCCCCCCC CCCC CCCCC                                   |
 |  AAAAA     BBBB BBBB BBBB BB BBBBB BBBB BBBBBBB                        |
+|  AAAAAA    BBBB BBB BBBBBB BB BBB BBBBB BBBBB BBBBB BB BBBBBB          |
 |  AAAAAAAA  BBB B BBBBBBBB BBBBB BBBBB BB BBBB BBBBBBBB                 |
 |  AAAAAAA   BBB B BBBB BB BBB BBBBB BBBBBBBBB BBBBBBB                   |
 |                                                                        |
 |A                                                                       |
-|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |

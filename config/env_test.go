@@ -14,6 +14,7 @@ func TestEnvFlags(t *testing.T) {
 	for name, flag := range map[string]func() bool{
 		EnvDisableTerminalTitle: TerminalTitleDisabled,
 		EnvWidthProbe:           WidthProbe,
+		EnvDisableAutoUpdate:    AutoUpdateDisabled,
 	} {
 		for value, want := range map[string]bool{
 			"": false, "0": false, "false": false, "FALSE": false,
@@ -62,13 +63,13 @@ func TestEnvVars(t *testing.T) {
 		}
 		listed[v.Name] = true
 	}
-	for _, name := range []string{EnvDataDir, EnvDebug, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvWidthProbe} {
+	for _, name := range []string{EnvDataDir, EnvDebug, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvWidthProbe, EnvDisableAutoUpdate} {
 		if !listed[name] {
 			t.Errorf("EnvVars does not list %s", name)
 		}
 	}
 	prefix := strings.ToUpper(product.ID) + "_"
-	for _, name := range []string{EnvDataDir, EnvSnapshotDelay, EnvDisableTerminalTitle} {
+	for _, name := range []string{EnvDataDir, EnvSnapshotDelay, EnvDisableTerminalTitle, EnvDisableAutoUpdate} {
 		if !strings.HasPrefix(name, prefix) {
 			t.Errorf("%s does not start with %s", name, prefix)
 		}

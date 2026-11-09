@@ -92,10 +92,12 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	},
 	Commands: []cmdline.Node{
 		versionCmd,
+		updateCmd,
 		loginCmd,
 		logoutCmd,
 		accountCmd,
 		serveCmd,
+		demoCmd,
 		debugCmd,
 	},
 }
@@ -117,8 +119,11 @@ func rootAppOptions(o rootOptions) app.Options {
 
 // runTerminal runs the terminal UI of a on the session that o chooses, with
 // the model and in the color mode of o. The UI draws on the terminal itself
-// and leaves the command that resumes the session it closes on. It returns
-// the session of another folder that the UI closed to reopen there, or "".
+// and leaves the command that resumes the session it closes on. It tells
+// of the update that installed this release, at its first start, as
+// justUpdated finds it, and installs a newer one meanwhile, as autoUpdate
+// does. It returns the session of another folder that the UI closed to
+// reopen there, or "".
 func runTerminal(ctx context.Context, a *app.App, o rootOptions) (message.SessionID, error) {
 	start := o.start()
 	model, err := selectModel(ctx, a, o.modelOptions)
@@ -126,6 +131,12 @@ func runTerminal(ctx context.Context, a *app.App, o rootOptions) (message.Sessio
 		return "", err
 	}
 	start.Model = model
+	cfg, err := a.Config()
+	if err != nil {
+		return "", err
+	}
+	start.Updated = justUpdated(cfg)
+	autoUpdate(ctx, cfg)
 	mode := o.color.mode()
 	start.ColorMode = &mode
 	start.NoColor = !cmdline.UseColor(os.Stdout)

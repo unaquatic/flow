@@ -224,6 +224,12 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "notice_keyword", w: 64, h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/provider-a/model-a:high", " as the default model"))
 		}},
+		// The first start of a release an update installed tells of it
+		// under the session info, its version in the primary color.
+		{name: "status_notice_updated", h: 20, add: func(ui *UI) {
+			ui.AddNotice(StatusNotice(statusLines())...)
+			ui.Apply(ui.service.ShowUpdated("v1.2.3"))
+		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.AddNotice(Notice{Text: "Nothing to undo"})

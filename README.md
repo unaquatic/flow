@@ -24,6 +24,21 @@
 npm install -g @unaquatic/flow
 ```
 
+## Updating
+
+Once a day, flow checks npm for a newer release when it starts, installs it in
+the background with the package manager that installed flow (npm or pnpm), and
+runs it from the next start, which shows `Updated to v1.2.3` under the status.
+Install output goes to `~/.flow/logs/update.log`.
+
+```sh
+flow update          # install the latest release now
+flow update --check  # only check for one
+```
+
+Set `"auto_update": false` in `~/.flow/config.json`, or
+`FLOW_DISABLE_AUTOUPDATE=1`, to turn off the background check and install.
+
 ## Development
 
 Build and run from source with Go 1.27+.
