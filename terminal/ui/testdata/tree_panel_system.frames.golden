@@ -2,7 +2,7 @@
 |■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
 |               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
-|  Context # Calc Use tabs.                                              |
+|  Context Calc Use tabs.                                                |
 |  User Run the tests                                                    |
 |  Agent All tests pass.                                                 |
 |                                                                        |
@@ -12,7 +12,7 @@
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  BBBBBBB B BBBB BBB BBBBB                                              |
+|  BBBBBBB BBBB BBB BBBBB                                                |
 |  AAAA BBB BBB BBBBB                                                    |
 |  CCCCC BBB BBBBB BBBBB                                                 |
 |                                                                        |

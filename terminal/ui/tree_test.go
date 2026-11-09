@@ -388,6 +388,20 @@ func TestNewTreeEntry(t *testing.T) {
 				{Name: "bash", Input: "go test ./calculator/... -run 'TestDivide|TestDivideByZero' -count=1 -v"},
 			}},
 		},
+		// The text shows Markdown as plain text; the prompt keeps it as
+		// written, to edit and send again.
+		{
+			name: "prompt with Markdown",
+			msg:  treeMsg("u2", "", message.RoleUser, "add `Divide` to **calc.go**"),
+			want: TreeEntry{ID: "u2", Role: message.RoleUser, Text: "add Divide to calc.go", Prompt: "add `Divide` to **calc.go**"},
+		},
+		{
+			name: "reply with Markdown blocks",
+			msg: treeMsg("a4", "u2", message.RoleAgent,
+				"## Plan\n\n- read [the spec](https://spec.example)\n- add `Divide`\n\n```go\nfunc Divide() {}\n```"),
+			want: TreeEntry{ID: "a4", Parent: "u2", Role: message.RoleAgent,
+				Text: "Plan read the spec add Divide func Divide() {}"},
+		},
 		{
 			name: "reply with text skips reasoning",
 			msg: treeMsg("a2", "u1", message.RoleAgent, "Done.",

@@ -6,6 +6,7 @@ import (
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/fluid/widget"
 )
 
 // treeMaxRows is the most session tree rows shown at once. A short terminal
@@ -65,7 +66,9 @@ type TreeEntry struct {
 	// type of the fork it belongs to, such as message.TypeTitle, which the
 	// tree hides until ShowHidden.
 	Type message.Type
-	// Text is the message's text on one line, or empty when it holds none.
+	// Text is the message's text on one line, the Markdown in it shown as
+	// plain text, as widget.MarkdownText gives it, or empty when it holds
+	// none.
 	Text string
 	// Tools are the message's tool calls, in order.
 	Tools []TreeTool
@@ -96,7 +99,7 @@ func NewTreeEntry(m message.Content) TreeEntry {
 		}
 	}
 	text := strings.Join(texts, "\n")
-	e.Text = Truncate(OneLine(text), treeTextLimit)
+	e.Text = Truncate(OneLine(widget.MarkdownText(text)), treeTextLimit)
 	if m.Role == message.RoleUser {
 		e.Prompt = text
 	}
