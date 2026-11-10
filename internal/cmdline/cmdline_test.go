@@ -197,6 +197,19 @@ func TestArgsBesideCommands(t *testing.T) {
 	}
 }
 
+// TestMaxArgs checks that MaxArgs takes up to n arguments and refuses more.
+func TestMaxArgs(t *testing.T) {
+	check := MaxArgs(1)
+	for _, args := range [][]string{nil, {"a"}} {
+		if err := check(args); err != nil {
+			t.Errorf("MaxArgs(1)(%q) = %v", args, err)
+		}
+	}
+	if err := check([]string{"a", "b"}); err == nil || err.Error() != "takes at most 1 argument, got 2" {
+		t.Errorf("MaxArgs(1) of two = %v, want takes at most 1 argument, got 2", err)
+	}
+}
+
 func TestReport(t *testing.T) {
 	usage := &UsageError{Scope: "app sub", Err: errors.New("bad flag")}
 	tests := []struct {

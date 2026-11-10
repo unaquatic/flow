@@ -54,16 +54,17 @@ func (o RunOptions) Start() terminal.Start {
 	return terminal.Start{}
 }
 
-// OutputFormat is how the run command writes a run: OutputText or
+// OutputFormat is how a command writes what it prints: OutputText or
 // OutputJSON.
 type OutputFormat string
 
 const (
-	// OutputText writes the run's final answer once the run has finished,
-	// and nothing else.
+	// OutputText writes text for people: a run's final answer, once the
+	// run has finished, and nothing else, or a list a row per item.
 	OutputText OutputFormat = "text"
-	// OutputJSON writes each event of the run on a line of its own, as the
-	// JSON the HTTP API streams it in, with its type first.
+	// OutputJSON writes JSON for scripts: each event of a run on a line of
+	// its own, as the HTTP API streams it, with its type first, or a list
+	// as the HTTP API writes it.
 	OutputJSON OutputFormat = "json"
 )
 

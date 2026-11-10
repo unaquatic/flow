@@ -99,12 +99,14 @@ func demoReply(parts ...agent.StreamPart) agent.StreamResponse {
 }
 
 // withRunDemoApp runs run on a demo app over a new temporary data directory,
-// which downloads no catalog and loads no extension, whose default model is
-// demoRunModel at demoLoginProvider, which answers each request with what
-// reply returns, and then closes the app and removes the directory. The
-// working directory is the data directory meanwhile, so that the run reads
-// no instructions of the user's project. Nothing of the user's is read or
-// changed.
+// which downloads no catalog and loads no extension, whose catalog is
+// demoModelCatalog's, and whose default model is demoRunModel at
+// demoLoginProvider, which demoKeyAccount's API key signs in to, and which
+// answers each request with what reply returns. demoKeyProvider is there
+// too, with no account. It then closes the app and removes the directory.
+// The working directory is the data directory meanwhile, so that the app
+// reads no instructions of the user's project and lists none of its
+// sessions. Nothing of the user's is read or changed.
 func withRunDemoApp(ctx context.Context, reply func() (agent.StreamResponse, error), run func(*app.App) error) error {
 	dir, err := os.MkdirTemp("", product.ID+"-demo-run-")
 	if err != nil {
@@ -125,14 +127,35 @@ func withRunDemoApp(ctx context.Context, reply func() (agent.StreamResponse, err
 		return err
 	}
 	accounts := agent.NewAccounts(agent.AccountsConfig{Store: agent.AuthFile{Dir: dir}})
-	store := gateway.NewStore(gateway.StoreOptions{Dir: dir, Source: demoNowhere, Snapshot: demoCatalog})
-	providers := agent.NewProviders(agent.ProviderOptions{Catalog: store}, DemoReplyProvider{ID: demoLoginProvider, Reply: reply})
+	if err := errors.Join(
+		accounts.SetKey(ctx, demoLoginProvider, demoKeyAccount, demoKey),
+		accounts.Use(ctx, demoLoginProvider, demoKeyAccount),
+	); err != nil {
+		return err
+	}
+	store := gateway.NewStore(gateway.StoreOptions{Dir: dir, Source: demoNowhere, Snapshot: demoModelCatalog})
+	providers := agent.NewProviders(agent.ProviderOptions{Catalog: store},
+		DemoReplyProvider{ID: demoLoginProvider, Reply: reply}, demoProvider(demoKeyProvider))
 	a, err := app.New(ctx, config.NewService(dir), app.Options{Accounts: accounts, Providers: providers, BuiltIn: []agent.ProviderID{}})
 	if err != nil {
 		return err
 	}
 	defer a.Close()
 	return run(a)
+}
+
+// demoModelCatalog returns demoCatalog's catalog, in which demoLoginProvider
+// offers two models: demoRunModel, which takes three reasoning efforts, and
+// one that takes none.
+func demoModelCatalog() *gateway.Catalog {
+	c := demoCatalog()
+	p := c.Providers[demoLoginProvider]
+	p.Models = map[gateway.ModelID]gateway.Offering{
+		demoRunModel:    {Name: "Model A", Reasoning: &gateway.Reasoning{Efforts: []gateway.Effort{"low", "medium", "high"}}},
+		"lab-a/model-b": {Name: "Model B"},
+	}
+	c.Providers[demoLoginProvider] = p
+	return c
 }
 
 // DemoReplyProvider is the provider of a run demo's app, whose models answer

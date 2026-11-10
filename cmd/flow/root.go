@@ -150,6 +150,9 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	},
 	Commands: []cmdline.Node{
 		runCmd,
+		sessionCmd,
+		modelsCmd,
+		exportCmd,
 		versionCmd,
 		updateCmd,
 		loginCmd,

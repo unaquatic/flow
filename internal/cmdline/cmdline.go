@@ -359,6 +359,20 @@ func (c *Command[T]) info() info {
 // AnyArgs is a [Command.Args] check that takes any number of arguments.
 func AnyArgs([]string) error { return nil }
 
+// MaxArgs returns a [Command.Args] check taking at most n arguments.
+func MaxArgs(n int) func([]string) error {
+	return func(args []string) error {
+		if len(args) <= n {
+			return nil
+		}
+		noun := "arguments"
+		if n == 1 {
+			noun = "argument"
+		}
+		return fmt.Errorf("takes at most %d %s, got %d", n, noun, len(args))
+	}
+}
+
 // ExactArgs returns a [Command.Args] check demanding exactly n arguments.
 func ExactArgs(n int) func([]string) error {
 	return func(args []string) error {
