@@ -96,7 +96,6 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	Commands: []cmdline.Node{
 		versionCmd,
 		updateCmd,
-		uninstallCmd,
 		loginCmd,
 		logoutCmd,
 		accountCmd,

@@ -29,8 +29,7 @@ pnpm add -g @unaquatic/flow
 The install script downloads flow from its GitHub release, checked against
 the digest GitHub reports for it, puts it in `~/.flow/bin`, links it from
 `~/.local/bin`, and adds that to `PATH`. `FLOW_VERSION`, `FLOW_INSTALL_DIR` and
-`FLOW_NO_MODIFY_PATH=1` change what it does. `flow uninstall` removes it again,
-and `flow uninstall --data` its config and sessions too.
+`FLOW_NO_MODIFY_PATH=1` change what it does.
 
 ## Updating
 
