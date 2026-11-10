@@ -12,7 +12,7 @@ var versionCmd = &cmdline.Command[cmdline.NoOptions]{
 	Aliases: []string{"v"},
 	Short:   "Show the version",
 	Run: func(ctx context.Context, _ cmdline.NoOptions, args []string) error {
-		printVersion(os.Stdout, cmdline.UseColor(os.Stdout), colorMode)
+		printVersion(os.Stdout)
 		return nil
 	},
 }

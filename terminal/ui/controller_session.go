@@ -63,9 +63,10 @@ type StatusInfo struct {
 	Updated time.Time
 	// Messages counts the transcript's messages.
 	Messages int
-	// Provider identifies the provider of the terminal's model, by its
-	// catalog ID.
-	Provider agent.ProviderID
+	// Provider names the provider of the terminal's model, as
+	// Service.ProviderName names it, such as "Provider A", or is empty when
+	// the model names none.
+	Provider string
 	// Model is the terminal's model variant without its provider, in
 	// "model:option:effort" form, such as "lab-a/model-a:fast:high".
 	Model string
@@ -114,7 +115,7 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		add("Updated", style.Plain(info.Updated.Local().Format(time.DateTime)))
 	}
 	add("Messages", style.Plain(strconv.Itoa(info.Messages)))
-	add("Provider", orNone(string(info.Provider)))
+	add("Provider", orNone(info.Provider))
 	add("Model", orNone(info.Model))
 	context := FormatTokens(info.Usage.Context)
 	if info.Usage.Window > 0 {
@@ -154,10 +155,12 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
 		Messages:  s.MessageCount(),
-		Provider:  provider,
 		Model:     model,
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
+	}
+	if provider != "" {
+		info.Provider = s.ProviderName(provider)
 	}
 	if stored != nil {
 		info.Title = stored.Title
@@ -526,9 +529,14 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 	}
 	// The logo and the session info head the transcript, above the messages
 	// they follow in. They show once the session and its model are set, so
-	// that the info reads them.
+	// that the info reads them. The update that started this release
+	// shows under them.
 	loaded := len(s.state.Messages)
 	s.ShowInfo()
+	if s.Updated != "" {
+		s.ShowUpdated(s.Updated)
+		s.Updated = ""
+	}
 	s.state.Messages = slices.Concat(s.state.Messages[loaded:], s.state.Messages[:loaded])
 	return slices.Concat(restored, []UIEvent{EventSessionLoad{Messages: s.state.Messages}}, s.UpdateUsage(), s.UpdateTitle())
 }

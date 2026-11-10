@@ -14,7 +14,7 @@ func (s *Service) EffortChoices() []agent.ReasoningEffort {
 
 // noEffort returns the notice that the terminal's model takes no levels.
 func (s *Service) noEffort() []UIEvent {
-	return s.ShowKeywordToast("Selected model ", s.Variant().WithEffort("").String(), " has no reasoning efforts.")
+	return s.ShowKeywordToast("", s.Variant().WithEffort("").String(), " has no reasoning efforts")
 }
 
 // HandleEffort runs /effort: it shows the effort levels of the terminal's

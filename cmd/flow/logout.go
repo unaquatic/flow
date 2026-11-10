@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
+	"text/tabwriter"
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
@@ -37,16 +39,22 @@ var logoutCmd = &cmdline.Command[logoutOptions]{
 	},
 }
 
-// runLogout removes the account that o names from a, and writes to w which
-// account of its provider is active now.
+// runLogout removes the account that o names from a, and writes to w that
+// it did, as introLine draws it, and under it the account's row, as
+// writeAccountRow writes it, its ID highlighted.
 func runLogout(ctx context.Context, w io.Writer, a *app.App, o logoutOptions, _ []string) error {
-	st, err := a.Accounts().Logout(ctx, o.provider, o.account)
-	if err != nil {
+	// The account's kind and source go with it, so read them first.
+	acct := agent.AccountStatus{ID: o.account}
+	if st, err := a.Accounts().Status(ctx, o.provider); err == nil {
+		if i := slices.IndexFunc(st.Accounts, func(s agent.AccountStatus) bool { return s.ID == o.account }); i >= 0 {
+			acct = st.Accounts[i]
+		}
+	}
+	if _, err := a.Accounts().Logout(ctx, o.provider, o.account); err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "Removed %s account %s.\n", o.provider, o.account)
-	if st.Active != "" {
-		fmt.Fprintf(w, "Active %s account: %s.\n", o.provider, st.Active)
-	}
-	return nil
+	fmt.Fprintln(w, introLine("Removed:", showsColor(w)))
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	writeAccountRow(tw, o.provider, acct, highlighter(w))
+	return tw.Flush()
 }

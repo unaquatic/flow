@@ -100,6 +100,10 @@ type Command[T any] struct {
 
 	// Commands are the subcommands, matched against the first argument.
 	Commands []Node
+
+	// Hidden leaves the command out of its parent's help, which still runs
+	// it. Its own help shows as any other's.
+	Hidden bool
 }
 
 // A UsageError reports that a command was invoked wrongly: with flags,
@@ -332,6 +336,7 @@ type info struct {
 	env         []EnvVar
 	runnable    bool
 	commands    []Node
+	hidden      bool
 }
 
 func (c *Command[T]) info() info {
@@ -345,6 +350,7 @@ func (c *Command[T]) info() info {
 		env:         c.Env,
 		runnable:    c.Run != nil,
 		commands:    c.Commands,
+		hidden:      c.Hidden,
 	}
 }
 

@@ -221,8 +221,11 @@ func helpOf(t *testing.T, st style) string {
 			fs.StringVar(&o.Name, "name", "", "`name` to greet")
 			fs.IntVar(&o.Count, "count", 3, "greet `n` times")
 		},
-		Run:      func(context.Context, HelpOptions, []string) error { return nil },
-		Commands: []Node{&Command[NoOptions]{Name: "sub", Short: "Do one thing"}},
+		Run: func(context.Context, HelpOptions, []string) error { return nil },
+		Commands: []Node{
+			&Command[NoOptions]{Name: "sub", Short: "Do one thing"},
+			&Command[NoOptions]{Name: "secret", Short: "Not listed", Hidden: true},
+		},
 	}
 	var o HelpOptions
 	sc := rootScope(c.info())
@@ -235,8 +238,9 @@ func helpOf(t *testing.T, st style) string {
 	return help.String()
 }
 
-// TestHelp checks that help lists the usage lines, subcommands, flags, and
-// environment variables, in that order, without the command's own Short.
+// TestHelp checks that help lists the usage lines, subcommands but hidden
+// ones, flags, and environment variables, in that order, without the
+// command's own Short.
 func TestHelp(t *testing.T) {
 	const want = `Usage:
   app [flags]
@@ -372,5 +376,26 @@ func TestFlagList(t *testing.T) {
 		if got := flagList(tt.names); got != tt.want {
 			t.Errorf("flagList(%q) = %q, want %q", tt.names, got, tt.want)
 		}
+	}
+}
+
+// TestHiddenRuns checks that a hidden command, which its parent's help does
+// not list, still runs, and that a parent whose subcommands are all hidden
+// lists no commands.
+func TestHiddenRuns(t *testing.T) {
+	var ran bool
+	hidden := &Command[NoOptions]{Name: "secret", Hidden: true, Run: func(context.Context, NoOptions, []string) error {
+		ran = true
+		return nil
+	}}
+	root := &Command[NoOptions]{Name: "app", Run: func(context.Context, NoOptions, []string) error { return nil }, Commands: []Node{hidden}}
+	if err := root.exec(t.Context(), rootScope(root.info()), []string{"secret"}); err != nil || !ran {
+		t.Errorf("app secret = %v, ran %v; want it run", err, ran)
+	}
+
+	var help strings.Builder
+	writeCommands(&help, root.Commands, style{})
+	if help.Len() != 0 {
+		t.Errorf("commands of app = %q, want none listed", help.String())
 	}
 }

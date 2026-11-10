@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
@@ -13,16 +14,18 @@ import (
 	"github.com/unaquatic/flow/internal/cmdline"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/flow/terminal"
+	"github.com/unaquatic/flow/terminal/ui"
 	"github.com/unaquatic/fluid/style"
 	fluidterm "github.com/unaquatic/fluid/terminal"
+	"golang.org/x/term"
 )
 
 // rootOptions are the flags of the root command itself.
 type rootOptions struct {
 	modelOptions
 	version bool
-	// color is the color mode the terminal UI, the version and the resume
-	// command draw in.
+	// color is the color mode the terminal UI and the resume command draw
+	// in.
 	color colorFlag
 
 	// resume, cont and session choose the session the terminal opens with.
@@ -74,7 +77,7 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	Run: func(ctx context.Context, o rootOptions, args []string) error {
 		// The version needs no app.
 		if o.version {
-			printVersion(os.Stdout, cmdline.UseColor(os.Stdout), o.color.mode())
+			printVersion(os.Stdout)
 			return nil
 		}
 		// The UI closes on a session of another folder to have flow
@@ -92,10 +95,12 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	},
 	Commands: []cmdline.Node{
 		versionCmd,
+		updateCmd,
 		loginCmd,
 		logoutCmd,
 		accountCmd,
 		serveCmd,
+		demoCmd,
 		debugCmd,
 	},
 }
@@ -117,8 +122,11 @@ func rootAppOptions(o rootOptions) app.Options {
 
 // runTerminal runs the terminal UI of a on the session that o chooses, with
 // the model and in the color mode of o. The UI draws on the terminal itself
-// and leaves the command that resumes the session it closes on. It returns
-// the session of another folder that the UI closed to reopen there, or "".
+// and leaves the command that resumes the session it closes on. It tells
+// of the update that installed this release, at its first start, as
+// justUpdated finds it, and installs a newer one meanwhile, as autoUpdate
+// does. It returns the session of another folder that the UI closed to
+// reopen there, or "".
 func runTerminal(ctx context.Context, a *app.App, o rootOptions) (message.SessionID, error) {
 	start := o.start()
 	model, err := selectModel(ctx, a, o.modelOptions)
@@ -126,6 +134,12 @@ func runTerminal(ctx context.Context, a *app.App, o rootOptions) (message.Sessio
 		return "", err
 	}
 	start.Model = model
+	cfg, err := a.Config()
+	if err != nil {
+		return "", err
+	}
+	start.Updated = justUpdated(cfg)
+	autoUpdate(ctx, cfg)
 	mode := o.color.mode()
 	start.ColorMode = &mode
 	start.NoColor = !cmdline.UseColor(os.Stdout)
@@ -159,13 +173,109 @@ var banner = terminal.LogoBanner().PlainText()
 // colorBanner is terminal.LogoBanner in colorMode, which help shows.
 var colorBanner = terminal.ANSI(terminal.LogoBanner(), colorMode)
 
-// printVersion writes the banner to w, then a blank line and the name and
-// version of the application. When color is true, the banner is
-// terminal.LogoBanner in mode.
-func printVersion(w io.Writer, color bool, mode style.ColorMode) {
-	b := banner
-	if color {
-		b = terminal.ANSI(terminal.LogoBanner(), mode)
+// highlight returns s, a value the user may copy, such as an account ID, a
+// URL or a code, in product.PrimaryColor as terminal.ANSI draws it in
+// colorMode when color is set, and as it is otherwise.
+func highlight(s string, color bool) string {
+	if !color || s == "" {
+		return s
 	}
-	fmt.Fprintf(w, "%s\n\n%s %s\n", b, product.Name, product.Version())
+	primary := style.New().WithFg(style.ColorFromHex(product.PrimaryColor)).Func()
+	return terminal.ANSI(style.NewStyledText(primary(s)), colorMode)
+}
+
+// showsColor reports whether w shows colors: it is a terminal, as
+// cmdline.UseColor tells.
+func showsColor(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	return ok && cmdline.UseColor(f)
+}
+
+// highlighter returns the func that highlights a value as highlight does,
+// in color where w shows colors, as showsColor tells.
+func highlighter(w io.Writer) func(string) string {
+	color := showsColor(w)
+	return func(s string) string { return highlight(s, color) }
+}
+
+// introLine returns text, a line that introduces what follows it, bold as
+// ui.ResumeIntro draws the line that introduces the resume command, when
+// color is set, and as it is otherwise.
+func introLine(text string, color bool) string {
+	if !color {
+		return text
+	}
+	bold := style.New().WithFg(style.ColorTransparent).Bold().Func()
+	return terminal.ANSI(style.NewStyledText(bold(text)), colorMode)
+}
+
+// liveLine is a line that a terminal shows while a step runs, such as
+// "Checking for updates...", and rewrites in place as the step goes on,
+// until what follows clears it or keeps it. Where w is no terminal, or one
+// that cannot rewrite a line, it shows nothing, so that a log holds only
+// what follows.
+type liveLine struct {
+	w     io.Writer
+	live  bool
+	shown bool
+}
+
+// newLiveLine returns a liveLine on w, live where w is a terminal whose
+// TERM is not dumb.
+func newLiveLine(w io.Writer) *liveLine {
+	f, ok := w.(*os.File)
+	return &liveLine{w: w, live: ok && term.IsTerminal(int(f.Fd())) && os.Getenv("TERM") != "dumb"}
+}
+
+// Show shows text on l, in place of what it showed.
+func (l *liveLine) Show(text string) {
+	if !l.live {
+		return
+	}
+	fmt.Fprint(l.w, "\r\x1b[2K"+text)
+	l.shown = true
+}
+
+// Clear removes what l shows, leaving the cursor where it began.
+func (l *liveLine) Clear() {
+	if l.shown {
+		fmt.Fprint(l.w, "\r\x1b[2K")
+		l.shown = false
+	}
+}
+
+// Keep leaves what l shows on its line, and ends the line.
+func (l *liveLine) Keep() {
+	if l.shown {
+		fmt.Fprintln(l.w)
+		l.shown = false
+	}
+}
+
+// writeField writes to w label, such as "Enter this code in your browser:",
+// as introLine draws it, and under it value, indented by ui.ResumeIndent
+// and highlighted, as the resume command is laid out, in colors where w
+// shows them.
+func writeField(w io.Writer, label, value string) {
+	color := showsColor(w)
+	writeFieldLine(w, introLine(label, color), highlight(value, color))
+}
+
+// writeURLField writes to w label, such as "Open this URL in your browser:",
+// and under it url, as writeField does, but leaves url in the terminal's
+// own color, as a terminal shows the links it finds.
+func writeURLField(w io.Writer, label, url string) {
+	writeFieldLine(w, introLine(label, showsColor(w)), url)
+}
+
+// writeFieldLine writes to w label, and under it value, indented by
+// ui.ResumeIndent, both as they are drawn.
+func writeFieldLine(w io.Writer, label, value string) {
+	fmt.Fprintf(w, "%s\n%s%s\n", label, strings.Repeat(" ", ui.ResumeIndent), value)
+}
+
+// printVersion writes the name and version of the application to w, such
+// as "flow v1.2.3".
+func printVersion(w io.Writer) {
+	fmt.Fprintf(w, "%s %s\n", product.Name, product.Version())
 }

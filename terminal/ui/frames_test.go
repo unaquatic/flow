@@ -204,7 +204,7 @@ func statusInfo(context int) StatusInfo {
 		Version:   product.Name + " v0.1.0",
 		Session:   "01a0e33d-4571-7ed4-b06b-4229c726c313",
 		Messages:  4,
-		Provider:  "provider-a",
+		Provider:  "Provider A",
 		Model:     "lab-a/model-a",
 		Usage:     SessionUsage{Context: context, Window: 400_000},
 		Directory: "/work/project",
@@ -223,6 +223,12 @@ func TestTranscriptFrames(t *testing.T) {
 		// A notice that names a model draws it in the primary color.
 		{name: "notice_keyword", w: 64, h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/provider-a/model-a:high", " as the default model"))
+		}},
+		// The first start of a release an update installed tells of it
+		// under the session info, its version in the primary color.
+		{name: "status_notice_updated", h: 20, add: func(ui *UI) {
+			ui.AddNotice(StatusNotice(statusLines())...)
+			ui.Apply(ui.service.ShowUpdated("v1.2.3"))
 		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
@@ -1617,7 +1623,7 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_login_progress", h: 8, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{
 				Title: "Login with Provider A",
-				Text:  "Logging in to Provider A account 01a0e1b4 [browser]...",
+				Text:  "Logging in [browser]...",
 			})
 		}},
 		{name: "banner_login_menu", h: 9, open: func(ui *UI) {

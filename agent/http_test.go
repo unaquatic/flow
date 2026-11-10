@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unaquatic/flow/sse"
+	"github.com/unaquatic/flow/internal/sse"
 )
 
 // TestStreamEvents checks that each event reaches the handler, which can end

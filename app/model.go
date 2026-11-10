@@ -415,6 +415,15 @@ func (m Models) Catalog() *gateway.Catalog {
 	return m.app.providers.Catalog()
 }
 
+// ProviderName returns the catalog's name of provider t, such as
+// "Provider A", or its ID when the catalog gives it none.
+func (m Models) ProviderName(t agent.ProviderID) string {
+	if p, ok := m.Catalog().Providers[t]; ok && p.Name != "" {
+		return p.Name
+	}
+	return string(t)
+}
+
 // Listing returns provider t's offering of the model that id, the catalog's
 // model ID, names, as ParseVariant reads "t/id". Like List, it starts a
 // refresh of the

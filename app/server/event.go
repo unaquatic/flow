@@ -9,7 +9,7 @@ import (
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/sse"
+	"github.com/unaquatic/flow/internal/sse"
 )
 
 // handleEvents streams app events as server-sent events, encoded as

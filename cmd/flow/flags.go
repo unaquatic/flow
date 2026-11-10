@@ -133,7 +133,7 @@ func colorFlags(fs *flag.FlagSet, c *colorFlag) {
 
 // errProviderRequired is the error of a command that acts on a provider run
 // without the flag that names it.
-var errProviderRequired = errors.New("--provider is required: name the provider by its catalog ID")
+var errProviderRequired = errors.New("--provider is required")
 
 // providerFlag binds the flag naming the provider to act on. It has no
 // default: a command that acts on a provider fails with errProviderRequired

@@ -13,15 +13,14 @@ const apiKeyName = "API key"
 // StartLogin starts a login to a new account of pt and shows its progress in
 // the login banner.
 func (s *Service) StartLogin(pt agent.ProviderID, method agent.LoginMethod) []UIEvent {
-	id, err := s.app.Accounts().StartLogin(pt, "", method)
-	if err != nil {
-		return s.ShowToast(fmt.Sprintf("login to %s failed: %v", s.ProviderName(pt), err))
+	if _, err := s.app.Accounts().StartLogin(pt, "", method); err != nil {
+		return s.ShowToast(fmt.Sprintf("Login to %s failed: %v", s.ProviderName(pt), err))
 	}
 	s.OpenBanner(LoginBanner)
 	s.state.Prompt = nil
 	progress := EventBannerShow{
 		Title: fmt.Sprintf("Login with %s", s.ProviderName(pt)),
-		Text:  fmt.Sprintf("Logging in to %s account %s [%s]...", s.ProviderName(pt), id, method),
+		Text:  fmt.Sprintf("Logging in [%s]...", method),
 	}
 	return []UIEvent{progress}
 }
@@ -37,7 +36,7 @@ func (s *Service) AskLoginCode(prompt app.EventLoginPrompt) []UIEvent {
 // LoginPanel displays the pending authorization above the input, never in chat.
 func (s *Service) LoginPanel(reason string) EventBannerShow {
 	p := s.state.Login
-	text := "Approve access in your browser, then paste the complete code below.\n" + p.URL
+	text := "Approve access in your browser, then paste the code below.\n" + p.URL
 	if reason != "" {
 		text += "\n" + reason
 	}
@@ -54,7 +53,7 @@ func (s *Service) SubmitLoginCode(code string) []UIEvent {
 		return nil
 	}
 	if code == "" {
-		return []UIEvent{s.LoginPanel("Paste the complete code (code#state) or callback URL.")}
+		return []UIEvent{s.LoginPanel("Paste the code or callback URL.")}
 	}
 	s.state.LoginCompleting = true
 	s.app.Accounts().StartCompleteLogin(p.Provider, p.Account, *p.State, code)
@@ -67,13 +66,11 @@ func (s *Service) ShowLoginMenu() []UIEvent {
 	return s.ShowSearchMenu(&SearchMenu{Title: "Login", Items: s.ProviderItems})
 }
 
-// ProviderName returns the catalog's name of provider pt, such as "OpenAI",
-// or its ID when the catalog gives it none.
+// ProviderName returns the catalog's name of provider pt, such as
+// "Provider A", or its ID when the catalog gives it none, as
+// app.Models.ProviderName does.
 func (s *Service) ProviderName(pt agent.ProviderID) string {
-	if p, ok := s.app.Models().Catalog().Providers[pt]; ok && p.Name != "" {
-		return p.Name
-	}
-	return string(pt)
+	return s.app.Models().ProviderName(pt)
 }
 
 // ProviderItems returns the providers of the login menu, as
@@ -116,8 +113,7 @@ func (s *Service) ShowLoginMethodMenu(pt agent.ProviderID) []UIEvent {
 
 // AskKey asks for an API key of pt and saves it as a new account.
 func (s *Service) AskKey(pt agent.ProviderID) []UIEvent {
-	question := fmt.Sprintf("Paste the %s API key into the input and press enter.", s.ProviderName(pt))
-	return s.AskText(question, PromptHintStyled("save API key"), func(key string) []UIEvent {
+	return s.AskText("Paste the API key", PromptHintStyled("save API key"), func(key string) []UIEvent {
 		return s.SubmitKey(pt, key)
 	})
 }
@@ -125,11 +121,10 @@ func (s *Service) AskKey(pt agent.ProviderID) []UIEvent {
 // SubmitKey saves key as the API key of a new account of pt, which makes the
 // account active. The key is not sent to the model.
 func (s *Service) SubmitKey(pt agent.ProviderID, key string) []UIEvent {
-	id, err := s.app.Accounts().SetKey(s.ctx, pt, "", agent.APIKey(key))
-	if err != nil {
-		return s.ShowToast(fmt.Sprintf("saving the %s API key failed: %v", s.ProviderName(pt), err))
+	if _, err := s.app.Accounts().SetKey(s.ctx, pt, "", agent.APIKey(key)); err != nil {
+		return s.ShowToast(fmt.Sprintf("Saving the API key failed: %v", err))
 	}
-	return s.ShowToast(fmt.Sprintf("Saved the API key as %s account %s; it is now active.", s.ProviderName(pt), id))
+	return s.ShowToast("API key saved")
 }
 
 // SettleLogin hides an open login banner and reports the result in the
@@ -143,12 +138,12 @@ func (s *Service) SettleLogin(text string) []UIEvent {
 
 // FailLogin hides an open login banner and shows the error e reports in the
 // indicator, as a run's error shows: ErrorIndicator of it, after
-// LoginFailedPrefix, such as "login to provider-a account demo failed:
-// token endpoint error (401)" over the body the endpoint answered with.
+// LoginFailedPrefix, such as "login to Provider A failed: token endpoint
+// error (401)" over the body the endpoint answered with.
 // While a run is in progress, whose time the indicator shows, it reports the
 // error in the transcript instead, on one line, as SettleLogin does.
 func (s *Service) FailLogin(e app.EventLoginFailed) []UIEvent {
-	prefix := s.LoginFailedPrefix(e.Provider, e.Account)
+	prefix := s.LoginFailedPrefix(e.Provider)
 	if s.Streaming() {
 		return s.SettleLogin(prefix + e.Error.Message)
 	}
@@ -162,8 +157,8 @@ func (s *Service) FailLogin(e app.EventLoginFailed) []UIEvent {
 	return append(out, ind)
 }
 
-// LoginFailedPrefix returns what heads the error of a failed login to
-// account of pt, such as "login to provider-a account demo failed: ".
-func (s *Service) LoginFailedPrefix(pt agent.ProviderID, account agent.AccountID) string {
-	return fmt.Sprintf("login to %s account %s failed: ", s.ProviderName(pt), account)
+// LoginFailedPrefix returns what heads the error of a failed login to pt,
+// after the indicator's Error label, such as "login to Provider A failed: ".
+func (s *Service) LoginFailedPrefix(pt agent.ProviderID) string {
+	return fmt.Sprintf("login to %s failed: ", s.ProviderName(pt))
 }

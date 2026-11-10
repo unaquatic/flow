@@ -130,12 +130,13 @@ type LoginState struct {
 	State string `json:"state"`
 }
 
-// String returns the instruction for the user.
+// String returns the instruction for the user on one line, such as "Open
+// https://login.example/device and enter code WDJB-MJHT".
 func (p LoginPrompt) String() string {
 	if p.Code == "" {
-		return "open " + p.URL + " in your browser"
+		return "Open " + p.URL + " in your browser"
 	}
-	return "open " + p.URL + " and enter code " + p.Code
+	return "Open " + p.URL + " and enter code " + p.Code
 }
 
 // AccountID identifies one account of a provider. It is a UUID in canonical

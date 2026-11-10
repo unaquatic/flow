@@ -1,8 +1,8 @@
 === text ===
 |■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
-|  /resume                   Resume a previous session from  |
-|  /new                      Clear the chat and start a new  |
+|  /resume                   Resume a session from history   |
+|  /new                      Clear the chat and start over   |
 |  /model                    Switch the model                |
 |  /effort                   Change the reasoning effort     |
 |  /status                   Show the version and session i  |
@@ -14,8 +14,8 @@
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB                          |
 |                                                            |
-|  CCCCCCC                   CCCCCC C CCCCCCCC CCCCCCC CCCC  |
-|  AAAA                      BBBBB BBB BBBB BBB BBBBB B BBB  |
+|  CCCCCCC                   CCCCCC C CCCCCCC CCCC CCCCCCC   |
+|  AAAA                      BBBBB BBB BBBB BBB BBBBB BBBB   |
 |  AAAAAA                    BBBBBB BBB BBBBB                |
 |  AAAAAAA                   BBBBBB BBB BBBBBBBBB BBBBBB     |
 |  AAAAAAA                   BBBB BBB BBBBBBB BBB BBBBBBB B  |

@@ -65,12 +65,25 @@ func writeUsageSection(w io.Writer, sc scope, in info, fs *flag.FlagSet, st styl
 
 func writeUsage(w io.Writer, sc scope, in info, st style) {
 	st.heading(w, "Usage")
-	if in.runnable || len(in.commands) == 0 {
+	listed := len(listedCommands(in.commands))
+	if in.runnable || listed == 0 {
 		fmt.Fprintf(w, "  %s%s [flags]\n", sc, argsSuffix(in.usage))
 	}
-	if len(in.commands) > 0 {
+	if listed > 0 {
 		fmt.Fprintf(w, "  %s <command> [flags]\n", sc)
 	}
+}
+
+// listedCommands returns the infos of the nodes that help lists: those
+// that are not hidden, in order.
+func listedCommands(nodes []Node) []info {
+	var subs []info
+	for _, n := range nodes {
+		if in := n.info(); !in.hidden {
+			subs = append(subs, in)
+		}
+	}
+	return subs
 }
 
 func argsSuffix(usage string) string {
@@ -81,14 +94,13 @@ func argsSuffix(usage string) string {
 }
 
 func writeCommands(w io.Writer, nodes []Node, st style) {
-	if len(nodes) == 0 {
+	subs := listedCommands(nodes)
+	if len(subs) == 0 {
 		return
 	}
-	subs := make([]info, len(nodes))
 	width := 0
-	for i, n := range nodes {
-		subs[i] = n.info()
-		width = max(width, len(subs[i].name))
+	for _, sub := range subs {
+		width = max(width, len(sub.name))
 	}
 	fmt.Fprintln(w)
 	st.heading(w, "Commands")

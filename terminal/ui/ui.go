@@ -225,6 +225,10 @@ type Options struct {
 	// Extensions add to the transcript the widgets of what the app's
 	// extensions add to messages, in order.
 	Extensions []Extension
+	// Updated is the release of flow that an update installed, when this
+	// is its first start, which shows under the session info at startup,
+	// as Service.Updated tells. Empty shows none.
+	Updated string
 }
 
 // Result is how the terminal UI closed.
@@ -316,6 +320,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	// Service returns events; UI applies them to the widget tree.
 	ui.service = NewService(ctx, a, state)
 	ui.service.Commands = CommandsWith(opts.Extensions)
+	ui.service.Updated = opts.Updated
 
 	ui.BuildUI()
 	ui.Apply(ui.service.InitSession(ctx, opts.First))

@@ -66,12 +66,20 @@ var loginCmd = &cmdline.Command[loginOptions]{
 	},
 }
 
-// runLogin logs in to the account that o names in a, or saves an API key for
-// it, and makes the account active. It writes the login instructions and
-// the outcome to w.
+// runLogin logs in to the account that o names in a, as login does, reading
+// from standard input.
 func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []string) error {
+	return login(ctx, w, os.Stdin, a, o)
+}
+
+// login logs in to the account that o names in a, or saves an API key for
+// it, and makes the account active. It reads the authorization code or the
+// key from in, and writes to w the login instructions, as writeLoginPrompt
+// lays them out, that it waits while the login has no code to read, and
+// that it logged in, as introLine draws it.
+func login(ctx context.Context, w io.Writer, in io.Reader, a *app.App, o loginOptions) error {
 	if o.method == keyMethod {
-		return saveKey(ctx, w, a, o.provider, o.account)
+		return saveKey(ctx, w, in, a, o.provider, o.account)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -81,7 +89,7 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 	if err != nil {
 		return err
 	}
-	input := bufio.NewReader(os.Stdin)
+	input := bufio.NewReader(in)
 	for {
 		select {
 		case <-ctx.Done():
@@ -92,12 +100,13 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 				if p.Provider != o.provider || p.Account != id {
 					continue
 				}
-				fmt.Fprintln(w, p.Prompt())
+				writeLoginPrompt(w, p.Prompt())
 				if p.State == nil {
+					fmt.Fprintln(w, introLine("Waiting for authorization...", showsColor(w)))
 					continue
 				}
 				for {
-					fmt.Fprint(w, "Authorization code: ")
+					fmt.Fprint(w, introLine("Authorization code:", showsColor(w))+" ")
 					code, err := input.ReadString('\n')
 					if err != nil && (!errors.Is(err, io.EOF) || code == "") {
 						return fmt.Errorf("read authorization code: %w", err)
@@ -113,7 +122,7 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 				}
 			case app.EventLoginSucceeded:
 				if p.Provider == o.provider && p.Account == id {
-					fmt.Fprintf(w, "Logged in to %s account %s; it is now active.\n", o.provider, id)
+					fmt.Fprintf(w, "\n%s\n", introLine("Logged in successfully", showsColor(w)))
 					return nil
 				}
 			case app.EventLoginFailed:
@@ -125,18 +134,31 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 	}
 }
 
-// saveKey asks on w for an API key, reads it from standard input and saves
-// it as account id of provider t, or as a new account when id is empty. The
-// key is echoed as typed.
-func saveKey(ctx context.Context, w io.Writer, a *app.App, t agent.ProviderID, id agent.AccountID) error {
-	fmt.Fprintf(w, "Enter the %s API key: ", t)
-	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+// writeLoginPrompt writes to w what p asks the user to do, a blank line
+// after each step: the page to open, as writeURLField lays it out, and the
+// code to enter there when p has one, as writeField does.
+func writeLoginPrompt(w io.Writer, p agent.LoginPrompt) {
+	writeURLField(w, "Open this URL in your browser:", p.URL)
+	fmt.Fprintln(w)
+	if p.Code != "" {
+		writeField(w, "Enter this code in your browser:", p.Code)
+		fmt.Fprintln(w)
+	}
+}
+
+// saveKey asks on w for an API key, bold as introLine draws it, reads it
+// from in and saves it as account id of provider t, or as a new account
+// when id is empty, and writes that it saved it, as introLine draws it. The
+// key is echoed as typed, after the question.
+func saveKey(ctx context.Context, w io.Writer, in io.Reader, a *app.App, t agent.ProviderID, id agent.AccountID) error {
+	fmt.Fprint(w, introLine("Enter the API key:", showsColor(w))+" ")
+	line, err := bufio.NewReader(in).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("read API key: %w", err)
 	}
-	if id, err = a.Accounts().SetKey(ctx, t, id, agent.APIKey(line)); err != nil {
+	if _, err := a.Accounts().SetKey(ctx, t, id, agent.APIKey(line)); err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "Saved the API key as %s account %s; it is now active.\n", t, id)
+	fmt.Fprintf(w, "\n%s\n", introLine("API key saved", showsColor(w)))
 	return nil
 }

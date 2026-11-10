@@ -563,3 +563,17 @@ func TestDefaultEffortPerModel(t *testing.T) {
 		}
 	}
 }
+
+// TestProviderName checks that a provider is named by its catalog name, and
+// one the catalog does not list by its ID.
+func TestProviderName(t *testing.T) {
+	dir := t.TempDir()
+	gatewaytest.WriteCache(t, dir, protocoltest.FromAPI(t,
+		`{"provider-a":{"id":"provider-a","name":"Provider A","format":"responses","models":{}}}`))
+	m := newCatalogApp(t, dir, "").Models()
+	for id, want := range map[agent.ProviderID]string{providerA: "Provider A", "provider-x": "provider-x"} {
+		if got := m.ProviderName(id); got != want {
+			t.Errorf("ProviderName(%s) = %q, want %q", id, got, want)
+		}
+	}
+}

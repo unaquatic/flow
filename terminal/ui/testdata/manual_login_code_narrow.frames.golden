@@ -4,7 +4,7 @@
 |                        [esc cancel]    |
 |                                        |
 |  Approve access in your browser,       |
-|  then paste the complete code below.   |
+|  then paste the code below.            |
 |  https://login.provider-b.test/oauth/  |
 |  authorize?client_id=0b5e4a3c-7d21-    |
 |  4f8e-9c6a-                            |
@@ -39,7 +39,7 @@
 |                        BBBB BBBBBBB    |
 |                                        |
 |  BBBBBBB BBBBBB BB BBBB BBBBBBBB       |
-|  BBBB BBBBB BBB BBBBBBBB BBBB BBBBBB   |
+|  BBBB BBBBB BBB BBBB BBBBBB            |
 |  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB  |
 |  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB    |
 |  BBBBBBBBBB                            |

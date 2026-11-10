@@ -78,7 +78,7 @@ func TestErrorItems(t *testing.T) {
 			Text: `request failed: Post "` + demo.APIURL + `": EOF`, Error: true,
 		})},
 		{name: "Login failed", check: indicator(ui.EventIndicatorShow{
-			Text:  "login to provider-a account demo failed: token endpoint error (401)",
+			Text:  "login to provider-a failed: token endpoint error (401)",
 			Error: true, Detail: indented(demo.TokenErrorBody), JSON: true,
 		})},
 		{name: "Message error", check: func(t *testing.T, events []ui.UIEvent) {
@@ -145,5 +145,21 @@ func TestFormatTool(t *testing.T) {
 	}
 	if view, ok := New().FormatTool(message.ToolPart{Name: "bash"}); ok {
 		t.Errorf("FormatTool(bash) = %+v, want it left to the box", view)
+	}
+}
+
+// TestShowUpdated checks that the update demo adds to the transcript the
+// notice of the first start of UpdateVersion.
+func TestShowUpdated(t *testing.T) {
+	var got []string
+	for _, ev := range ShowUpdated(newTestService(t)) {
+		if added, ok := ev.(ui.EventMessageAdded); ok && added.Msg.Notice != nil {
+			for _, line := range added.Msg.Notice.Lines {
+				got = append(got, line.PlainText())
+			}
+		}
+	}
+	if want := []string{"Updated to v1.2.3"}; !slices.Equal(got, want) {
+		t.Errorf("notice = %q, want %q", got, want)
 	}
 }

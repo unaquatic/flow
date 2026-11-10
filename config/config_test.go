@@ -89,3 +89,23 @@ func TestExtension(t *testing.T) {
 		t.Errorf("Extension of malformed settings = %v, want an error naming the extension", err)
 	}
 }
+
+// TestAutoUpdate checks that updates install in the background unless the
+// config file turns auto_update off.
+func TestAutoUpdate(t *testing.T) {
+	for file, want := range map[string]bool{
+		`{}`:                    true,
+		`{"auto_update":true}`:  true,
+		`{"auto_update":false}`: false,
+	} {
+		dir := t.TempDir()
+		write(t, dir, file)
+		cfg, err := LoadDir(dir)
+		if err != nil {
+			t.Fatalf("LoadDir with %s: %v", file, err)
+		}
+		if cfg.AutoUpdate != want {
+			t.Errorf("auto update with %s = %v, want %v", file, cfg.AutoUpdate, want)
+		}
+	}
+}

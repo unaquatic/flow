@@ -97,6 +97,13 @@ type Config struct {
 	// each message ends with. The terminal's /settings menu sets it.
 	Debug bool `json:"debug,omitempty"`
 
+	// AutoUpdate makes the terminal UI check for a newer release of flow,
+	// once a day, and install it in the background, which runs from the
+	// next start. It is on by default; EnvDisableAutoUpdate turns it off,
+	// whatever the file says. flow update checks and installs on request
+	// either way.
+	AutoUpdate bool `json:"auto_update,omitempty"`
+
 	// Terminal holds the settings of the terminal UI, which its /settings
 	// menu sets.
 	Terminal Terminal `json:"terminal,omitzero"`
@@ -328,6 +335,7 @@ func Defaults(dir string) *Config {
 		LogLevel:   LogInfo,
 		HomeDir:    dir,
 		ShowBorder: true,
+		AutoUpdate: true,
 		Agent: Agent{
 			MaxSteps:         50,
 			RetryMaxAttempts: 5,
@@ -460,6 +468,10 @@ func mergeFromFile(cfg *Config, f File) error {
 
 	if _, ok := raw["debug"]; ok {
 		cfg.Debug = overlay.Debug
+	}
+
+	if _, ok := raw["auto_update"]; ok {
+		cfg.AutoUpdate = overlay.AutoUpdate
 	}
 
 	if _, ok := raw["terminal"]; ok {

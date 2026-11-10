@@ -16,7 +16,7 @@ const addAccountName = "Add account"
 func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 	st, err := s.app.Accounts().Status(s.ctx, pt)
 	if err != nil {
-		return s.ShowToast(fmt.Sprintf("reading the %s accounts failed: %v", s.ProviderName(pt), err))
+		return s.ShowToast(fmt.Sprintf("Reading the %s accounts failed: %v", s.ProviderName(pt), err))
 	}
 
 	items := make([]MenuItem, 0, len(st.Accounts)+1)
@@ -45,7 +45,7 @@ func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 // UseAccount makes account id the active account of pt.
 func (s *Service) UseAccount(pt agent.ProviderID, id agent.AccountID) []UIEvent {
 	if _, err := s.app.Accounts().Use(s.ctx, pt, id); err != nil {
-		return s.ShowToast(fmt.Sprintf("switching to %s account %s failed: %v", s.ProviderName(pt), id, err))
+		return s.ShowToast(fmt.Sprintf("Switching the %s account failed: %v", s.ProviderName(pt), err))
 	}
 	return s.ShowToast(fmt.Sprintf("Active %s account: %s.", s.ProviderName(pt), id))
 }

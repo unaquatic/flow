@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/unaquatic/flow/sse"
+	"github.com/unaquatic/flow/internal/sse"
 )
 
 // StreamEvents returns the stream of the server-sent events of body. It
