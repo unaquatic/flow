@@ -27,8 +27,9 @@ pnpm add -g @unaquatic/flow
 ```
 
 The install script downloads flow from its GitHub release, checked against
-the digest GitHub reports for it, puts it in `~/.flow/bin`, links it from
-`~/.local/bin`, and adds that to `PATH`. `FLOW_VERSION`, `FLOW_INSTALL_DIR` and
+the digest GitHub reports for it, or from its mirror at aquatic.dev when GitHub
+does not answer, puts it in `~/.flow/bin`, links it from `~/.local/bin`, and
+adds that to `PATH`. `FLOW_VERSION`, `FLOW_INSTALL_DIR` and
 `FLOW_NO_MODIFY_PATH=1` change what it does.
 
 ## Updating
