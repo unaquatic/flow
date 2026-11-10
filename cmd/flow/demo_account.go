@@ -154,14 +154,39 @@ var accountDemos = []demoCase{
 		run: accountDemo(runAccountUse, string(demoLoginProvider), string(demoKeyAccount))},
 	{name: "use-invalid", desc: "An account ID that is not one", line: "account use " + string(demoLoginProvider) + " 123",
 		run: accountDemo(runAccountUse, string(demoLoginProvider), "123")},
+	{name: "check", desc: "A provider that can take requests", line: "account check " + string(demoLoginProvider),
+		run: accountDemo(runAccountCheck, string(demoLoginProvider))},
+	{name: "check-not-ready", desc: "A provider with no account, which exits with status 1, and why on standard error", line: "account check " + string(demoKeyProvider),
+		run: withStderr(accountDemo(runAccountCheck, string(demoKeyProvider)))},
+	{name: "check-json", desc: "A provider's check, as JSON", line: "account check " + string(demoLoginProvider) + " --format json",
+		run: accountDemoIn(OutputJSON, runAccountCheck, string(demoLoginProvider))},
+	{name: "check-no-provider", desc: "No provider named, and no default model to take it from", line: "account check",
+		run: accountDemo(runAccountCheck)},
 }
 
 // accountDemo returns the run of a case of flow account that runs run on a
 // demo app with args, writing text.
 func accountDemo(run func(context.Context, io.Writer, *app.App, AccountOptions, []string) error, args ...string) func(context.Context, io.Writer, bool) error {
+	return accountDemoIn(OutputText, run, args...)
+}
+
+// accountDemoIn returns the run of a case of flow account that runs run on
+// a demo app with args, writing in format.
+func accountDemoIn(format OutputFormat, run func(context.Context, io.Writer, *app.App, AccountOptions, []string) error, args ...string) func(context.Context, io.Writer, bool) error {
 	return withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
-		return run(ctx, w, a, AccountOptions{Format: OutputText}, args)
+		return run(ctx, w, a, AccountOptions{Format: format}, args)
 	})
+}
+
+// withStderr returns run, which writes to stderr what is for people alone,
+// as the case's output shows it: into w, in its place.
+func withStderr(run func(context.Context, io.Writer, bool) error) func(context.Context, io.Writer, bool) error {
+	return func(ctx context.Context, w io.Writer, color bool) error {
+		prev := stderr
+		stderr = w
+		defer func() { stderr = prev }()
+		return run(ctx, w, color)
+	}
 }
 
 // loginDemos are the cases of flow login, each on a demo app of its own.

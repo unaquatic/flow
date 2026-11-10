@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/app/server"
 	"github.com/unaquatic/flow/internal/cmdline"
+	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/flow/terminal/ui"
 )
 
@@ -48,7 +50,7 @@ var accountCmd = &cmdline.Command[AccountOptions]{
 	Run: withApp(func(ctx context.Context, w io.Writer, a *app.App, o AccountOptions, _ []string) error {
 		return listAccounts(ctx, w, a, o)
 	}),
-	Commands: []cmdline.Node{accountCurrentCmd, accountUseCmd},
+	Commands: []cmdline.Node{accountCurrentCmd, accountUseCmd, accountCheckCmd},
 }
 
 var accountCurrentCmd = &cmdline.Command[AccountOptions]{
@@ -227,4 +229,62 @@ func writeAccountsJSON(ctx context.Context, w io.Writer, a *app.App) error {
 		out = append(out, server.NewAuthStatus(a, st))
 	}
 	return writeJSON(w, out)
+}
+
+// errNoCheckProvider is the error of flow account check, named no provider,
+// when the config file sets no default model to take the provider of.
+var errNoCheckProvider = errors.New("no provider to check: name one, or set a default model")
+
+var accountCheckCmd = &cmdline.Command[AccountOptions]{
+	Name:  "check",
+	Usage: "[provider]",
+	Short: "Check that a provider can take requests, the default model's by default; exit 1 when not",
+	Flags: accountFlags,
+	Args:  cmdline.MaxArgs(1),
+	Run:   withApp(runAccountCheck),
+}
+
+// runAccountCheck checks the provider that args name, or else the default
+// model's, as app.Accounts.Check checks it, and writes to w what it found:
+// in OutputText, its status, ready, not_ready or invalid, on a line of its
+// own, and why it is not ready, if so, to stderr; in OutputJSON, as an
+// app.AuthCheck. A provider that is not ready ends the command with exit
+// status 1.
+func runAccountCheck(ctx context.Context, w io.Writer, a *app.App, o AccountOptions, args []string) error {
+	var t agent.ProviderID
+	if len(args) == 1 {
+		if err := (providerValue{id: &t}).Set(args[0]); err != nil {
+			return err
+		}
+	} else {
+		d, err := a.Models().DefaultModel()
+		if err != nil {
+			return err
+		}
+		if t = d.Provider; t == "" {
+			return errNoCheckProvider
+		}
+	}
+	check, err := a.Accounts().Check(ctx, t)
+	if err != nil {
+		return err
+	}
+	if check.Status == app.CheckNotReady {
+		check.Reason += "; log in with " + product.Name + " login --provider " + string(t)
+	}
+	if o.Format == OutputJSON {
+		err = writeJSON(w, check)
+	} else {
+		_, err = fmt.Fprintln(w, check.Status)
+		if check.Reason != "" {
+			fmt.Fprintln(stderr, check.Reason)
+		}
+	}
+	if err != nil {
+		return err
+	}
+	if check.Status != app.CheckReady {
+		return &cmdline.ExitError{Code: 1}
+	}
+	return nil
 }
