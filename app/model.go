@@ -353,7 +353,7 @@ func (m Models) StartListings(ctx context.Context) {
 		ev := EventModelsListed{EventBase: m.app.eventBase()}
 		listings, err := m.Listings(ctx, "")
 		if err != nil {
-			e := NewUnknownError(err.Error())
+			e := ErrorOf(err)
 			ev.Error = &e
 		}
 		ev.Listings = listings

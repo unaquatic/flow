@@ -30,7 +30,7 @@ func (c Accounts) Providers() []agent.ProviderID {
 // other API-key-only providers remain available through Providers.
 func (c Accounts) LoginProviders() []agent.ProviderID {
 	return slices.DeleteFunc(c.Providers(), func(t agent.ProviderID) bool {
-		return !c.SupportsLogin(t) && !slices.Contains(c.app.builtIn, t)
+		return !c.SupportsLogin(t) && !c.BuiltIn(t)
 	})
 }
 
@@ -39,6 +39,19 @@ func (c Accounts) LoginProviders() []agent.ProviderID {
 // saves it.
 func (c Accounts) SupportsLogin(t agent.ProviderID) bool {
 	return c.app.accounts.SupportsLogin(t)
+}
+
+// LoginMethods returns the methods Login takes for provider t, browser first
+// when it has one, or none when t takes an API key alone.
+func (c Accounts) LoginMethods(t agent.ProviderID) []agent.LoginMethod {
+	return c.app.accounts.LoginMethods(t)
+}
+
+// BuiltIn reports whether flow is built with provider t, as
+// Options.BuiltIn names them, which LoginProviders lists whether or not it
+// has a login flow.
+func (c Accounts) BuiltIn(t agent.ProviderID) bool {
+	return slices.Contains(c.app.builtIn, t)
 }
 
 // Status returns the accounts of provider t and which one is active.
@@ -200,7 +213,7 @@ func (a *App) registered(t agent.ProviderID) error {
 }
 
 func (a *App) publishLoginFailed(pt agent.ProviderID, id agent.AccountID, err error) {
-	a.publish(EventLoginFailed{EventBase: a.eventBase(), Provider: pt, Account: id, Error: NewUnknownError(err.Error()), Retry: errors.Is(err, agent.ErrInvalidLoginCode)})
+	a.publish(EventLoginFailed{EventBase: a.eventBase(), Provider: pt, Account: id, Error: ErrorOf(err), Retry: errors.Is(err, agent.ErrInvalidLoginCode)})
 }
 
 // publishAccountsChanged publishes the active account of provider t.

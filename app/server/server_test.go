@@ -53,7 +53,7 @@ func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Serv
 	t.Setenv(keyEnvA, "")
 	t.Setenv(keyEnvB, "")
 	cfg := &config.Config{
-		Model:      "test/model",
+		Model:      "provider-b/model-y",
 		HomeDir:    t.TempDir(),
 		Extensions: map[string]json.RawMessage{snapshot.Name: json.RawMessage(`{"enabled":false}`)},
 	}
@@ -80,7 +80,7 @@ func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Serv
 		t.Fatal(err)
 	}
 	t.Cleanup(a.Close)
-	ts := httptest.NewServer(New(a).Handler())
+	ts := httptest.NewServer(New(a, Options{}).Handler())
 	t.Cleanup(ts.Close)
 	return ts, a
 }
@@ -108,6 +108,36 @@ func doJSON(t *testing.T, method, url string, body, out any) int {
 		}
 	}
 	return resp.StatusCode
+}
+
+// doError sends a request as doJSON does, and returns the status of its
+// response and the error it holds. It fails t when the response is not a
+// JSON ErrorResponse.
+func doError(t *testing.T, method, url string, body any) (int, app.Error) {
+	t.Helper()
+	var buf bytes.Buffer
+	if body != nil {
+		if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatal(err)
+		}
+	}
+	req, err := http.NewRequestWithContext(t.Context(), method, url, &buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	var got ErrorResponse
+	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("%s %s: Content-Type %q, want application/json", method, url, ct)
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode %s %s error response: %v", method, url, err)
+	}
+	return resp.StatusCode, got.Error
 }
 
 func createSession(t *testing.T, ts *httptest.Server) session.Session {
@@ -175,6 +205,15 @@ func TestSessionLifecycle(t *testing.T) {
 	if err := json.Unmarshal([]byte(awaitSSE(t, events, app.TypeSessionUpdated)), &streamed); err != nil ||
 		streamed.Title != title || !streamed.CreatedAt.Equal(titled.CreatedAt) || !streamed.UpdatedAt.Equal(titled.UpdatedAt) {
 		t.Errorf("session.updated once titled = %+v, %v; want the session PATCH answered with, %+v", streamed, err, titled)
+	}
+	// An update that leaves the title out keeps it; an empty one clears it.
+	var kept session.Session
+	if status := doJSON(t, "PATCH", sessURL, SessionUpdateRequest{}, &kept); status != http.StatusOK || kept.Title != title {
+		t.Errorf("update without a title: status %d, title %q; want 200, %q", status, kept.Title, title)
+	}
+	var cleared session.Session
+	if status := doJSON(t, "PATCH", sessURL, SessionUpdateRequest{Title: new("")}, &cleared); status != http.StatusOK || cleared.Title != "" {
+		t.Errorf("update with an empty title: status %d, title %q; want 200, none", status, cleared.Title)
 	}
 
 	if status := doJSON(t, "DELETE", sessURL, nil, nil); status != http.StatusNoContent {

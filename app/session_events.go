@@ -108,7 +108,7 @@ type EventMessageEnded struct {
 	Stopped bool `json:"stopped,omitempty"`
 	// Error is why the message failed, or why a message that finished or
 	// was stopped could not be stored. It is nil otherwise.
-	Error *UnknownError `json:"error,omitempty"`
+	Error *Error `json:"error,omitempty"`
 }
 
 func (EventMessageEnded) EventType() EventType { return TypeMessageEnded }
@@ -127,7 +127,7 @@ func (EventAgentStarted) EventType() EventType { return TypeAgentStarted }
 type EventAgentEnded struct {
 	EventBase
 	// Error is why the run failed, or nil when it finished or was stopped.
-	Error *UnknownError `json:"error,omitempty"`
+	Error *Error `json:"error,omitempty"`
 }
 
 func (EventAgentEnded) EventType() EventType { return TypeAgentEnded }
@@ -150,7 +150,7 @@ type EventAgentRetrying struct {
 	// limited".
 	Reason string `json:"reason"`
 	// Error is the failure.
-	Error UnknownError `json:"error"`
+	Error Error `json:"error"`
 }
 
 func (EventAgentRetrying) EventType() EventType { return TypeAgentRetrying }

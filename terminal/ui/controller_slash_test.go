@@ -200,8 +200,8 @@ func TestSlashMenuNoMatch(t *testing.T) {
 }
 
 func TestAgentEndedIndicator(t *testing.T) {
-	failed := app.NewUnknownError("connection reset by peer")
-	rejected := app.UnknownError{Type: app.ErrorTypeUnknown, Message: "provider-a response error (400): bad", Provider: providerA, Status: 400,
+	failed := app.NewError(app.CodeUnknown, "connection reset by peer")
+	rejected := app.Error{Code: app.CodeProviderError, Message: "provider-a response error (400): bad", Provider: providerA, Status: 400,
 		Body: `{"error":{"message":"bad"}}`}
 	tests := []struct {
 		name  string

@@ -2,19 +2,37 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
 )
 
-// handleSessionList returns the project's sessions, as a list of
-// [session.Session] that is empty rather than null when there are none.
+// handleSessionList returns the project's sessions, or with the all query
+// set to true those of every project, newest first, each with the worktree
+// of its project, as a list of [session.Session] that is empty rather than
+// null when there are none.
 func (s *Server) handleSessionList(w http.ResponseWriter, r *http.Request) {
-	sessions, err := s.app.Sessions().ListSessions(r.Context())
+	all := false
+	if q := r.URL.Query().Get("all"); q != "" {
+		var err error
+		if all, err = strconv.ParseBool(q); err != nil {
+			respondInvalid(w, fmt.Sprintf("all must be true or false, not %q", q))
+			return
+		}
+	}
+	list := s.app.Sessions().ListSessions
+	if all {
+		list = s.app.Sessions().ListAllSessions
+	}
+	sessions, err := list(r.Context())
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	if sessions == nil {
@@ -30,7 +48,7 @@ func (s *Server) handleSessionCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSessionStatus(w http.ResponseWriter, r *http.Request) {
 	busy, err := s.app.BusySessions(r.Context())
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	out := make(map[string]SessionStatusInfo, len(busy))
@@ -43,26 +61,31 @@ func (s *Server) handleSessionStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSessionGet(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.app.Sessions().Session(r.Context(), sessionID(r))
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, sess)
 }
 
+// handleSessionUpdate changes the settings of the session that the body
+// names, and answers with the session. A body that names none leaves it as
+// it is; an empty title clears it.
 func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 	var req SessionUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid JSON body")
+		respondInvalid(w, "invalid JSON body")
 		return
 	}
 	id := sessionID(r)
-	title := ""
+	var sess *session.Session
+	var err error
 	if req.Title != nil {
-		title = *req.Title
+		sess, err = s.app.Session(id).SetTitle(*req.Title)
+	} else {
+		sess, err = s.app.Sessions().Session(r.Context(), id)
 	}
-	sess, err := s.app.Session(id).SetTitle(title)
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, sess)
@@ -70,7 +93,7 @@ func (s *Server) handleSessionUpdate(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 	if err := s.app.DeleteSession(r.Context(), sessionID(r)); err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -82,7 +105,7 @@ func (s *Server) handleSessionDelete(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageList(w http.ResponseWriter, r *http.Request) {
 	msgs, err := s.session(r).Messages()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, msgs)
@@ -91,11 +114,11 @@ func (s *Server) handleMessageList(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 	var req SendRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid JSON body")
+		respondInvalid(w, "invalid JSON body")
 		return
 	}
 	if req.Text == "" {
-		respondError(w, http.StatusBadRequest, "text must not be empty")
+		respondInvalid(w, "text must not be empty")
 		return
 	}
 	id := message.NewID()
@@ -105,7 +128,7 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.session(r).Send(input); err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusAccepted, SendResponse{MessageID: id})
@@ -117,18 +140,16 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 // transcript is answered 409.
 func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 	var req ContinueRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid JSON body")
-			return
-		}
+	if err := decodeOptional(r, &req); err != nil {
+		respondInvalid(w, "invalid JSON body")
+		return
 	}
 	if req.Stream {
 		s.streamRun(w, r, s.session(r).ContinueStream(req.Model))
 		return
 	}
 	if err := s.session(r).Continue(req.Model); err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
@@ -139,7 +160,7 @@ func (s *Server) handleContinue(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageGet(w http.ResponseWriter, r *http.Request) {
 	m, err := s.session(r).Message(message.ID(r.PathValue("messageID")))
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, m)
@@ -150,7 +171,7 @@ func (s *Server) handleMessageGet(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMessageDelete(w http.ResponseWriter, r *http.Request) {
 	err := s.session(r).DeleteMessage(message.ID(r.PathValue("messageID")))
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -173,11 +194,9 @@ func (s *Server) handleRedo(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 	var req CheckoutRequest
-	if r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "invalid request body")
-			return
-		}
+	if err := decodeOptional(r, &req); err != nil {
+		respondInvalid(w, "invalid request body")
+		return
 	}
 	moved, err := s.session(r).Checkout(req.MessageID)
 	respondCheckout(w, moved, err)
@@ -187,7 +206,7 @@ func (s *Server) handleCheckout(w http.ResponseWriter, r *http.Request) {
 // move that changed no file reports an empty list rather than null.
 func respondCheckout(w http.ResponseWriter, moved app.MoveResult, err error) {
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	files := moved.Files
@@ -195,6 +214,15 @@ func respondCheckout(w http.ResponseWriter, moved app.MoveResult, err error) {
 		files = []app.FileDiff{}
 	}
 	respondJSON(w, http.StatusOK, CheckoutResponse{Files: files, Checkout: moved.Checkout})
+}
+
+// decodeOptional decodes the JSON body of r, which may be left out, into v.
+// A body that is empty, however it is sent, leaves v as it is.
+func decodeOptional(r *http.Request, v any) error {
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
 }
 
 // session returns a handle on the session named by the request's path.
@@ -265,8 +293,10 @@ type SessionStatusInfo struct {
 	Type string `json:"type"`
 }
 
-// SessionUpdateRequest is the body of PATCH /session/{id}.
+// SessionUpdateRequest is the body of PATCH /session/{id}, which changes the
+// settings it names and leaves the others as they are.
 type SessionUpdateRequest struct {
-	// Title replaces the session title when present.
+	// Title replaces the session title when present. An empty title clears
+	// it.
 	Title *string `json:"title,omitempty"`
 }

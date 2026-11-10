@@ -302,8 +302,10 @@ func TestGenerateStream(t *testing.T) {
 	}
 }
 
-// TestGenerateErrors checks the status of a POST /generate that is invalid,
-// names an unknown provider, has no credentials, or that the model refuses.
+// TestGenerateErrors checks the status and the error code of a POST
+// /generate that is invalid, names an unknown provider, has no credentials,
+// or that the model refuses, whose error keeps the provider's status and
+// body.
 func TestGenerateErrors(t *testing.T) {
 	ts, _, _ := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -315,18 +317,23 @@ func TestGenerateErrors(t *testing.T) {
 		name       string
 		body       any
 		wantStatus int
+		wantCode   app.ErrorCode
 	}{
-		{name: "not an object", body: "hi", wantStatus: http.StatusBadRequest},
-		{name: "no messages", body: GenerateRequest{Model: "provider-b/model-y"}, wantStatus: http.StatusBadRequest},
-		{name: "unknown role", body: GenerateRequest{Model: "provider-b/model-y", Messages: []GenerateMessage{{Role: "tool", Content: "x"}}}, wantStatus: http.StatusBadRequest},
-		{name: "negative limit", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: -1}, wantStatus: http.StatusBadRequest},
-		{name: "unknown provider", body: GenerateRequest{Model: "nope/x", Messages: user}, wantStatus: http.StatusNotFound},
-		{name: "no credentials", body: GenerateRequest{Model: "provider-a/model-x", Messages: user}, wantStatus: http.StatusUnauthorized},
-		{name: "refused by the model", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: 10}, wantStatus: http.StatusBadGateway},
+		{name: "not an object", body: "hi", wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "no messages", body: GenerateRequest{Model: "provider-b/model-y"}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "unknown role", body: GenerateRequest{Model: "provider-b/model-y", Messages: []GenerateMessage{{Role: "tool", Content: "x"}}}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "negative limit", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: -1}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "unknown provider", body: GenerateRequest{Model: "nope/x", Messages: user}, wantStatus: http.StatusNotFound, wantCode: app.CodeProviderNotFound},
+		{name: "no credentials", body: GenerateRequest{Model: "provider-a/model-x", Messages: user}, wantStatus: http.StatusUnauthorized, wantCode: app.CodeNotAuthenticated},
+		{name: "refused by the model", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: 10}, wantStatus: http.StatusBadGateway, wantCode: app.CodeProviderError},
 	}
 	for _, tt := range tests {
-		if status := doJSON(t, "POST", ts.URL+"/generate", tt.body, nil); status != tt.wantStatus {
-			t.Errorf("%s: status %d, want %d", tt.name, status, tt.wantStatus)
+		status, got := doError(t, "POST", ts.URL+"/generate", tt.body)
+		if status != tt.wantStatus || got.Code != tt.wantCode {
+			t.Errorf("%s: %d %+v, want %d %s", tt.name, status, got, tt.wantStatus, tt.wantCode)
+		}
+		if tt.wantCode == app.CodeProviderError && (got.Status != http.StatusUnauthorized || !strings.Contains(got.Body, "invalid x-api-key")) {
+			t.Errorf("%s: error %+v, want the provider's 401 and its body", tt.name, got)
 		}
 	}
 }
@@ -353,13 +360,11 @@ func TestBrokenConfigFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var got struct {
-			Error string `json:"error"`
-		}
+		var got ErrorResponse
 		json.NewDecoder(resp.Body).Decode(&got)
 		resp.Body.Close()
-		if resp.StatusCode != http.StatusInternalServerError || !strings.Contains(got.Error, config.FileName) {
-			t.Errorf("%s %s = %d %q, want 500 naming %s", tt.method, tt.path, resp.StatusCode, got.Error, config.FileName)
+		if resp.StatusCode != http.StatusInternalServerError || got.Error.Code != app.CodeUnknown || !strings.Contains(got.Error.Message, config.FileName) {
+			t.Errorf("%s %s = %d %+v, want 500 %s naming %s", tt.method, tt.path, resp.StatusCode, got.Error, app.CodeUnknown, config.FileName)
 		}
 	}
 

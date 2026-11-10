@@ -61,7 +61,7 @@ type EventLoginFailed struct {
 	EventBase
 	Provider agent.ProviderID `json:"provider"`
 	Account  agent.AccountID  `json:"account"`
-	Error    UnknownError     `json:"error"`
+	Error    Error            `json:"error"`
 	// Retry reports malformed input that can be corrected using the same State.
 	Retry bool `json:"retry,omitempty"`
 }

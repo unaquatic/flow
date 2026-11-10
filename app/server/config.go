@@ -25,12 +25,12 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid config update: "+err.Error())
+		respondInvalid(w, "invalid config update: "+err.Error())
 		return
 	}
 	if req.Model != nil {
 		if err := s.app.Models().SaveDefault(*req.Model); err != nil {
-			respondModelErr(w, err)
+			respondErr(w, err)
 			return
 		}
 	}
@@ -42,7 +42,7 @@ func (s *Server) handleConfigUpdate(w http.ResponseWriter, r *http.Request) {
 func (s *Server) RespondConfig(w http.ResponseWriter) {
 	model, err := s.app.Models().Default()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
+		respondErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, Config{Model: model})

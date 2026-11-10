@@ -12,7 +12,7 @@ import (
 func (s *Server) handleBranchList(w http.ResponseWriter, r *http.Request) {
 	fork, err := s.session(r).Branches()
 	if err != nil {
-		respondErr(w, err)
+		respondSessionErr(w, err)
 		return
 	}
 	respondJSON(w, http.StatusOK, fork)
@@ -23,11 +23,11 @@ func (s *Server) handleBranchList(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleBranchSwitch(w http.ResponseWriter, r *http.Request) {
 	var req BranchSwitchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+		respondInvalid(w, "invalid request body")
 		return
 	}
 	if req.MessageID == "" {
-		respondError(w, http.StatusBadRequest, "message_id must not be empty")
+		respondInvalid(w, "message_id must not be empty")
 		return
 	}
 	moved, err := s.session(r).SwitchBranch(req.MessageID)

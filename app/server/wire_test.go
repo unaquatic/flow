@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
@@ -38,10 +39,24 @@ func assertWireGolden(t *testing.T, name, got string) {
 	}
 }
 
-// testListing returns the listing of one provider with a model that takes
-// reasoning efforts and one that does not.
+// testListing returns the listing of one provider with models that take
+// reasoning efforts, at the catalog's default or at medium, and ones that do
+// not.
 func testListing() app.ModelListing {
-	return app.NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
+	levels := []gateway.Effort{"low", "medium", "high"}
+	return app.NewModelListing("provider-a", []agent.Listing{
+		{Model: "model-x"},
+		{Model: "model-y", Unlisted: true},
+		{Model: "model-r", Offering: gateway.Offering{Reasoning: &gateway.Reasoning{Efforts: levels}}},
+		{Model: "model-s", Offering: gateway.Offering{Reasoning: &gateway.Reasoning{Efforts: levels, DefaultEffort: "high"}}},
+	})
+}
+
+// providerRefusal returns the error response of a provider that is rate
+// limited.
+func providerRefusal() error {
+	return &agent.ResponseError{Provider: "provider-a", StatusCode: http.StatusTooManyRequests, Message: "slow down",
+		ResponseBody: `{"error":{"message":"slow down"}}`}
 }
 
 // TestWireBodies checks that the response bodies that carry what the app
@@ -64,6 +79,7 @@ func TestWireBodies(t *testing.T) {
 		{"GET /model", []app.ModelListing{testListing()}},
 		{"GET /model none", []app.ModelListing(nil)},
 		{"GET /session", []session.Session{sess}},
+		{"GET /session?all=true", []session.Session{{ID: "ses_3", CreatedAt: created, UpdatedAt: updated, Worktree: "/work/project-b"}}},
 		{"GET /session/{id} untitled", session.Session{ID: "ses_2", CreatedAt: created, UpdatedAt: created}},
 		{"GET /session/{id}/branch", fork},
 		{"GET /session/{id}/branch at the root", app.Fork{Branches: fork.Branches}},
@@ -72,6 +88,15 @@ func TestWireBodies(t *testing.T) {
 			{File: "old.go", Deletions: 12, Status: "deleted"},
 		}, Checkout: "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0"}},
 		{"POST /session/{id}/undo nothing checked out", CheckoutResponse{Files: []app.FileDiff{}}},
+		{"GET /auth", []AuthStatus{
+			{Provider: "provider-a", Active: "00000000-0000-0000-0000-000000000001", Accounts: []AccountStatus{
+				{ID: "00000000-0000-0000-0000-000000000001", Kind: agent.CredentialOAuth, Source: agent.CredentialSourceStore},
+			}, LoginMethods: []agent.LoginMethod{agent.LoginBrowser, agent.LoginDevice}, BuiltIn: true},
+			{Provider: "provider-b", Accounts: []AccountStatus{}, LoginMethods: []agent.LoginMethod{}},
+		}},
+		{"error", ErrorResponse{Error: app.ErrorOf(app.ErrBusy)}},
+		{"error from a provider", ErrorResponse{Error: app.ErrorOf(fmt.Errorf("generate: %w", providerRefusal()))}},
+		{"POST /generate generate.failed", GenerateFailed{Error: app.ErrorOf(providerRefusal())}},
 	} {
 		data, err := json.Marshal(body.v)
 		if err != nil {

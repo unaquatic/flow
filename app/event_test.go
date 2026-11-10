@@ -43,7 +43,7 @@ func testEvents() []eventCase {
 	full := message.Content{ID: "msg_1", ParentID: &parent, Role: message.RoleAgent, Parts: parts, Model: "test/model", CreatedAt: time.Date(2026, 10, 30, 1, 2, 4, 0, time.UTC)}
 	root := message.Content{ID: "msg_0", Role: message.RoleUser, Parts: []message.ContentPart{message.TextPart{ID: "p0", Text: "q"}}, Model: "test/model", CreatedAt: time.Date(2026, 10, 30, 1, 2, 2, 0, time.UTC)}
 	at := session.Position{Index: 2, Of: 3}
-	failed := NewUnknownError("boom")
+	failed := NewError(CodeUnknown, "boom")
 	change := PartChange{EventBase: base, MessageID: "msg_1", Part: parts[1]}
 	listing := NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
 	return []eventCase{
@@ -57,7 +57,7 @@ func testEvents() []eventCase {
 		{EventAgentEnded{EventBase: base}, TypeAgentEnded},
 		{EventAgentEnded{EventBase: base, Error: &failed}, TypeAgentEnded},
 		{EventAgentRetrying{EventBase: base, MessageID: "msg_1", Attempt: 1, MaxAttempts: 5, RetryAt: base.Timestamp.Add(3 * time.Second),
-			Reason: "rate limited", Error: NewUnknownError("provider-a: 429 Too Many Requests")}, TypeAgentRetrying},
+			Reason: "rate limited", Error: NewError(CodeProviderError, "provider-a: 429 Too Many Requests")}, TypeAgentRetrying},
 		{EventSessionLoaded{EventBase: base, Messages: []Message{{Content: root}, {Content: full, Branch: at}}}, TypeSessionLoaded},
 		{EventSessionLoaded{EventBase: base}, TypeSessionLoaded},
 		{EventSessionUpdated{EventBase: base, Title: "fix the tests", CreatedAt: root.CreatedAt, UpdatedAt: full.CreatedAt}, TypeSessionUpdated},
@@ -169,39 +169,6 @@ func assertGolden(t *testing.T, path, got string) {
 	}
 }
 
-func TestNewUnknownError(t *testing.T) {
-	err := NewUnknownError("provider failed")
-	if err.Type != ErrorTypeUnknown {
-		t.Fatalf("error type = %q, want %q", err.Type, ErrorTypeUnknown)
-	}
-	if err.Message != "provider failed" {
-		t.Fatalf("error message = %q", err.Message)
-	}
-}
-
-// TestErrorOf checks that a provider's error response, wrapped or not, keeps
-// its provider, status and body, and that another error keeps its message
-// alone.
-func TestErrorOf(t *testing.T) {
-	resp := &agent.ResponseError{Provider: "provider-a", StatusCode: 400, Message: "bad", ResponseBody: `{"error":{"message":"bad"}}`}
-	got := ErrorOf(fmt.Errorf("turn: %w", resp))
-	want := UnknownError{Type: ErrorTypeUnknown, Message: "turn: " + resp.Error(), Provider: "provider-a", Status: 400, Body: resp.ResponseBody}
-	if got != want {
-		t.Errorf("ErrorOf(response error) = %+v, want %+v", got, want)
-	}
-	if got, want := ErrorOf(errors.New("boom")), NewUnknownError("boom"); got != want {
-		t.Errorf("ErrorOf(boom) = %+v, want %+v", got, want)
-	}
-
-	// A body longer than MaxErrorBody is cut short at a rune boundary: the
-	// two-byte é that would straddle the cut is left out whole.
-	long := strings.Repeat("a", MaxErrorBody-1) + "é" + "tail"
-	body := ErrorOf(&agent.ResponseError{Provider: "provider-a", StatusCode: 502, ResponseBody: long}).Body
-	if want := strings.Repeat("a", MaxErrorBody-1); body != want {
-		t.Errorf("ErrorOf(long body).Body is %d bytes, want the %d before é", len(body), len(want))
-	}
-}
-
 // TestAgentEvent checks that each event of an agent run becomes the app event
 // that clients read, stamped with the base it is given, with its message, and
 // the error that ended a message described.
@@ -212,7 +179,7 @@ func TestAgentEvent(t *testing.T) {
 		Parts: []message.ContentPart{message.TextPart{ID: "p1", Text: "hi"}}, Model: "test/model", CreatedAt: time.Unix(2, 0).UTC()}
 	change := agent.PartChange{MessageID: "msg_1", Part: message.TextPart{ID: "p1", Text: "hi"}}
 	want := PartChange{EventBase: base, MessageID: "msg_1", Part: change.Part}
-	failed := NewUnknownError("boom")
+	failed := NewError(CodeUnknown, "boom")
 	for _, tt := range []struct {
 		in   agent.Event
 		want Event

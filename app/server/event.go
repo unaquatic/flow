@@ -5,6 +5,7 @@ import (
 	"io"
 	"iter"
 	"net/http"
+	"time"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
@@ -16,11 +17,14 @@ import (
 //	event: <EventType>
 //	data: <event JSON>
 //
-// The optional session query filters events by session ID.
+// The optional session query filters events by session ID. While no event
+// comes, a keepalive comment goes every Options.Heartbeat, so that proxies
+// keep the connection open and a client can tell a quiet stream from a dead
+// one.
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		respondError(w, http.StatusInternalServerError, "streaming unsupported")
+		respondErr(w, errStreamingUnsupported)
 		return
 	}
 	filter := message.SessionID(r.URL.Query().Get("session"))
@@ -30,10 +34,17 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 
 	sse.Start(w)
 	flusher.Flush()
+	heartbeat := time.NewTicker(s.opts.heartbeat())
+	defer heartbeat.Stop()
 	for {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-heartbeat.C:
+			if err := sse.WriteComment(w, "keepalive"); err != nil {
+				return
+			}
+			flusher.Flush()
 		case ev := <-events:
 			if filter != "" && ev.Base().SessionID != filter {
 				continue
@@ -60,14 +71,14 @@ func (s *Server) streamSend(w http.ResponseWriter, r *http.Request, input app.Se
 func (s *Server) streamRun(w http.ResponseWriter, r *http.Request, run iter.Seq2[app.Event, error]) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		respondError(w, http.StatusInternalServerError, "streaming unsupported")
+		respondErr(w, errStreamingUnsupported)
 		return
 	}
 	started := false
 	for ev, err := range run {
 		if err != nil {
 			if !started {
-				respondErr(w, err)
+				respondSessionErr(w, err)
 			}
 			return
 		}

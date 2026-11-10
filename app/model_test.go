@@ -328,14 +328,14 @@ func TestModelsFindDownloadsOnce(t *testing.T) {
 }
 
 // TestModelsRefreshPublishesEveryRefresh checks that a refresh publishes
-// EventModelsRefreshed also when the source answers that nothing changed.
+// EventModelsRefreshed also when the source serves the catalog unchanged.
 func TestModelsRefreshPublishesEveryRefresh(t *testing.T) {
 	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNotModified)
+		w.Write(providerDoc(t, "model-old"))
 	}))
 	defer src.Close()
 	dir := t.TempDir()
-	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{ETag: `"v1"`, Fetched: time.Now(), Data: providerDoc(t, "model-old")})
+	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: providerDoc(t, "model-old")})
 	a := newCatalogApp(t, dir, src.URL)
 	events := a.Subscribe(t.Context())
 

@@ -80,6 +80,14 @@ func Start(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// WriteComment writes text to w as a comment of an event stream, which Read
+// and browsers skip, as a stream sends to keep an idle connection open. Text
+// must have no line break.
+func WriteComment(w io.Writer, text string) error {
+	_, err := io.WriteString(w, ": "+text+"\n\n")
+	return err
+}
+
 // Write writes ev to w as one event of an event stream: an "event" field when
 // ev has a Type, a "data" field for each line of ev.Data, and a blank line.
 // Read reads it back as ev, as long as Type has no line break and Data no

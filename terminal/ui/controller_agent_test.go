@@ -41,7 +41,7 @@ func turnsEnded(out []UIEvent) []EventTurnEnded {
 // its run ends, or once a prompt in the same run opens the next turn, and
 // that a turn that ends without a reply of its own shows none.
 func TestTurnWorked(t *testing.T) {
-	failed := &app.UnknownError{Message: "no model"}
+	failed := &app.Error{Code: app.CodeModelNotFound, Message: "no model"}
 	tests := []struct {
 		name   string
 		events []app.Event

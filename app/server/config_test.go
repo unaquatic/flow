@@ -30,8 +30,8 @@ func TestConfig(t *testing.T) {
 	})
 
 	var got Config
-	if status := doJSON(t, "GET", ts.URL+"/config", nil, &got); status != http.StatusOK || got.Model != "test/model" {
-		t.Fatalf("GET /config = %d, %+v, want 200 and test/model", status, got)
+	if status := doJSON(t, "GET", ts.URL+"/config", nil, &got); status != http.StatusOK || got.Model != "provider-b/model-y" {
+		t.Fatalf("GET /config = %d, %+v, want 200 and provider-b/model-y", status, got)
 	}
 
 	model := "provider-a/model-x"
