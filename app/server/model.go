@@ -10,7 +10,7 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/sse"
+	"github.com/unaquatic/flow/internal/sse"
 )
 
 // handleModelList answers with the catalog models of each signed-in

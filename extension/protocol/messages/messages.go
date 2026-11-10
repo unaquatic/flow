@@ -17,7 +17,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/request"
 	"github.com/unaquatic/flow/extension/protocol/internal/post"
-	"github.com/unaquatic/flow/sse"
+	"github.com/unaquatic/flow/internal/sse"
 )
 
 // DefaultBaseURL is the base URL of the format's own API.
