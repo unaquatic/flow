@@ -15,8 +15,9 @@ import (
 )
 
 // TestExport checks that flow export writes the latest session of the
-// project as Markdown, a session it names as JSON, and a transcript to the
-// file it names, saying where.
+// project as Markdown, a session it names as JSON, the session and then each
+// message on a line of its own as JSON Lines, and a transcript to the file
+// it names, saying where.
 func TestExport(t *testing.T) {
 	a, _ := newRunTestApp(t, "All green.")
 	if err := runExport(t.Context(), new(strings.Builder), a, ExportOptions{Format: ExportMarkdown}, nil); !errors.Is(err, errNoSessions) {
@@ -59,6 +60,28 @@ func TestExport(t *testing.T) {
 	}
 
 	out.Reset()
+	if err := runExport(t.Context(), &out, a, ExportOptions{Format: ExportJSONL}, nil); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("JSON Lines =\n%s\nwant the session and its two messages", out.String())
+	}
+	for i, want := range []struct{ typ, role string }{{"session", ""}, {"message", "user"}, {"message", "agent"}} {
+		var line struct {
+			Type string            `json:"type"`
+			ID   message.SessionID `json:"id"`
+			Role string            `json:"role"`
+		}
+		if err := json.Unmarshal([]byte(lines[i]), &line); err != nil {
+			t.Fatalf("line %d = %s: %v", i, lines[i], err)
+		}
+		if !strings.HasPrefix(lines[i], `{"type":"`+want.typ+`",`) || line.Role != want.role || (i == 0 && line.ID != id) {
+			t.Errorf("line %d = %s, want type %s first, role %q", i, lines[i], want.typ, want.role)
+		}
+	}
+
+	out.Reset()
 	file := filepath.Join(t.TempDir(), "session.md")
 	if err := runExport(t.Context(), &out, a, ExportOptions{Format: ExportMarkdown, Output: file}, nil); err != nil {
 		t.Fatal(err)
@@ -79,7 +102,7 @@ func TestExport(t *testing.T) {
 // TestExportFormat checks the names --format takes, in any case, and that
 // it refuses others.
 func TestExportFormat(t *testing.T) {
-	for in, want := range map[string]ExportFormat{"markdown": ExportMarkdown, "JSON": ExportJSON} {
+	for in, want := range map[string]ExportFormat{"markdown": ExportMarkdown, "JSON": ExportJSON, "jsonl": ExportJSONL} {
 		var f ExportFormat
 		if err := f.UnmarshalText([]byte(in)); err != nil || f != want {
 			t.Errorf("format %q = %q, %v; want %q", in, f, err, want)
@@ -123,5 +146,26 @@ func TestExportMatchesTheTerminal(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestTypedLine checks that a line of JSON Lines is the object with its type
+// first, an empty object too, and that a value that is no object fails.
+func TestTypedLine(t *testing.T) {
+	for _, tt := range []struct {
+		v    any
+		want string
+	}{
+		{struct {
+			ID string `json:"id"`
+		}{"x"}, `{"type":"t","id":"x"}` + "\n"},
+		{struct{}{}, `{"type":"t"}` + "\n"},
+	} {
+		if got, err := typedLine("t", tt.v); err != nil || string(got) != tt.want {
+			t.Errorf("typedLine(%+v) = %q, %v; want %q", tt.v, got, err, tt.want)
+		}
+	}
+	if got, err := typedLine("t", []int{1}); err == nil {
+		t.Errorf("typedLine of a list = %q, want an error", got)
 	}
 }

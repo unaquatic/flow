@@ -62,6 +62,10 @@ var exportDemos = []demoCase{
 		run: storedDemo(true, func(ctx context.Context, w io.Writer, a *app.App) error {
 			return runExport(ctx, w, a, ExportOptions{Format: ExportMarkdown}, []string{string(demoSession)})
 		})},
+	{name: "jsonl", desc: "A session as JSON Lines: the session, and then each message", line: "export " + string(demoSession) + " --format jsonl",
+		run: storedDemo(true, func(ctx context.Context, w io.Writer, a *app.App) error {
+			return runExport(ctx, w, a, ExportOptions{Format: ExportJSONL}, []string{string(demoSession)})
+		})},
 	{name: "missing", desc: "A session that is not stored", line: "export " + demoMissingSession,
 		run: storedDemo(true, func(ctx context.Context, w io.Writer, a *app.App) error {
 			return runExport(ctx, w, a, ExportOptions{Format: ExportMarkdown}, []string{demoMissingSession})

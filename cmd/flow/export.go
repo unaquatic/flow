@@ -27,8 +27,8 @@ type ExportOptions struct {
 	Output string
 }
 
-// ExportFormat is how flow export writes a transcript: ExportMarkdown or
-// ExportJSON.
+// ExportFormat is how flow export writes a transcript: ExportMarkdown,
+// ExportJSON or ExportJSONL.
 type ExportFormat string
 
 const (
@@ -36,8 +36,12 @@ const (
 	// it.
 	ExportMarkdown ExportFormat = "markdown"
 	// ExportJSON writes the session and its messages as the HTTP API
-	// writes them.
+	// writes them, in one JSON document.
 	ExportJSON ExportFormat = "json"
+	// ExportJSONL writes them as JSON Lines, an object on each line with
+	// its type first: the session, typed "session", and then each message,
+	// typed "message", from the root of the active branch.
+	ExportJSONL ExportFormat = "jsonl"
 )
 
 // MarshalText returns f as text.
@@ -48,8 +52,8 @@ func (f ExportFormat) MarshalText() ([]byte, error) {
 // UnmarshalText sets f to the format text names, in any case.
 func (f *ExportFormat) UnmarshalText(text []byte) error {
 	name := ExportFormat(strings.ToLower(strings.TrimSpace(string(text))))
-	if name != ExportMarkdown && name != ExportJSON {
-		return fmt.Errorf("unknown format %q; use markdown or json", text)
+	if name != ExportMarkdown && name != ExportJSON && name != ExportJSONL {
+		return fmt.Errorf("unknown format %q; use markdown, json or jsonl", text)
 	}
 	*f = name
 	return nil
@@ -65,7 +69,7 @@ var exportCmd = &cmdline.Command[ExportOptions]{
 	Usage: "[session-id]",
 	Short: "Write a session's transcript, the latest of this project's by default",
 	Flags: func(fs *flag.FlagSet, o *ExportOptions) {
-		fs.TextVar(&o.Format, "format", ExportMarkdown, "Output `format`: markdown, as /export saves it, or json, as the HTTP API writes it")
+		fs.TextVar(&o.Format, "format", ExportMarkdown, "Output `format`: markdown, as /export saves it, json, as the HTTP API writes it, or jsonl, a line each")
 		const outputUsage = "Write the transcript to this `file`, not to standard output"
 		fs.StringVar(&o.Output, "output", "", outputUsage)
 		fs.StringVar(&o.Output, "o", "", outputUsage)
@@ -117,6 +121,24 @@ func runExport(ctx context.Context, w io.Writer, a *app.App, o ExportOptions, ar
 	return nil
 }
 
+// exportLines returns sess and msgs, the messages of its active branch, as
+// JSON Lines, as ExportJSONL describes: the session first, as the HTTP API
+// writes it, and then each message, as the HTTP API writes it.
+func exportLines(sess *session.Session, msgs []app.Message) ([]byte, error) {
+	out, err := typedLine("session", sess)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range msgs {
+		line, err := typedLine("message", m)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, line...)
+	}
+	return out, nil
+}
+
 // exportID returns the session that args names, or else the latest of a's
 // project, or errNoSessions when it has none.
 func exportID(ctx context.Context, a *app.App, args []string) (message.SessionID, error) {
@@ -136,12 +158,15 @@ func exportID(ctx context.Context, a *app.App, args []string) (message.SessionID
 
 // exportData returns the transcript of sess, whose active branch msgs holds,
 // in format: Markdown, as ui.TranscriptMarkdown writes it among exts, the
-// terminal UI's extensions, which name tool calls as the terminal does, or
-// the JSON of a SessionExport.
+// terminal UI's extensions, which name tool calls as the terminal does, the
+// JSON of a SessionExport, or JSON Lines, as ExportJSONL describes.
 func exportData(format ExportFormat, sess *session.Session, msgs []app.Message, exts []ui.Extension) ([]byte, error) {
-	if format == ExportJSON {
+	switch format {
+	case ExportJSON:
 		data, err := json.MarshalIndent(SessionExport{Session: sess, Messages: msgs}, "", "  ")
 		return append(data, '\n'), err
+	case ExportJSONL:
+		return exportLines(sess, msgs)
 	}
 	chat := make([]ui.ChatMessage, 0, len(msgs))
 	for _, m := range msgs {

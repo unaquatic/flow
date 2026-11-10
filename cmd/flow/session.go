@@ -94,3 +94,27 @@ func writeJSON(w io.Writer, v any) error {
 	_, err = w.Write(append(data, '\n'))
 	return err
 }
+
+// typedLine returns v, which encodes as a JSON object, as one line of JSON
+// Lines: the object with a "type" member, typ, first, and then v's own
+// members, ending with a line break.
+func typedLine(typ string, v any) ([]byte, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) < 2 || data[0] != '{' {
+		return nil, fmt.Errorf("%s: %T encodes as no JSON object", typ, v)
+	}
+	name, err := json.Marshal(typ)
+	if err != nil {
+		return nil, err
+	}
+	line := append([]byte(`{"type":`), name...)
+	if rest := data[1:]; len(rest) > 1 {
+		line = append(append(line, ','), rest...)
+	} else {
+		line = append(line, '}')
+	}
+	return append(line, '\n'), nil
+}

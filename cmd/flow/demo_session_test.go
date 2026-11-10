@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -34,6 +35,10 @@ func TestSessionDemos(t *testing.T) {
 		{command: "export", cases: exportDemos, want: map[string]string{
 			"markdown": q("# " + demoSessionTitle + "\n\n## User\n\nwhy does TestAdd fail?\n\n## Agent\n\nLet me read calc.go.\n\n### Read\n\n" +
 				"```json\n{\"path\":\"calc.go\"}\n```\n\n```\npackage calc\n\nfunc Add(a, b int) int { return a - b }\n```\n\n" + demoRunAnswer + "\n"),
+			"jsonl": `\{"type":"session","id":"` + titled + `","title":"` + q(demoSessionTitle) + `",[^\n]*\}\n` +
+				`\{"type":"message",[^\n]*"role":"user"[^\n]*\}\n` +
+				`\{"type":"message",[^\n]*"name":"read"[^\n]*\}\n` +
+				`\{"type":"message",[^\n]*"text":"` + q(strings.ReplaceAll(demoRunAnswer, "\n", `\n`)) + `"[^\n]*\}\n`,
 			"missing": q(`error: no stored session matches "` + demoMissingSession + `"` + "\n"),
 			"none":    q("error: " + errNoSessions.Error() + "\n"),
 		}},

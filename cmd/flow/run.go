@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -347,21 +346,11 @@ func (p *RunPrinter) WriteAnswer() error {
 // PrintJSON writes ev on a line of its own, as the JSON object that the
 // HTTP API streams, with a "type" member, its EventType, first.
 func (p *RunPrinter) PrintJSON(ev app.Event) error {
-	data, err := json.Marshal(ev)
+	line, err := typedLine(string(ev.EventType()), ev)
 	if err != nil {
 		return err
 	}
-	typ, err := json.Marshal(ev.EventType())
-	if err != nil {
-		return err
-	}
-	line := append([]byte(`{"type":`), typ...)
-	if rest := data[1:]; len(rest) > 1 {
-		line = append(append(line, ','), rest...)
-	} else {
-		line = append(line, '}')
-	}
-	_, err = p.W.Write(append(line, '\n'))
+	_, err = p.W.Write(line)
 	return err
 }
 
