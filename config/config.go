@@ -97,8 +97,8 @@ type Config struct {
 	// each message ends with. The terminal's /settings menu sets it.
 	Debug bool `json:"debug,omitempty"`
 
-	// AutoUpdate makes the terminal UI check for a newer release of flow,
-	// once a day, and install it in the background, which runs from the
+	// AutoUpdate makes the terminal UI check for a newer release of flow
+	// when it starts, and install it in the background, which runs from the
 	// next start. It is on by default; EnvDisableAutoUpdate turns it off,
 	// whatever the file says. flow update checks and installs on request
 	// either way.

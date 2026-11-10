@@ -1,0 +1,20 @@
+name: CI Develop
+
+run-name: Checks ${{ github.sha }}
+
+# Every push to main, as a squash-merged pull request is, is checked. It is
+# not released: a release starts from a version tag pushed by hand, as
+# ci-tag.yml describes.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check
+    uses: ./.github/workflows/run-checks.yml
+    secrets: inherit

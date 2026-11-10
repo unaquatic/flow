@@ -27,8 +27,10 @@ func TestRunDemoUpdate(t *testing.T) {
 		"# Up to date\n$ flow update\nAlready up to date: 1.2.3\n",
 		"$ flow update --check\nNew update available: 1.2.2 → 1.2.3\n\nUpdate with:\n  flow update\n",
 		"$ flow update\nUpdating 1.2.2 → 1.2.3\n  npm install -g @unaquatic/flow@1.2.3\n\nInstalled successfully\n",
-		"error: cannot update flow: " + root + " is not writable, run npm install -g @unaquatic/flow@1.2.3\n",
-		"error: cannot update flow: /usr/local/bin/flow is not a global npm or pnpm install, run npm install -g @unaquatic/flow@latest\n",
+		"for a flow the install script installed\n$ flow update\nUpdating 1.2.2 → 1.2.3\n\nInstalled successfully\n",
+		"# A newer release, whose download breaks off\n$ flow update\nUpdating 1.2.2 → 1.2.3\n\nerror: flow update: download failed: " + demoReleaseURL + ": unexpected EOF\n",
+		"error: flow update: not writable: " + root + ", run npm install -g @unaquatic/flow@1.2.3\n",
+		"error: flow update: not installed by npm, pnpm or the install script: /usr/local/bin/flow, run curl -fsSL https://aquatic.dev/flow/install | sh\n",
 		"# A development build\n$ flow update\nerror: flow (devel) is a development build, run flow update --force to install\n",
 	} {
 		if !strings.Contains(w.String(), want) {

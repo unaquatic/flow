@@ -21,15 +21,23 @@
 ## Installation
 
 ```sh
+curl -fsSL https://aquatic.dev/flow/install | sh   # macOS, Linux, Git Bash on Windows
 npm install -g @unaquatic/flow
+pnpm add -g @unaquatic/flow
 ```
+
+The install script downloads flow from its GitHub release, checked against
+the digest GitHub reports for it, puts it in `~/.flow/bin`, links it from
+`~/.local/bin`, and adds that to `PATH`. `FLOW_VERSION`, `FLOW_INSTALL_DIR` and
+`FLOW_NO_MODIFY_PATH=1` change what it does.
 
 ## Updating
 
-Once a day, flow checks npm for a newer release when it starts, installs it in
-the background with the package manager that installed flow (npm or pnpm), and
-runs it from the next start, which shows `Updated to v1.2.3` under the status.
-Install output goes to `~/.flow/logs/update.log`.
+When it starts, flow checks for a newer release where it was installed from:
+GitHub for the install script, npm for npm and pnpm. It installs the release
+in the background the same way, and runs it from the next start, which shows
+`Updated to v1.2.3` under the status. Install output goes to
+`~/.flow/logs/update.log`.
 
 ```sh
 flow update          # install the latest release now

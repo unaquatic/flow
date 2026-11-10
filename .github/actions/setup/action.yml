@@ -1,0 +1,10 @@
+name: Setup
+description: Install the Go of go.mod, with the module and build caches
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: go.mod

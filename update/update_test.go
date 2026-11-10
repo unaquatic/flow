@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
+	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/internal/flock"
 )
 
@@ -131,33 +131,50 @@ func TestLatest(t *testing.T) {
 	}
 }
 
-// TestCheckCaches checks that Check asks the registry once per Interval and
-// keeps what it found in the state file.
-func TestCheckCaches(t *testing.T) {
-	srv, hits := registry(t, "0.2.0")
-	u := &Updater{Dir: t.TempDir(), Registry: srv.URL, Current: "v0.1.0", Interval: time.Hour}
-	for range 3 {
-		if got, err := u.Check(t.Context()); err != nil || got != "v0.2.0" {
-			t.Fatalf("Check = %q, %v; want v0.2.0", got, err)
+// TestNewMethod checks that an Updater takes the package manager that
+// config.EnvManagedBy names, when it is one flow updates with.
+func TestNewMethod(t *testing.T) {
+	for value, want := range map[string]Method{"npm": MethodNPM, "pnpm": MethodPNPM, "yarn": MethodNone, "": MethodNone} {
+		t.Setenv(config.EnvManagedBy, value)
+		u, err := New(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if u.Method != want {
+			t.Errorf("%s=%q: Method %q, want %q", config.EnvManagedBy, value, u.Method, want)
 		}
 	}
-	if n := hits.Load(); n != 1 {
-		t.Errorf("registry asked %d times, want once", n)
-	}
-	s, err := u.State()
-	if err != nil || s.Latest != "v0.2.0" || s.CheckedAt.IsZero() {
-		t.Errorf("State = %+v, %v; want the release and the time of the check", s, err)
-	}
+}
 
-	// Once the interval has passed, the registry is asked again.
-	if err := u.SaveState(func(s *State) { s.CheckedAt = time.Now().Add(-2 * time.Hour) }); err != nil {
+// TestPlanMethod checks that Plan updates with the package manager the
+// launcher names over the one the folders tell, as for npm's global folder
+// under a Node that pnpm installed, and that the launcher's name does not
+// make a flow outside node_modules updatable.
+func TestPlanMethod(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "pnpm", "nodejs", "22", "lib", "node_modules")
+	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := u.Check(t.Context()); err != nil {
-		t.Fatal(err)
+	root, _ = filepath.EvalSymlinks(root)
+	u := &Updater{
+		Executable: filepath.Join(root, "@unaquatic", "flow", "bin", "flow-linux-x64"),
+		Output: func(_ context.Context, name string, args ...string) ([]byte, error) {
+			if name == "npm" {
+				return []byte(root), nil
+			}
+			return nil, fmt.Errorf("%s is not installed", name)
+		},
 	}
-	if n := hits.Load(); n != 2 {
-		t.Errorf("registry asked %d times after the interval, want twice", n)
+	if _, err := u.Plan(t.Context(), "v0.2.0"); !errors.Is(err, ErrUnmanaged) {
+		t.Errorf("Plan by the folders alone = %v, want ErrUnmanaged, as they read as pnpm's", err)
+	}
+	u.Method = MethodNPM
+	if inst, err := u.Plan(t.Context(), "v0.2.0"); err != nil || inst.Method != MethodNPM {
+		t.Errorf("Plan of npm's install = %+v, %v; want npm's", inst, err)
+	}
+	u.Executable = filepath.Join(t.TempDir(), "flow")
+	if _, err := u.Plan(t.Context(), "v0.2.0"); !errors.Is(err, ErrUnmanaged) {
+		t.Errorf("Plan of a build from source = %v, want ErrUnmanaged", err)
 	}
 }
 
@@ -267,7 +284,7 @@ func TestAuto(t *testing.T) {
 
 // TestAutoInstall checks that Auto installs a newer release with the
 // package manager, writing its output to the update log, and that a
-// release that failed to install is not installed again.
+// release that failed to install is tried again.
 func TestAutoInstall(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Auto does not install on Windows")
@@ -291,21 +308,16 @@ func TestAutoInstall(t *testing.T) {
 	if err != nil || !strings.Contains(string(log), "installed install -g @unaquatic/flow@0.2.0") {
 		t.Errorf("update log = %q, %v; want the output of npm", log, err)
 	}
-	if s, err := u.State(); err != nil || s.Installed != "v0.2.0" {
-		t.Errorf("State = %+v, %v; want v0.2.0 installed", s, err)
-	}
 
 	u = fakeGlobal(t, srv.URL)
 	npm("echo no access >&2; exit 1")
 	if got, ok := u.Auto(t.Context()); !ok || got.Status != StatusFailed || got.Err == nil {
 		t.Fatalf("Auto with a failing npm = %+v, %v; want a failure", got, ok)
 	}
-	if s, err := u.State(); err != nil || s.Failed != "v0.2.0" {
-		t.Errorf("State = %+v, %v; want v0.2.0 failed", s, err)
-	}
-	npm("echo must not run; exit 1")
-	if got, ok := u.Auto(t.Context()); !ok || got.Status != StatusAvailable {
-		t.Errorf("Auto after a failure = %+v, %v; want the release only available", got, ok)
+	// The next start tries it again.
+	npm(`echo "installed $*"`)
+	if got, ok := u.Auto(t.Context()); !ok || got.Status != StatusInstalled {
+		t.Errorf("Auto after a failure = %+v, %v; want it installed", got, ok)
 	}
 }
 
@@ -337,25 +349,37 @@ func TestBackgroundBusy(t *testing.T) {
 	}
 }
 
-// TestTakeInstalled checks that the release an update installed is reported
-// once, by its own first start, and by no flow of another version.
-func TestTakeInstalled(t *testing.T) {
-	u := &Updater{Dir: t.TempDir(), Current: "v0.1.0"}
-	if got := u.TakeInstalled(); got != "" {
-		t.Errorf("TakeInstalled without a state file = %q, want none", got)
+// TestUpdated checks that a start tells of a release newer than the one
+// that ran last, once, whatever brought it, and that a first start, the same
+// release, an older one and a build that is no release tell of none.
+func TestUpdated(t *testing.T) {
+	u := &Updater{Dir: t.TempDir()}
+	for _, tt := range []struct {
+		current, want string
+	}{
+		{"v0.1.0", ""},       // first start
+		{"v0.1.0", ""},       // same release, as flow update --force leaves it
+		{"v0.2.0", "v0.2.0"}, // updated
+		{"v0.2.0", ""},       // told once
+		{"(devel)", ""},      // a build from source is not saved
+		{"v0.2.0", ""},
+		{"v0.1.0", ""}, // an older release, as a reinstall of one leaves it
+		{"v0.3.0", "v0.3.0"},
+	} {
+		u.Current = tt.current
+		if got := u.Updated(); got != tt.want {
+			t.Errorf("Updated at %s = %q, want %q", tt.current, got, tt.want)
+		}
 	}
-	if err := u.RecordInstalled("0.2.0"); err != nil {
+	// What older builds kept is dropped.
+	if err := os.WriteFile(filepath.Join(u.Dir, StateName), []byte(`{"latest":"v9.0.0","installed":"v0.3.0","last_version":"v0.3.0"}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	// The flow that installed it still runs the version before.
-	if got := u.TakeInstalled(); got != "" {
-		t.Errorf("TakeInstalled of v0.1.0 = %q, want none", got)
+	u.Current = "v0.3.0"
+	if got := u.Updated(); got != "" {
+		t.Errorf("Updated = %q, want none", got)
 	}
-	u.Current = "v0.2.0"
-	if got := u.TakeInstalled(); got != "v0.2.0" {
-		t.Errorf("first TakeInstalled of v0.2.0 = %q, want v0.2.0", got)
-	}
-	if got := u.TakeInstalled(); got != "" {
-		t.Errorf("second TakeInstalled of v0.2.0 = %q, want none", got)
+	if data, _ := os.ReadFile(filepath.Join(u.Dir, StateName)); !strings.Contains(string(data), `"last_version": "v0.3.0"`) || strings.Contains(string(data), "installed") {
+		t.Errorf("state file = %s, want last_version alone", data)
 	}
 }

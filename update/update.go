@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/product"
 	"golang.org/x/mod/module"
 	"golang.org/x/mod/semver"
@@ -29,11 +31,6 @@ const (
 	// DefaultRegistry is the npm registry that an Updater reads releases
 	// from when its Registry is empty.
 	DefaultRegistry = "https://registry.npmjs.org"
-
-	// CheckInterval is how long Updater.Check trusts the latest release it
-	// found last, before it asks the registry again, when the Updater's
-	// Interval is zero.
-	CheckInterval = 24 * time.Hour
 
 	// RequestTimeout bounds a request to the registry.
 	RequestTimeout = 10 * time.Second
@@ -51,15 +48,19 @@ type Updater struct {
 	// Executable is the path of the running flow, its symbolic links
 	// resolved.
 	Executable string
+	// Method is the package manager that installed flow, as the launcher
+	// of the npm package tells it, which Plan takes over the one the
+	// folders of Executable tell. MethodNone leaves it to them.
+	Method Method
 	// Registry is the base URL of the npm registry. Empty selects
 	// DefaultRegistry.
 	Registry string
+	// GitHubAPI is the base URL of the GitHub API, which a flow that the
+	// install script installed updates from. Empty selects DefaultGitHubAPI.
+	GitHubAPI string
 	// Client sends the requests to the registry. Nil selects
 	// http.DefaultClient.
 	Client *http.Client
-	// Interval is how long Check trusts the latest release it found last.
-	// Zero selects CheckInterval.
-	Interval time.Duration
 	// Output runs a command of a package manager, such as npm root -g, and
 	// returns its standard output. Nil runs it with os/exec.
 	Output func(ctx context.Context, name string, args ...string) ([]byte, error)
@@ -67,10 +68,19 @@ type Updater struct {
 	// global folder of a package manager. Nil probes it, as the package's
 	// Writable does.
 	Writable func(dir string) bool
+	// Progress, when set, is told how far Replace has downloaded the
+	// release asset at url: done bytes of total, or of an unknown size when
+	// total is -1. It is called as the bytes arrive, from the goroutine that
+	// calls Replace.
+	Progress func(url string, done, total int64)
+	// Installing, when set, is called by Replace once it has downloaded the
+	// release asset and checked its digest, before it writes the new binary.
+	Installing func()
 }
 
 // New returns an Updater of the running flow, at product.Version, for data
-// directory dir.
+// directory dir, installed by the package manager that
+// config.EnvManagedBy names, when it names npm or pnpm.
 func New(dir string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -79,7 +89,11 @@ func New(dir string) (*Updater, error) {
 	if real, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = real
 	}
-	return &Updater{Dir: dir, Current: product.Version(), Executable: exe}, nil
+	m := Method(config.ManagedBy())
+	if m != MethodNPM && m != MethodPNPM {
+		m = MethodNone
+	}
+	return &Updater{Dir: dir, Current: product.Version(), Executable: exe, Method: m}, nil
 }
 
 // Canonical returns v as a semantic version with its leading "v", which Go
@@ -112,43 +126,45 @@ func Newer(latest, current string) bool {
 	return l != "" && c != "" && semver.Compare(l, c) > 0
 }
 
-// Latest returns the version of PackageName that the registry's "latest"
-// dist-tag names, in Canonical form, such as v0.2.0.
+// Latest returns the latest release, in Canonical form, such as v0.2.0, as
+// the way flow was installed tells of it: the latest GitHub release for a
+// flow that the install script installed, as IsStandalone tells, and the
+// version of PackageName that the npm registry's "latest" dist-tag names
+// otherwise.
 func (u *Updater) Latest(ctx context.Context) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
-	defer cancel()
+	if IsStandalone(u.Executable) {
+		return u.latestRelease(ctx)
+	}
 	endpoint := strings.TrimSuffix(cmp.Or(u.Registry, DefaultRegistry), "/") +
 		"/" + url.PathEscape(PackageName) + "/latest"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", product.Name+"/"+u.Current)
-	client := u.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("checking for updates: %w", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return "", fmt.Errorf("checking for updates: %s has no release of %s", cmp.Or(u.Registry, DefaultRegistry), PackageName)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("checking for updates: %s: %s", endpoint, resp.Status)
-	}
 	var body struct {
 		Version string `json:"version"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&body); err != nil {
-		return "", fmt.Errorf("checking for updates: %s: %w", endpoint, err)
+	if err := u.getJSON(ctx, endpoint, &body); err != nil {
+		if se, ok := errors.AsType[*StatusError](err); ok && se.Code == http.StatusNotFound {
+			return "", fmt.Errorf("check failed: not published: %s", PackageName)
+		}
+		return "", fmt.Errorf("check failed: %w", err)
 	}
 	v := Canonical(body.Version)
 	if v == "" {
-		return "", fmt.Errorf("checking for updates: %s: no valid version, got %q", endpoint, body.Version)
+		return "", fmt.Errorf("check failed: invalid version: %q", body.Version)
 	}
 	return v, nil
+}
+
+// getJSON decodes the JSON that a GET of endpoint answers with, within
+// RequestTimeout, into v.
+func (u *Updater) getJSON(ctx context.Context, endpoint string, v any) error {
+	ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
+	defer cancel()
+	resp, err := u.get(ctx, endpoint)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(v); err != nil {
+		return fmt.Errorf("%s: %w", endpoint, err)
+	}
+	return nil
 }

@@ -1,0 +1,17 @@
+name: CI PR
+
+run-name: "Checks ${{ github.event.pull_request.title }}"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check
+    uses: ./.github/workflows/run-checks.yml
+    secrets: inherit

@@ -1,0 +1,48 @@
+name: CI Tag
+
+run-name: Release ${{ github.ref_name }}
+
+# Pushing a version tag, vX.Y.Z, checks the tagged commit and releases it on
+# GitHub, as release.yml does, and then starts release-npm.yml, which npm's
+# trusted publishing accepts as a run of its own. Tags are pushed by hand, on
+# a commit of main:
+#
+#   git tag v0.1.0 origin/main && git push origin v0.1.0
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check
+    uses: ./.github/workflows/run-checks.yml
+    secrets: inherit
+
+  release:
+    name: Release
+    needs: check
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ github.ref_name }}
+    permissions:
+      contents: write
+    secrets: inherit
+
+  release-npm:
+    name: Release npm
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Start Release npm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh workflow run release-npm.yml --repo "$REPO" --ref "$TAG" -f tag="$TAG"
