@@ -102,7 +102,7 @@ func TestBannerMenuAfterEmptyModels(t *testing.T) {
 func TestBannerSearchesFromTheInput(t *testing.T) {
 	ui := newBannerTestUI(t)
 	ui.renderer.FocusRenderable(ui.input)
-	items := []MenuItem{{Name: "provider-a/model-a"}, {Name: "provider-b/model-b"}}
+	items := []MenuItem{{Name: "provider-a/provider-a/model-a"}, {Name: "provider-b/provider-b/model-b"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	if !ui.inputContentRow.Visible() || !ui.input.Focused() {
 		t.Fatal("input is not on screen and focused for the search")
@@ -181,7 +181,7 @@ func TestBannerArrowsChangeSetting(t *testing.T) {
 		t.Errorf("shift+right changed the mode to %s or was kept from the input", ui.service.state.CacheMode)
 	}
 
-	items := []MenuItem{{Name: "provider-a/model-a"}}
+	items := []MenuItem{{Name: "provider-a/provider-a/model-a"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	left := &input.KeyEvent{Name: input.KeyLeft}
 	ui.HandleBannerKey(left)
@@ -225,39 +225,6 @@ func TestBannerTabAsksCustomModel(t *testing.T) {
 	ui.HandleBannerKey(tab)
 	if tab.DefaultPrevented() || !ui.bannerPanel.Visible() {
 		t.Errorf("tab in a menu without a custom entry was kept %v, banner shown %v; want it left to the input", tab.DefaultPrevented(), ui.bannerPanel.Visible())
-	}
-}
-
-// TestBannerCtrlSSavesRow checks that Ctrl+S in a menu whose rows can be
-// saved, as the model menu's can, saves the selected row and leaves the menu
-// open, and that in a menu without one it goes to the input.
-func TestBannerCtrlSSavesRow(t *testing.T) {
-	ui := newBannerTestUI(t)
-	var saved []string
-	items := []MenuItem{
-		{Name: "model-a", Save: func() []UIEvent { saved = append(saved, "model-a"); return nil }},
-		{Name: "model-b", Selected: true, Save: func() []UIEvent { saved = append(saved, "model-b"); return nil }},
-	}
-	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Title: modelsTitle, Items: func() []MenuItem { return items }}))
-	if got := ui.bannerHeader.Keys.Hints; !slices.Contains(got, HintSave) {
-		t.Errorf("title keys = %v, want %s among them", got, HintSave)
-	}
-
-	key := &input.KeyEvent{Name: "s", Mods: input.ModCtrl}
-	ui.HandleKey(key)
-	if !key.DefaultPrevented() || !ui.bannerPanel.Visible() || !slices.Equal(saved, []string{"model-b"}) {
-		t.Errorf("ctrl+s kept %v, banner shown %v, saved %q; want kept, the menu open, and model-b saved", key.DefaultPrevented(), ui.bannerPanel.Visible(), saved)
-	}
-
-	plain := []MenuItem{{Name: "model-a"}}
-	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return plain }}))
-	key = &input.KeyEvent{Name: "s", Mods: input.ModCtrl}
-	ui.HandleBannerKey(key)
-	if key.DefaultPrevented() {
-		t.Error("ctrl+s in a menu without rows to save was kept from the input")
-	}
-	if got := ui.bannerHeader.Keys.Hints; slices.Contains(got, HintSave) {
-		t.Errorf("title keys = %v for a menu without rows to save, want no %s", got, HintSave)
 	}
 }
 

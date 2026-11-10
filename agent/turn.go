@@ -83,8 +83,9 @@ func (s *TurnState) Message() message.Content {
 		ID:   s.MessageID,
 		Role: message.RoleAgent,
 		// Later changes replace parts in s.Parts.
-		Parts: slices.Clone(s.Parts),
-		Model: s.Variant.String(),
+		Parts:    slices.Clone(s.Parts),
+		Provider: s.Variant.Provider,
+		Model:    s.Variant.Ref(),
 	}
 }
 

@@ -40,14 +40,14 @@ func testEvents() []eventCase {
 		message.TextPart{ID: "p1", Text: "hi"},
 		message.ToolPart{ID: "p2", CallID: "c1", Name: "bash", State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"ls"}`), Output: "a.go"}},
 	}
-	full := message.Content{ID: "msg_1", ParentID: &parent, Role: message.RoleAgent, Parts: parts, Model: "test/model", CreatedAt: time.Date(2026, 10, 30, 1, 2, 4, 0, time.UTC)}
-	root := message.Content{ID: "msg_0", Role: message.RoleUser, Parts: []message.ContentPart{message.TextPart{ID: "p0", Text: "q"}}, Model: "test/model", CreatedAt: time.Date(2026, 10, 30, 1, 2, 2, 0, time.UTC)}
+	full := message.Content{ID: "msg_1", ParentID: &parent, Role: message.RoleAgent, Parts: parts, Provider: "test", Model: "lab-a/model", CreatedAt: time.Date(2026, 10, 30, 1, 2, 4, 0, time.UTC)}
+	root := message.Content{ID: "msg_0", Role: message.RoleUser, Parts: []message.ContentPart{message.TextPart{ID: "p0", Text: "q"}}, Provider: "test", Model: "lab-a/model", CreatedAt: time.Date(2026, 10, 30, 1, 2, 2, 0, time.UTC)}
 	at := session.Position{Index: 2, Of: 3}
 	failed := NewError(CodeUnknown, "boom")
 	change := PartChange{EventBase: base, MessageID: "msg_1", Part: parts[1]}
 	listing := NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
 	return []eventCase{
-		{EventMessageStarted{EventBase: base, Message: Message{ID: "msg_1", Role: message.RoleAgent, Model: "test/model"}}, TypeMessageStarted},
+		{EventMessageStarted{EventBase: base, Message: Message{ID: "msg_1", Role: message.RoleAgent, Provider: "test", Model: "lab-a/model"}}, TypeMessageStarted},
 		{EventPartStarted{change}, TypePartStarted},
 		{EventPartUpdated{change}, TypePartUpdated},
 		{EventPartEnded{change}, TypePartEnded},
@@ -176,7 +176,7 @@ func TestAgentEvent(t *testing.T) {
 	base := EventBase{SessionID: "ses_1", Timestamp: time.Unix(1, 0).UTC()}
 	parent := message.ID("msg_0")
 	msg := message.Content{ID: "msg_1", ParentID: &parent, Role: message.RoleAgent,
-		Parts: []message.ContentPart{message.TextPart{ID: "p1", Text: "hi"}}, Model: "test/model", CreatedAt: time.Unix(2, 0).UTC()}
+		Parts: []message.ContentPart{message.TextPart{ID: "p1", Text: "hi"}}, Provider: "test", Model: "lab-a/model", CreatedAt: time.Unix(2, 0).UTC()}
 	change := agent.PartChange{MessageID: "msg_1", Part: message.TextPart{ID: "p1", Text: "hi"}}
 	want := PartChange{EventBase: base, MessageID: "msg_1", Part: change.Part}
 	failed := NewError(CodeUnknown, "boom")

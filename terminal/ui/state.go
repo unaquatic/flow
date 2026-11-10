@@ -4,6 +4,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
@@ -33,9 +34,14 @@ type ChatMessage struct {
 	Prev []message.ContentPart
 	// Error is an optional failure rendered with the message.
 	Error error
+	// Provider is the provider of the model variant that produced the
+	// message, or that a prompt was sent to, as [message.Content.Provider]
+	// names it.
+	Provider agent.ProviderID
 	// Model is the model variant that produced the message, or that a
-	// prompt was sent to, in "provider/model:option:effort" form, as
-	// [message.Content.Model] names it. Its variant prices the usage.
+	// prompt was sent to, without its provider, in "model:option:effort"
+	// form, as [message.Content.Model] names it. Its variant prices the
+	// usage.
 	Model string
 	// Usage contains the token counts of the message's request, which its
 	// usage part records. It stays zero while the message streams, though
@@ -96,6 +102,13 @@ const (
 // HasParent reports whether the message belongs to another message's bubble.
 func (m ChatMessage) HasParent() bool {
 	return m.ParentID != "" && m.ParentID != m.ID
+}
+
+// Variant returns the model variant that produced the message, or that a
+// prompt was sent to, as agent.ParseVariantAt reads it against cat. It is
+// the zero Variant when the model is not known.
+func (m ChatMessage) Variant(cat *gateway.Catalog) agent.Variant {
+	return agent.ParseVariantAt(m.Provider, m.Model, cat)
 }
 
 // AssignPrev records on each message in msgs the parts of the one before

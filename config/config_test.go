@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// TestLogLevel checks that the config file's log level reads in any case,
-// as its lower-case name, and sets the slog level it names, and that a level
-// it does not name logs at the default, info.
+// TestLogLevel checks that the config file's log level reads as the slog
+// level it names, and that a level it does not name, upper-case names
+// among them, fails loading.
 func TestLogLevel(t *testing.T) {
 	tests := []struct {
 		file  string
@@ -17,11 +17,9 @@ func TestLogLevel(t *testing.T) {
 		level slog.Level
 	}{
 		{file: "debug", want: LogDebug, level: slog.LevelDebug},
-		{file: "DEBUG", want: LogDebug, level: slog.LevelDebug},
-		{file: "Warn", want: LogWarn, level: slog.LevelWarn},
-		{file: "error", want: LogError, level: slog.LevelError},
 		{file: "info", want: LogInfo, level: slog.LevelInfo},
-		{file: "verbose", want: "verbose", level: slog.LevelInfo},
+		{file: "warn", want: LogWarn, level: slog.LevelWarn},
+		{file: "error", want: LogError, level: slog.LevelError},
 	}
 	for _, tt := range tests {
 		dir := t.TempDir()
@@ -32,6 +30,14 @@ func TestLogLevel(t *testing.T) {
 		}
 		if cfg.LogLevel != tt.want || cfg.LogLevel.Level() != tt.level {
 			t.Errorf("log level %q = %q at %v, want %q at %v", tt.file, cfg.LogLevel, cfg.LogLevel.Level(), tt.want, tt.level)
+		}
+	}
+
+	for _, file := range []string{"DEBUG", "Warn", "verbose", ""} {
+		dir := t.TempDir()
+		write(t, dir, `{"log_level":"`+file+`"}`)
+		if _, err := LoadDir(dir); err == nil || !strings.Contains(err.Error(), "log_level") {
+			t.Errorf("LoadDir with %q = %v, want an error naming log_level", file, err)
 		}
 	}
 }
@@ -53,7 +59,7 @@ func TestExtension(t *testing.T) {
 		{name: "section", file: `{"extensions":{"snapshot":{"enabled":false}}}`, want: `{"enabled":false}`},
 		{name: "legacy key", file: `{"snapshot":false}`, want: `false`},
 		{name: "section over legacy key", file: `{"snapshot":true,"extensions":{"snapshot":{"enabled":false}}}`, want: `{"enabled":false}`},
-		{name: "none", file: `{"model":"provider-a/model-a"}`, want: ""},
+		{name: "none", file: `{"default_model":"provider-a/model-a"}`, want: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

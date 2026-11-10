@@ -18,7 +18,12 @@ var (
 	// ErrNoModel reports that no model matches a pattern.
 	ErrNoModel = errors.New("no model matches")
 
-	// ErrModelFormat reports a model not named in "provider/model" format.
+	// ErrAmbiguousModel reports a model named without its lab that models
+	// of more than one lab have.
+	ErrAmbiguousModel = errors.New("model is ambiguous")
+
+	// ErrModelFormat reports a model not named in "provider/model" format,
+	// or a default model without its provider or its model.
 	ErrModelFormat = errors.New("model must be provider/model")
 )
 
@@ -31,36 +36,99 @@ type Models struct{ app *App }
 // Models returns the app's models.
 func (a *App) Models() Models { return Models{app: a} }
 
-// Default returns the default model, a variant in the form Resolve reads,
-// of a request that names none, as the config file sets it now, so that
-// SaveDefault applies at once. It fails when the config file cannot be read. A
-// caller that picks its own model, as the terminal does, passes it with each
-// request instead.
-func (m Models) Default() (string, error) {
+// DefaultModel is the default model of the config file, which a request
+// that names no model runs: a provider, and a model of it apart, in the
+// form agent.Variant.Ref writes, such as "lab-a/model-a:fast:high".
+type DefaultModel struct {
+	// Provider is the provider the model runs at, by its catalog ID.
+	Provider agent.ProviderID
+	// Model is the model without its provider, as agent.Variant.Ref
+	// writes it.
+	Model string
+}
+
+// DefaultModel returns the default provider and model as the config file
+// sets them now, so that SaveDefaultModel applies at once. Either is empty
+// when the file does not set it. It fails when the config file cannot be
+// read.
+func (m Models) DefaultModel() (DefaultModel, error) {
 	cfg, err := m.app.config.Get()
 	if err != nil {
-		return "", err
+		return DefaultModel{}, err
 	}
-	return cfg.Model, nil
+	return DefaultModel{Provider: agent.ProviderID(cfg.DefaultProvider), Model: cfg.DefaultModel}, nil
+}
+
+// Default returns the default model, as DefaultModel reads it, as a variant
+// in the form Resolve reads, its provider and then its model. It is empty
+// when the file sets no model, and the model alone when it sets no
+// provider, which Resolve refuses. A caller that picks its own model, as
+// the terminal does, passes it with each request instead.
+func (m Models) Default() (string, error) {
+	d, err := m.DefaultModel()
+	if err != nil || d.Model == "" || d.Provider == "" {
+		return d.Model, err
+	}
+	return agent.FormatModel(d.Provider, d.Model), nil
+}
+
+// SaveDefaultModel saves d as the default provider and model of the config
+// file, its model as agent.ParseVariantAt reads it at its provider and
+// Variant.Ref writes it, once its provider is registered. It fails with
+// ErrModelFormat when d lacks either. The model need not be in the catalog.
+// DefaultModel reads them from there, so they apply at once, and to the
+// other processes as they next read them.
+func (m Models) SaveDefaultModel(d DefaultModel) error {
+	v, err := m.defaultVariant(d)
+	if err != nil {
+		return err
+	}
+	return m.app.config.SaveDefaultModel(string(v.Provider), v.Ref())
+}
+
+// UpdateDefaultModel applies change to the default provider and model as
+// DefaultModel reads them, and saves the result as SaveDefaultModel saves
+// it, in one write under the config file's lock, so that a change another
+// process makes to the file meanwhile, as of the other of the two, is not
+// lost. Nothing is saved when the result cannot be.
+func (m Models) UpdateDefaultModel(change func(*DefaultModel)) error {
+	return m.app.config.UpdateDefaultModel(func(provider, model string) (string, string, error) {
+		d := DefaultModel{Provider: agent.ProviderID(provider), Model: model}
+		change(&d)
+		v, err := m.defaultVariant(d)
+		if err != nil {
+			return "", "", err
+		}
+		return string(v.Provider), v.Ref(), nil
+	})
+}
+
+// defaultVariant returns d as a variant, its model as agent.ParseVariantAt
+// reads it at its provider. It fails with ErrModelFormat when d lacks its
+// provider or its model, and when its provider is not registered.
+func (m Models) defaultVariant(d DefaultModel) (agent.Variant, error) {
+	if d.Provider == "" || d.Model == "" {
+		return agent.Variant{}, fmt.Errorf("%w: provider %q, model %q", ErrModelFormat, d.Provider, d.Model)
+	}
+	if err := m.app.registered(d.Provider); err != nil {
+		return agent.Variant{}, err
+	}
+	return agent.ParseVariantAt(d.Provider, d.Model, m.Catalog()), nil
 }
 
 // SaveDefault saves model, a variant in the form Resolve reads, as the
-// default model in the config file, once its provider is registered. The
-// model need not be in the catalog. Default reads it from there, so it applies
-// at once, and to the other processes as they next read it.
+// default model, its provider and the rest apart, as SaveDefaultModel
+// saves them.
 func (m Models) SaveDefault(model string) error {
 	t, id, ok := strings.Cut(model, "/")
 	if !ok || t == "" || id == "" {
 		return fmt.Errorf("%w: %q", ErrModelFormat, model)
 	}
-	if err := m.app.registered(agent.ProviderID(t)); err != nil {
-		return err
-	}
-	return m.app.config.SaveModel(model)
+	return m.SaveDefaultModel(DefaultModel{Provider: agent.ProviderID(t), Model: id})
 }
 
 // Resolve returns the model variant that model names, in the form
-// agent.Variant.String writes, such as "provider-a/model-a:fast:high", or the
+// agent.Variant.String writes, such as "provider-a/lab-a/model-a:fast:high", or the
 // default model when model is empty, which fails when the config file
 // cannot be read. ParseVariant reads it, and FitEffort fits its
 // effort to the model, or sets the default effort when it names none, so the
@@ -137,7 +205,7 @@ func (m Models) ParseVariant(model string) agent.Variant {
 // ModelChoice is a model that a pattern can name.
 type ModelChoice struct {
 	// Name is the variant in the form agent.Variant.String writes, as in
-	// "provider-a/model-a:fast".
+	// "provider-a/lab-a/model-a:fast".
 	Name string
 	// Released is the model's release date, as YYYY-MM-DD, or "" when the
 	// catalog has none.
@@ -153,11 +221,15 @@ type ModelChoice struct {
 // When none matches, it downloads the catalog and looks again, as the model
 // may be newer than the cached catalog. The error wraps
 // [ErrNoModel] when none matches still, and the download's error too when
-// the download fails.
+// the download fails, and [ErrAmbiguousModel] when pattern, or it without
+// its suffix, names the models of more than one lab without their lab.
 func (m Models) Find(ctx context.Context, t agent.ProviderID, pattern string) (string, error) {
 	if i := strings.LastIndexByte(pattern, ':'); i >= 0 {
 		level := agent.ParseReasoningEffort(pattern[i+1:])
 		name, err := m.Match(ctx, t, pattern[:i])
+		if errors.Is(err, ErrAmbiguousModel) {
+			return "", err
+		}
 		if err == nil && slices.Contains(m.Efforts(m.ParseVariant(name)), level) {
 			return name + ":" + string(level), nil
 		}
@@ -172,8 +244,8 @@ func (m Models) Match(ctx context.Context, t agent.ProviderID, pattern string) (
 	if err != nil {
 		return "", err
 	}
-	if name, ok := MatchModel(pattern, choices); ok {
-		return name, nil
+	if name, err := MatchModel(pattern, choices); !errors.Is(err, ErrNoModel) {
+		return name, err
 	}
 	if err := m.Refresh(ctx); err != nil {
 		return "", fmt.Errorf("%w %q, and the model catalog could not be refreshed: %w", ErrNoModel, pattern, err)
@@ -181,10 +253,7 @@ func (m Models) Match(ctx context.Context, t agent.ProviderID, pattern string) (
 	if choices, err = m.Choices(ctx, t); err != nil {
 		return "", err
 	}
-	if name, ok := MatchModel(pattern, choices); ok {
-		return name, nil
-	}
-	return "", fmt.Errorf("%w %q", ErrNoModel, pattern)
+	return MatchModel(pattern, choices)
 }
 
 // Choices returns the variants of the catalog's models at provider t,
@@ -217,29 +286,48 @@ func (m Models) Choices(ctx context.Context, t agent.ProviderID) ([]ModelChoice,
 }
 
 // MatchModel returns the name of the choice that pattern names, ignoring
-// case: the choice whose name or model ID is pattern, or else the best fuzzy
-// match, as the model menu ranks them, and the newest release among equal
-// matches. It reports false when none matches.
-func MatchModel(pattern string, choices []ModelChoice) (string, bool) {
+// case: the choice whose name or model ID is pattern, or else the one whose
+// model ID without its lab is, or else the best fuzzy match, as the model
+// menu ranks them, and the newest release among equal matches. A pattern
+// that names, without the lab, the models of more than one lab fails with
+// ErrAmbiguousModel, and one that matches none with ErrNoModel.
+func MatchModel(pattern string, choices []ModelChoice) (string, error) {
 	key := func(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
 	query := key(pattern)
 	if query == "" {
-		return "", false
+		return "", fmt.Errorf("%w %q", ErrNoModel, pattern)
 	}
+	var bare []ModelChoice // the choices whose model ID without its lab is query
 	for _, c := range choices {
 		name := key(c.Name)
 		_, id := agent.ParseModel(name)
 		if name == query || id == query {
-			return c.Name, true
+			return c.Name, nil
 		}
+		if _, short, ok := strings.Cut(id, "/"); ok && short == query {
+			bare = append(bare, c)
+		}
+	}
+	if len(bare) > 0 {
+		ids := make([]string, 0, len(bare))
+		for _, c := range bare {
+			_, id := agent.ParseModel(key(c.Name))
+			if !slices.Contains(ids, id) {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) > 1 {
+			return "", fmt.Errorf("%w: %q names %s; name its lab too", ErrAmbiguousModel, pattern, strings.Join(ids, ", "))
+		}
+		return bare[0].Name, nil
 	}
 	// Equal matches keep this order, so the newest release ranks first.
 	newest := slices.Clone(choices)
 	slices.SortStableFunc(newest, func(x, y ModelChoice) int { return cmp.Compare(y.Released, x.Released) })
 	for c := range fuzzy.Rank(query, newest, func(c ModelChoice) string { return key(c.Name) }) {
-		return c.Name, true
+		return c.Name, nil
 	}
-	return "", false
+	return "", fmt.Errorf("%w %q", ErrNoModel, pattern)
 }
 
 // ModelVariants returns the variants of listing m of provider t, in the
@@ -327,9 +415,9 @@ func (m Models) Catalog() *gateway.Catalog {
 	return m.app.providers.Catalog()
 }
 
-// Listing returns provider t's offering of the model that id names, as
-// ParseVariant reads "t/id": by the catalog's model ID, or by it without
-// the lab when t is the lab. Like List, it starts a refresh of the
+// Listing returns provider t's offering of the model that id, the catalog's
+// model ID, names, as ParseVariant reads "t/id". Like List, it starts a
+// refresh of the
 // catalog when one is due. It fails when t is not registered, with
 // agent.ErrModelNotFound when the catalog lists no such model at t.
 func (m Models) Listing(t agent.ProviderID, id string) (agent.Listing, error) {

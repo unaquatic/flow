@@ -117,9 +117,6 @@ var (
 	// HintCustom names the key that enters an entry a menu does not list,
 	// as a model typed in /model.
 	HintCustom = KeyHint{Key: "tab", Action: "custom"}
-	// HintSave names the key that saves a menu's selected row as a default,
-	// as /model saves a model as the config file's default model.
-	HintSave = KeyHint{Key: "ctrl+s", Action: "save default"}
 	// HintComplete and HintSearch name keys that the footer names, and a
 	// title leaves out: tab completes a slash command, and typing searches
 	// a menu in the input under it.

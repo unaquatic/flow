@@ -9,20 +9,18 @@ import (
 
 // Variant names a model as a request runs it: its provider, the catalog's
 // model, the variant of the provider's offering of it, and the reasoning
-// effort. Its string form is "provider/model:option:effort", the model
-// without its lab when the provider is the lab, as
-// "provider-a/model-a:fast:high" and "provider-b/lab-a/model-b",
-// leaving out the option and the effort it does not set.
+// effort. Its string form is "provider/model:option:effort", the provider
+// and then Ref, as "provider-a/lab-a/model-a:fast:high", leaving out the
+// option and the effort it does not set.
 type Variant struct {
 	// Provider identifies the provider, by its catalog ID.
 	Provider ProviderID
-	// Model is the catalog's model ID, such as "provider-a/model-a", or the
-	// provider's own ID of a model the catalog leaves unlisted or does not
-	// know.
+	// Model is the catalog's model ID, lab included, such as
+	// "lab-a/model-a", or, for a model the catalog leaves unlisted or does
+	// not know, the provider's own ID of it.
 	Model string
 	// Option is what the catalog's variant ID adds to the model ID, such as
-	// "fast" of "provider-a/model-a:fast", or empty for the default
-	// variant.
+	// "fast" of "lab-a/model-a:fast", or empty for the default variant.
 	Option string
 	// Effort is the reasoning effort, or empty to leave it to the provider.
 	Effort ReasoningEffort
@@ -37,20 +35,21 @@ func (v Variant) ID() string {
 	return v.Model + ":" + v.Option
 }
 
-// ModelName returns v's variant ID as its string form names it: without the
-// lab when the provider is the lab, such as "model-a:fast".
-func (v Variant) ModelName() string {
-	return strings.TrimPrefix(v.ID(), string(v.Provider)+"/")
+// String returns v in "provider/model:option:effort" form, its provider and
+// then its Ref, the form ParseVariant reads.
+func (v Variant) String() string {
+	return FormatModel(v.Provider, v.Ref())
 }
 
-// String returns v in "provider/model:option:effort" format, the form
-// ParseVariant reads.
-func (v Variant) String() string {
-	s := FormatModel(v.Provider, v.ModelName())
-	if v.Effort != "" {
-		s += ":" + string(v.Effort)
+// Ref returns v without its provider, in "model:option:effort" form: its ID,
+// and its effort after a colon, as "lab-a/model-a:fast:high". The config
+// file and the session store save a variant as its Ref and its provider
+// apart, which ParseVariantAt reads back.
+func (v Variant) Ref() string {
+	if v.Effort == "" {
+		return v.ID()
 	}
-	return s
+	return v.ID() + ":" + string(v.Effort)
 }
 
 // WithEffort returns v at reasoning effort t.
@@ -59,39 +58,43 @@ func (v Variant) WithEffort(t ReasoningEffort) Variant {
 	return v
 }
 
-// ParseVariant reads s, a model in the form Variant.String writes. A model
-// without a provider has none, as ParseModel has it. The rest names a
-// variant that cat lists for the provider, by its ID or, when the provider
-// is its model's lab, by its ID without the lab, and may end in ":effort",
+// ParseVariant reads s, a model in the form Variant.String writes: the
+// provider, the part before the first slash, as ParseModel has it, and the
+// rest as ParseVariantAt reads it.
+func ParseVariant(s string, cat *gateway.Catalog) Variant {
+	t, rest := ParseModel(s)
+	return ParseVariantAt(t, rest, cat)
+}
+
+// ParseVariantAt reads s, a variant of provider t in the form Variant.Ref
+// writes: a variant ID that cat lists for t, which may end in ":effort",
 // naming a level that cat lists for the model. A variant ID that cat lists
 // is never cut, so an option or model ID that ends like an effort is not
 // mistaken for one. A model cat does not know is kept whole, by the ID s
 // names.
-func ParseVariant(s string, cat *gateway.Catalog) Variant {
-	t, rest := ParseModel(s)
-	if v, ok := findVariant(cat, t, rest); ok {
+func ParseVariantAt(t ProviderID, s string, cat *gateway.Catalog) Variant {
+	if v, ok := findVariant(cat, t, s); ok {
 		return v
 	}
-	if i := strings.LastIndexByte(rest, ':'); i >= 0 {
-		e := ParseReasoningEffort(rest[i+1:])
-		if v, ok := findVariant(cat, t, rest[:i]); ok {
+	if i := strings.LastIndexByte(s, ':'); i >= 0 {
+		e := ParseReasoningEffort(s[i+1:])
+		if v, ok := findVariant(cat, t, s[:i]); ok {
 			if off, ok := Lookup(cat, v); ok && slices.Contains(ReasoningEfforts(off.Reasoning), e) {
 				return v.WithEffort(e)
 			}
 		}
 	}
-	return Variant{Provider: t, Model: rest}
+	return Variant{Provider: t, Model: s}
 }
 
-// findVariant returns the variant of provider t whose ID is id, or the
-// lab's ID followed by id, and reports whether cat lists one.
+// findVariant returns the variant of provider t whose ID is id, and reports
+// whether cat lists one.
 func findVariant(cat *gateway.Catalog, t ProviderID, id string) (Variant, bool) {
-	for _, full := range []string{id, string(t) + "/" + id} {
-		if model, _, option, ok := cat.Lookup(t, full); ok {
-			return Variant{Provider: t, Model: model, Option: option}, true
-		}
+	model, _, option, ok := cat.Lookup(t, id)
+	if !ok {
+		return Variant{}, false
 	}
-	return Variant{}, false
+	return Variant{Provider: t, Model: model, Option: option}, true
 }
 
 // Lookup returns the offering of v's model at its provider in cat, listed or

@@ -35,7 +35,7 @@ func TestErrorResponses(t *testing.T) {
 		{"POST", "/session/ses_missing/continue", nil, http.StatusConflict, app.CodeNothingToContinue},
 		{"POST", "/session/ses_missing/navigate", NavigateRequest{}, http.StatusBadRequest, app.CodeInvalidRequest},
 		{"PATCH", "/config", map[string]string{"theme": "dark"}, http.StatusBadRequest, app.CodeInvalidRequest},
-		{"PATCH", "/config", ConfigUpdate{Model: new("model-x")}, http.StatusBadRequest, app.CodeInvalidModel},
+		{"PATCH", "/config", ConfigUpdate{DefaultModel: new("")}, http.StatusBadRequest, app.CodeInvalidModel},
 		{"GET", "/model/nope/model-x", nil, http.StatusNotFound, app.CodeProviderNotFound},
 		{"DELETE", "/auth/provider-a/accounts/not-a-uuid", nil, http.StatusBadRequest, app.CodeInvalidAccountID},
 		{"POST", "/auth/provider-a/accounts", NewAccountRequest{}, http.StatusBadRequest, app.CodeInvalidRequest},

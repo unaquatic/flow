@@ -22,7 +22,7 @@ func (s Session) logAgent(ev agent.Event) {
 		s.Logger().Warn("request retrying", "message", e.MessageID, "attempt", e.Attempt, "of", e.MaxAttempts,
 			"delay", e.Delay, "reason", e.Reason, "err", e.Err)
 	case agent.MessageEnded:
-		args := []any{"message", e.Message.ID, "model", e.Message.Model, "finish", e.Finish, "stopped", e.Stopped}
+		args := []any{"message", e.Message.ID, "provider", e.Message.Provider, "model", e.Message.Model, "finish", e.Finish, "stopped", e.Stopped}
 		if e.Err != nil {
 			s.Logger().Warn("message ended", append(args, "err", e.Err)...)
 			return

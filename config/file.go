@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/unaquatic/flow/internal/flock"
 )
@@ -23,10 +24,10 @@ const fileMode = 0o600
 //
 // Reads take no lock: a write replaces the file with a rename, so a read
 // sees the file as it was before the write or after it, never part of
-// either. Writes hold an exclusive lock on the lock file beside it, Name with
-// ".lock" added, so concurrent updates apply one after another and none is
-// lost. The lock file stays when the write is done. The locks are advisory:
-// programs that edit the file without them are not excluded.
+// either. Writes hold an exclusive lock on the lock file beside it, LockName,
+// so concurrent updates apply one after another and none is lost. The lock
+// file stays when the write is done. The locks are advisory: programs that
+// edit the file without them are not excluded.
 type File struct {
 	// Dir is the directory that holds the file and its lock file. Update
 	// creates it, private to its user, when it is missing.
@@ -78,7 +79,26 @@ func (f File) Read() (map[string]json.RawMessage, error) {
 //
 // Update holds the lock while change runs, so change must not update the
 // same file, which would wait for it.
-func (f File) Update(ctx context.Context, key string, change func(json.RawMessage) (json.RawMessage, error)) (err error) {
+func (f File) Update(ctx context.Context, key string, change func(json.RawMessage) (json.RawMessage, error)) error {
+	return f.Edit(ctx, func(keys map[string]json.RawMessage) error {
+		value, err := change(keys[key])
+		if err != nil {
+			return err
+		}
+		if value == nil {
+			delete(keys, key)
+		} else {
+			keys[key] = value
+		}
+		return nil
+	})
+}
+
+// Edit lets change edit the top-level keys of the file and their JSON
+// values in place, and saves the result, as Update does, so that keys that
+// belong together change in one write. change gets an empty map when the
+// file is missing or empty.
+func (f File) Edit(ctx context.Context, change func(keys map[string]json.RawMessage) error) (err error) {
 	unlock, err := f.lock(ctx)
 	if err != nil {
 		return err
@@ -93,17 +113,11 @@ func (f File) Update(ctx context.Context, key string, change func(json.RawMessag
 	if err != nil {
 		return err
 	}
-	value, err := change(keys[key])
-	if err != nil {
-		return err
-	}
 	if keys == nil {
 		keys = make(map[string]json.RawMessage)
 	}
-	if value == nil {
-		delete(keys, key)
-	} else {
-		keys[key] = value
+	if err := change(keys); err != nil {
+		return err
 	}
 	data, err := json.MarshalIndent(keys, "", "  ")
 	if err != nil {
@@ -116,13 +130,19 @@ func (f File) Update(ctx context.Context, key string, change func(json.RawMessag
 	return replace(path, data, mode)
 }
 
+// LockName returns the name of the lock file of the file in Dir: Name with
+// its extension replaced by ".lock", such as "auth.lock" of "auth.json".
+func (f File) LockName() string {
+	return strings.TrimSuffix(f.Name, filepath.Ext(f.Name)) + ".lock"
+}
+
 // lock takes the exclusive lock of the file, creating Dir and the lock file
 // when they are missing, and returns the function that releases it.
 func (f File) lock(ctx context.Context) (unlock func() error, err error) {
 	if err := os.MkdirAll(f.Dir, 0o700); err != nil {
 		return nil, err
 	}
-	lf, err := os.OpenFile(filepath.Join(f.Dir, f.Name+".lock"), os.O_RDWR|os.O_CREATE, fileMode)
+	lf, err := os.OpenFile(filepath.Join(f.Dir, f.LockName()), os.O_RDWR|os.O_CREATE, fileMode)
 	if err != nil {
 		return nil, err
 	}

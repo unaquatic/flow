@@ -32,8 +32,7 @@ func (s *Service) HandleEffort() []UIEvent {
 // and selecting the one v would run at for the terminal's chosen level. It is
 // the page of the model menu that follows choosing model v, and what /effort
 // shows for the terminal's model. Choosing a level switches the terminal to
-// v at that level, and Ctrl+S saves v at that level as the default model,
-// as SaveDefaultModel does.
+// v at that level and saves it as the default model, as SelectModel does.
 func (s *Service) ShowEffortMenu(v agent.Variant) []UIEvent {
 	levels := s.app.Models().Efforts(v)
 	fallback := agent.Fit(levels, "", s.app.Models().DefaultEffort(v))
@@ -49,7 +48,6 @@ func (s *Service) ShowEffortMenu(v agent.Variant) []UIEvent {
 			Hint:     hint,
 			Selected: t == current,
 			Choose:   s.Closing(func() []UIEvent { return s.SelectModel(v.WithEffort(t).String()) }),
-			Save:     func() []UIEvent { return s.SaveDefaultModel(v.WithEffort(t).String()) },
 		})
 	}
 	return s.ShowSearchMenu(&SearchMenu{Title: effortTitle, Items: func() []MenuItem { return items }})

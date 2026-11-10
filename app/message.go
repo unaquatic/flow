@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/unaquatic/catalog/gateway"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 )
@@ -27,14 +28,15 @@ func (m Message) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(struct {
-		ID        message.ID       `json:"id"`
-		ParentID  *message.ID      `json:"parent_id,omitempty"`
-		Role      message.Role     `json:"role"`
-		Parts     json.RawMessage  `json:"parts"`
-		Model     string           `json:"model,omitempty"`
-		Branch    session.Position `json:"branch,omitzero"`
-		CreatedAt time.Time        `json:"created_at,omitzero"`
-	}{m.ID, m.ParentID, m.Role, parts, m.Model, m.Branch, m.CreatedAt})
+		ID        message.ID         `json:"id"`
+		ParentID  *message.ID        `json:"parent_id,omitempty"`
+		Role      message.Role       `json:"role"`
+		Parts     json.RawMessage    `json:"parts"`
+		Provider  gateway.ProviderID `json:"provider,omitempty"`
+		Model     string             `json:"model,omitempty"`
+		Branch    session.Position   `json:"branch,omitzero"`
+		CreatedAt time.Time          `json:"created_at,omitzero"`
+	}{m.ID, m.ParentID, m.Role, parts, m.Provider, m.Model, m.Branch, m.CreatedAt})
 }
 
 // Messages returns the messages of the session's active branch, from its

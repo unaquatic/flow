@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 	"uuid"
+
+	"github.com/unaquatic/catalog/gateway"
 )
 
 // Role identifies the sender of a message.
@@ -140,13 +142,17 @@ type Content struct {
 	Role Role `json:"role"`
 	// Parts contains message content in order.
 	Parts []ContentPart `json:"parts"`
+	// Provider is the provider of the model variant that produced the
+	// message, or that a prompt was sent to, by its catalog ID, such as
+	// "provider-b". It is empty when the model is not known.
+	Provider gateway.ProviderID `json:"provider,omitempty"`
 	// Model names the model variant that produced the message, or that a
-	// prompt was sent to, in "provider/model:option:effort" form, as
-	// agent.Variant.String writes it, such as
-	// "provider-a/model-a:fast:xhigh". It leaves out the option for
-	// the default variant, which with the model decides the price of the
-	// usage, and the effort when the provider chose it. It is empty when
-	// the model is not known.
+	// prompt was sent to, without its provider, in "model:option:effort"
+	// form with the model's whole catalog ID, as agent.Variant.Ref writes
+	// it, such as "lab-a/model-a:fast:xhigh"; agent.ParseVariantAt reads it
+	// with Provider. It leaves out the option for the default variant,
+	// which with the model decides the price of the usage, and the effort
+	// when the provider chose it. It is empty when the model is not known.
 	Model string `json:"model,omitempty"`
 	// CreatedAt is when the message was created. A stored message does not
 	// change afterwards.

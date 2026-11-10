@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -94,7 +93,9 @@ func (s *Service) EndMessage(msg message.Content) (ChatMessage, bool) {
 	m := &s.state.Messages[i]
 	m.Live = nil
 	m.Usage = msg.Usage()
-	m.Model = cmp.Or(msg.Model, m.Model)
+	if msg.Model != "" {
+		m.Provider, m.Model = msg.Provider, msg.Model
+	}
 	if !msg.CreatedAt.IsZero() {
 		m.CreatedAt = msg.CreatedAt
 	}

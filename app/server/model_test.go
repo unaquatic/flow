@@ -96,8 +96,8 @@ func TestModelList(t *testing.T) {
 		wantStatus int
 		want       []string
 	}{
-		{query: "", wantStatus: http.StatusOK, want: []string{"provider-a/model-x"}},
-		{query: "?provider=provider-a", wantStatus: http.StatusOK, want: []string{"provider-a/model-x"}},
+		{query: "", wantStatus: http.StatusOK, want: []string{"provider-a/provider-a/model-x"}},
+		{query: "?provider=provider-a", wantStatus: http.StatusOK, want: []string{"provider-a/provider-a/model-x"}},
 		{query: "?provider=provider-b", wantStatus: http.StatusOK},
 		{query: "?provider=nope", wantStatus: http.StatusNotFound},
 	}
@@ -116,7 +116,7 @@ func TestModelGet(t *testing.T) {
 	ts, _ := newTestServerWith(t, withCatalog(t, catalogDoc(t, "model-x")))
 
 	var m agent.Listing
-	if status := doJSON(t, "GET", ts.URL+"/model/provider-b/model-y", nil, &m); status != http.StatusOK || m.Model != "provider-b/model-y" || m.Limit.Output != 64000 {
+	if status := doJSON(t, "GET", ts.URL+"/model/provider-b/provider-b/model-y", nil, &m); status != http.StatusOK || m.Model != "provider-b/model-y" || m.Limit.Output != 64000 {
 		t.Errorf("GET model-y = %d, %+v, want 200 with its 64000-token output limit", status, m)
 	}
 	for _, path := range []string{"/model/provider-b/missing", "/model/nope/x"} {
@@ -159,7 +159,7 @@ func TestModelRefresh(t *testing.T) {
 
 	var got []app.ModelListing
 	status := doJSON(t, "POST", ts.URL+"/model/refresh", nil, &got)
-	if want := []string{"provider-a/model-new", "provider-a/model-x"}; status != http.StatusOK || !slices.Equal(modelIDs(got), want) {
+	if want := []string{"provider-a/provider-a/model-new", "provider-a/provider-a/model-x"}; status != http.StatusOK || !slices.Equal(modelIDs(got), want) {
 		t.Errorf("POST /model/refresh = %d, %v, want 200, %v", status, modelIDs(got), want)
 	}
 	body := bufio.NewReader(events.Body)
@@ -231,7 +231,7 @@ func newGenerateServer(t *testing.T, api http.HandlerFunc, setups ...func(*confi
 
 // generateBody is a request for model-y with a system prompt.
 var generateBody = GenerateRequest{
-	Model:     "provider-b/model-y",
+	Model:     "provider-b/provider-b/model-y",
 	Messages:  []GenerateMessage{{Role: "system", Content: "Be brief."}, {Role: "user", Content: "hi"}},
 	MaxTokens: 100,
 }
@@ -247,7 +247,7 @@ func TestGenerate(t *testing.T) {
 	if status := doJSON(t, "POST", ts.URL+"/generate", generateBody, &got); status != http.StatusOK {
 		t.Fatalf("POST /generate: status %d", status)
 	}
-	if got.Model != "provider-b/model-y" || got.Text != "Hello there" || got.StopReason != "end_turn" ||
+	if got.Model != "provider-b/provider-b/model-y" || got.Text != "Hello there" || got.StopReason != "end_turn" ||
 		got.Usage.InputTokens != 12 || got.Usage.OutputTokens != 5 {
 		t.Errorf("response = %+v, want model-y's reply Hello there, end_turn, 12 in and 5 out", got)
 	}
@@ -320,12 +320,12 @@ func TestGenerateErrors(t *testing.T) {
 		wantCode   app.ErrorCode
 	}{
 		{name: "not an object", body: "hi", wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
-		{name: "no messages", body: GenerateRequest{Model: "provider-b/model-y"}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
-		{name: "unknown role", body: GenerateRequest{Model: "provider-b/model-y", Messages: []GenerateMessage{{Role: "tool", Content: "x"}}}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
-		{name: "negative limit", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: -1}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "no messages", body: GenerateRequest{Model: "provider-b/provider-b/model-y"}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "unknown role", body: GenerateRequest{Model: "provider-b/provider-b/model-y", Messages: []GenerateMessage{{Role: "tool", Content: "x"}}}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
+		{name: "negative limit", body: GenerateRequest{Model: "provider-b/provider-b/model-y", Messages: user, MaxTokens: -1}, wantStatus: http.StatusBadRequest, wantCode: app.CodeInvalidRequest},
 		{name: "unknown provider", body: GenerateRequest{Model: "nope/x", Messages: user}, wantStatus: http.StatusNotFound, wantCode: app.CodeProviderNotFound},
-		{name: "no credentials", body: GenerateRequest{Model: "provider-a/model-x", Messages: user}, wantStatus: http.StatusUnauthorized, wantCode: app.CodeNotAuthenticated},
-		{name: "refused by the model", body: GenerateRequest{Model: "provider-b/model-y", Messages: user, MaxTokens: 10}, wantStatus: http.StatusBadGateway, wantCode: app.CodeProviderError},
+		{name: "no credentials", body: GenerateRequest{Model: "provider-a/provider-a/model-x", Messages: user}, wantStatus: http.StatusUnauthorized, wantCode: app.CodeNotAuthenticated},
+		{name: "refused by the model", body: GenerateRequest{Model: "provider-b/provider-b/model-y", Messages: user, MaxTokens: 10}, wantStatus: http.StatusBadGateway, wantCode: app.CodeProviderError},
 	}
 	for _, tt := range tests {
 		status, got := doError(t, "POST", ts.URL+"/generate", tt.body)
@@ -422,13 +422,13 @@ func TestGenerateVariant(t *testing.T) {
 		io.WriteString(w, messagesReply)
 	}, withCatalog(t, apiCatalog(t, variantCatalog)))
 
-	body := GenerateRequest{Model: "provider-b/model-v:fast:high", Messages: []GenerateMessage{{Role: "user", Content: "hi"}}}
+	body := GenerateRequest{Model: "provider-b/provider-b/model-v:fast:high", Messages: []GenerateMessage{{Role: "user", Content: "hi"}}}
 	var got GenerateResponse
 	if status := doJSON(t, "POST", ts.URL+"/generate", body, &got); status != http.StatusOK {
 		t.Fatalf("POST /generate: status %d", status)
 	}
-	if got.Model != "provider-b/model-v:fast:high" {
-		t.Errorf("model = %q, want provider-b/model-v:fast:high", got.Model)
+	if got.Model != "provider-b/provider-b/model-v:fast:high" {
+		t.Errorf("model = %q, want provider-b/provider-b/model-v:fast:high", got.Model)
 	}
 	sent := bodies()[0]
 	if sent["model"] != "model-v" || sent["speed"] != "fast" {

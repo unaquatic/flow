@@ -32,37 +32,55 @@ const (
 	providerB agent.ProviderID = "provider-b"
 )
 
+// TestMatchModel checks that a pattern names the choice whose name or model
+// ID it is, or else the one whose model ID without its lab it is, or else
+// the best fuzzy match, the newest among equals, and that a model named
+// without its lab that two labs have is ambiguous.
 func TestMatchModel(t *testing.T) {
 	choices := []ModelChoice{
-		{Name: "provider-b/model-b-large-5", Released: "2026-07-24"},
-		{Name: "provider-b/model-b-small-4-5", Released: "2025-09-29"},
-		{Name: "provider-b/model-b-small-5", Released: "2026-06-29"},
-		{Name: "provider-a/model-a-5", Released: "2025-08-07"},
-		{Name: "provider-a/model-a-5-mini", Released: "2025-08-07"},
-		{Name: "provider-a/model-a-6-nova", Released: "2026-09-04"},
+		{Name: "provider-b/lab-b/model-b-large-5", Released: "2026-07-24"},
+		{Name: "provider-b/lab-b/model-b-small-4-5", Released: "2025-09-29"},
+		{Name: "provider-b/lab-b/model-b-small-5", Released: "2026-06-29"},
+		{Name: "provider-a/lab-a/model-a-5", Released: "2025-08-07"},
+		{Name: "provider-a/lab-a/model-a-5:fast", Released: "2025-08-07"},
+		{Name: "provider-a/lab-a/model-a-5-mini", Released: "2025-08-07"},
+		{Name: "provider-a/lab-a/model-a-6-nova", Released: "2026-09-04"},
+		// Newer, and a fuzzy match of model-a-5, which names model-a-5
+		// exactly.
+		{Name: "provider-a/lab-c/model-a-50", Released: "2026-10-01"},
+		{Name: "provider-a/lab-a/model-x", Released: "2026-01-01"},
+		{Name: "provider-a/lab-c/model-x", Released: "2026-02-01"},
+		{Name: "provider-a/my-finetune", Released: ""},
 	}
 	tests := []struct {
 		pattern string
 		want    string // "" means no match
+		wantErr error
 	}{
-		{pattern: "provider-a/model-a-5", want: "provider-a/model-a-5"},
-		{pattern: "model-a-5", want: "provider-a/model-a-5"},
-		{pattern: "MODEL-A-5", want: "provider-a/model-a-5"},
-		{pattern: "  model-b-large-5 ", want: "provider-b/model-b-large-5"},
+		{pattern: "provider-a/lab-a/model-a-5", want: "provider-a/lab-a/model-a-5"},
+		{pattern: "lab-a/model-a-5", want: "provider-a/lab-a/model-a-5"},
+		{pattern: "model-a-5", want: "provider-a/lab-a/model-a-5"},
+		{pattern: "MODEL-A-5", want: "provider-a/lab-a/model-a-5"},
+		{pattern: "model-a-5:fast", want: "provider-a/lab-a/model-a-5:fast"},
+		{pattern: "  model-b-large-5 ", want: "provider-b/lab-b/model-b-large-5"},
+		{pattern: "my-finetune", want: "provider-a/my-finetune"},
+		// Two labs have a model-x.
+		{pattern: "model-x", wantErr: ErrAmbiguousModel},
+		{pattern: "lab-c/model-x", want: "provider-a/lab-c/model-x"},
 		// Every small model matches as well; the newest wins.
-		{pattern: "small", want: "provider-b/model-b-small-5"},
-		{pattern: "large", want: "provider-b/model-b-large-5"},
-		{pattern: "nova", want: "provider-a/model-a-6-nova"},
-		{pattern: "model-a-5-m", want: "provider-a/model-a-5-mini"},
+		{pattern: "small", want: "provider-b/lab-b/model-b-small-5"},
+		{pattern: "large", want: "provider-b/lab-b/model-b-large-5"},
+		{pattern: "nova", want: "provider-a/lab-a/model-a-6-nova"},
+		{pattern: "model-a-5-m", want: "provider-a/lab-a/model-a-5-mini"},
 		// A pattern can name the provider too.
-		{pattern: "provider-b/small", want: "provider-b/model-b-small-5"},
-		{pattern: "zzzz"},
-		{pattern: ""},
+		{pattern: "provider-b/small", want: "provider-b/lab-b/model-b-small-5"},
+		{pattern: "zzzz", wantErr: ErrNoModel},
+		{pattern: "", wantErr: ErrNoModel},
 	}
 	for _, tt := range tests {
-		got, ok := MatchModel(tt.pattern, choices)
-		if got != tt.want || ok != (tt.want != "") {
-			t.Errorf("MatchModel(%q) = %q, %v; want %q", tt.pattern, got, ok, tt.want)
+		got, err := MatchModel(tt.pattern, choices)
+		if got != tt.want || !errors.Is(err, tt.wantErr) || (err == nil) != (tt.wantErr == nil) {
+			t.Errorf("MatchModel(%q) = %q, %v; want %q, %v", tt.pattern, got, err, tt.want, tt.wantErr)
 		}
 	}
 }
@@ -85,8 +103,8 @@ func TestModelsFindRefreshesOnlyWhenNothingMatches(t *testing.T) {
 		wantErr  error
 		wantHits int32
 	}{
-		{name: "in the cached catalog", pattern: "model-old", want: "provider-a/model-old"},
-		{name: "newer than the cached catalog", pattern: "model-new", want: "provider-a/model-new", wantHits: 1},
+		{name: "in the cached catalog", pattern: "model-old", want: "provider-a/provider-a/model-old"},
+		{name: "newer than the cached catalog", pattern: "model-new", want: "provider-a/provider-a/model-new", wantHits: 1},
 		{name: "nowhere", pattern: "zzzz", wantErr: ErrNoModel, wantHits: 1},
 	}
 	for _, tt := range tests {
@@ -241,18 +259,25 @@ func TestCloseStopsModelRefresh(t *testing.T) {
 }
 
 // TestModelsDefaultReadsTheConfigFile checks that the default model is the
-// one the config file sets at each call, so a change to the file applies at
-// once, and that a file it cannot read is an error.
+// one the config file sets at each call, its model at its default provider,
+// so a change to the file applies at once, that it reads the older
+// "provider/model" form too, and that a file it cannot read is an error.
 func TestModelsDefaultReadsTheConfigFile(t *testing.T) {
 	home := t.TempDir()
 	a := &App{config: config.NewService(home)}
-	for _, model := range []string{"provider-a/model-x", "provider-b/model-y"} {
-		data := []byte(`{"model":"` + model + `"}`)
-		if err := os.WriteFile(filepath.Join(home, config.FileName), data, 0o644); err != nil {
+	tests := []struct{ file, want string }{
+		{`{"default_model":"provider-a/model-x","default_provider":"provider-a"}`, "provider-a/provider-a/model-x"},
+		{`{"default_model":"lab-a/model-z:high","default_provider":"provider-b"}`, "provider-b/lab-a/model-z:high"},
+		{`{"model":"provider-b/model-y"}`, "provider-b/provider-b/model-y"},
+		{`{"model":"model-x"}`, "model-x"},
+		{`{}`, ""},
+	}
+	for _, tt := range tests {
+		if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(tt.file), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if got, err := a.Models().Default(); got != model || err != nil {
-			t.Errorf("Models.Default after writing %s = %q, %v", model, got, err)
+		if got, err := a.Models().Default(); got != tt.want || err != nil {
+			t.Errorf("Models.Default after writing %s = %q, %v, want %q", tt.file, got, err, tt.want)
 		}
 	}
 
@@ -318,8 +343,8 @@ func TestModelsFindDownloadsOnce(t *testing.T) {
 	defer src.Close()
 	a := newCatalogApp(t, staleCatalog(t), src.URL)
 
-	if got, err := a.Models().Find(t.Context(), "", "model-new"); got != "provider-a/model-new" || err != nil {
-		t.Fatalf("Models.Find = %q, %v, want provider-a/model-new", got, err)
+	if got, err := a.Models().Find(t.Context(), "", "model-new"); got != "provider-a/provider-a/model-new" || err != nil {
+		t.Fatalf("Models.Find = %q, %v, want provider-a/provider-a/model-new", got, err)
 	}
 	time.Sleep(100 * time.Millisecond) // time for a stray background download
 	if n := hits.Load(); n != 1 {
@@ -377,11 +402,11 @@ func TestModelsFindVariants(t *testing.T) {
 		want    string
 		variant agent.Variant
 	}{
-		{"model-a", "provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "medium"}},
-		{"model-a:fast", "provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "medium"}},
-		{"a-pro:xhigh", "provider-a/model-a-pro:xhigh", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "xhigh"}},
-		{"model-a:none", "provider-a/model-a:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "none"}},
-		{"model-b-pro", "provider-a/model-b-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-b-pro"}},
+		{"model-a", "provider-a/provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "medium"}},
+		{"model-a:fast", "provider-a/provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "medium"}},
+		{"a-pro:xhigh", "provider-a/provider-a/model-a-pro:xhigh", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "xhigh"}},
+		{"model-a:none", "provider-a/provider-a/model-a:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "none"}},
+		{"model-b-pro", "provider-a/provider-a/model-b-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-b-pro"}},
 	}
 	for _, tt := range tests {
 		got, err := a.Models().Find(t.Context(), "", tt.pattern)
@@ -394,7 +419,7 @@ func TestModelsFindVariants(t *testing.T) {
 		}
 	}
 	want := []agent.ReasoningEffort{"none", "low", "medium", "high", "xhigh"}
-	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/model-a:fast")); !slices.Equal(got, want) {
+	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/provider-a/model-a:fast")); !slices.Equal(got, want) {
 		t.Errorf("Models.Efforts = %v, want %v", got, want)
 	}
 	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/model-unknown")); got != nil {
@@ -411,8 +436,8 @@ func TestUnknownEffort(t *testing.T) {
 	a := newCatalogApp(t, dir, "")
 
 	got, err := a.Models().Find(t.Context(), "", "model-c:XXXHIGH")
-	if got != "provider-a/model-c:xxxhigh" || err != nil {
-		t.Fatalf("Models.Find = %q, %v, want provider-a/model-c:xxxhigh", got, err)
+	if got != "provider-a/provider-a/model-c:xxxhigh" || err != nil {
+		t.Fatalf("Models.Find = %q, %v, want provider-a/provider-a/model-c:xxxhigh", got, err)
 	}
 	want := agent.Variant{Provider: providerA, Model: "provider-a/model-c", Effort: "xxxhigh"}
 	if v, err := a.Models().Resolve(got); v != want || err != nil {
@@ -442,7 +467,7 @@ func TestModelsSelect(t *testing.T) {
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
 	a := newCatalogApp(t, dir, "")
 	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"model":"provider-a/model-a:fast:low"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"default_provider":"provider-a","default_model":"provider-a/model-a:fast:low"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	a.config = config.NewService(home)
@@ -497,11 +522,11 @@ func TestModelsFitEffortTakesTheDefault(t *testing.T) {
 	if d := a.Models().DefaultEffort(agent.Variant{Provider: providerA, Model: "provider-a/model-a"}); d != "medium" {
 		t.Errorf("Models.DefaultEffort = %q, want medium", d)
 	}
-	if v, _ := a.Models().Resolve("provider-a/model-a"); v.Effort != "medium" {
+	if v, _ := a.Models().Resolve("provider-a/provider-a/model-a"); v.Effort != "medium" {
 		t.Errorf("model-a runs at %q, want medium", v.Effort)
 	}
 	// A chosen level wins over the default.
-	if v, _ := a.Models().Resolve("provider-a/model-a:low"); v.Effort != "low" {
+	if v, _ := a.Models().Resolve("provider-a/provider-a/model-a:low"); v.Effort != "low" {
 		t.Errorf("model-a:low runs at %q, want low", v.Effort)
 	}
 	// A model must name its provider: flow defaults to none.
@@ -530,8 +555,8 @@ func TestDefaultEffortPerModel(t *testing.T) {
 	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, messages.New(messages.Init{Name: string(providerB)}))
 
 	for model, want := range map[string]agent.ReasoningEffort{
-		"provider-b/model-e": "medium",
-		"provider-b/model-d": "high",
+		"provider-b/provider-b/model-e": "medium",
+		"provider-b/provider-b/model-d": "high",
 	} {
 		if v, err := a.Models().Resolve(model); v.Effort != want || err != nil {
 			t.Errorf("Models.Resolve(%s) runs at %q, %v, want %q", model, v.Effort, err, want)

@@ -416,9 +416,9 @@ func TestServiceProviders(t *testing.T) {
 			ids = append(ids, v.String())
 		}
 	}
-	// gw's models are its lab's, gw/lab/m with its fast tier by request
-	// fields, and gw/lab/m-fast, a model of its own in this catalog.
-	if want := []string{"gw/lab/m", "gw/lab/m:fast", "gw/lab/m-fast"}; !slices.Equal(ids, want) {
+	// gw's models are gw/lab/m with its fast tier by request fields, and
+	// gw/lab/m-fast, a model of its own in this catalog.
+	if want := []string{"gw/gw/lab/m", "gw/gw/lab/m:fast", "gw/gw/lab/m-fast"}; !slices.Equal(ids, want) {
 		t.Errorf("gw variants = %q, want %q", ids, want)
 	}
 	if _, err := ps.ListModels(t.Context(), "provider-c"); !errors.Is(err, agent.ErrProviderNotRegistered) {
@@ -446,7 +446,7 @@ func TestStreamEndpoint(t *testing.T) {
 	ps := newProviders(t, strings.ReplaceAll(gatewayDoc, "BASE", api.URL+"/v1"),
 		func(agent.ProviderID) (agent.APIKey, error) { return "sk-gw", nil })
 
-	v := agent.ParseVariant("gw/lab/m:fast", ps.Catalog())
+	v := agent.ParseVariant("gw/gw/lab/m:fast", ps.Catalog())
 	stream, err := ps.Stream(t.Context(), v, agent.Request{Messages: []agent.Message{agent.NewTextMessage(message.RoleUser, "hi")}})
 	if err != nil {
 		t.Fatal(err)
@@ -513,7 +513,7 @@ func TestListModelsCallable(t *testing.T) {
 	if want := []string{"mx/lab/chat", "mx/lab/messages"}; !slices.Equal(models, want) {
 		t.Errorf("listed %v, want %v: not lab/odd, whose format the catalog does not know", models, want)
 	}
-	if _, ok := agent.Lookup(ps.Catalog(), agent.ParseVariant("mx/lab/odd", ps.Catalog())); ok {
+	if _, ok := agent.Lookup(ps.Catalog(), agent.ParseVariant("mx/mx/lab/odd", ps.Catalog())); ok {
 		t.Error("the catalog lists lab/odd, whose format it does not know")
 	}
 }
@@ -545,7 +545,7 @@ func TestStreamBaseURL(t *testing.T) {
 			Auth:     accounts.For,
 			Settings: func(agent.ProviderID) agent.Settings { return agent.Settings{BaseURL: tt.base} },
 		})
-		for _, model := range []string{"mx/lab/chat", "mx/lab/messages"} {
+		for _, model := range []string{"mx/mx/lab/chat", "mx/mx/lab/messages"} {
 			stream, err := ps.Stream(t.Context(), agent.ParseVariant(model, ps.Catalog()), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}})
 			if err != nil {
 				t.Fatal(err)

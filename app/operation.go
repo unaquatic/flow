@@ -428,7 +428,7 @@ func (s Session) history(msgs []message.Content) []agent.Message {
 	for _, m := range msgs {
 		pm := agent.Message{Role: m.Role, Content: m.Parts}
 		if m.Model != "" {
-			v := agent.ParseVariant(m.Model, cat)
+			v := agent.ParseVariantAt(m.Provider, m.Model, cat)
 			pm.Provider, pm.Model = v.Provider, v.Model
 		}
 		out = append(out, pm)
@@ -542,10 +542,11 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 		id = message.NewID()
 	}
 	msg := message.Content{
-		ID:    id,
-		Role:  message.RoleUser,
-		Parts: []message.ContentPart{message.TextPart{ID: message.NewPartID(), Text: snd.Text}},
-		Model: v.String(),
+		ID:       id,
+		Role:     message.RoleUser,
+		Parts:    []message.ContentPart{message.TextPart{ID: message.NewPartID(), Text: snd.Text}},
+		Provider: v.Provider,
+		Model:    v.Ref(),
 	}
 	prompt := func() Message {
 		m := msg
@@ -563,7 +564,7 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 			s.publish(EventPartEnded{change(part)})
 		},
 	}
-	p := extension.Prompt{SessionID: s.id, MessageID: id, Text: snd.Text, Model: msg.Model}
+	p := extension.Prompt{SessionID: s.id, MessageID: id, Text: snd.Text, Model: v.String()}
 	for hook := range extension.Hooks[extension.PromptHook](exts) {
 		hook.OnPrompt(s.ctx, p, sink)
 	}
@@ -576,7 +577,7 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 		s.publish(EventMessageEnded{EventBase: s.eventBase(), Message: prompt(), Error: &e})
 		return err
 	}
-	s.Logger().Info("prompt stored", "message", id, "model", msg.Model)
+	s.Logger().Info("prompt stored", "message", id, "model", v.String())
 	at, err := s.branchPositions([]message.Content{msg})
 	ended := prompt()
 	ended.Branch = at[id]

@@ -14,7 +14,7 @@ import (
 
 // usageReply returns an agent message of provider-a's model with usage u.
 func usageReply(id message.ID, model string, u message.Usage) ChatMessage {
-	return ChatMessage{ID: id, Role: message.RoleAgent, Model: "provider-a/" + model, Usage: u}
+	return ChatMessage{ID: id, Role: message.RoleAgent, Provider: providerA, Model: "provider-a/" + model, Usage: u}
 }
 
 // TestSumUsage checks that the totals count the input apart from the cache,
@@ -98,14 +98,15 @@ func TestContextChunk(t *testing.T) {
 }
 
 // TestModelName checks that the status row names a model without its provider,
+// as its catalog ID,
 // with its reasoning effort after a space, and keeps the colons of a model ID.
 func TestModelName(t *testing.T) {
 	for model, want := range map[string]string{
-		"provider-a/model-b":                           "model-b",
-		"provider-b/model-d":                           "model-d",
+		"provider-a/provider-a/model-b":                "provider-a/model-b",
+		"provider-b/provider-b/model-d":                "provider-b/model-d",
 		"model-d":                                      "model-d",
-		"provider-a/model-b-fast:medium":               "model-b-fast medium",
-		"provider-b/model-f:max":                       "model-f max",
+		"provider-a/provider-a/model-b-fast:medium":    "provider-a/model-b-fast medium",
+		"provider-b/provider-b/model-f:max":            "provider-b/model-f max",
 		"provider-a/ft:model-a:acme:support:a1b2":      "ft:model-a:acme:support:a1b2",
 		"provider-a/ft:model-a:acme:support:a1b2:high": "ft:model-a:acme:support:a1b2 high",
 	} {
@@ -217,15 +218,15 @@ func TestStatusLine(t *testing.T) {
 	}{
 		{
 			name:  "session under way",
-			model: "provider-a/model-h:medium",
+			model: "provider-a/provider-a/model-h:medium",
 			usage: SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000,
 				Cost: 0.4249, Context: 64_000, Window: 922_000},
 			worked: 3*time.Minute + 12*time.Second,
-			want:   "model-h medium context 64K 7% in 120K out 8.4K cache 310K $0.42 worked 3m 12s",
+			want:   "provider-a/model-h medium context 64K 7% in 120K out 8.4K cache 310K $0.42 worked 3m 12s",
 		},
 		// Before any request every count and the cost show as none.
-		{name: "new session", model: "provider-b/model-d", usage: SessionUsage{Window: 200_000},
-			want: "model-d context 0K 0% in 0K out 0K cache 0K $0.00 worked 0s"},
+		{name: "new session", model: "provider-b/provider-b/model-d", usage: SessionUsage{Window: 200_000},
+			want: "provider-b/model-d context 0K 0% in 0K out 0K cache 0K $0.00 worked 0s"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -255,13 +256,13 @@ func usageShown(t *testing.T, out []UIEvent) SessionUsage {
 // leaves it as it is.
 func TestUsageOnMessageEnd(t *testing.T) {
 	s, a := newTestService(t)
-	s.state.Model = "provider-a/model-c"
-	model := offeringOf(t, a, "provider-a/model-c")
+	s.state.Model = "provider-a/provider-a/model-c"
+	model := offeringOf(t, a, "provider-a/provider-a/model-c")
 	price, ok := a.Models().Catalog().Resolve("provider-a", "provider-a/model-c")
 	if !ok || price.Price == nil {
-		t.Fatal("the catalog lists no price for provider-a/model-c")
+		t.Fatal("the catalog lists no price for provider-a/provider-a/model-c")
 	}
-	reply := message.Content{ID: "a1", Role: message.RoleAgent, Model: "provider-a/model-c"}
+	reply := message.Content{ID: "a1", Role: message.RoleAgent, Provider: providerA, Model: "provider-a/model-c"}
 	s.ApplyAgentEvent(app.EventMessageStarted{Message: app.Message{Content: reply}})
 
 	stopped := s.ApplyAgentEvent(app.EventMessageEnded{Message: app.Message{Content: reply}, Stopped: true})

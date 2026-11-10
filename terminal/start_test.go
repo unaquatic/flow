@@ -22,7 +22,7 @@ func newTestApp(t *testing.T) *app.App {
 	t.Helper()
 	t.Chdir(t.TempDir())
 	home := t.TempDir()
-	settings := `{"model":"provider-a/model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
+	settings := `{"default_model":"model","default_provider":"provider-a","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}

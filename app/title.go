@@ -118,9 +118,9 @@ func (s Session) fork(p extension.Prompt, history []agent.Message) extension.For
 		}
 		stored := make([]*message.Content, 0, len(msgs)+1)
 		for _, m := range msgs {
-			stored = append(stored, &message.Content{ID: message.NewID(), Role: m.Role, Parts: m.Content, Model: v.String(), Type: message.TypeTitle})
+			stored = append(stored, &message.Content{ID: message.NewID(), Role: m.Role, Parts: m.Content, Provider: v.Provider, Model: v.Ref(), Type: message.TypeTitle})
 		}
-		reply := &message.Content{ID: message.NewID(), Role: message.RoleAgent, Parts: slices.Clone(resp.Message.Content), Model: v.String(), Type: message.TypeTitle}
+		reply := &message.Content{ID: message.NewID(), Role: message.RoleAgent, Parts: slices.Clone(resp.Message.Content), Provider: v.Provider, Model: v.Ref(), Type: message.TypeTitle}
 		if u := message.Usage(resp.Usage); !u.IsZero() {
 			reply.Parts = append(reply.Parts, message.UsagePart{ID: message.NewPartID(), Usage: u})
 		}

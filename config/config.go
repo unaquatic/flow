@@ -3,19 +3,21 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/unaquatic/flow/product"
 )
 
-// LogLevel controls logging verbosity. The config file names it in lower
-// case, as "debug", and reads it in any case, as "DEBUG".
+// LogLevel controls logging verbosity. The config file names it as one of
+// the constants below, in lower case, as "debug".
 type LogLevel string
 
 const (
@@ -28,6 +30,16 @@ const (
 	// LogError enables error logging only.
 	LogError LogLevel = "error"
 )
+
+// Valid reports whether l is one of LogDebug, LogInfo, LogWarn and
+// LogError.
+func (l LogLevel) Valid() bool {
+	switch l {
+	case LogDebug, LogInfo, LogWarn, LogError:
+		return true
+	}
+	return false
+}
 
 // Level returns the slog level that l names, or slog.LevelInfo, the
 // default, when l names none.
@@ -43,12 +55,31 @@ func (l LogLevel) Level() slog.Level {
 	return slog.LevelInfo
 }
 
+// Version is the format version of the config file that this build reads
+// and writes. LoadDir reads a file of an older version as upgrade brings it
+// to Version, every write of Service saves the file at Version, and a file
+// of a newer version fails with ErrNewerVersion.
+const Version = 1
+
+// ErrNewerVersion reports a config file of a format version newer than
+// Version, which a newer build wrote.
+var ErrNewerVersion = errors.New("config file of a newer version")
+
 // Config contains resolved application configuration.
 type Config struct {
-	// Model is the default model in "provider/model:option:effort" form, as
-	// agent.Variant.String writes it, such as "provider-a/model-a:fast:high",
-	// leaving out the option and the effort it does not set.
-	Model string `json:"model,omitempty"`
+	// Version is the format version of the config file, Version once it
+	// is read; a file without one is of version 0.
+	Version int `json:"version"`
+
+	// DefaultProvider is the provider the default model runs at, by its
+	// catalog ID, such as "provider-a".
+	DefaultProvider string `json:"default_provider,omitempty"`
+
+	// DefaultModel is the default model, without its provider, in
+	// "model:option:effort" form, as agent.Variant.Ref writes it, such as
+	// "lab-a/model-a:fast:high", leaving out the option and the effort it
+	// does not set.
+	DefaultModel string `json:"default_model,omitempty"`
 
 	// LogLevel controls logging verbosity.
 	LogLevel LogLevel `json:"log_level,omitempty"`
@@ -175,6 +206,104 @@ type Terminal struct {
 	Selection string `json:"selection,omitempty"`
 }
 
+// versionKey is the key of the config file that holds its format version.
+const versionKey = "version"
+
+// legacyModelKey is the key that config files of version 0 name the
+// default model by, in "provider/model:option:effort" form.
+const legacyModelKey = "model"
+
+// upgrade brings keys, the top-level keys of a config file, from their
+// format version to Version, in place, and sets the version. It fails with
+// ErrNewerVersion when keys are of a newer version, and changes nothing
+// then.
+//
+// Version 1 replaces the "model" key of version 0 with "default_provider"
+// and "default_model", unless the file sets "default_model" already. The
+// older form left out the model's lab when the lab was the provider, so its
+// first segment becomes the default provider, and also the lab of a model
+// left without one.
+func upgrade(keys map[string]json.RawMessage) error {
+	var v int
+	if raw, ok := keys[versionKey]; ok {
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return fmt.Errorf("%s: %w", versionKey, err)
+		}
+	}
+	if v > Version {
+		return fmt.Errorf("%w: version %d, and this build reads up to %d", ErrNewerVersion, v, Version)
+	}
+	if v < 1 {
+		if err := upgradeV1(keys); err != nil {
+			return err
+		}
+	}
+	keys[versionKey] = json.RawMessage(strconv.Itoa(Version))
+	return nil
+}
+
+// upgradeV1 brings keys of version 0 to version 1, as upgrade describes.
+func upgradeV1(keys map[string]json.RawMessage) error {
+	raw, ok := keys[legacyModelKey]
+	if !ok {
+		return nil
+	}
+	delete(keys, legacyModelKey)
+	if _, ok := keys["default_model"]; ok {
+		return nil
+	}
+	var model string
+	if err := json.Unmarshal(raw, &model); err != nil {
+		return fmt.Errorf("%s: %w", legacyModelKey, err)
+	}
+	provider, rest, ok := strings.Cut(model, "/")
+	if !ok {
+		return setDefaultModel(keys, "", model)
+	}
+	if !strings.Contains(rest, "/") {
+		rest = provider + "/" + rest
+	}
+	return setDefaultModel(keys, provider, rest)
+}
+
+// defaultModelOf returns the default provider and model that keys, the
+// top-level keys of a config file of Version, set. Either is empty when
+// keys do not set it.
+func defaultModelOf(keys map[string]json.RawMessage) (provider, model string, err error) {
+	if raw, ok := keys["default_provider"]; ok {
+		if err := json.Unmarshal(raw, &provider); err != nil {
+			return "", "", fmt.Errorf("default_provider: %w", err)
+		}
+	}
+	if raw, ok := keys["default_model"]; ok {
+		if err := json.Unmarshal(raw, &model); err != nil {
+			return "", "", fmt.Errorf("default_model: %w", err)
+		}
+	}
+	return provider, model, nil
+}
+
+// setDefaultModel sets provider and model as the default provider and
+// model in keys, the top-level keys of a config file. An empty provider
+// removes the default provider.
+func setDefaultModel(keys map[string]json.RawMessage, provider, model string) error {
+	m, err := json.Marshal(model)
+	if err != nil {
+		return err
+	}
+	keys["default_model"] = m
+	if provider == "" {
+		delete(keys, "default_provider")
+		return nil
+	}
+	p, err := json.Marshal(provider)
+	if err != nil {
+		return err
+	}
+	keys["default_provider"] = p
+	return nil
+}
+
 // legacyExtensions maps each top-level key of config files written before
 // extensions had settings of their own to the extension that now reads it.
 // The extension is given the key's value as it is, unless its own section
@@ -293,6 +422,11 @@ func mergeFromFile(cfg *Config, f File) error {
 	if err != nil || len(raw) == 0 {
 		return err
 	}
+	// Read an older file as its upgrade to Version, which a write saves.
+	if err := upgrade(raw); err != nil {
+		path, _ := f.Path()
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
 	// Decode the overlay from the keys of the one read, so that both see
 	// the same file even when a write replaces it meanwhile.
 	data, err := json.Marshal(raw)
@@ -305,11 +439,18 @@ func mergeFromFile(cfg *Config, f File) error {
 		return fmt.Errorf("parsing %s: %w", path, err)
 	}
 
-	if _, ok := raw["model"]; ok {
-		cfg.Model = overlay.Model
+	cfg.Version = overlay.Version
+	if cfg.DefaultProvider, cfg.DefaultModel, err = defaultModelOf(raw); err != nil {
+		path, _ := f.Path()
+		return fmt.Errorf("parsing %s: %w", path, err)
 	}
 	if _, ok := raw["log_level"]; ok {
-		cfg.LogLevel = LogLevel(strings.ToLower(string(overlay.LogLevel)))
+		if !overlay.LogLevel.Valid() {
+			path, _ := f.Path()
+			return fmt.Errorf("parsing %s: log_level %q is none of %q, %q, %q and %q",
+				path, overlay.LogLevel, LogDebug, LogInfo, LogWarn, LogError)
+		}
+		cfg.LogLevel = overlay.LogLevel
 	}
 
 	if _, ok := raw["provider"]; ok && overlay.Provider != nil {
