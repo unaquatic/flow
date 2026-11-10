@@ -84,7 +84,7 @@ func TestOpen_CreatesTheTables(t *testing.T) {
 // type and role.
 const insertMessageSQL = `
 	INSERT INTO messages (session_id, id, parent_id, type, role, model, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, '', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')`
+	VALUES (?, ?, ?, ?, ?, '', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`
 
 // insertPartSQL inserts a part row, taking its message's seq, its ID, its
 // type and its data.
@@ -212,7 +212,7 @@ func TestMigrationV2_MovesTheProvider(t *testing.T) {
 	for _, id := range []message.ID{"msg_lab", "msg_gateway", "msg_bare", "msg_none"} {
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO messages (session_id, id, parent_id, type, role, model, created_at, updated_at)
-			VALUES ('ses_old', ?, ?, 'chat', 'agent', ?, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')`,
+			VALUES ('ses_old', ?, ?, 'chat', 'agent', ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`,
 			string(id), parent, models[id]); err != nil {
 			t.Fatal(err)
 		}
@@ -220,7 +220,7 @@ func TestMigrationV2_MovesTheProvider(t *testing.T) {
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO sessions (id, project, created_at, updated_at, head_id)
-		VALUES ('ses_old', ?, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 'msg_none')`, project); err != nil {
+		VALUES ('ses_old', ?, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', 'msg_none')`, project); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(); err != nil {

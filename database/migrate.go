@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+
+	"github.com/unaquatic/flow/internal/timestamp"
 )
 
 // Name is the ID the migrations table records this package's own
@@ -47,8 +49,9 @@ CREATE TABLE projects (
 `
 
 // migrationsTable records each migration applied, by the ID of its owner
-// and its version, starting at 1. It is created before any migration runs,
-// since every migration is recorded in it.
+// and its version, starting at 1, and when, in timestamp.Layout. It is
+// created before any migration runs, since every migration is recorded in
+// it.
 const migrationsTable = `
 CREATE TABLE IF NOT EXISTS migrations (
 	id         TEXT    NOT NULL,
@@ -134,7 +137,7 @@ func applyMigration(ctx context.Context, db *sql.DB, id string, v int, migration
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO migrations (id, version, applied_at) VALUES (?, ?, ?)`,
-		id, v+1, time.Now().UTC().Format(time.RFC3339)); err != nil {
+		id, v+1, timestamp.Format(time.Now())); err != nil {
 		return err
 	}
 	return tx.Commit()

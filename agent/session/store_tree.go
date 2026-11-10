@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/internal/timestamp"
 )
 
 // messageColumns lists the message fields every message query selects, in scan
@@ -327,7 +328,7 @@ func (r *messageRow) scan(rows *sql.Rows, lead ...any) error {
 		m.Type = t
 	}
 	m.ParentID = optionalID(message.ID(parent.V))
-	if m.CreatedAt, err = decodeTime(createdAt); err != nil {
+	if m.CreatedAt, err = timestamp.Parse(createdAt); err != nil {
 		return err
 	}
 	if !partID.Valid {
