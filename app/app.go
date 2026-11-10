@@ -23,6 +23,7 @@ import (
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/internal/catalog"
 	"github.com/unaquatic/flow/internal/pubsub"
+	"github.com/unaquatic/flow/internal/realpath"
 	_ "github.com/unaquatic/sqlite" // registers the driver that database.Open uses
 )
 
@@ -222,7 +223,9 @@ func enterSessionDir(ctx context.Context, db *sql.DB, id message.SessionID, wd s
 		return "", err
 	}
 	dir, ok, err := session.WorktreeOf(ctx, db, id)
-	if err != nil || !ok || dir == wd {
+	// The stored folder has its links resolved, as database.Project records
+	// it, so wd is compared resolved too.
+	if err != nil || !ok || dir == realpath.Of(wd) {
 		return wd, err
 	}
 	if err := os.Chdir(dir); err != nil {

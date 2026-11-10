@@ -16,6 +16,7 @@ import (
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/database"
 	"github.com/unaquatic/flow/extension/protocol/protocoltest"
+	"github.com/unaquatic/flow/internal/realpath"
 )
 
 // nextEvent returns the next event of events, failing on timeout.
@@ -154,8 +155,9 @@ func TestNew_EntersTheSessionsFolder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if a.WorkingDir() != there || !sameDir(t, wd, there) {
-		t.Errorf("working directory = %s, app's %s; want the session's folder %s", wd, a.WorkingDir(), there)
+	// The project records the folder's real path, which the app enters.
+	if real := realpath.Of(there); a.WorkingDir() != real || !sameDir(t, wd, there) {
+		t.Errorf("working directory = %s, app's %s; want the session's folder %s", wd, a.WorkingDir(), real)
 	}
 	if ok, err := a.Sessions().Stored(t.Context(), "ses_there"); err != nil || !ok {
 		t.Errorf("session of the app's project = %v, %v; want it its own", ok, err)
@@ -169,8 +171,8 @@ func TestNew_EntersTheSessionsFolder(t *testing.T) {
 		t.Errorf("working directory = %s, app's %s; want it left in %s", wd, a.WorkingDir(), here)
 	}
 
-	if _, err := open("ses_gone"); err == nil || !strings.Contains(err.Error(), gone) {
-		t.Errorf("open on a session whose folder is gone = %v, want an error naming %s", err, gone)
+	if _, err := open("ses_gone"); err == nil || !strings.Contains(err.Error(), realpath.Of(gone)) {
+		t.Errorf("open on a session whose folder is gone = %v, want an error naming %s", err, realpath.Of(gone))
 	}
 	if wd, _ := os.Getwd(); !sameDir(t, wd, here) {
 		t.Errorf("working directory after the failure = %s, want it left in %s", wd, here)

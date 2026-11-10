@@ -272,6 +272,42 @@ func TestProject_ReturnsOneIDPerWorktree(t *testing.T) {
 	}
 }
 
+// TestProject_ResolvesSymlinks checks that a folder reached through a
+// symbolic link is the project of the folder itself, recorded by its real
+// path, whichever path names it first.
+func TestProject_ResolvesSymlinks(t *testing.T) {
+	db := openTest(t)
+	ctx := t.Context()
+	// The temporary directory may lie behind links itself, as on macOS.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, "app")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(dir, link); err != nil {
+		t.Skipf("symlink: %v", err)
+	}
+
+	byLink, err := Project(ctx, db, link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byDir, err := Project(ctx, db, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if byLink != byDir {
+		t.Errorf("link got ID %d, the folder it leads to %d", byLink, byDir)
+	}
+	if got := texts(t, db, `SELECT worktree FROM projects`); !slices.Equal(got, []string{dir}) {
+		t.Errorf("projects hold worktrees %q, want only %q", got, dir)
+	}
+}
+
 // TestOpen_EnforcesForeignKeys checks that the tables of other owners, which
 // reference projects, cannot hold rows of a project that does not exist.
 func TestOpen_EnforcesForeignKeys(t *testing.T) {

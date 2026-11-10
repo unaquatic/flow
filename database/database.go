@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/unaquatic/flow/internal/realpath"
 )
 
 // FileName is the name of the database file in the data directory.
@@ -74,12 +76,15 @@ func Open(path string) (*sql.DB, error) {
 
 // Project returns the ID of the project rooted at worktree, adding the
 // project if the database holds none. A relative worktree is resolved against
-// the working directory.
+// the working directory, and its symbolic links are resolved, so every path
+// leading to one folder names one project, which records the folder's real
+// path.
 func Project(ctx context.Context, db *sql.DB, worktree string) (ProjectID, error) {
 	abs, err := filepath.Abs(worktree)
 	if err != nil {
 		return 0, fmt.Errorf("database: project %s: %w", worktree, err)
 	}
+	abs = realpath.Of(abs)
 	// The no-op update makes RETURNING yield the row that already exists.
 	var id ProjectID
 	err = db.QueryRowContext(ctx, `
