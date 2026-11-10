@@ -577,7 +577,7 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 		s.publish(EventMessageEnded{EventBase: s.eventBase(), Message: prompt(), Error: &e})
 		return err
 	}
-	s.Logger().Info("prompt stored", "message", id, "model", v.String())
+	s.Logger().Info("prompt stored", "message", id, "provider", v.Provider, "model", v.Ref())
 	at, err := s.branchPositions([]message.Content{msg})
 	ended := prompt()
 	ended.Branch = at[id]
