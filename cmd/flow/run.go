@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/signal"
 	"slices"
@@ -32,6 +33,12 @@ type RunOptions struct {
 	Format OutputFormat
 	// Output is the file the run's answer is written to, or empty.
 	Output string
+	// NoSession deletes the run's session once the run has ended, so that
+	// none is kept. It takes a new session alone.
+	NoSession bool
+	// Dir is the folder the run works in, in place of the one flow started
+	// in, or empty.
+	Dir string
 }
 
 // Start returns the session the flags in o choose, as the terminal's Start
@@ -92,9 +99,10 @@ var runCmd = &cmdline.Command[RunOptions]{
 		fs.BoolVar(&o.Continue, "continue", false, continueUsage)
 		fs.BoolVar(&o.Continue, "c", false, continueUsage)
 		fs.StringVar(&o.Session, "session", "", "Send the prompt to the session with this `id`, in its own folder")
+		dirFlag(fs, &o.Dir)
 		printFlags(fs, o)
 	},
-	Exclusive: [][]string{{"continue", "session"}},
+	Exclusive: [][]string{{"continue", "session"}, {"no-session", "continue"}, {"no-session", "session"}, {"dir", "session"}},
 	Args:      cmdline.AnyArgs,
 	Run:       printRun,
 }
@@ -106,15 +114,38 @@ func printFlags(fs *flag.FlagSet, o *RunOptions) {
 	const outputUsage = "Also write the final answer of a printed run to this `file`"
 	fs.StringVar(&o.Output, "output", "", outputUsage)
 	fs.StringVar(&o.Output, "o", "", outputUsage)
+	fs.BoolVar(&o.NoSession, "no-session", false, "Keep no session of a printed run: delete it once the run ends")
+}
+
+// dirFlag binds --dir, the folder a command works in, to dir.
+func dirFlag(fs *flag.FlagSet, dir *string) {
+	fs.StringVar(dir, "dir", "", "Work in this `folder`, as though flow started there")
+}
+
+// enterDir makes dir, which --dir names, the working directory, so that the
+// app works in its project. An empty dir leaves the working directory as it
+// is.
+func enterDir(dir string) error {
+	if dir == "" {
+		return nil
+	}
+	if err := os.Chdir(dir); err != nil {
+		return fmt.Errorf("--dir: %w", err)
+	}
+	return nil
 }
 
 // printRun sends the prompt that args and piped standard input hold, as
-// promptText reads it, to the session that o chooses, and prints the run on
-// standard output, as runPrompt does, until the run ends or a signal stops
-// it. It fails before the app starts when there is no prompt.
+// promptText reads it, to the session that o chooses, in the folder that o
+// names, and prints the run on standard output, as runPrompt does, until
+// the run ends or a signal stops it. It fails before the app starts when
+// there is no prompt or no such folder.
 func printRun(ctx context.Context, o RunOptions, args []string) error {
 	prompt, err := promptText(args, pipedInput(os.Stdin))
 	if err != nil {
+		return err
+	}
+	if err := enterDir(o.Dir); err != nil {
 		return err
 	}
 	// A signal stops the run, as the app's work in progress.
@@ -162,14 +193,19 @@ func promptText(args []string, stdin io.Reader) (string, error) {
 // model, and writes the run to w in o's format: the final answer once the
 // run has finished, or every event as it comes. It writes the final answer
 // to o's output file too. It fails with the run's failure, and with
-// errStopped when ctx ends first, and then writes no answer.
-func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, prompt string) error {
+// errStopped when ctx ends first, and then writes no answer. With
+// NoSession, it deletes the run's new session once the run has ended,
+// however it ended.
+func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, prompt string) (err error) {
 	id, err := o.Start().FirstSession(ctx, a.Sessions())
 	if err != nil {
 		return err
 	}
 	if id == "" {
 		id = message.NewSessionID()
+	}
+	if o.NoSession {
+		defer func() { err = errors.Join(err, forgetSession(ctx, a, id)) }()
 	}
 	sess := a.Session(id)
 	model, err := runModel(ctx, a, o.modelOptions, sess)
@@ -203,6 +239,17 @@ func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, promp
 		return os.WriteFile(o.Output, []byte(p.Answer), 0o644)
 	}
 	return nil
+}
+
+// forgetSession deletes session id of a, a new session that a run has ended
+// on, with its messages, even once ctx has ended, as when a signal stopped
+// the run. A session the run never stored is no error.
+func forgetSession(ctx context.Context, a *app.App, id message.SessionID) error {
+	err := a.Sessions().DeleteSession(context.WithoutCancel(ctx), id)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
 }
 
 // runModel returns the model variant that o picks, as selectModel picks it,

@@ -93,28 +93,39 @@ func TestRootPrintFlags(t *testing.T) {
 	fs := flag.NewFlagSet("flow", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	rootCmd.Flags(fs, &o)
-	args := []string{"-p", "-c", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "fix it"}
+	args := []string{"-p", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "--no-session", "--dir", "sub", "fix it"}
 	if err := fs.Parse(args); err != nil {
 		t.Fatal(err)
 	}
-	want := RunOptions{modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Continue: true, Format: OutputJSON, Output: "answer.md"}
+	want := RunOptions{modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Format: OutputJSON, Output: "answer.md", NoSession: true, Dir: "sub"}
 	if !o.print || o.runOptions() != want || !slices.Equal(fs.Args(), []string{"fix it"}) {
 		t.Errorf("parse %q = print %v, %+v, args %q; want print, %+v, args [fix it]", args, o.print, o.runOptions(), fs.Args(), want)
 	}
 }
 
-// TestRootPrintMisuse checks that the root command refuses --format and
-// --output without --print, and --print with --resume. It fails before the
-// app starts.
+// TestRootPrintMisuse checks that the root command refuses --format,
+// --output and --no-session without --print, --print with --resume,
+// --no-session with a flag that chooses a stored session, and --dir with
+// --session. It fails before the app starts.
 func TestRootPrintMisuse(t *testing.T) {
-	for _, args := range [][]string{{"--format", "json"}, {"-o", "answer.md", "hi"}} {
+	for _, args := range [][]string{{"--format", "json"}, {"-o", "answer.md", "hi"}, {"--no-session", "hi"}} {
 		if err := rootCmd.Execute(t.Context(), args); !errors.Is(err, errNeedsPrint) {
 			t.Errorf("execute %q: err = %v, want %v", args, err, errNeedsPrint)
 		}
 	}
-	const want = "flow: use only one of --print and --resume"
-	if err := rootCmd.Execute(t.Context(), []string{"-p", "-r", "hi"}); err == nil || err.Error() != want {
-		t.Errorf("execute -p -r: err = %v, want %q", err, want)
+	for _, tt := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"-p", "-r", "hi"}, "--print and --resume"},
+		{[]string{"-p", "--no-session", "-c", "hi"}, "--no-session and --continue"},
+		{[]string{"-p", "--no-session", "--session", "ses_1", "hi"}, "--no-session and --session"},
+		{[]string{"--dir", "..", "--session", "ses_1"}, "--dir and --session"},
+	} {
+		want := "flow: use only one of " + tt.want
+		if err := rootCmd.Execute(t.Context(), tt.args); err == nil || err.Error() != want {
+			t.Errorf("execute %q: err = %v, want %q", tt.args, err, want)
+		}
 	}
 }
 

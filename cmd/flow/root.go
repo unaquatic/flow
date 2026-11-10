@@ -34,6 +34,9 @@ type rootOptions struct {
 	resume  bool
 	cont    bool
 	session string
+	// dir is the folder flow works in, in place of the one it started in,
+	// or empty.
+	dir string
 
 	// print sends the prompt without the terminal UI, prints the final
 	// answer and exits, as the run command does, in the format and to the
@@ -51,6 +54,8 @@ func (o rootOptions) runOptions() RunOptions {
 		Session:      o.session,
 		Format:       o.printed.Format,
 		Output:       o.printed.Output,
+		NoSession:    o.printed.NoSession,
+		Dir:          o.dir,
 	}
 }
 
@@ -82,7 +87,7 @@ func sessionFlags(fs *flag.FlagSet, o *rootOptions) {
 
 // errNeedsPrint is the error of a flag that shapes a printed run, given to
 // the root command without --print.
-var errNeedsPrint = errors.New("--format and --output need --print")
+var errNeedsPrint = errors.New("--format, --output and --no-session need --print")
 
 // errResumePrompt is the error of a prompt given to the root command with
 // --resume, whose session list chooses the session the prompt would go to.
@@ -100,13 +105,17 @@ var rootCmd = &cmdline.Command[rootOptions]{
 		fs.BoolVar(&o.version, "version", false, "Show the version")
 		colorFlags(fs, &o.color)
 		sessionFlags(fs, o)
+		dirFlag(fs, &o.dir)
 		const printUsage = "Send the prompt, print the final answer and exit, without the terminal UI"
 		fs.BoolVar(&o.print, "print", false, printUsage)
 		fs.BoolVar(&o.print, "p", false, printUsage)
 		printFlags(fs, &o.printed)
 	},
-	Exclusive: [][]string{{"resume", "continue", "session"}, {"print", "resume"}},
-	Args:      cmdline.AnyArgs,
+	Exclusive: [][]string{
+		{"resume", "continue", "session"}, {"print", "resume"}, {"dir", "session"},
+		{"no-session", "continue"}, {"no-session", "session"},
+	},
+	Args: cmdline.AnyArgs,
 	Run: func(ctx context.Context, o rootOptions, args []string) error {
 		// The version needs no app.
 		if o.version {
@@ -116,12 +125,15 @@ var rootCmd = &cmdline.Command[rootOptions]{
 		if o.print {
 			return printRun(ctx, o.runOptions(), args)
 		}
-		if o.printed.Format != OutputText || o.printed.Output != "" {
+		if o.printed.Format != OutputText || o.printed.Output != "" || o.printed.NoSession {
 			return errNeedsPrint
 		}
 		prompt := strings.TrimSpace(strings.Join(args, " "))
 		if o.resume && prompt != "" {
 			return errResumePrompt
+		}
+		if err := enterDir(o.dir); err != nil {
+			return err
 		}
 		// The UI closes on a session of another folder to have flow
 		// started again on it, in that folder, once this app has closed.

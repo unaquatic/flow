@@ -42,7 +42,9 @@ var runDemos = []demoCase{
 		run: promptDemo(RunOptions{Format: OutputJSON}, "say hi", demoReply(agent.TextDelta{Text: "Hi!"}, agent.Stop{Reason: agent.StopEndTurn}))},
 	{name: "failure", desc: "A model that refuses the request", line: `-p "say hi"`,
 		run: failedPromptDemo(&agent.ResponseError{Provider: string(demoLoginProvider), StatusCode: 401, Message: "invalid API key"})},
-	{name: "no-session", desc: "A session that is not stored", line: "-p --session " + demoMissingSession + ` "say hi"`,
+	{name: "no-session", desc: "A run that keeps no session", line: `-p --no-session "say hi"`,
+		run: promptDemo(RunOptions{Format: OutputText, NoSession: true}, "say hi", demoReply(agent.TextDelta{Text: "Hi!"}, agent.Stop{Reason: agent.StopEndTurn}))},
+	{name: "missing-session", desc: "A session that is not stored", line: "-p --session " + demoMissingSession + ` "say hi"`,
 		run: promptDemo(RunOptions{Format: OutputText, Session: demoMissingSession}, "say hi")},
 	{name: "no-prompt", desc: "No prompt, as arguments or on standard input", line: "-p",
 		run: func(context.Context, io.Writer, bool) error {

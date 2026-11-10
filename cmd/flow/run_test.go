@@ -283,11 +283,93 @@ func TestRunPromptFailure(t *testing.T) {
 	}
 }
 
-// TestRunExclusiveSessionFlags runs the run command with --continue and
-// --session together. The command fails before Run, so no app starts.
+// TestRunExclusiveSessionFlags runs the run command with session flags that
+// conflict: two that choose a session, --no-session with one that chooses
+// a stored session, and --dir with --session, which works in the session's
+// own folder. The command fails before Run, so no app starts.
 func TestRunExclusiveSessionFlags(t *testing.T) {
-	const want = "flow run: use only one of --continue and --session"
-	if err := rootCmd.Execute(t.Context(), []string{"run", "-c", "--session", "ses_1", "hi"}); err == nil || err.Error() != want {
-		t.Errorf("execute: err = %v, want %q", err, want)
+	for _, tt := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"-c", "--session", "ses_1"}, "--continue and --session"},
+		{[]string{"--no-session", "-c"}, "--no-session and --continue"},
+		{[]string{"--no-session", "--session", "ses_1"}, "--no-session and --session"},
+		{[]string{"--dir", "..", "--session", "ses_1"}, "--dir and --session"},
+	} {
+		args := append(append([]string{"run"}, tt.args...), "hi")
+		want := "flow run: use only one of " + tt.want
+		if err := rootCmd.Execute(t.Context(), args); err == nil || err.Error() != want {
+			t.Errorf("execute %q: err = %v, want %q", args, err, want)
+		}
 	}
+}
+
+// TestRunPromptNoSession checks that a run with NoSession prints the answer
+// and writes its file, and keeps no session, whether it finishes or fails.
+func TestRunPromptNoSession(t *testing.T) {
+	a, gw := newRunTestApp(t, "All green.")
+	answer := filepath.Join(t.TempDir(), "answer.txt")
+	var out strings.Builder
+	if err := runPrompt(t.Context(), &out, a, RunOptions{Format: OutputText, Output: answer, NoSession: true}, "fix the tests"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := out.String(), "All green.\n"; got != want {
+		t.Errorf("output = %q, want %q", got, want)
+	}
+	if data, err := os.ReadFile(answer); err != nil || string(data) != "All green." {
+		t.Errorf("answer file = %q, %v; want %q", data, err, "All green.")
+	}
+	if sessions, err := a.Sessions().ListSessions(t.Context()); err != nil || len(sessions) != 0 {
+		t.Errorf("sessions after the run = %+v, %v; want none", sessions, err)
+	}
+
+	gw.StreamFunc = func() (agent.StreamResponse, error) { return nil, errors.New("upstream down") }
+	err := runPrompt(t.Context(), new(strings.Builder), a, RunOptions{Format: OutputText, NoSession: true}, "hi")
+	if err == nil || !strings.Contains(err.Error(), "upstream down") {
+		t.Errorf("failed run: err = %v, want the model's failure", err)
+	}
+	if sessions, err := a.Sessions().ListSessions(t.Context()); err != nil || len(sessions) != 0 {
+		t.Errorf("sessions after the failed run = %+v, %v; want none", sessions, err)
+	}
+}
+
+// TestEnterDir checks that --dir makes its folder the working directory,
+// that no --dir leaves it, and that a folder that does not exist fails.
+func TestEnterDir(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.Mkdir("sub", 0o755); err != nil {
+		t.Fatal(err)
+	}
+	want, err := filepath.Abs("sub")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := enterDir(""); err != nil {
+		t.Fatal(err)
+	}
+	if err := enterDir("sub"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g, w := evalPath(t, got), evalPath(t, want); g != w {
+		t.Errorf("working directory = %q, want %q", g, w)
+	}
+	if err := enterDir("missing"); err == nil || !strings.HasPrefix(err.Error(), "--dir: ") {
+		t.Errorf("enterDir(missing) = %v, want an error about --dir", err)
+	}
+}
+
+// evalPath returns path with its symbolic links resolved, as a temporary
+// folder has them on some systems.
+func evalPath(t *testing.T, path string) string {
+	t.Helper()
+	real, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return real
 }

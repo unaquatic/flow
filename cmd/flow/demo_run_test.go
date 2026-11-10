@@ -15,10 +15,11 @@ import (
 // events as JSON, and each error as the command line reports it.
 func TestRunDemos(t *testing.T) {
 	want := map[string]string{
-		"answer":     demoRunAnswer + "\n",
-		"failure":    "error: provider-a response error (401): invalid API key\n",
-		"no-session": `error: no stored session matches "` + demoMissingSession + `"` + "\n",
-		"no-prompt":  "error: " + errNoPrompt.Error() + "\n",
+		"answer":          demoRunAnswer + "\n",
+		"failure":         "error: provider-a response error (401): invalid API key\n",
+		"no-session":      "Hi!\n",
+		"missing-session": `error: no stored session matches "` + demoMissingSession + `"` + "\n",
+		"no-prompt":       "error: " + errNoPrompt.Error() + "\n",
 	}
 	for _, c := range runDemos {
 		t.Run(c.name, func(t *testing.T) {
