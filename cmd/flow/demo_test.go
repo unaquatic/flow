@@ -24,12 +24,12 @@ func TestRunDemoUpdate(t *testing.T) {
 		root = real
 	}
 	for _, want := range []string{
-		"# Up to date\n$ flow update\nflow v1.2.3 is up to date.\n",
-		"$ flow update --check\nflow v1.2.3 is available, and this is v1.2.2. Run flow update to install it.\n",
-		"flow v1.2.2 is updating to v1.2.3 with npm install -g @unaquatic/flow@1.2.3\n\nchanged 1 package in 2s\nflow updated to v1.2.3.\n",
+		"# Up to date\n$ flow update\nAlready up to date: 1.2.3\n",
+		"$ flow update --check\nNew update available: 1.2.2 → 1.2.3\n\nUpdate with:\n  flow update\n",
+		"$ flow update\nUpdating 1.2.2 → 1.2.3\n  npm install -g @unaquatic/flow@1.2.3\n\nInstalled successfully\n",
 		"error: cannot update flow: " + root + " is not writable, run npm install -g @unaquatic/flow@1.2.3\n",
 		"error: cannot update flow: /usr/local/bin/flow is not a global npm or pnpm install, run npm install -g @unaquatic/flow@latest\n",
-		"# A development build\n$ flow update\nflow (devel) is a development build, run flow update --force to install v1.2.3.\n",
+		"# A development build\n$ flow update\nerror: flow (devel) is a development build, run flow update --force to install\n",
 	} {
 		if !strings.Contains(w.String(), want) {
 			t.Errorf("output lacks %q:\n%s", want, w.String())
@@ -43,7 +43,7 @@ func TestRunDemoUpdate(t *testing.T) {
 	if err := runDemo(t.Context(), &w, false, updateDemos(), []string{"latest"}); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := w.String(), "# Up to date\n$ flow update\nflow v1.2.3 is up to date.\n"; got != want {
+	if got, want := w.String(), "# Up to date\n$ flow update\nAlready up to date: 1.2.3\n"; got != want {
 		t.Errorf("latest = %q, want %q", got, want)
 	}
 }

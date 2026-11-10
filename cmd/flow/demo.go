@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/extension/demo"
@@ -188,13 +189,16 @@ func updateDemos() []demoCase {
 // run writes what flow update prints in the case d to w: the output of the
 // command itself, run against a canned registry, which names
 // demoui.UpdateVersion the latest release, and a package manager that
-// installs nothing, so that nothing is checked or installed.
+// installs nothing, so that nothing is checked or installed. Where w is a
+// terminal, the registry and the package manager take a while, as they do
+// over the network, so that the live lines show.
 func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 	dir, err := os.MkdirTemp("", product.ID+"-demo-update-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(dir)
+	slow := newLiveLine(w).live
 	// The executable is in the folder as the package manager's own report
 	// of it resolves, where it is a symbolic link on this machine.
 	root := demoGlobalRoot
@@ -204,10 +208,10 @@ func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 	u := &update.Updater{
 		Dir:     dir,
 		Current: d.current,
-		Client: &http.Client{Transport: demo.CannedReply{
+		Client: &http.Client{Transport: demoSlow(slow, demo.CannedReply{
 			Status: http.StatusOK,
 			Body:   fmt.Sprintf(`{"name":%q,"version":%q}`, update.PackageName, strings.TrimPrefix(demoui.UpdateVersion, "v")),
-		}},
+		})},
 		Executable: filepath.Join(root, update.PackageName, "bin", product.Name),
 		Output: func(context.Context, string, ...string) ([]byte, error) {
 			return []byte(root), nil
@@ -217,7 +221,31 @@ func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 	if d.install == demoUnmanaged {
 		u.Executable = filepath.Join("/usr/local/bin", product.Name)
 	}
-	return runUpdate(ctx, w, u, d.opts, demoInstall)
+	install := demoInstall
+	if slow {
+		install = func(cmd *exec.Cmd) error {
+			time.Sleep(time.Second)
+			return demoInstall(cmd)
+		}
+	}
+	return runUpdate(ctx, w, u, d.opts, install)
+}
+
+// demoTransport answers each request with what the func returns.
+type demoTransport func(*http.Request) (*http.Response, error)
+
+func (t demoTransport) RoundTrip(r *http.Request) (*http.Response, error) { return t(r) }
+
+// demoSlow returns rt, which, when slow is set, takes a while to answer,
+// as a request over the network does.
+func demoSlow(slow bool, rt http.RoundTripper) http.RoundTripper {
+	if !slow {
+		return rt
+	}
+	return demoTransport(func(r *http.Request) (*http.Response, error) {
+		time.Sleep(600 * time.Millisecond)
+		return rt.RoundTrip(r)
+	})
 }
 
 // demoInstall stands in for the package manager that cmd runs, and writes

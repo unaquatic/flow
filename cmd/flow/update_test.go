@@ -47,8 +47,9 @@ func testUpdater(t *testing.T, current string, global bool) *update.Updater {
 	return u
 }
 
-// TestRunUpdate checks what flow update reports, and that it installs a
-// newer release only into a global install of a package manager.
+// TestRunUpdate checks what flow update reports, versions without their v,
+// and that it installs a newer release only into a global install of a
+// package manager, showing its command and not its output.
 func TestRunUpdate(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
@@ -56,11 +57,9 @@ func TestRunUpdate(t *testing.T) {
 		opts    updateOptions
 		want    string
 	}{
-		{name: "up to date", current: "v0.2.0", want: "flow v0.2.0 is up to date.\n"},
+		{name: "up to date", current: "v0.2.0", want: "Already up to date: 0.2.0\n"},
 		{name: "check", current: "v0.1.0", opts: updateOptions{check: true},
-			want: "flow v0.2.0 is available, and this is v0.1.0. Run flow update to install it.\n"},
-		{name: "development build", current: "(devel)",
-			want: "flow (devel) is a development build, run flow update --force to install v0.2.0.\n"},
+			want: "New update available: 0.1.0 → 0.2.0\n\nUpdate with:\n  flow update\n"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var w bytes.Buffer
@@ -76,6 +75,14 @@ func TestRunUpdate(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("development build", func(t *testing.T) {
+		var w bytes.Buffer
+		err := runUpdate(t.Context(), &w, testUpdater(t, "(devel)", false), updateOptions{}, (*exec.Cmd).Run)
+		if want := "flow (devel) is a development build, run flow update --force to install"; err == nil || err.Error() != want || w.Len() != 0 {
+			t.Errorf("runUpdate = %v, wrote %q; want %q and nothing written", err, w.String(), want)
+		}
+	})
 
 	t.Run("build from source", func(t *testing.T) {
 		err := runUpdate(t.Context(), new(bytes.Buffer), testUpdater(t, "v0.1.0", false), updateOptions{}, (*exec.Cmd).Run)
@@ -97,11 +104,29 @@ func TestRunUpdate(t *testing.T) {
 		if err := runUpdate(t.Context(), &w, testUpdater(t, "v0.1.0", true), updateOptions{}, (*exec.Cmd).Run); err != nil {
 			t.Fatal(err)
 		}
-		want := "flow v0.1.0 is updating to v0.2.0 with npm install -g @unaquatic/flow@0.2.0\n" +
-			"npm install -g @unaquatic/flow@0.2.0\n" +
-			"flow updated to v0.2.0.\n"
+		want := "Updating 0.1.0 → 0.2.0\n  npm install -g @unaquatic/flow@0.2.0\n\nInstalled successfully\n"
 		if w.String() != want {
 			t.Errorf("output = %q, want %q", w.String(), want)
+		}
+	})
+
+	t.Run("install fails", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("uses a shell script")
+		}
+		bin := t.TempDir()
+		t.Setenv("PATH", bin)
+		if err := os.WriteFile(filepath.Join(bin, "npm"), []byte("#!/bin/sh\necho \"npm ERR! code EACCES\"\nexit 1\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		var w bytes.Buffer
+		err := runUpdate(t.Context(), &w, testUpdater(t, "v0.1.0", true), updateOptions{}, (*exec.Cmd).Run)
+		if err == nil || !strings.HasPrefix(err.Error(), "npm install -g @unaquatic/flow@0.2.0") {
+			t.Errorf("runUpdate = %v, want the install failed", err)
+		}
+		want := "Updating 0.1.0 → 0.2.0\n  npm install -g @unaquatic/flow@0.2.0\n\nnpm ERR! code EACCES\n"
+		if w.String() != want {
+			t.Errorf("output = %q, want npm's output after the command, %q", w.String(), want)
 		}
 	})
 }

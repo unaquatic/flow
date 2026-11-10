@@ -17,6 +17,7 @@ import (
 	"github.com/unaquatic/flow/terminal/ui"
 	"github.com/unaquatic/fluid/style"
 	fluidterm "github.com/unaquatic/fluid/terminal"
+	"golang.org/x/term"
 )
 
 // rootOptions are the flags of the root command itself.
@@ -206,6 +207,49 @@ func introLine(text string, color bool) string {
 	}
 	bold := style.New().WithFg(style.ColorTransparent).Bold().Func()
 	return terminal.ANSI(style.NewStyledText(bold(text)), colorMode)
+}
+
+// liveLine is a line that a terminal shows while a step runs, such as
+// "Checking for updates...", and rewrites in place as the step goes on,
+// until what follows clears it or keeps it. Where w is no terminal, or one
+// that cannot rewrite a line, it shows nothing, so that a log holds only
+// what follows.
+type liveLine struct {
+	w     io.Writer
+	live  bool
+	shown bool
+}
+
+// newLiveLine returns a liveLine on w, live where w is a terminal whose
+// TERM is not dumb.
+func newLiveLine(w io.Writer) *liveLine {
+	f, ok := w.(*os.File)
+	return &liveLine{w: w, live: ok && term.IsTerminal(int(f.Fd())) && os.Getenv("TERM") != "dumb"}
+}
+
+// Show shows text on l, in place of what it showed.
+func (l *liveLine) Show(text string) {
+	if !l.live {
+		return
+	}
+	fmt.Fprint(l.w, "\r\x1b[2K"+text)
+	l.shown = true
+}
+
+// Clear removes what l shows, leaving the cursor where it began.
+func (l *liveLine) Clear() {
+	if l.shown {
+		fmt.Fprint(l.w, "\r\x1b[2K")
+		l.shown = false
+	}
+}
+
+// Keep leaves what l shows on its line, and ends the line.
+func (l *liveLine) Keep() {
+	if l.shown {
+		fmt.Fprintln(l.w)
+		l.shown = false
+	}
 }
 
 // writeField writes to w label, such as "Enter this code in your browser:",
