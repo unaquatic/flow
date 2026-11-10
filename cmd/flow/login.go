@@ -66,12 +66,18 @@ var loginCmd = &cmdline.Command[loginOptions]{
 	},
 }
 
-// runLogin logs in to the account that o names in a, or saves an API key for
-// it, and makes the account active. It writes the login instructions and
-// the outcome to w.
+// runLogin logs in to the account that o names in a, as login does, reading
+// from standard input.
 func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []string) error {
+	return login(ctx, w, os.Stdin, a, o)
+}
+
+// login logs in to the account that o names in a, or saves an API key for
+// it, and makes the account active. It reads the authorization code or the
+// key from in, and writes the login instructions and the outcome to w.
+func login(ctx context.Context, w io.Writer, in io.Reader, a *app.App, o loginOptions) error {
 	if o.method == keyMethod {
-		return saveKey(ctx, w, a, o.provider, o.account)
+		return saveKey(ctx, w, in, a, o.provider, o.account)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -81,7 +87,7 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 	if err != nil {
 		return err
 	}
-	input := bufio.NewReader(os.Stdin)
+	input := bufio.NewReader(in)
 	for {
 		select {
 		case <-ctx.Done():
@@ -125,12 +131,12 @@ func runLogin(ctx context.Context, w io.Writer, a *app.App, o loginOptions, _ []
 	}
 }
 
-// saveKey asks on w for an API key, reads it from standard input and saves
-// it as account id of provider t, or as a new account when id is empty. The
-// key is echoed as typed.
-func saveKey(ctx context.Context, w io.Writer, a *app.App, t agent.ProviderID, id agent.AccountID) error {
+// saveKey asks on w for an API key, reads it from in and saves it as account
+// id of provider t, or as a new account when id is empty. The key is echoed
+// as typed.
+func saveKey(ctx context.Context, w io.Writer, in io.Reader, a *app.App, t agent.ProviderID, id agent.AccountID) error {
 	fmt.Fprintf(w, "Enter the %s API key: ", t)
-	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	line, err := bufio.NewReader(in).ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("read API key: %w", err)
 	}
