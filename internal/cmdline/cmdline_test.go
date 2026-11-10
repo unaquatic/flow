@@ -159,6 +159,44 @@ func TestUsageErrors(t *testing.T) {
 	}
 }
 
+// TestArgsBesideCommands checks that a command with subcommands and Args
+// takes the arguments that name no subcommand as its own, while the first
+// argument still selects a subcommand that it names.
+func TestArgsBesideCommands(t *testing.T) {
+	var ran string
+	var got []string
+	leaf := &Command[NoOptions]{
+		Name: "leaf",
+		Run:  func(context.Context, NoOptions, []string) error { ran = "leaf"; return nil },
+	}
+	root := &Command[NoOptions]{
+		Name:     "app",
+		Usage:    "[text...]",
+		Args:     AnyArgs,
+		Run:      func(_ context.Context, _ NoOptions, args []string) error { ran, got = "app", args; return nil },
+		Commands: []Node{leaf},
+	}
+	for _, tt := range []struct {
+		args     []string
+		wantRan  string
+		wantArgs []string
+	}{
+		{args: []string{"leaf"}, wantRan: "leaf"},
+		{args: []string{"fix", "the", "tests"}, wantRan: "app", wantArgs: []string{"fix", "the", "tests"}},
+		{args: []string{"leaf of a tree"}, wantRan: "app", wantArgs: []string{"leaf of a tree"}},
+		{args: []string{"--", "leaf"}, wantRan: "app", wantArgs: []string{"leaf"}},
+		{args: nil, wantRan: "app"},
+	} {
+		ran, got = "", nil
+		if err := root.Execute(t.Context(), tt.args); err != nil {
+			t.Fatalf("execute %q: %v", tt.args, err)
+		}
+		if ran != tt.wantRan || !slices.Equal(got, tt.wantArgs) {
+			t.Errorf("execute %q ran %s with %q, want %s with %q", tt.args, ran, got, tt.wantRan, tt.wantArgs)
+		}
+	}
+}
+
 func TestReport(t *testing.T) {
 	usage := &UsageError{Scope: "app sub", Err: errors.New("bad flag")}
 	tests := []struct {

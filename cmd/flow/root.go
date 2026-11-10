@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -33,6 +34,24 @@ type rootOptions struct {
 	resume  bool
 	cont    bool
 	session string
+
+	// print sends the prompt without the terminal UI, prints the final
+	// answer and exits, as the run command does, in the format and to the
+	// output file that printed holds.
+	print   bool
+	printed RunOptions
+}
+
+// runOptions returns the options of the run that --print starts: o's
+// model and session flags, and the format and output file of printed.
+func (o rootOptions) runOptions() RunOptions {
+	return RunOptions{
+		modelOptions: o.modelOptions,
+		Continue:     o.cont,
+		Session:      o.session,
+		Format:       o.printed.Format,
+		Output:       o.printed.Output,
+	}
 }
 
 // start returns the session the flags in o choose for the terminal to open
@@ -61,9 +80,18 @@ func sessionFlags(fs *flag.FlagSet, o *rootOptions) {
 	fs.StringVar(&o.session, "session", "", "Resume the session with this `id`, in its own folder")
 }
 
+// errNeedsPrint is the error of a flag that shapes a printed run, given to
+// the root command without --print.
+var errNeedsPrint = errors.New("--format and --output need --print")
+
+// errResumePrompt is the error of a prompt given to the root command with
+// --resume, whose session list chooses the session the prompt would go to.
+var errResumePrompt = errors.New("--resume takes no prompt: pick the session, then send it")
+
 // rootCmd is named after the application.
 var rootCmd = &cmdline.Command[rootOptions]{
 	Name:        product.Name,
+	Usage:       "[prompt...]",
 	Banner:      banner,
 	ColorBanner: colorBanner,
 	Env:         envVars(),
@@ -72,20 +100,35 @@ var rootCmd = &cmdline.Command[rootOptions]{
 		fs.BoolVar(&o.version, "version", false, "Show the version")
 		colorFlags(fs, &o.color)
 		sessionFlags(fs, o)
+		const printUsage = "Send the prompt, print the final answer and exit, without the terminal UI"
+		fs.BoolVar(&o.print, "print", false, printUsage)
+		fs.BoolVar(&o.print, "p", false, printUsage)
+		printFlags(fs, &o.printed)
 	},
-	Exclusive: [][]string{{"resume", "continue", "session"}},
+	Exclusive: [][]string{{"resume", "continue", "session"}, {"print", "resume"}},
+	Args:      cmdline.AnyArgs,
 	Run: func(ctx context.Context, o rootOptions, args []string) error {
 		// The version needs no app.
 		if o.version {
 			printVersion(os.Stdout)
 			return nil
 		}
+		if o.print {
+			return printRun(ctx, o.runOptions(), args)
+		}
+		if o.printed.Format != OutputText || o.printed.Output != "" {
+			return errNeedsPrint
+		}
+		prompt := strings.TrimSpace(strings.Join(args, " "))
+		if o.resume && prompt != "" {
+			return errResumePrompt
+		}
 		// The UI closes on a session of another folder to have flow
 		// started again on it, in that folder, once this app has closed.
 		var next message.SessionID
 		err := withAppOptions(rootAppOptions, func(ctx context.Context, _ io.Writer, a *app.App, o rootOptions, _ []string) error {
 			var err error
-			next, err = runTerminal(ctx, a, o)
+			next, err = runTerminal(ctx, a, o, prompt)
 			return err
 		})(ctx, o, args)
 		if err != nil || next == "" {
@@ -94,6 +137,7 @@ var rootCmd = &cmdline.Command[rootOptions]{
 		return relaunch(relaunchArgs(o, next))
 	},
 	Commands: []cmdline.Node{
+		runCmd,
 		versionCmd,
 		updateCmd,
 		loginCmd,
@@ -121,14 +165,16 @@ func rootAppOptions(o rootOptions) app.Options {
 }
 
 // runTerminal runs the terminal UI of a on the session that o chooses, with
-// the model and in the color mode of o. The UI draws on the terminal itself
+// the model and in the color mode of o, and sends prompt there once it is
+// open, unless prompt is empty. The UI draws on the terminal itself
 // and leaves the command that resumes the session it closes on. It tells
 // of the update that installed this release, at its first start, as
 // justUpdated finds it, and installs a newer one meanwhile, as autoUpdate
 // does. It returns the session of another folder that the UI closed to
 // reopen there, or "".
-func runTerminal(ctx context.Context, a *app.App, o rootOptions) (message.SessionID, error) {
+func runTerminal(ctx context.Context, a *app.App, o rootOptions, prompt string) (message.SessionID, error) {
 	start := o.start()
+	start.Prompt = prompt
 	model, err := selectModel(ctx, a, o.modelOptions)
 	if err != nil {
 		return "", err

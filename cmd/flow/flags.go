@@ -26,11 +26,10 @@ type modelOptions struct {
 	effort agent.ReasoningEffort
 }
 
-// modelFlags binds --provider, --model and --effort to o.
+// modelFlags binds --provider, --model and --effort to o. --provider has
+// no -p, which is --print's.
 func modelFlags(fs *flag.FlagSet, o *modelOptions) {
-	const providerUsage = "Model provider `name` to choose from"
-	fs.Var(providerValue{id: &o.provider}, "provider", providerUsage)
-	fs.Var(providerValue{id: &o.provider}, "p", providerUsage)
+	fs.Var(providerValue{id: &o.provider}, "provider", "Model provider `name` to choose from")
 	const modelUsage = "Model ID or `pattern` to use, such as name:fast:high"
 	fs.StringVar(&o.model, "model", "", modelUsage)
 	fs.StringVar(&o.model, "m", "", modelUsage)

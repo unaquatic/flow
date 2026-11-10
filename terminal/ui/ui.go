@@ -212,6 +212,9 @@ func (q *AppEvents) After(fn func()) {
 type Options struct {
 	// First is the stored session the UI opens first, or "" for a new one.
 	First message.SessionID
+	// Prompt is submitted once the UI is running, as though typed in its
+	// input, so that it goes to the first session. Empty submits nothing.
+	Prompt string
 	// Model is the model variant the UI starts with, in
 	// "provider/model:option:effort" format, which a stored first session
 	// keeps. Empty takes the app's default model, or the model the first
@@ -353,6 +356,11 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	// the input is focused.
 	if opts.PickSession {
 		r.Enqueue(func() { ui.Apply(ui.service.HandleSessionList()) })
+	}
+	// The run's events reach the UI through the subscription above, which
+	// is open by now.
+	if opts.Prompt != "" {
+		r.Enqueue(func() { ui.Apply(ui.service.HandleSubmit(opts.Prompt)) })
 	}
 
 	err = r.Wait(ctx)

@@ -41,8 +41,10 @@ func TestModelFlags(t *testing.T) {
 	}{
 		{name: "none"},
 		{name: "pattern", args: []string{"--model", "small"}, want: modelOptions{model: "small"}},
-		{name: "provider", args: []string{"-p", "provider-a", "-m", "model-a"},
+		{name: "provider", args: []string{"--provider", "provider-a", "-m", "model-a"},
 			want: modelOptions{provider: "provider-a", model: "model-a"}},
+		// -p is --print's, on the commands that take the model flags.
+		{name: "no -p", args: []string{"-p", "provider-a"}, wantErr: "flag provided but not defined: -p"},
 		{name: "gateway provider", args: []string{"--provider", "provider-c", "-m", "large"},
 			want: modelOptions{provider: "provider-c", model: "large"}},
 		{name: "empty provider", args: []string{"--provider", " "}, wantErr: "empty provider"},

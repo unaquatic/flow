@@ -92,7 +92,9 @@ type Command[T any] struct {
 	Exclusive [][]string
 
 	// Args checks the positional arguments left after flag parsing. A
-	// command without Args takes none.
+	// command without Args takes none, and one with subcommands reports
+	// its first argument as an unknown command instead. A command with
+	// both takes the arguments that name no subcommand as its own.
 	Args func([]string) error
 
 	// Run executes the command. A command without Run prints its help.
@@ -252,7 +254,7 @@ func (c *Command[T]) parse(sc scope, opts *T, args []string) (*flag.FlagSet, err
 
 func (c *Command[T]) run(ctx context.Context, sc scope, opts T, fs *flag.FlagSet) error {
 	args := fs.Args()
-	if len(args) > 0 && len(c.Commands) > 0 {
+	if len(args) > 0 && len(c.Commands) > 0 && c.Args == nil {
 		return c.usageError(sc, fs, fmt.Errorf("unknown command %q", args[0]))
 	}
 	if c.Run == nil {
@@ -353,6 +355,9 @@ func (c *Command[T]) info() info {
 		hidden:      c.Hidden,
 	}
 }
+
+// AnyArgs is a [Command.Args] check that takes any number of arguments.
+func AnyArgs([]string) error { return nil }
 
 // ExactArgs returns a [Command.Args] check demanding exactly n arguments.
 func ExactArgs(n int) func([]string) error {

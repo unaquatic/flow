@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"slices"
@@ -70,6 +71,50 @@ func TestRootExclusiveSessionFlags(t *testing.T) {
 		if err := rootCmd.Execute(t.Context(), args); err == nil || err.Error() != want {
 			t.Errorf("execute %q: err = %v, want %q", args, err, want)
 		}
+	}
+}
+
+// TestRootResumePrompt checks that the root command refuses a prompt with
+// --resume, whose session list has not picked the session it would go to.
+// It fails before the app starts.
+func TestRootResumePrompt(t *testing.T) {
+	for _, args := range [][]string{{"-r", "fix", "the", "tests"}, {"--resume", "--", "fix the tests"}} {
+		if err := rootCmd.Execute(t.Context(), args); !errors.Is(err, errResumePrompt) {
+			t.Errorf("execute %q: err = %v, want %v", args, err, errResumePrompt)
+		}
+	}
+}
+
+// TestRootPrintFlags checks that --print takes the root command's model and
+// session flags, and the format and output file of a printed run, which
+// the run command takes too.
+func TestRootPrintFlags(t *testing.T) {
+	var o rootOptions
+	fs := flag.NewFlagSet("flow", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	rootCmd.Flags(fs, &o)
+	args := []string{"-p", "-c", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "fix it"}
+	if err := fs.Parse(args); err != nil {
+		t.Fatal(err)
+	}
+	want := RunOptions{modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Continue: true, Format: OutputJSON, Output: "answer.md"}
+	if !o.print || o.runOptions() != want || !slices.Equal(fs.Args(), []string{"fix it"}) {
+		t.Errorf("parse %q = print %v, %+v, args %q; want print, %+v, args [fix it]", args, o.print, o.runOptions(), fs.Args(), want)
+	}
+}
+
+// TestRootPrintMisuse checks that the root command refuses --format and
+// --output without --print, and --print with --resume. It fails before the
+// app starts.
+func TestRootPrintMisuse(t *testing.T) {
+	for _, args := range [][]string{{"--format", "json"}, {"-o", "answer.md", "hi"}} {
+		if err := rootCmd.Execute(t.Context(), args); !errors.Is(err, errNeedsPrint) {
+			t.Errorf("execute %q: err = %v, want %v", args, err, errNeedsPrint)
+		}
+	}
+	const want = "flow: use only one of --print and --resume"
+	if err := rootCmd.Execute(t.Context(), []string{"-p", "-r", "hi"}); err == nil || err.Error() != want {
+		t.Errorf("execute -p -r: err = %v, want %q", err, want)
 	}
 }
 

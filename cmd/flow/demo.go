@@ -40,6 +40,7 @@ var demoCmd = &cmdline.Command[cmdline.NoOptions]{
 	Name:  "demo",
 	Short: "Show demos of what flow's commands print",
 	Commands: []cmdline.Node{
+		demoCommand("run", "Show what flow run prints in each case, with demo models", runDemos),
 		demoCommand("version", "Show what flow version prints", versionDemos),
 		demoCommand("update", "Show what flow update prints in each case, without checking or installing", updateDemos()),
 		demoCommand("login", "Show what flow login prints in each case, with demo providers", loginDemos),
