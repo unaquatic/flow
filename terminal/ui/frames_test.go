@@ -204,7 +204,7 @@ func statusInfo(context int) StatusInfo {
 		Version:   product.Name + " v0.1.0",
 		Session:   "01a0e33d-4571-7ed4-b06b-4229c726c313",
 		Messages:  4,
-		Provider:  "provider-a",
+		Provider:  "Provider A",
 		Model:     "lab-a/model-a",
 		Usage:     SessionUsage{Context: context, Window: 400_000},
 		Directory: "/work/project",

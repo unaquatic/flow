@@ -63,9 +63,10 @@ type StatusInfo struct {
 	Updated time.Time
 	// Messages counts the transcript's messages.
 	Messages int
-	// Provider identifies the provider of the terminal's model, by its
-	// catalog ID.
-	Provider agent.ProviderID
+	// Provider names the provider of the terminal's model, as
+	// Service.ProviderName names it, such as "Provider A", or is empty when
+	// the model names none.
+	Provider string
 	// Model is the terminal's model variant without its provider, in
 	// "model:option:effort" form, such as "lab-a/model-a:fast:high".
 	Model string
@@ -114,7 +115,7 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		add("Updated", style.Plain(info.Updated.Local().Format(time.DateTime)))
 	}
 	add("Messages", style.Plain(strconv.Itoa(info.Messages)))
-	add("Provider", orNone(string(info.Provider)))
+	add("Provider", orNone(info.Provider))
 	add("Model", orNone(info.Model))
 	context := FormatTokens(info.Usage.Context)
 	if info.Usage.Window > 0 {
@@ -154,10 +155,12 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
 		Messages:  s.MessageCount(),
-		Provider:  provider,
 		Model:     model,
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
+	}
+	if provider != "" {
+		info.Provider = s.ProviderName(provider)
 	}
 	if stored != nil {
 		info.Title = stored.Title

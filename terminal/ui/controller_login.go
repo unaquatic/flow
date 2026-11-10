@@ -67,13 +67,11 @@ func (s *Service) ShowLoginMenu() []UIEvent {
 	return s.ShowSearchMenu(&SearchMenu{Title: "Login", Items: s.ProviderItems})
 }
 
-// ProviderName returns the catalog's name of provider pt, such as "OpenAI",
-// or its ID when the catalog gives it none.
+// ProviderName returns the catalog's name of provider pt, such as
+// "Provider A", or its ID when the catalog gives it none, as
+// app.Models.ProviderName does.
 func (s *Service) ProviderName(pt agent.ProviderID) string {
-	if p, ok := s.app.Models().Catalog().Providers[pt]; ok && p.Name != "" {
-		return p.Name
-	}
-	return string(pt)
+	return s.app.Models().ProviderName(pt)
 }
 
 // ProviderItems returns the providers of the login menu, as
