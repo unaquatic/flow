@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"iter"
@@ -14,8 +15,9 @@ import (
 	"github.com/unaquatic/flow/extension"
 )
 
-// maxAgentSteps limits model responses within one run.
-const maxAgentSteps = 16
+// DefaultMaxSteps limits model responses within one run, unless the app's
+// Options.MaxSteps sets another limit.
+const DefaultMaxSteps = 16
 
 var (
 	// ErrClosed reports that the app was closed before an operation started.
@@ -30,10 +32,21 @@ var (
 type SendInput struct {
 	// Text is the user prompt.
 	Text string
+	// Parts are the parts the prompt holds after its text, such as the
+	// files attached to it, in order, each with the ID message.NewPartID
+	// gives it.
+	Parts []message.ContentPart
 	// Model optionally overrides the configured model.
 	Model string
 	// MessageID optionally supplies the user message ID.
 	MessageID message.ID
+}
+
+// content returns the parts of the prompt snd sends: its text, with a new
+// part ID, and then its Parts. The slice is new.
+func (snd SendInput) content() []message.ContentPart {
+	text := message.TextPart{ID: message.NewPartID(), Text: snd.Text}
+	return append([]message.ContentPart{text}, snd.Parts...)
 }
 
 // FileDiff summarizes one file changed by a history move, as the
@@ -481,9 +494,11 @@ func (s Session) processSend(ctx context.Context, snd SendInput) error {
 	if err != nil {
 		return err
 	}
-	history = append(history, agent.NewUserMessage(snd.Text))
+	// The prompt sent and the one stored share their parts, part IDs too.
+	parts := snd.content()
+	history = append(history, agent.Message{Role: message.RoleUser, Content: parts})
 
-	if err := s.emitPrompt(snd, v, s.app.extensions); err != nil {
+	if err := s.emitPrompt(snd, parts, v, s.app.extensions); err != nil {
 		return err
 	}
 	return s.answer(ctx, history, v)
@@ -525,8 +540,9 @@ func settle(ctx context.Context, err error) error {
 	return err
 }
 
-// emitPrompt persists the prompt opening a run, and publishes it as a reply
-// is published: it starts with its text, the parts that the extension.PromptHook
+// emitPrompt persists the prompt opening a run, snd's, whose parts are
+// parts, as snd.content returns them, and publishes it as a reply is
+// published: it starts with those parts, the parts that the extension.PromptHook
 // of each of exts adds, such as the workspace snapshot the run's first reply
 // starts from, arrive through the part events, and it ends once stored, with
 // its parent, creation time and branch position. The position is the
@@ -536,7 +552,7 @@ func settle(ctx context.Context, err error) error {
 // the failure. The first prompt of a session stores the session too, which
 // it then publishes as EventSessionUpdated. Each stored prompt then has the
 // extensions title the session, as startTitling describes.
-func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Extension) error {
+func (s Session) emitPrompt(snd SendInput, parts []message.ContentPart, v agent.Variant, exts []extension.Extension) error {
 	id := snd.MessageID
 	if id == "" {
 		id = message.NewID()
@@ -544,7 +560,7 @@ func (s Session) emitPrompt(snd SendInput, v agent.Variant, exts []extension.Ext
 	msg := message.Content{
 		ID:       id,
 		Role:     message.RoleUser,
-		Parts:    []message.ContentPart{message.TextPart{ID: message.NewPartID(), Text: snd.Text}},
+		Parts:    slices.Clone(parts),
 		Provider: v.Provider,
 		Model:    v.Ref(),
 	}
@@ -605,7 +621,7 @@ func (s Session) runAgent(ctx context.Context, history []agent.Message, v agent.
 		Variant:         v,
 		Messages:        history,
 		ToolDefinitions: s.app.tools.WireTools(),
-		MaxSteps:        maxAgentSteps,
+		MaxSteps:        cmp.Or(s.app.maxSteps, DefaultMaxSteps),
 		TurnHooks:       turnHooks(s.app.extensions),
 		SessionID:       s.id,
 		OnEvent:         s.publishAgent,

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -191,22 +193,196 @@ func mustJSON(t *testing.T, v any) string {
 // answers every request with answer. The test ends by closing it.
 func newRunTestApp(t *testing.T, answer string) (*app.App, *agenttest.Gateway) {
 	t.Helper()
+	settings := `{"default_provider":"mock","default_model":"test-model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
+	a, gw, _ := newRunTestAppWith(t, answer, settings, app.Options{})
+	return a, gw
+}
+
+// newRunTestAppWith returns an app as newRunTestApp does, over a data
+// directory, which it returns too, whose config file holds settings, with
+// the other parts opts gives.
+func newRunTestAppWith(t *testing.T, answer, settings string, opts app.Options) (*app.App, *agenttest.Gateway, string) {
+	t.Helper()
 	t.Chdir(t.TempDir())
 	t.Setenv(keyEnv, "")
 	home := t.TempDir()
-	settings := `{"default_provider":"mock","default_model":"test-model","snapshot":false,"catalog_source":"http://127.0.0.1:1"}`
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t,
 		`{"provider-a":{"id":"provider-a","format":"responses","env":["`+keyEnv+`"],"models":{}}}`))
 	gw := &agenttest.Gateway{StreamFunc: func() (agent.StreamResponse, error) { return agenttest.TextResponse(answer), nil }}
-	a, err := app.New(t.Context(), config.NewService(home), app.Options{Providers: agenttest.NewProviders(t, gw)})
+	opts.Providers = agenttest.NewProviders(t, gw)
+	a, err := app.New(t.Context(), config.NewService(home), opts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(a.Close)
-	return a, gw
+	return a, gw, home
+}
+
+// TestRunAppOptions checks that the app a printed run starts on, with the
+// options its flags give, leaves the AGENTS.md files out of a new session's
+// system prompt with --no-context-files, holds --system-prompt's text in
+// it, offers the model the built-in tools --tools names but for those
+// --exclude-tools names, even one flow offers no model by default, and
+// stops the run once the model has answered --max-steps times, printing
+// the answer it got to and telling of the flag.
+func TestRunAppOptions(t *testing.T) {
+	o := RunOptions{
+		Format: OutputText, NoContextFiles: true, SystemPrompt: "Answer in haiku.", MaxSteps: 2,
+		Tools: []string{"read", "grep", "bash"}, ExcludeTools: []string{"bash"},
+	}
+	settings := `{"default_provider":"mock","default_model":"test-model","catalog_source":"http://127.0.0.1:1",` +
+		`"extensions":{"snapshot":{"enabled":false},"titling":{"enabled":false}}}`
+	a, gw, home := newRunTestAppWith(t, "", settings, o.AppOptions())
+	if err := os.WriteFile(filepath.Join(home, app.InstructionsFile), []byte("Call me Sam."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gw.StreamFunc = func() (agent.StreamResponse, error) {
+		return agenttest.Stream(
+			agent.TextDelta{Text: "Still looking."},
+			agent.ToolUseStart{ID: "c1", Name: "read"},
+			agent.ToolUseEnd{ID: "c1", Input: json.RawMessage(`{"path":"missing.txt"}`)},
+			agent.Stop{Reason: agent.StopToolUse},
+		), nil
+	}
+	answer := filepath.Join(t.TempDir(), "answer.txt")
+	o.Output = answer
+
+	var out strings.Builder
+	err := runPrompt(t.Context(), &out, a, o, "read it")
+	if e, ok := errors.AsType[*agent.MaxStepsError](err); !ok || e.Steps != 2 || !strings.Contains(err.Error(), "--max-steps") {
+		t.Errorf("run that calls tools forever: err = %v, want it stopped after 2 steps, telling of --max-steps", err)
+	}
+	if got, want := out.String(), "Still looking.\n"; got != want {
+		t.Errorf("output = %q, want the answer the run got to, %q", got, want)
+	}
+	if data, err := os.ReadFile(answer); err != nil || string(data) != "Still looking." {
+		t.Errorf("answer file = %q, %v; want the answer the run got to", data, err)
+	}
+	if len(gw.StreamCalls) != 2 {
+		t.Fatalf("gateway saw %d requests, want 2", len(gw.StreamCalls))
+	}
+	if first := gw.StreamCalls[0][0]; first.Role != message.RoleSystem || first.TextContent() != o.SystemPrompt {
+		t.Errorf("request opens with %+v, want the system prompt alone", first)
+	}
+	var names []string
+	for _, d := range gw.StreamTools[0] {
+		names = append(names, d.Name)
+	}
+	// Requests list the tools by name.
+	if want := []string{"grep", "read"}; !slices.Equal(names, want) {
+		t.Errorf("tools offered = %v, want %v", names, want)
+	}
+}
+
+// TestCheckTools checks that a printed run refuses a name of --tools or
+// --exclude-tools that no built-in tool has, naming the flag and the name,
+// before the app starts, and takes the names of built-in tools.
+func TestCheckTools(t *testing.T) {
+	if err := checkTools(RunOptions{Tools: []string{"read", "grep"}, ExcludeTools: []string{"b*"}}); err != nil {
+		t.Errorf("built-in tools: %v", err)
+	}
+	for _, tt := range []struct {
+		o    RunOptions
+		want string
+	}{
+		{RunOptions{Tools: []string{"read", "model-x"}}, `--tools: unknown tool "model-x"`},
+		{RunOptions{ExcludeTools: []string{"model-x"}}, `--exclude-tools: unknown tool "model-x"`},
+	} {
+		if err := checkTools(tt.o); err == nil || !strings.HasPrefix(err.Error(), tt.want) {
+			t.Errorf("%+v: err = %v, want it to start %q", tt.o, err, tt.want)
+		}
+	}
+}
+
+// TestAttachFiles checks that --file attaches an image and a PDF whole, of
+// the media types their content shows, and a text file as text that names
+// its absolute path, in order, and that it refuses a file of another type and one
+// that cannot be read.
+func TestAttachFiles(t *testing.T) {
+	dir := t.TempDir()
+	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+	files := map[string][]byte{
+		"shot.png":  png,
+		"spec.pdf":  []byte("%PDF-1.7\n%\xe2\xe3\xcf\xd3\n"),
+		"notes.txt": []byte("first line\nsecond line\n"),
+		"blob.bin":  {0x00, 0x01, 0xfe, 0xff},
+	}
+	for name, data := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	path := func(name string) string { return filepath.Join(dir, name) }
+	t.Chdir(dir)
+	notes, err := filepath.Abs("notes.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parts, err := attachFiles([]string{path("shot.png"), path("spec.pdf"), "notes.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parts) != 3 {
+		t.Fatalf("parts = %+v, want 3", parts)
+	}
+	for i, want := range []message.FilePart{
+		{Data: base64.StdEncoding.EncodeToString(png), MediaType: "image/png", Filename: "shot.png"},
+		{Data: base64.StdEncoding.EncodeToString(files["spec.pdf"]), MediaType: "application/pdf", Filename: "spec.pdf"},
+	} {
+		got, ok := parts[i].(message.FilePart)
+		if !ok || got.ID == "" {
+			t.Errorf("part %d = %+v, want a file part with an ID", i, parts[i])
+			continue
+		}
+		got.ID = ""
+		if got != want {
+			t.Errorf("part %d = %+v, want %+v", i, got, want)
+		}
+	}
+	text, ok := parts[2].(message.TextPart)
+	if want := "<file path=\"" + notes + "\">\nfirst line\nsecond line\n</file>"; !ok || text.ID == "" || text.Text != want {
+		t.Errorf("part 2 = %+v, want a text part with an ID holding %q", parts[2], want)
+	}
+
+	if _, err := attachFiles([]string{path("blob.bin")}); err == nil || !strings.Contains(err.Error(), "blob.bin") {
+		t.Errorf("attach a binary file: err = %v, want it refused, naming the file", err)
+	}
+	if _, err := attachFiles([]string{path("missing.png")}); err == nil || !strings.HasPrefix(err.Error(), "--file: ") {
+		t.Errorf("attach a missing file: err = %v, want an error about --file", err)
+	}
+}
+
+// TestRunPromptFiles checks that a run sends the parts it attaches after
+// the prompt's text, in the prompt it stores too.
+func TestRunPromptFiles(t *testing.T) {
+	a, gw := newRunTestApp(t, "A cat.")
+	file := message.FilePart{ID: message.NewPartID(), Data: "AAAA", MediaType: "image/png", Filename: "cat.png"}
+	if err := runPrompt(t.Context(), new(strings.Builder), a, RunOptions{Format: OutputText}, "what is this?", file); err != nil {
+		t.Fatal(err)
+	}
+	if len(gw.StreamCalls) != 1 {
+		t.Fatalf("gateway saw %d requests, want 1", len(gw.StreamCalls))
+	}
+	sent := gw.StreamCalls[0][len(gw.StreamCalls[0])-1]
+	if sent.Role != message.RoleUser || len(sent.Content) != 2 || sent.TextContent() != "what is this?" || sent.Content[1] != file {
+		t.Errorf("prompt sent = %+v, want its text and then the file", sent)
+	}
+	sessions, err := a.Sessions().ListSessions(t.Context())
+	if err != nil || len(sessions) != 1 {
+		t.Fatalf("sessions = %+v, %v; want the run's", sessions, err)
+	}
+	msgs, err := a.Session(sessions[0].ID).Messages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := slices.IndexFunc(msgs, func(m app.Message) bool { return m.Role == message.RoleUser })
+	if i < 0 || len(msgs[i].Parts) != 2 || msgs[i].Parts[1] != file {
+		t.Errorf("stored messages = %+v, want the prompt with the file", msgs)
+	}
 }
 
 // TestRunPrompt checks that a run prints the final answer, writes it to
@@ -296,6 +472,8 @@ func TestRunExclusiveSessionFlags(t *testing.T) {
 		{[]string{"--no-session", "-c"}, "--no-session and --continue"},
 		{[]string{"--no-session", "--session", "ses_1"}, "--no-session and --session"},
 		{[]string{"--dir", "..", "--session", "ses_1"}, "--dir and --session"},
+		{[]string{"--tools", "read", "-c"}, "--tools and --continue"},
+		{[]string{"--exclude-tools", "bash", "--session", "ses_1"}, "--exclude-tools and --session"},
 	} {
 		args := append(append([]string{"run"}, tt.args...), "hi")
 		want := "flow run: use only one of " + tt.want

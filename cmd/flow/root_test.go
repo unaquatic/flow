@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -93,12 +94,20 @@ func TestRootPrintFlags(t *testing.T) {
 	fs := flag.NewFlagSet("flow", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	rootCmd.Flags(fs, &o)
-	args := []string{"-p", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "--no-session", "--dir", "sub", "fix it"}
+	args := []string{
+		"-p", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "--no-session", "--dir", "sub",
+		"--no-context-files", "--system-prompt", "Be brief.", "--max-steps", "4", "--tools", "read,grep", "--exclude-tools", "grep",
+		"-f", "a.png", "--file", "b, c.txt", "fix it",
+	}
 	if err := fs.Parse(args); err != nil {
 		t.Fatal(err)
 	}
-	want := RunOptions{modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Format: OutputJSON, Output: "answer.md", NoSession: true, Dir: "sub"}
-	if !o.print || o.runOptions() != want || !slices.Equal(fs.Args(), []string{"fix it"}) {
+	want := RunOptions{
+		modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Format: OutputJSON, Output: "answer.md", NoSession: true, Dir: "sub",
+		NoContextFiles: true, SystemPrompt: "Be brief.", MaxSteps: 4, Tools: []string{"read", "grep"}, ExcludeTools: []string{"grep"},
+		Files: []string{"a.png", "b, c.txt"},
+	}
+	if !o.print || !reflect.DeepEqual(o.runOptions(), want) || !slices.Equal(fs.Args(), []string{"fix it"}) {
 		t.Errorf("parse %q = print %v, %+v, args %q; want print, %+v, args [fix it]", args, o.print, o.runOptions(), fs.Args(), want)
 	}
 }
@@ -108,7 +117,10 @@ func TestRootPrintFlags(t *testing.T) {
 // --no-session with a flag that chooses a stored session, and --dir with
 // --session. It fails before the app starts.
 func TestRootPrintMisuse(t *testing.T) {
-	for _, args := range [][]string{{"--format", "json"}, {"-o", "answer.md", "hi"}, {"--no-session", "hi"}} {
+	for _, args := range [][]string{
+		{"--format", "json"}, {"-o", "answer.md", "hi"}, {"--no-session", "hi"}, {"--tools", "", "hi"},
+		{"--exclude-tools", "bash"}, {"-f", "a.png"}, {"--max-steps", "2"}, {"--system-prompt", "x"}, {"--no-context-files"},
+	} {
 		if err := rootCmd.Execute(t.Context(), args); !errors.Is(err, errNeedsPrint) {
 			t.Errorf("execute %q: err = %v, want %v", args, err, errNeedsPrint)
 		}
@@ -121,6 +133,8 @@ func TestRootPrintMisuse(t *testing.T) {
 		{[]string{"-p", "--no-session", "-c", "hi"}, "--no-session and --continue"},
 		{[]string{"-p", "--no-session", "--session", "ses_1", "hi"}, "--no-session and --session"},
 		{[]string{"--dir", "..", "--session", "ses_1"}, "--dir and --session"},
+		{[]string{"-p", "--system-prompt", "x", "-c", "hi"}, "--system-prompt and --continue"},
+		{[]string{"-p", "--no-context-files", "--session", "ses_1", "hi"}, "--no-context-files and --session"},
 	} {
 		want := "flow: use only one of " + tt.want
 		if err := rootCmd.Execute(t.Context(), tt.args); err == nil || err.Error() != want {

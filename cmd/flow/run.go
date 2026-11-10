@@ -1,21 +1,27 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strings"
 	"syscall"
+	"unicode/utf8"
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/extension/tools"
 	"github.com/unaquatic/flow/internal/cmdline"
 	"github.com/unaquatic/flow/terminal"
 )
@@ -41,6 +47,48 @@ type RunOptions struct {
 	// Name is the title the run gives its session, or empty to leave the
 	// title to the session's titling.
 	Name string
+	// NoContextFiles leaves the AGENTS.md files out of the system prompt
+	// of the run's new session.
+	NoContextFiles bool
+	// SystemPrompt is the system prompt's own text in the run's new
+	// session, in place of the configuration's agent.system_prompt, or
+	// empty to keep it.
+	SystemPrompt string
+	// MaxSteps limits the model responses of the run, or is zero for the
+	// default limit.
+	MaxSteps int
+	// Tools names the built-in tools the run offers the model, or patterns
+	// of them, in place of the default ones, as tools.Selection's Only
+	// does: nil offers the default ones, and an empty list none.
+	Tools []string
+	// ExcludeTools names the tools, or patterns of them, the run leaves
+	// out of those it offers.
+	ExcludeTools []string
+	// Files are the paths of the files the run attaches to its prompt, as
+	// attachFiles reads them.
+	Files []string
+}
+
+// PrintOnly reports whether o sets a flag that shapes a printed run alone,
+// which flow takes only with --print.
+func (o RunOptions) PrintOnly() bool {
+	return o.Format != OutputText || o.Output != "" || o.NoSession || o.Name != "" ||
+		o.NoContextFiles || o.SystemPrompt != "" || o.MaxSteps != 0 ||
+		o.Tools != nil || o.ExcludeTools != nil || o.Files != nil
+}
+
+// AppOptions returns the options of the app the run starts on: in the
+// folder of the session that Session names, with the system prompt, step
+// limit and tools that o's flags choose.
+func (o RunOptions) AppOptions() app.Options {
+	sel := tools.Selection{Only: o.Tools, Exclude: o.ExcludeTools}
+	return app.Options{
+		Session:        message.SessionID(o.Session),
+		Extensions:     extensionsWith(sel.Load),
+		NoInstructions: o.NoContextFiles,
+		SystemPrompt:   o.SystemPrompt,
+		MaxSteps:       o.MaxSteps,
+	}
 }
 
 // Start returns the session the flags in o choose, as the terminal's Start
@@ -105,9 +153,24 @@ var runCmd = &cmdline.Command[RunOptions]{
 		dirFlag(fs, &o.Dir)
 		printFlags(fs, o)
 	},
-	Exclusive: [][]string{{"continue", "session"}, {"no-session", "continue"}, {"no-session", "session"}, {"no-session", "name"}, {"dir", "session"}},
+	Exclusive: append([][]string{{"continue", "session"}, {"dir", "session"}}, printExclusive...),
 	Args:      cmdline.AnyArgs,
 	Run:       printRun,
+}
+
+// printExclusive are the groups of flags of a printed run, as printFlags
+// binds them, of which at most one may be given with the flags that choose
+// a stored session. --no-session deletes the run's session, which must so
+// be new and needs no title. The system prompt is that of a session's
+// start, which a stored session has had already. The history of a stored
+// session may hold calls of tools that --tools or --exclude-tools would
+// leave out, which some providers refuse to take without them.
+var printExclusive = [][]string{
+	{"no-session", "continue"}, {"no-session", "session"}, {"no-session", "name"},
+	{"system-prompt", "continue"}, {"system-prompt", "session"},
+	{"no-context-files", "continue"}, {"no-context-files", "session"},
+	{"tools", "continue"}, {"tools", "session"},
+	{"exclude-tools", "continue"}, {"exclude-tools", "session"},
 }
 
 // printFlags binds the flags that shape what a run prints, which the run
@@ -121,6 +184,15 @@ func printFlags(fs *flag.FlagSet, o *RunOptions) {
 	const nameUsage = "Title the session of a printed run"
 	fs.StringVar(&o.Name, "name", "", nameUsage)
 	fs.StringVar(&o.Name, "n", "", nameUsage)
+	fs.BoolVar(&o.NoContextFiles, "no-context-files", false, "Leave the AGENTS.md files out of the system prompt of a printed run")
+	fs.StringVar(&o.SystemPrompt, "system-prompt", "", "System prompt `text` of a printed run, in place of the configuration's agent.system_prompt")
+	fs.Var(positiveValue{n: &o.MaxSteps}, "max-steps", fmt.Sprintf("Most model responses a printed run makes, `n` (default %d)", app.DefaultMaxSteps))
+	fs.Var(listValue{list: &o.Tools}, "tools",
+		"Built-in tools a printed run offers, in place of the default ones: comma-separated `names` or patterns, such as read,grep, or \"\" for none")
+	fs.Var(listValue{list: &o.ExcludeTools}, "exclude-tools", "Tools a printed run leaves out: comma-separated `names` or patterns, such as bash,write")
+	const fileUsage = "Attach this `file` to the prompt of a printed run: an image, a PDF or a text file (repeatable)"
+	fs.Var(pathsValue{paths: &o.Files}, "file", fileUsage)
+	fs.Var(pathsValue{paths: &o.Files}, "f", fileUsage)
 }
 
 // dirFlag binds --dir, the folder a command works in, to dir.
@@ -142,12 +214,23 @@ func enterDir(dir string) error {
 }
 
 // printRun sends the prompt that args and piped standard input hold, as
-// promptText reads it, to the session that o chooses, in the folder that o
-// names, and prints the run on standard output, as runPrompt does, until
-// the run ends or a signal stops it. It fails before the app starts when
-// there is no prompt or no such folder.
+// promptText reads it, with the files that o attaches, as attachFiles reads
+// them, to the session that o chooses, in the folder that o names, on an
+// app with the options o's AppOptions gives, and prints the run on standard
+// output, as runPrompt does, until the run ends or a signal stops it. It
+// fails before the app starts when --tools or --exclude-tools names no
+// built-in tool, as checkTools tells, there is no prompt, a file cannot be
+// attached, or there is no such folder. The paths of the files are those
+// of the folder flow started in, as a shell completes them.
 func printRun(ctx context.Context, o RunOptions, args []string) error {
+	if err := checkTools(o); err != nil {
+		return err
+	}
 	prompt, err := promptText(args, pipedInput(os.Stdin))
+	if err != nil {
+		return err
+	}
+	files, err := attachFiles(o.Files)
 	if err != nil {
 		return err
 	}
@@ -157,11 +240,65 @@ func printRun(ctx context.Context, o RunOptions, args []string) error {
 	// A signal stops the run, as the app's work in progress.
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	options := func(o RunOptions) app.Options { return app.Options{Session: message.SessionID(o.Session)} }
-	return withAppOptions(options, func(ctx context.Context, w io.Writer, a *app.App, o RunOptions, _ []string) error {
-		return runPrompt(ctx, w, a, o, prompt)
+	return withAppOptions(RunOptions.AppOptions, func(ctx context.Context, w io.Writer, a *app.App, o RunOptions, _ []string) error {
+		return runPrompt(ctx, w, a, o, prompt, files...)
 	})(ctx, o, args)
 }
+
+// checkTools fails, naming the flag, when a name or pattern that o's
+// --tools or --exclude-tools gives matches no built-in tool, or is
+// malformed, as tools.Matcher tells.
+func checkTools(o RunOptions) error {
+	all := tools.All()
+	if _, err := tools.Matcher(all, o.Tools); err != nil {
+		return fmt.Errorf("--tools: %w", err)
+	}
+	if _, err := tools.Matcher(all, o.ExcludeTools); err != nil {
+		return fmt.Errorf("--exclude-tools: %w", err)
+	}
+	return nil
+}
+
+// attachFiles returns the parts that attach the files at paths to a
+// prompt, in order, each with a new part ID: an image, of a type every
+// request format takes, or a PDF, as a message.FilePart of its media type
+// and base name, and a text file, UTF-8 without NUL bytes, as a
+// message.TextPart that holds its content in a <file> element naming its
+// absolute path, which holds wherever the run works. It fails, naming the
+// path, for a file that cannot be read or is none of these.
+func attachFiles(paths []string) ([]message.ContentPart, error) {
+	var parts []message.ContentPart
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("--file: %w", err)
+		}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return nil, fmt.Errorf("--file: %w", err)
+		}
+		switch mediaType, _, _ := strings.Cut(http.DetectContentType(data), ";"); {
+		case slices.Contains(attachedTypes, mediaType):
+			parts = append(parts, message.FilePart{
+				ID:        message.NewPartID(),
+				Data:      base64.StdEncoding.EncodeToString(data),
+				MediaType: mediaType,
+				Filename:  filepath.Base(path),
+			})
+		case utf8.Valid(data) && !bytes.ContainsRune(data, 0):
+			text := fmt.Sprintf("<file path=%q>\n%s\n</file>", abs, strings.TrimSuffix(string(data), "\n"))
+			parts = append(parts, message.TextPart{ID: message.NewPartID(), Text: text})
+		default:
+			return nil, fmt.Errorf("--file %s: cannot attach a file of type %s; attach an image, a PDF or a text file", path, mediaType)
+		}
+	}
+	return parts, nil
+}
+
+// attachedTypes are the media types, as http.DetectContentType names them,
+// of the files attachFiles attaches whole: the images every request format
+// takes, and PDFs.
+var attachedTypes = []string{"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf"}
 
 // pipedInput returns f when it is a pipe or a file, as standard input is
 // when a command pipes into flow, and nil when it is a terminal or another
@@ -194,16 +331,19 @@ func promptText(args []string, stdin io.Reader) (string, error) {
 	return strings.Join(pieces, "\n\n"), nil
 }
 
-// runPrompt sends prompt to the session that o chooses, with the model
-// that o picks, or else the one the session last ran, or else the default
-// model, and writes the run to w in o's format: the final answer once the
+// runPrompt sends prompt, followed by parts, such as the files attachFiles
+// attaches, to the session that o chooses, with the model that o picks, or
+// else the one the session last ran, or else the default model, and writes
+// the run to w in o's format: the final answer once the
 // run has finished, or every event as it comes. It writes the final answer
 // to o's output file too. It fails with the run's failure, and with
-// errStopped when ctx ends first, and then writes no answer. With Name, it
+// errStopped when ctx ends first, and then writes no answer, but for a run
+// that the step limit ended: it writes the answer the run got to, and then
+// fails with the limit, telling of --max-steps. With Name, it
 // titles the session once the run has ended, unless a signal stopped it, or
 // it stored nothing. With NoSession, it deletes the run's new session once
 // the run has ended, however it ended.
-func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, prompt string) (err error) {
+func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, prompt string, parts ...message.ContentPart) (err error) {
 	id, err := o.Start().FirstSession(ctx, a.Sessions())
 	if err != nil {
 		return err
@@ -221,7 +361,7 @@ func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, promp
 	}
 	p := NewRunPrinter(w, o.Format)
 	var runErr error
-	for ev, err := range sess.Stream(app.SendInput{Text: prompt, Model: model}) {
+	for ev, err := range sess.Stream(app.SendInput{Text: prompt, Parts: parts, Model: model}) {
 		if err != nil {
 			runErr = err
 			break
@@ -236,21 +376,26 @@ func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, promp
 			return errors.Join(runErr, err)
 		}
 	}
+	_, limited := errors.AsType[*agent.MaxStepsError](runErr)
 	switch {
-	case runErr != nil:
+	case runErr != nil && !limited:
 		return runErr
 	case ctx.Err() != nil:
 		return errStopped
+	case limited:
+		runErr = fmt.Errorf("%w; --max-steps raises the limit", runErr)
 	}
 	if o.Format == OutputText {
 		if err := p.WriteAnswer(); err != nil {
-			return err
+			return errors.Join(runErr, err)
 		}
 	}
 	if o.Output != "" {
-		return os.WriteFile(o.Output, []byte(p.Answer), 0o644)
+		if err := os.WriteFile(o.Output, []byte(p.Answer), 0o644); err != nil {
+			return errors.Join(runErr, err)
+		}
 	}
-	return nil
+	return runErr
 }
 
 // nameSession titles sess name, unless name is empty. A session that is not

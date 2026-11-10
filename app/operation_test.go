@@ -280,6 +280,58 @@ func TestSend_WithoutInstructionsSendsNoSystemMessage(t *testing.T) {
 	}
 }
 
+// TestSend_SystemPromptOptions checks that Options.NoInstructions leaves
+// the AGENTS.md files out of a new session's system message, and that
+// Options.SystemPrompt takes the place of the configuration's
+// agent.system_prompt in it, or alone opens no system message when both
+// leave it empty.
+func TestSend_SystemPromptOptions(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		noInstructions bool
+		systemPrompt   string
+		want           string
+	}{
+		{"default", false, "", testInstructions + "\n\nAnswer in prose."},
+		{"no instructions", true, "", "Answer in prose."},
+		{"system prompt", false, "Answer in haiku.", testInstructions + "\n\nAnswer in haiku."},
+		{"both", true, "Answer in haiku.", "Answer in haiku."},
+	} {
+		a, gw := newActorTestApp(t, "reply")
+		settings := `{"default_provider":"mock","default_model":"test-model","agent":{"system_prompt":"Answer in prose."}}`
+		if err := os.WriteFile(filepath.Join(a.config.Dir, config.FileName), []byte(settings), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		a.noInstructions, a.systemPrompt = tt.noInstructions, tt.systemPrompt
+		events := a.Subscribe(t.Context())
+		send(t, a, "ses_options", SendInput{Text: "hi"})
+		collectUntilIdle(t, events)
+		if call := gw.StreamCalls[0]; call[0].Role != message.RoleSystem || call[0].TextContent() != tt.want {
+			t.Errorf("%s: request opens with %+v, want the system message %q", tt.name, call[0], tt.want)
+		}
+	}
+}
+
+// TestSend_Parts checks that a prompt's Parts follow its text, in the
+// request and in the stored prompt.
+func TestSend_Parts(t *testing.T) {
+	a, gw := newActorTestApp(t, "reply")
+	file := message.FilePart{ID: message.NewPartID(), Data: "AAAA", MediaType: "application/pdf", Filename: "spec.pdf"}
+	events := a.Subscribe(t.Context())
+	send(t, a, "ses_parts", SendInput{Text: "summarize", Parts: []message.ContentPart{file}})
+	collectUntilIdle(t, events)
+
+	call := gw.StreamCalls[0]
+	sent := call[len(call)-1]
+	if sent.Role != message.RoleUser || len(sent.Content) != 2 || sent.TextContent() != "summarize" || sent.Content[1] != file {
+		t.Errorf("prompt sent = %+v, want its text and then the file", sent)
+	}
+	stored := conversation(t, branchOf(t, a.Sessions(), "ses_parts"))[0]
+	if len(stored.Parts) != 2 || stored.Parts[0] != sent.Content[0] || stored.Parts[1] != file {
+		t.Errorf("stored prompt = %+v, want the parts sent, with their IDs", stored)
+	}
+}
+
 // TestUndo_KeepsTheSystemMessage checks that undoing a session's first
 // prompt leaves the head on the system message it was sent with, which has
 // nothing to continue or undo, and that the prompt sent next is stored below

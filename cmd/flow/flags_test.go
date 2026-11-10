@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -188,5 +189,44 @@ func TestProviderRequired(t *testing.T) {
 	}
 	if err := logoutCmd.Run(t.Context(), logoutOptions{account: "01a11ff1-50e6-7a76-8b37-44931fa04af6"}, nil); !errors.Is(err, errProviderRequired) {
 		t.Errorf("logout without a provider = %v, want %v", err, errProviderRequired)
+	}
+}
+
+// TestListValue checks that a list flag splits each use at commas and
+// spaces, adds each use to the list, and that a use with no names sets an
+// empty list, apart from the nil list of a flag not given.
+func TestListValue(t *testing.T) {
+	for _, tt := range []struct {
+		args []string
+		want []string
+	}{
+		{nil, nil},
+		{[]string{"--tools", ""}, []string{}},
+		{[]string{"--tools", "read,grep", "--tools", "ls  bash,"}, []string{"read", "grep", "ls", "bash"}},
+	} {
+		var got []string
+		fs := flag.NewFlagSet("flow", flag.ContinueOnError)
+		fs.Var(listValue{list: &got}, "tools", "")
+		if err := fs.Parse(tt.args); err != nil {
+			t.Fatal(err)
+		}
+		if (got == nil) != (tt.want == nil) || !slices.Equal(got, tt.want) {
+			t.Errorf("parse %q = %#v, want %#v", tt.args, got, tt.want)
+		}
+	}
+}
+
+// TestPositiveValue checks that a positive number flag takes a number above
+// zero alone.
+func TestPositiveValue(t *testing.T) {
+	var n int
+	v := positiveValue{n: &n}
+	if err := v.Set("4"); err != nil || n != 4 {
+		t.Errorf("Set(4) = %v, n = %d; want 4", err, n)
+	}
+	for _, s := range []string{"0", "-1", "x", ""} {
+		if err := v.Set(s); err == nil {
+			t.Errorf("Set(%q): no error", s)
+		}
 	}
 }

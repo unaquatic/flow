@@ -670,6 +670,8 @@ func ToInput(msgs []agent.Message) (instructions string, input []any) {
 					"type":      "input_image",
 					"image_url": url,
 				})
+			case message.FilePart:
+				content = append(content, AttachmentItem(v))
 			case message.ReasoningPart:
 				if item, ok := ParseReasoningItem(v.Signature); ok {
 					flush()
@@ -714,14 +716,20 @@ func ToolOutput(r message.ToolResultPart) any {
 		items = append(items, map[string]any{"type": "input_text", "text": r.Text})
 	}
 	for _, f := range r.Attachments {
-		url := "data:" + f.MediaType + ";base64," + f.Data
-		if agent.AttachmentModality(f.MediaType) == "image" {
-			items = append(items, map[string]any{"type": "input_image", "image_url": url})
-			continue
-		}
-		items = append(items, map[string]any{"type": "input_file", "file_data": url, "filename": f.Filename})
+		items = append(items, AttachmentItem(f))
 	}
 	return items
+}
+
+// AttachmentItem returns the content item that sends f inline, as a data
+// URL: an input_image item for an image, and an input_file item for any
+// other file.
+func AttachmentItem(f message.FilePart) map[string]any {
+	url := "data:" + f.MediaType + ";base64," + f.Data
+	if agent.AttachmentModality(f.MediaType) == "image" {
+		return map[string]any{"type": "input_image", "image_url": url}
+	}
+	return map[string]any{"type": "input_file", "file_data": url, "filename": f.Filename}
 }
 
 // Stream sends req: with an OAuth credential to the provider's backend, when

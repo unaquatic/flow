@@ -373,3 +373,23 @@ func TestToMessages_ToolResultAttachments(t *testing.T) {
 		t.Errorf("messages =\n%s\nwant\n%s", got, want)
 	}
 }
+
+// TestToMessages_PromptFiles checks that the files a prompt attaches follow
+// its text: an image_url part for an image and a file part for any other
+// file, inline as data URLs.
+func TestToMessages_PromptFiles(t *testing.T) {
+	got, err := json.Marshal(ToMessages([]agent.Message{{Role: message.RoleUser, Content: []message.ContentPart{
+		message.TextPart{Text: "compare"},
+		message.FilePart{Data: "aW1n", MediaType: "image/png", Filename: "shot.png"},
+		message.FilePart{Data: "cGRm", MediaType: "application/pdf", Filename: "spec.pdf"},
+	}}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"role":"user","content":[{"type":"text","text":"compare"},` +
+		`{"type":"image_url","image_url":{"url":"data:image/png;base64,aW1n"}},` +
+		`{"type":"file","file":{"filename":"spec.pdf","file_data":"data:application/pdf;base64,cGRm"}}]}]`
+	if string(got) != want {
+		t.Errorf("messages =\n%s\nwant\n%s", got, want)
+	}
+}

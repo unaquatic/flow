@@ -29,6 +29,8 @@ type Gateway struct {
 	StreamModels []string
 	// StreamCacheKeys records the cache key of each request.
 	StreamCacheKeys []string
+	// StreamTools records the tools each request offered.
+	StreamTools [][]agent.ToolDefinition
 
 	// mu guards the records, which requests sent at once, such as a run's
 	// and a session title's, append to together. A test reads them once
@@ -44,6 +46,7 @@ func (g *Gateway) Stream(_ context.Context, pt agent.ProviderID, model string, r
 	g.StreamProviders = append(g.StreamProviders, pt)
 	g.StreamModels = append(g.StreamModels, model)
 	g.StreamCacheKeys = append(g.StreamCacheKeys, req.CacheKey)
+	g.StreamTools = append(g.StreamTools, req.Tools)
 	g.mu.Unlock()
 	return g.StreamFunc()
 }

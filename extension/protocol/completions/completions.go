@@ -97,6 +97,16 @@ type ContentPart struct {
 	ImageURL *ImageURL `json:"image_url,omitempty"`
 	// InputAudio contains inline audio.
 	InputAudio *Audio `json:"input_audio,omitempty"`
+	// File contains an inline file that is neither an image nor audio.
+	File *File `json:"file,omitempty"`
+}
+
+// File is an inline file in a content part.
+type File struct {
+	// Filename is the file's name.
+	Filename string `json:"filename,omitempty"`
+	// FileData is the file as a data URL.
+	FileData string `json:"file_data"`
 }
 
 // ImageURL is an image reference in a content part.
@@ -214,13 +224,17 @@ func ToMessages(msgs []agent.Message) []Message {
 }
 
 // FileContentPart returns the content part that sends f inline: an
-// input_audio part for audio, and an image_url part holding a data URL for
-// any other file.
+// input_audio part for audio, an image_url part holding a data URL for an
+// image, and a file part holding one for any other file, such as a PDF.
 func FileContentPart(f message.FilePart) ContentPart {
-	if isAudioMediaType(f.MediaType) {
+	url := "data:" + f.MediaType + ";base64," + f.Data
+	switch {
+	case isAudioMediaType(f.MediaType):
 		return ContentPart{Type: "input_audio", InputAudio: &Audio{Data: f.Data, Format: audioFormat(f.MediaType)}}
+	case agent.AttachmentModality(f.MediaType) == "image":
+		return ContentPart{Type: "image_url", ImageURL: &ImageURL{URL: url}}
 	}
-	return ContentPart{Type: "image_url", ImageURL: &ImageURL{URL: "data:" + f.MediaType + ";base64," + f.Data}}
+	return ContentPart{Type: "file", File: &File{Filename: f.Filename, FileData: url}}
 }
 
 // Model returns the model with ID name.
