@@ -17,11 +17,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/unaquatic/flow/app"
@@ -114,14 +114,11 @@ func (w *statusRecorder) WriteHeader(status int) { w.status = status }
 // Write drops p.
 func (w *statusRecorder) Write(p []byte) (int, error) { return len(p), nil }
 
-// ListenAndServe serves the API of a on the address opts names until ctx is
-// canceled, and prints the address it listens on, with the port it picked
-// when opts names none.
-func ListenAndServe(ctx context.Context, a *app.App, opts Options) error {
-	ln, err := net.Listen("tcp", net.JoinHostPort(opts.Host(), strconv.Itoa(opts.Port)))
-	if err != nil {
-		return err
-	}
+// Serve serves the HTTP API of a on ln, as opts configures it, until ctx
+// is done, and then closes ln. It writes to w the address it serves on,
+// with the port the listener picked when opts names none, before it accepts
+// a request.
+func Serve(ctx context.Context, w io.Writer, a *app.App, opts Options, ln net.Listener) error {
 	srv := &http.Server{
 		Handler:           New(a, opts).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
@@ -137,7 +134,7 @@ func ListenAndServe(ctx context.Context, a *app.App, opts Options) error {
 			slog.Warn("server shutdown", "err", err)
 		}
 	}()
-	fmt.Printf("server listening on http://%s\n", ln.Addr())
+	fmt.Fprintf(w, "server listening on http://%s\n", ln.Addr())
 	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

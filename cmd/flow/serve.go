@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/unaquatic/flow/app"
@@ -60,14 +62,25 @@ func parseOrigin(s string) (string, error) {
 }
 
 // runServer serves the HTTP API of a on the address o names until ctx is
-// done. A request that names no model goes to the default model in the
-// config file, which PATCH /config sets. It warns on w when the server is
-// reachable from other machines with no password.
+// done, as serve does, on a TCP listener.
 func runServer(ctx context.Context, w io.Writer, a *app.App, o serveOptions, _ []string) error {
+	return serve(ctx, w, a, o, net.Listen)
+}
+
+// serve serves the HTTP API of a, as server.Serve does, on the listener that
+// listen opens at the address o names, until ctx is done. A request that
+// names no model goes to the default model in the config file, which PATCH
+// /config sets. It warns on w when the server is reachable from other
+// machines with no password.
+func serve(ctx context.Context, w io.Writer, a *app.App, o serveOptions, listen func(network, address string) (net.Listener, error)) error {
 	username, password := config.ServerCredentials()
 	opts := server.Options{Hostname: o.hostname, Port: o.port, CORS: o.cors, Username: username, Password: password}
 	if !opts.Loopback() && password == "" {
 		fmt.Fprintf(w, "warning: %s is not set, so anyone who reaches %s can run commands on this machine\n", config.EnvServerPassword, opts.Host())
 	}
-	return server.ListenAndServe(ctx, a, opts)
+	ln, err := listen("tcp", net.JoinHostPort(opts.Host(), strconv.Itoa(opts.Port)))
+	if err != nil {
+		return err
+	}
+	return server.Serve(ctx, w, a, opts, ln)
 }
