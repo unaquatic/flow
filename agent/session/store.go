@@ -13,6 +13,7 @@ import (
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/database"
+	"github.com/unaquatic/flow/internal/timestamp"
 )
 
 // Store persists sessions and messages in the database, which every
@@ -58,20 +59,23 @@ const sessionColumns = `s.id, s.title, s.head_id, s.forward_id, s.created_at, s.
 // as s, joined to the project each belongs to as p.
 const sessionsSQL = `FROM sessions s JOIN projects p ON p.id = s.project`
 
-// ListSessions returns the project's sessions, newest first.
+// ListSessions returns the project's sessions, newest first: the latest
+// updated first, and of those updated in one millisecond, the latest
+// created, as their version 7 UUIDs sort.
 func (s *Store) ListSessions(ctx context.Context) ([]Session, error) {
 	return s.listSessions(ctx, `
 		SELECT `+sessionColumns+` `+sessionsSQL+`
 		WHERE s.project = ?
-		ORDER BY s.updated_at DESC, s.id`, s.project)
+		ORDER BY s.updated_at DESC, s.id DESC`, s.project)
 }
 
-// ListAllSessions returns the sessions of every project, newest first, each
-// with the worktree of its project, as the session list shows them.
+// ListAllSessions returns the sessions of every project, newest first, as
+// ListSessions orders them, each with the worktree of its project, as the
+// session list shows them.
 func (s *Store) ListAllSessions(ctx context.Context) ([]Session, error) {
 	return s.listSessions(ctx, `
 		SELECT `+sessionColumns+` `+sessionsSQL+`
-		ORDER BY s.updated_at DESC, s.id`)
+		ORDER BY s.updated_at DESC, s.id DESC`)
 }
 
 // listSessions returns the sessions that query, which selects
@@ -145,10 +149,10 @@ func scanSession[R interface{ Scan(dest ...any) error }](r R) (Session, error) {
 	}
 	sess.Head = Head{ID: message.ID(head.V), Forward: message.ID(forward.V)}
 	var err error
-	if sess.CreatedAt, err = decodeTime(createdAt); err != nil {
+	if sess.CreatedAt, err = timestamp.Parse(createdAt); err != nil {
 		return Session{}, err
 	}
-	if sess.UpdatedAt, err = decodeTime(updatedAt); err != nil {
+	if sess.UpdatedAt, err = timestamp.Parse(updatedAt); err != nil {
 		return Session{}, err
 	}
 	return sess, nil
@@ -405,7 +409,7 @@ func insertMessage(ctx context.Context, tx *sql.Tx, sessionID message.SessionID,
 	if msg.ParentID != nil {
 		parent = *msg.ParentID
 	}
-	created := encodeTime(msg.CreatedAt)
+	created := timestamp.Format(msg.CreatedAt)
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO messages (session_id, id, parent_id, type, role, provider, model, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -465,7 +469,7 @@ func currentHead(ctx context.Context, tx *sql.Tx, sessionID message.SessionID) (
 // moveHead stamps a session and points it at h, storing the session if it is
 // new, created now. A session it stores belongs to the store's project.
 func (s *Store) moveHead(ctx context.Context, tx *sql.Tx, sessionID message.SessionID, h Head) error {
-	now := encodeTime(time.Now())
+	now := timestamp.Format(time.Now())
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO sessions (id, project, created_at, updated_at, head_id, forward_id)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -498,7 +502,7 @@ func repairHead(ctx context.Context, tx *sql.Tx, sessionID message.SessionID, fa
 // touchSession updates a stored session's timestamp.
 func touchSession(ctx context.Context, tx *sql.Tx, id message.SessionID) error {
 	_, err := tx.ExecContext(ctx, `UPDATE sessions SET updated_at = ? WHERE id = ?`,
-		encodeTime(time.Now()), id)
+		timestamp.Format(time.Now()), id)
 	return err
 }
 
@@ -574,19 +578,4 @@ func decodePart(id message.PartID, typ message.ContentType, data []byte) (messag
 		return nil, fmt.Errorf("part %s: %w", id, err)
 	}
 	return message.PartFromJSON(j), nil
-}
-
-// encodeTime converts t to the form held by a time column.
-//
-// Seconds, not nanoseconds: RFC 3339 omits the fraction when it is zero, so a
-// nanosecond column holds values of differing widths and stops sorting
-// chronologically. Truncating makes every value 20 bytes, and a session list
-// is ordered by id within a second.
-func encodeTime(t time.Time) string {
-	return t.UTC().Format(time.RFC3339)
-}
-
-// decodeTime converts a time column back to a UTC time.
-func decodeTime(s string) (time.Time, error) {
-	return time.Parse(time.RFC3339, s)
 }

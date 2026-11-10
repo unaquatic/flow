@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -86,8 +87,8 @@ func TestOSC52(t *testing.T) {
 
 // TestTranscriptMarkdown checks the Markdown /export writes: a heading for
 // each run of messages of one role, their text, and each tool call fenced,
-// leaving out reasoning and notices, with a fence longer than the backticks
-// its text holds.
+// under its tool's name as its box's header shows it, leaving out reasoning
+// and notices, with a fence longer than the backticks its text holds.
 func TestTranscriptMarkdown(t *testing.T) {
 	msgs := []ChatMessage{
 		{ID: "n1", Notice: &Notice{Text: "Chat cleared"}},
@@ -104,13 +105,46 @@ func TestTranscriptMarkdown(t *testing.T) {
 	want := "# Tests\n" +
 		"\n## User\n\nRun the tests\n" +
 		"\n## Agent\n\nRunning them.\n" +
-		"\n### bash\n\n```json\n{\"command\":\"go test\"}\n```\n\n````\nok ```\n````\n" +
-		"\n### read\n\n```json\n{\"path\":\"x\"}\n```\n\n```\nError: no such file\n```\n"
-	if got := TranscriptMarkdown("Tests", msgs); got != want {
+		"\n### Bash\n\n```json\n{\"command\":\"go test\"}\n```\n\n````\nok ```\n````\n" +
+		"\n### Read\n\n```json\n{\"path\":\"x\"}\n```\n\n```\nError: no such file\n```\n"
+	if got := TranscriptMarkdown("Tests", msgs, nil); got != want {
 		t.Errorf("TranscriptMarkdown =\n%s\nwant\n%s", got, want)
 	}
-	if got := TranscriptMarkdown("", nil); got != "# "+UntitledName+"\n" {
+	if got := TranscriptMarkdown("", nil, nil); got != "# "+UntitledName+"\n" {
 		t.Errorf("untitled = %q", got)
+	}
+}
+
+// labelFormatter is a ToolFormatter that labels the calls of tool name.
+type labelFormatter struct {
+	name, label string
+}
+
+func (labelFormatter) NewPartView(message.ContentPart, ViewHost) PartView { return nil }
+
+func (labelFormatter) NewSegmentView(ChatMessage, ViewHost) SegmentView { return nil }
+
+func (f labelFormatter) FormatTool(call message.ToolPart) (ToolView, bool) {
+	return ToolView{Label: f.label}, call.Name == f.name
+}
+
+// TestTranscriptMarkdown_ToolLabels checks that a tool call's heading is the
+// label of the first extension that describes the call, as its box's header
+// is, and ToolLabel's for a call that none describes.
+func TestTranscriptMarkdown_ToolLabels(t *testing.T) {
+	msgs := []ChatMessage{agentParts("a1",
+		message.ToolPart{Name: "ls", State: message.ToolStateCompleted{Output: "a.go"}},
+		message.ToolPart{Name: "web_search", State: message.ToolStateCompleted{Output: "none"}},
+	)}
+	exts := []Extension{labelFormatter{name: "ls", label: "List"}, labelFormatter{name: "ls", label: "Second"}}
+	got := TranscriptMarkdown("Tests", msgs, exts)
+	for _, want := range []string{"\n### List\n", "\n### Web Search\n"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("TranscriptMarkdown =\n%s\nwant a heading %q", got, strings.TrimSpace(want))
+		}
+	}
+	if strings.Contains(got, "Second") {
+		t.Errorf("TranscriptMarkdown =\n%s\nwant the first extension's label alone", got)
 	}
 }
 

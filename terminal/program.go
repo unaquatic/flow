@@ -51,6 +51,7 @@ func (p *Program) Run(ctx context.Context) error {
 	}
 	res, err := ui.Run(ctx, p.app, ui.Options{
 		First:       first,
+		Prompt:      p.start.Prompt,
 		Model:       p.start.Model,
 		ColorMode:   p.start.ColorMode,
 		PickSession: p.start.Mode == StartPick,

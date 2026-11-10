@@ -137,9 +137,10 @@ func ProjectDirs(workingDir string) iter.Seq[string] {
 // it stores the session too, which it then publishes as
 // EventSessionUpdated. Its text is SystemPrompt's, of the InstructionsFile
 // files FindInstructions finds, in flow's data directory and the project,
-// and the configuration's agent.system_prompt; when that is empty, there is
-// nothing to send, and it stores none. It fails when the config file cannot
-// be read.
+// unless the app's Options.NoInstructions leaves them out, and the
+// configuration's agent.system_prompt, or the app's Options.SystemPrompt in
+// its place; when that is empty, there is nothing to send, and it stores
+// none. It fails when the config file cannot be read.
 func (s Session) emitSystem() error {
 	h, err := s.head()
 	if err != nil || h.ID != "" {
@@ -149,8 +150,15 @@ func (s Session) emitSystem() error {
 	if err != nil {
 		return err
 	}
-	instructions := FindInstructions(s.app.config.Dir, s.app.workingDir)
-	text := SystemPrompt(instructions, cfg.Agent.SystemPrompt)
+	var instructions []Instruction
+	if !s.app.noInstructions {
+		instructions = FindInstructions(s.app.config.Dir, s.app.workingDir)
+	}
+	extra := cfg.Agent.SystemPrompt
+	if s.app.systemPrompt != "" {
+		extra = s.app.systemPrompt
+	}
+	text := SystemPrompt(instructions, extra)
 	if text == "" {
 		return nil
 	}

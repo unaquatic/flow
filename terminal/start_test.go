@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/unaquatic/catalog/gateway/gatewaytest"
 	"github.com/unaquatic/flow/agent/message"
@@ -56,6 +57,9 @@ func TestStartFirstSession(t *testing.T) {
 	storeMessage(t, a, older)
 	storeMessage(t, a, newer)
 	// A later message makes the older session the most recently updated one.
+	// Update times are milliseconds, and a tie goes to the newer session, so
+	// the message is stored in a later millisecond.
+	time.Sleep(2 * time.Millisecond)
 	storeMessage(t, a, older)
 
 	tests := []struct {

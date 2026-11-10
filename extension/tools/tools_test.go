@@ -2,6 +2,7 @@ package tools
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/unaquatic/flow/agent"
@@ -35,5 +36,49 @@ func TestTools_ReturnsACopy(t *testing.T) {
 	e.Tools()[0].Name = "b"
 	if got := e.Toolset[0].Name; got != "a" {
 		t.Errorf("Toolset[0].Name = %q after changing Tools' slice, want a", got)
+	}
+}
+
+// TestSelection checks that a Selection offers DefaultTools when it names
+// none, the built-in tools that Only names or matches in place of them,
+// even those Load leaves out, without those Exclude names, in the order All
+// returns them, and none for an empty Only.
+func TestSelection(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		sel  Selection
+		want []string
+	}{
+		{"zero", Selection{}, DefaultTools},
+		{"only", Selection{Only: []string{"grep", "read"}}, []string{"read", "grep"}},
+		{"exclude", Selection{Exclude: []string{"bash", "write"}}, []string{"read", "edit", "todo"}},
+		{"pattern", Selection{Only: []string{"*"}, Exclude: []string{"[bw]*"}}, []string{"read", "edit", "todo", "grep", "glob", "ls"}},
+		{"none", Selection{Only: []string{}}, nil},
+	} {
+		ts, err := tt.sel.Tools()
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		var names []string
+		for _, tl := range ts {
+			names = append(names, tl.Name)
+		}
+		if !slices.Equal(names, tt.want) {
+			t.Errorf("%s: tools = %v, want %v", tt.name, names, tt.want)
+		}
+	}
+}
+
+// TestSelectionUnknown checks that a Selection fails on a name or pattern
+// that matches no built-in tool, naming them, and on a malformed pattern.
+func TestSelectionUnknown(t *testing.T) {
+	for _, sel := range []Selection{{Only: []string{"read", "model-x"}}, {Exclude: []string{"model-x"}}} {
+		_, err := sel.Tools()
+		if err == nil || !strings.Contains(err.Error(), `unknown tool "model-x"`) || !strings.Contains(err.Error(), "bash, edit") {
+			t.Errorf("%+v: err = %v, want it to name the unknown tool and the built-in ones", sel, err)
+		}
+	}
+	if _, err := (Selection{Only: []string{"["}}).Tools(); err == nil {
+		t.Error("malformed pattern: no error")
 	}
 }

@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -116,5 +117,42 @@ func TestToolPart_IsTerminal(t *testing.T) {
 		if got != c.want {
 			t.Fatalf("state %T: got %v, want %v", c.state, got, c.want)
 		}
+	}
+}
+
+// TestToolPart_TimesInLayout checks that a tool call's times are stored in
+// UTC, to the millisecond, as timestamp.Layout has them, from a time of any
+// zone, that they read back as those times, and that a time with a zone
+// offset is refused.
+func TestToolPart_TimesInLayout(t *testing.T) {
+	zone := time.FixedZone("UTC+9", 9*60*60)
+	started := time.Date(2026, 1, 1, 21, 0, 0, 0, zone).Add(1500 * time.Microsecond)
+	tp := ToolPart{CallID: "call_1", Name: "read", State: ToolStateCompleted{
+		Input:     json.RawMessage(`{"path":"a.go"}`),
+		Output:    "ok",
+		StartedAt: started,
+		EndedAt:   started.Add(250 * time.Millisecond),
+	}}
+	data, err := MarshalParts([]ContentPart{tp})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	for _, want := range []string{`"started_at":"2026-01-01T12:00:00.001Z"`, `"ended_at":"2026-01-01T12:00:00.251Z"`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("parts = %s, want %s", data, want)
+		}
+	}
+	got, err := UnmarshalParts(data)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	st, ok := got[0].(ToolPart).State.(ToolStateCompleted)
+	if !ok || !st.StartedAt.Equal(started.Truncate(time.Millisecond)) || st.StartedAt.Location() != time.UTC {
+		t.Errorf("read back %+v, want started at %v in UTC", got[0], started.Truncate(time.Millisecond))
+	}
+
+	offset := strings.Replace(string(data), `2026-01-01T12:00:00.001Z`, `2026-01-01T21:00:00.001+09:00`, 1)
+	if _, err := UnmarshalParts(json.RawMessage(offset)); err == nil {
+		t.Errorf("parts with a zone offset read back, want an error: %s", offset)
 	}
 }

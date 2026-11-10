@@ -3,6 +3,8 @@ package message
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/unaquatic/flow/internal/timestamp"
 )
 
 // ToolState is one state in a tool call's lifecycle.
@@ -150,13 +152,15 @@ type ToolStateJSON struct {
 	Attachments []FilePart `json:"attachments,omitempty"`
 	// Error contains a failure message.
 	Error string `json:"error,omitempty"`
-	// StartedAt is when execution began.
-	StartedAt time.Time `json:"started_at"`
-	// EndedAt is when execution completed or failed.
-	EndedAt time.Time `json:"ended_at"`
+	// StartedAt is when execution began, in timestamp.Layout, as the
+	// stored parts and the API write it.
+	StartedAt timestamp.Time `json:"started_at"`
+	// EndedAt is when execution completed or failed, in timestamp.Layout.
+	EndedAt timestamp.Time `json:"ended_at"`
 }
 
 func (s ToolStateJSON) decode() ToolState {
+	started, ended := time.Time(s.StartedAt), time.Time(s.EndedAt)
 	if s.PartialInput != "" {
 		s.Input = json.RawMessage(s.PartialInput)
 	}
@@ -164,7 +168,7 @@ func (s ToolStateJSON) decode() ToolState {
 	case ToolStatusPending:
 		return ToolStatePending{Input: s.Input}
 	case ToolStatusRunning:
-		return ToolStateRunning{Input: s.Input, Output: s.Output, StartedAt: s.StartedAt}
+		return ToolStateRunning{Input: s.Input, Output: s.Output, StartedAt: started}
 	case ToolStatusCompleted:
 		return ToolStateCompleted{
 			Input:       s.Input,
@@ -172,15 +176,15 @@ func (s ToolStateJSON) decode() ToolState {
 			Title:       s.Title,
 			Metadata:    s.Metadata,
 			Attachments: s.Attachments,
-			StartedAt:   s.StartedAt,
-			EndedAt:     s.EndedAt,
+			StartedAt:   started,
+			EndedAt:     ended,
 		}
 	case ToolStatusError:
 		return ToolStateError{
 			Input:     s.Input,
 			Error:     s.Error,
-			StartedAt: s.StartedAt,
-			EndedAt:   s.EndedAt,
+			StartedAt: started,
+			EndedAt:   ended,
 		}
 	}
 	return ToolStatePending{}
@@ -201,7 +205,7 @@ func toolStateJSON(state ToolState) ToolStateJSON {
 	case ToolStatePending:
 		return ToolStateJSON{Status: ToolStatusPending, Input: v.Input}
 	case ToolStateRunning:
-		return ToolStateJSON{Status: ToolStatusRunning, Input: v.Input, Output: v.Output, StartedAt: v.StartedAt}
+		return ToolStateJSON{Status: ToolStatusRunning, Input: v.Input, Output: v.Output, StartedAt: timestamp.Time(v.StartedAt)}
 	case ToolStateCompleted:
 		return ToolStateJSON{
 			Status:      ToolStatusCompleted,
@@ -210,16 +214,16 @@ func toolStateJSON(state ToolState) ToolStateJSON {
 			Title:       v.Title,
 			Metadata:    v.Metadata,
 			Attachments: v.Attachments,
-			StartedAt:   v.StartedAt,
-			EndedAt:     v.EndedAt,
+			StartedAt:   timestamp.Time(v.StartedAt),
+			EndedAt:     timestamp.Time(v.EndedAt),
 		}
 	case ToolStateError:
 		return ToolStateJSON{
 			Status:    ToolStatusError,
 			Input:     v.Input,
 			Error:     v.Error,
-			StartedAt: v.StartedAt,
-			EndedAt:   v.EndedAt,
+			StartedAt: timestamp.Time(v.StartedAt),
+			EndedAt:   timestamp.Time(v.EndedAt),
 		}
 	}
 	return ToolStateJSON{Status: ToolStatusPending}

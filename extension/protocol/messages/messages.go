@@ -344,13 +344,8 @@ func ToMessages(msgs []agent.Message) (system []ContentBlock, out []Message) {
 					}
 				}
 			case message.FilePart:
-				ab.Type = "document"
+				ab = AttachmentBlock(v)
 				ab.CacheControl = v.CacheControl
-				ab.Source = &Source{
-					Type:      "base64",
-					MediaType: v.MediaType,
-					Data:      v.Data,
-				}
 			case message.ReasoningPart:
 				ab.CacheControl = v.CacheControl
 				switch {

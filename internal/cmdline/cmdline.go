@@ -92,7 +92,9 @@ type Command[T any] struct {
 	Exclusive [][]string
 
 	// Args checks the positional arguments left after flag parsing. A
-	// command without Args takes none.
+	// command without Args takes none, and one with subcommands reports
+	// its first argument as an unknown command instead. A command with
+	// both takes the arguments that name no subcommand as its own.
 	Args func([]string) error
 
 	// Run executes the command. A command without Run prints its help.
@@ -134,14 +136,27 @@ func Main(ctx context.Context, root Node) {
 	}
 }
 
+// An ExitError ends a command with exit status Code, once the command has
+// written all it has to say, such as a check that reports what it found:
+// Report writes nothing for it.
+type ExitError struct {
+	// Code is the exit status, which is not 0.
+	Code int
+}
+
+func (e *ExitError) Error() string { return fmt.Sprintf("exit status %d", e.Code) }
+
 // Report writes err to w after an "error:" label and returns the exit status
 // for it: 2 for a [UsageError], which it follows with the command's usage
-// section, 1 for any other error, and 0 for nil, which it does not write.
-// When color is true, the label is red and the usage section is bold where
-// help is.
+// section, the code of an [ExitError], which it does not write, 1 for any
+// other error, and 0 for nil, which it does not write. When color is true,
+// the label is red and the usage section is bold where help is.
 func Report(w io.Writer, err error, color bool) int {
 	if err == nil {
 		return 0
+	}
+	if ee, ok := errors.AsType[*ExitError](err); ok {
+		return ee.Code
 	}
 	label := "error:"
 	if color {
@@ -205,7 +220,7 @@ func (c *Command[T]) exec(ctx context.Context, sc scope, args []string) error {
 	}
 
 	var opts T
-	fs, err := c.parse(sc, &opts, args)
+	fs, args, err := c.parse(sc, &opts, args)
 	switch {
 	case errors.Is(err, flag.ErrHelp):
 		printHelp(sc, c.info(), fs)
@@ -213,7 +228,7 @@ func (c *Command[T]) exec(ctx context.Context, sc scope, args []string) error {
 	case err != nil:
 		return c.usageError(sc, fs, err)
 	}
-	return c.run(ctx, sc, opts, fs)
+	return c.run(ctx, sc, opts, fs, args)
 }
 
 // usageError returns err as a UsageError of c, which sc names, with the usage
@@ -239,20 +254,44 @@ func lookup(nodes []Node, name string) Node {
 	return nil
 }
 
-// parse builds the flag set for c, binding it to opts, and parses args into
-// it. The flag set is returned even on failure, so that help can report it.
-func (c *Command[T]) parse(sc scope, opts *T, args []string) (*flag.FlagSet, error) {
+// parse builds the flag set for c, binding it to opts, parses args into it,
+// as parseInterspersed does, and returns the positional arguments. The flag
+// set is returned even on failure, so that help can report it.
+func (c *Command[T]) parse(sc scope, opts *T, args []string) (*flag.FlagSet, []string, error) {
 	fs := flag.NewFlagSet(sc.String(), flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	if c.Flags != nil {
 		c.Flags(fs, opts)
 	}
-	return fs, fs.Parse(args)
+	positional, err := parseInterspersed(fs, args)
+	return fs, positional, err
 }
 
-func (c *Command[T]) run(ctx context.Context, sc scope, opts T, fs *flag.FlagSet) error {
-	args := fs.Args()
-	if len(args) > 0 && len(c.Commands) > 0 {
+// parseInterspersed parses args into fs, taking flags wherever they stand
+// among the positional arguments, which it returns in order, so that
+// "prompt -m model" sets -m as "-m model prompt" does. A "--" ends the
+// flags: each argument after it is positional, even one that starts with a
+// dash. So does a "--" given as the value of a flag, which flag cannot tell
+// apart from one that ends the flags.
+func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
+	var positional []string
+	for {
+		if err := fs.Parse(args); err != nil {
+			return nil, err
+		}
+		rest := fs.Args()
+		// Parse stops at a positional argument, which it leaves in rest, or
+		// after a "--", which it takes.
+		if consumed := len(args) - len(rest); len(rest) == 0 || consumed > 0 && args[consumed-1] == "--" {
+			return append(positional, rest...), nil
+		}
+		positional = append(positional, rest[0])
+		args = rest[1:]
+	}
+}
+
+func (c *Command[T]) run(ctx context.Context, sc scope, opts T, fs *flag.FlagSet, args []string) error {
+	if len(args) > 0 && len(c.Commands) > 0 && c.Args == nil {
 		return c.usageError(sc, fs, fmt.Errorf("unknown command %q", args[0]))
 	}
 	if c.Run == nil {
@@ -351,6 +390,37 @@ func (c *Command[T]) info() info {
 		runnable:    c.Run != nil,
 		commands:    c.Commands,
 		hidden:      c.Hidden,
+	}
+}
+
+// AnyArgs is a [Command.Args] check that takes any number of arguments.
+func AnyArgs([]string) error { return nil }
+
+// MinArgs returns a [Command.Args] check demanding at least n arguments.
+func MinArgs(n int) func([]string) error {
+	return func(args []string) error {
+		if len(args) >= n {
+			return nil
+		}
+		noun := "arguments"
+		if n == 1 {
+			noun = "argument"
+		}
+		return fmt.Errorf("expects at least %d %s, got %d", n, noun, len(args))
+	}
+}
+
+// MaxArgs returns a [Command.Args] check taking at most n arguments.
+func MaxArgs(n int) func([]string) error {
+	return func(args []string) error {
+		if len(args) <= n {
+			return nil
+		}
+		noun := "arguments"
+		if n == 1 {
+			noun = "argument"
+		}
+		return fmt.Errorf("takes at most %d %s, got %d", n, noun, len(args))
 	}
 }
 

@@ -31,6 +31,9 @@ type Start struct {
 	Mode StartMode
 	// ID is the session StartID opens.
 	ID message.SessionID
+	// Prompt is sent to the first session once the UI opens on it, as
+	// though typed and submitted. Empty sends nothing.
+	Prompt string
 	// Model is the model variant the terminal starts with, in
 	// "provider/model:option:effort" format, which a stored first session
 	// keeps. Empty takes the app's default model, or the model the first

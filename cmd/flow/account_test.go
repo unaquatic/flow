@@ -13,7 +13,6 @@ import (
 	"github.com/unaquatic/flow/extension"
 	"github.com/unaquatic/flow/extension/protocol"
 	"github.com/unaquatic/flow/extension/protocol/protocoltest"
-	"github.com/unaquatic/flow/internal/cmdline"
 )
 
 // testProvider is the provider of the test app's catalog, and keyEnv the
@@ -28,13 +27,13 @@ const (
 func TestAccountCurrentNone(t *testing.T) {
 	a := newTestApp(t)
 	var out strings.Builder
-	if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, nil); err != nil {
+	if err := runAccountCurrent(t.Context(), &out, a, AccountOptions{Format: OutputText}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := out.String(), "Current account:\n  [no active accounts]\n"; got != want {
 		t.Errorf("account current = %q, want %q", got, want)
 	}
-	err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, []string{"provider-a"})
+	err := runAccountCurrent(t.Context(), &out, a, AccountOptions{Format: OutputText}, []string{"provider-a"})
 	if err == nil || !strings.Contains(err.Error(), "no active account: provider-a") {
 		t.Errorf("account current provider-a: err = %v, want no active account", err)
 	}
@@ -75,7 +74,7 @@ func TestAccountCommands(t *testing.T) {
 	}
 
 	var out strings.Builder
-	if err := listAccounts(t.Context(), &out, a); err != nil {
+	if err := listAccounts(t.Context(), &out, a, AccountOptions{Format: OutputText}); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "provider-a\n* "+string(id)) {
@@ -83,7 +82,7 @@ func TestAccountCommands(t *testing.T) {
 	}
 
 	out.Reset()
-	if err := runAccountUse(t.Context(), &out, a, cmdline.NoOptions{}, []string{"provider-a", string(id)}); err != nil {
+	if err := runAccountUse(t.Context(), &out, a, AccountOptions{Format: OutputText}, []string{"provider-a", string(id)}); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := out.String(), "Switched to:\n  provider-a  "+string(id)+"  api_key  store\n"; got != want {
@@ -100,7 +99,7 @@ func TestAccountCommands(t *testing.T) {
 	}
 	for _, args := range [][]string{nil, {"provider-a"}} {
 		out.Reset()
-		if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, args); err != nil {
+		if err := runAccountCurrent(t.Context(), &out, a, AccountOptions{Format: OutputText}, args); err != nil {
 			t.Fatal(err)
 		}
 		if got := out.String(); !strings.HasPrefix(got, "Current account:\n  provider-a  "+string(id)+"  ") || strings.Count(got, "\n") != 2 || strings.Contains(got, string(other)) {
@@ -133,7 +132,7 @@ func TestAccountCurrentPlural(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out strings.Builder
-	if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, nil); err != nil {
+	if err := runAccountCurrent(t.Context(), &out, a, AccountOptions{Format: OutputText}, nil); err != nil {
 		t.Fatal(err)
 	}
 	want := "Current accounts:\n" +

@@ -11,50 +11,33 @@ import (
 	"time"
 
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/internal/timestamp"
 )
 
-// TestEncodeTime_IsFixedWidth pins the property the column ordering rests on.
-// A stored timestamp is compared as text, so every value must be the same
-// width: RFC 3339 with nanoseconds omitted the fraction when it was zero,
-// which made a whole second sort above every fraction of the same second.
-func TestEncodeTime_IsFixedWidth(t *testing.T) {
-	whole := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	tests := map[string]time.Time{
-		"whole second":   whole,
-		"half second":    whole.Add(500 * time.Millisecond),
-		"one nanosecond": whole.Add(time.Nanosecond),
-		"zero time":      {},
-	}
-	width := len(encodeTime(whole))
-	for name, at := range tests {
-		t.Run(name, func(t *testing.T) {
-			if got := encodeTime(at); len(got) != width {
-				t.Errorf("encodeTime(%v) = %q, want %d bytes like %q", at, got, width, encodeTime(whole))
-			}
-		})
-	}
-}
-
 // TestListSessions_OrdersByTimeThenID checks the order the session list is
-// read back in, and that a tie inside one second falls back to the id.
+// read back in: the latest updated first, to the millisecond, and of those
+// updated in the same millisecond, the latest created first, as their ids
+// sort.
 func TestListSessions_OrdersByTimeThenID(t *testing.T) {
 	store := newTestStore(t)
 	ctx := context.Background()
 
 	early := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	late := early.Add(time.Second)
+	tied := late.Add(900 * time.Millisecond)
 	for _, s := range []struct {
 		id message.SessionID
 		at time.Time
 	}{
 		{"ses_early", early},
 		{"ses_late", late},
-		{"ses_tied_b", late.Add(500 * time.Millisecond)},
-		{"ses_tied_a", late.Add(900 * time.Millisecond)},
+		{"ses_late_ms", late.Add(500 * time.Millisecond)},
+		{"ses_tied_a", tied},
+		{"ses_tied_b", tied},
 	} {
 		if _, err := store.db.ExecContext(ctx, `
 			INSERT INTO sessions (id, project, title, created_at, updated_at) VALUES (?, ?, '', ?, ?)`,
-			s.id, store.project, encodeTime(early), encodeTime(s.at)); err != nil {
+			s.id, store.project, timestamp.Format(early), timestamp.Format(s.at)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -67,12 +50,12 @@ func TestListSessions_OrdersByTimeThenID(t *testing.T) {
 	for i, s := range sessions {
 		got[i] = s.ID
 	}
-	want := []message.SessionID{"ses_late", "ses_tied_a", "ses_tied_b", "ses_early"}
+	want := []message.SessionID{"ses_tied_b", "ses_tied_a", "ses_late_ms", "ses_late", "ses_early"}
 	if !slices.Equal(got, want) {
 		t.Errorf("newest-first order = %v, want %v", got, want)
 	}
-	if !sessions[0].UpdatedAt.Equal(late) {
-		t.Errorf("round-tripped time = %v, want %v", sessions[0].UpdatedAt, late)
+	if at := late.Add(500 * time.Millisecond); !sessions[2].UpdatedAt.Equal(at) {
+		t.Errorf("round-tripped time = %v, want %v", sessions[2].UpdatedAt, at)
 	}
 }
 
@@ -131,7 +114,7 @@ func TestListAllSessions_ListsEveryProject(t *testing.T) {
 	// Times are whole seconds, so ses_a is made an hour older to order the
 	// two.
 	if _, err := db.ExecContext(ctx, `UPDATE sessions SET updated_at = ? WHERE id = 'ses_a'`,
-		encodeTime(time.Now().Add(-time.Hour))); err != nil {
+		timestamp.Format(time.Now().Add(-time.Hour))); err != nil {
 		t.Fatal(err)
 	}
 
@@ -332,12 +315,12 @@ func TestAppendMessage_KeepsCreatedAt(t *testing.T) {
 		t.Errorf("after the first message: created %v, updated %v; want both from %v on", sess.CreatedAt, sess.UpdatedAt, before)
 	}
 
-	// Times are whole seconds, so the session is made an hour older to tell
-	// the two apart.
+	// Two appends may share a millisecond, so the session is made an hour
+	// older to tell the two apart.
 	old := before.Add(-time.Hour).UTC()
 	if _, err := store.db.ExecContext(ctx, `
 		UPDATE sessions SET created_at = ?, updated_at = ? WHERE id = 'ses_a'`,
-		encodeTime(old), encodeTime(old)); err != nil {
+		timestamp.Format(old), timestamp.Format(old)); err != nil {
 		t.Fatal(err)
 	}
 	appendAt(t, store, "ses_a", "msg_1", "msg_2")

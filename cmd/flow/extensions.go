@@ -23,11 +23,18 @@ import (
 
 // extensions loads the extensions built into flow into the app, in the
 // order their hooks run.
-var extensions = []extension.Load{
-	protocol.Load,
-	tools.Load,
-	snapshot.Load,
-	titling.Load,
+var extensions = extensionsWith(tools.Load)
+
+// extensionsWith returns the extensions built into flow, as extensions
+// loads them, with toolsLoad loading the tools extension, such as the
+// Load of the tools.Selection a printed run's flags make.
+func extensionsWith(toolsLoad extension.Load) []extension.Load {
+	return []extension.Load{
+		protocol.Load,
+		toolsLoad,
+		snapshot.Load,
+		titling.Load,
+	}
 }
 
 // views returns the terminal UI widgets of the extensions loaded into a.

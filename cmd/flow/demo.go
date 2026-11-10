@@ -40,6 +40,11 @@ var demoCmd = &cmdline.Command[cmdline.NoOptions]{
 	Name:  "demo",
 	Short: "Show demos of what flow's commands print",
 	Commands: []cmdline.Node{
+		demoCommand("run", "Show what flow run prints in each case, with demo models", runDemos),
+		demoCommand("session", "Show what flow session list prints in each case, with demo sessions", sessionDemos),
+		demoCommand("session-delete", "Show what flow session delete prints in each case, with demo sessions", sessionDeleteDemos),
+		demoCommand("models", "Show what flow models prints in each case, with a demo catalog", modelsDemos),
+		demoCommand("export", "Show what flow export prints in each case, with demo sessions", exportDemos),
 		demoCommand("version", "Show what flow version prints", versionDemos),
 		demoCommand("update", "Show what flow update prints in each case, without checking or installing", updateDemos()),
 		demoCommand("login", "Show what flow login prints in each case, with demo providers", loginDemos),
@@ -132,6 +137,13 @@ var versionDemos = []demoCase{{
 	run: func(_ context.Context, w io.Writer, _ bool) error {
 		printVersion(w)
 		return nil
+	},
+}, {
+	name: "json",
+	desc: "The version, as JSON",
+	line: "version --format json",
+	run: func(_ context.Context, w io.Writer, _ bool) error {
+		return writeVersionJSON(w)
 	},
 }}
 
@@ -390,6 +402,7 @@ func demoInstall(cmd *exec.Cmd) error {
 var serveDemos = []demoCase{
 	{name: "local", desc: "Listening on this machine alone", line: "serve", run: serveDemo(serveOptions{port: demoPort})},
 	{name: "exposed", desc: "Reachable from other machines, with no password", line: "serve --hostname 0.0.0.0", run: serveDemo(serveOptions{hostname: "0.0.0.0", port: demoPort})},
+	{name: "json", desc: "Listening on this machine alone, as one line of JSON for a script to read", line: "serve --format json", run: serveDemo(serveOptions{port: demoPort, format: OutputJSON})},
 }
 
 // demoPort is the port of the serve demos, flow serve's default.

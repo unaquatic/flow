@@ -823,3 +823,25 @@ func TestToInput_ToolResultAttachments(t *testing.T) {
 		t.Errorf("input =\n%s\nwant\n%s", got, want)
 	}
 }
+
+// TestToInput_PromptFiles checks that the files a prompt attaches follow
+// its text, as function call outputs send theirs: an input_image item for
+// an image and an input_file item for any other file, inline as data URLs.
+func TestToInput_PromptFiles(t *testing.T) {
+	_, input := ToInput([]agent.Message{{Role: message.RoleUser, Content: []message.ContentPart{
+		message.TextPart{Text: "compare"},
+		message.FilePart{Data: "aW1n", MediaType: "image/png", Filename: "shot.png"},
+		message.FilePart{Data: "cGRm", MediaType: "application/pdf", Filename: "spec.pdf"},
+	}}})
+	got, err := json.Marshal(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"content":[{"text":"compare","type":"input_text"},` +
+		`{"image_url":"data:image/png;base64,aW1n","type":"input_image"},` +
+		`{"file_data":"data:application/pdf;base64,cGRm","filename":"spec.pdf","type":"input_file"}],` +
+		`"role":"user"}]`
+	if string(got) != want {
+		t.Errorf("input =\n%s\nwant\n%s", got, want)
+	}
+}

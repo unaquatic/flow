@@ -159,6 +159,132 @@ func TestUsageErrors(t *testing.T) {
 	}
 }
 
+// TestArgsBesideCommands checks that a command with subcommands and Args
+// takes the arguments that name no subcommand as its own, while the first
+// argument still selects a subcommand that it names.
+func TestArgsBesideCommands(t *testing.T) {
+	var ran string
+	var got []string
+	leaf := &Command[NoOptions]{
+		Name: "leaf",
+		Run:  func(context.Context, NoOptions, []string) error { ran = "leaf"; return nil },
+	}
+	root := &Command[NoOptions]{
+		Name:     "app",
+		Usage:    "[text...]",
+		Args:     AnyArgs,
+		Run:      func(_ context.Context, _ NoOptions, args []string) error { ran, got = "app", args; return nil },
+		Commands: []Node{leaf},
+	}
+	for _, tt := range []struct {
+		args     []string
+		wantRan  string
+		wantArgs []string
+	}{
+		{args: []string{"leaf"}, wantRan: "leaf"},
+		{args: []string{"fix", "the", "tests"}, wantRan: "app", wantArgs: []string{"fix", "the", "tests"}},
+		{args: []string{"leaf of a tree"}, wantRan: "app", wantArgs: []string{"leaf of a tree"}},
+		{args: []string{"--", "leaf"}, wantRan: "app", wantArgs: []string{"leaf"}},
+		{args: nil, wantRan: "app"},
+	} {
+		ran, got = "", nil
+		if err := root.Execute(t.Context(), tt.args); err != nil {
+			t.Fatalf("execute %q: %v", tt.args, err)
+		}
+		if ran != tt.wantRan || !slices.Equal(got, tt.wantArgs) {
+			t.Errorf("execute %q ran %s with %q, want %s with %q", tt.args, ran, got, tt.wantRan, tt.wantArgs)
+		}
+	}
+}
+
+// TestFlagsAmongArgs checks that flags may stand after the positional
+// arguments, or between them, and that a "--" ends the flags, so that an
+// argument after it is positional though it starts with a dash.
+func TestFlagsAmongArgs(t *testing.T) {
+	type options struct {
+		Model string
+		Print bool
+	}
+	var gotOpts options
+	var gotArgs []string
+	root := &Command[options]{
+		Name: "app",
+		Flags: func(fs *flag.FlagSet, o *options) {
+			fs.StringVar(&o.Model, "m", "", "model")
+			fs.BoolVar(&o.Print, "p", false, "print")
+		},
+		Args: AnyArgs,
+		Run: func(_ context.Context, o options, args []string) error {
+			gotOpts, gotArgs = o, args
+			return nil
+		},
+	}
+	for _, tt := range []struct {
+		args     []string
+		wantOpts options
+		wantArgs []string
+	}{
+		{args: []string{"-p", "-m", "fast", "fix it"}, wantOpts: options{Model: "fast", Print: true}, wantArgs: []string{"fix it"}},
+		{args: []string{"fix it", "-m", "fast", "-p"}, wantOpts: options{Model: "fast", Print: true}, wantArgs: []string{"fix it"}},
+		{args: []string{"-p", "fix", "-m", "fast", "it"}, wantOpts: options{Model: "fast", Print: true}, wantArgs: []string{"fix", "it"}},
+		{args: []string{"-p", "fix", "--", "-m", "fast"}, wantOpts: options{Print: true}, wantArgs: []string{"fix", "-m", "fast"}},
+		{args: []string{"--", "-p"}, wantArgs: []string{"-p"}},
+		{args: []string{"-", "-p"}, wantOpts: options{Print: true}, wantArgs: []string{"-"}},
+	} {
+		gotOpts, gotArgs = options{}, nil
+		if err := root.Execute(t.Context(), tt.args); err != nil {
+			t.Fatalf("execute %q: %v", tt.args, err)
+		}
+		if gotOpts != tt.wantOpts || !slices.Equal(gotArgs, tt.wantArgs) {
+			t.Errorf("execute %q = %+v, %q; want %+v, %q", tt.args, gotOpts, gotArgs, tt.wantOpts, tt.wantArgs)
+		}
+	}
+	if err := root.Execute(t.Context(), []string{"fix it", "-x"}); err == nil || err.Error() != "app: flag provided but not defined: -x" {
+		t.Errorf("execute with an unknown flag after an argument: err = %v", err)
+	}
+}
+
+// TestReportExitError checks that an ExitError sets the exit status, and
+// that Report writes nothing for it, even wrapped.
+func TestReportExitError(t *testing.T) {
+	for _, err := range []error{&ExitError{Code: 1}, fmt.Errorf("check: %w", &ExitError{Code: 3})} {
+		var out strings.Builder
+		want := 1
+		if ee, ok := errors.AsType[*ExitError](err); ok {
+			want = ee.Code
+		}
+		if got := Report(&out, err, false); got != want || out.Len() != 0 {
+			t.Errorf("Report(%v) = %d, wrote %q; want %d and nothing", err, got, out.String(), want)
+		}
+	}
+}
+
+// TestMinArgs checks that MinArgs demands n arguments or more.
+func TestMinArgs(t *testing.T) {
+	check := MinArgs(1)
+	for _, args := range [][]string{{"a"}, {"a", "b"}} {
+		if err := check(args); err != nil {
+			t.Errorf("MinArgs(1)(%q) = %v", args, err)
+		}
+	}
+	if err := check(nil); err == nil || err.Error() != "expects at least 1 argument, got 0" {
+		t.Errorf("MinArgs(1) of none = %v, want expects at least 1 argument, got 0", err)
+	}
+}
+
+// TestMaxArgs checks that MaxArgs takes up to n arguments and refuses more.
+func TestMaxArgs(t *testing.T) {
+	check := MaxArgs(1)
+	for _, args := range [][]string{nil, {"a"}} {
+		if err := check(args); err != nil {
+			t.Errorf("MaxArgs(1)(%q) = %v", args, err)
+		}
+	}
+	if err := check([]string{"a", "b"}); err == nil || err.Error() != "takes at most 1 argument, got 2" {
+		t.Errorf("MaxArgs(1) of two = %v, want takes at most 1 argument, got 2", err)
+	}
+}
+
 func TestReport(t *testing.T) {
 	usage := &UsageError{Scope: "app sub", Err: errors.New("bad flag")}
 	tests := []struct {
@@ -229,7 +355,7 @@ func helpOf(t *testing.T, st style) string {
 	}
 	var o HelpOptions
 	sc := rootScope(c.info())
-	fs, err := c.parse(sc, &o, nil)
+	fs, _, err := c.parse(sc, &o, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

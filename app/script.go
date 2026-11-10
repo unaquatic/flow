@@ -55,7 +55,7 @@ func (s Session) processScript(ctx context.Context, script Script) error {
 			return err
 		}
 		snd := SendInput{Text: text}
-		if err := s.emitPrompt(snd, script.Variant, nil); err != nil {
+		if err := s.emitPrompt(snd, snd.content(), script.Variant, nil); err != nil {
 			return err
 		}
 		run := &agent.Agent{

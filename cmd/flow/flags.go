@@ -5,7 +5,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
@@ -26,11 +28,10 @@ type modelOptions struct {
 	effort agent.ReasoningEffort
 }
 
-// modelFlags binds --provider, --model and --effort to o.
+// modelFlags binds --provider, --model and --effort to o. --provider has
+// no -p, which is --print's.
 func modelFlags(fs *flag.FlagSet, o *modelOptions) {
-	const providerUsage = "Model provider `name` to choose from"
-	fs.Var(providerValue{id: &o.provider}, "provider", providerUsage)
-	fs.Var(providerValue{id: &o.provider}, "p", providerUsage)
+	fs.Var(providerValue{id: &o.provider}, "provider", "Model provider `name` to choose from")
 	const modelUsage = "Model ID or `pattern` to use, such as name:fast:high"
 	fs.StringVar(&o.model, "model", "", modelUsage)
 	fs.StringVar(&o.model, "m", "", modelUsage)
@@ -79,6 +80,78 @@ func (v effortValue) Set(s string) error {
 		return errors.New("empty reasoning effort")
 	}
 	*v.effort = t
+	return nil
+}
+
+// positiveValue is the flag.Value of a positive whole number.
+type positiveValue struct {
+	// n is the variable the flag sets.
+	n *int
+}
+
+func (v positiveValue) String() string {
+	if v.n == nil || *v.n == 0 {
+		return ""
+	}
+	return strconv.Itoa(*v.n)
+}
+
+// Set sets the number s names, which must be above zero.
+func (v positiveValue) Set(s string) error {
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil || n <= 0 {
+		return fmt.Errorf("%q is not a positive number", s)
+	}
+	*v.n = n
+	return nil
+}
+
+// listValue is the flag.Value of a list of names, separated by commas or
+// spaces, such as "read,grep". Each use of the flag adds to the list. Any
+// use makes the list non-nil, so that one of an empty string, "", sets an
+// empty list, which tells apart a flag given no names from one not given.
+type listValue struct {
+	// list is the variable the flag sets.
+	list *[]string
+}
+
+func (v listValue) String() string {
+	if v.list == nil {
+		return ""
+	}
+	return strings.Join(*v.list, ",")
+}
+
+// Set adds the names of s to the list.
+func (v listValue) Set(s string) error {
+	names := strings.FieldsFunc(s, func(r rune) bool { return r == ',' || unicode.IsSpace(r) })
+	if *v.list == nil {
+		*v.list = []string{}
+	}
+	*v.list = append(*v.list, names...)
+	return nil
+}
+
+// pathsValue is the flag.Value of a list of paths, one per use of the
+// flag, so that a path may hold commas and spaces.
+type pathsValue struct {
+	// paths is the variable the flag sets.
+	paths *[]string
+}
+
+func (v pathsValue) String() string {
+	if v.paths == nil {
+		return ""
+	}
+	return strings.Join(*v.paths, ",")
+}
+
+// Set adds the path s, which must not be empty, to the list.
+func (v pathsValue) Set(s string) error {
+	if s == "" {
+		return errors.New("empty path")
+	}
+	*v.paths = append(*v.paths, s)
 	return nil
 }
 

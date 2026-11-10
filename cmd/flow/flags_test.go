@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -41,8 +42,10 @@ func TestModelFlags(t *testing.T) {
 	}{
 		{name: "none"},
 		{name: "pattern", args: []string{"--model", "small"}, want: modelOptions{model: "small"}},
-		{name: "provider", args: []string{"-p", "provider-a", "-m", "model-a"},
+		{name: "provider", args: []string{"--provider", "provider-a", "-m", "model-a"},
 			want: modelOptions{provider: "provider-a", model: "model-a"}},
+		// -p is --print's, on the commands that take the model flags.
+		{name: "no -p", args: []string{"-p", "provider-a"}, wantErr: "flag provided but not defined: -p"},
 		{name: "gateway provider", args: []string{"--provider", "provider-c", "-m", "large"},
 			want: modelOptions{provider: "provider-c", model: "large"}},
 		{name: "empty provider", args: []string{"--provider", " "}, wantErr: "empty provider"},
@@ -144,13 +147,15 @@ func TestLoginFlags(t *testing.T) {
 		wantErr string
 	}{
 		{name: "defaults, with no provider",
-			want: loginOptions{method: loginMethod(agent.LoginBrowser)}},
+			want: loginOptions{method: loginMethod(agent.LoginBrowser), format: OutputText}},
 		{name: "device", args: []string{"-m", "device", "-p", "provider-a"},
-			want: loginOptions{method: loginMethod(agent.LoginDevice), provider: "provider-a"}},
+			want: loginOptions{method: loginMethod(agent.LoginDevice), provider: "provider-a", format: OutputText}},
 		{name: "API key", args: []string{"-method", "key"},
-			want: loginOptions{method: keyMethod}},
+			want: loginOptions{method: keyMethod, format: OutputText}},
+		{name: "JSON", args: []string{"-method", "key", "--format", "json"},
+			want: loginOptions{method: keyMethod, format: OutputJSON}},
 		{name: "account", args: []string{"-account", strings.ToUpper(id)},
-			want: loginOptions{method: loginMethod(agent.LoginBrowser), account: id}},
+			want: loginOptions{method: loginMethod(agent.LoginBrowser), account: id, format: OutputText}},
 		{name: "unknown method", args: []string{"-method", "fax"}, wantErr: `unknown login method "fax"`},
 		{name: "empty provider", args: []string{"-provider", ""}, wantErr: "empty provider"},
 		{name: "bad account", args: []string{"-a", "nope"}, wantErr: "nope"},
@@ -184,5 +189,44 @@ func TestProviderRequired(t *testing.T) {
 	}
 	if err := logoutCmd.Run(t.Context(), logoutOptions{account: "01a11ff1-50e6-7a76-8b37-44931fa04af6"}, nil); !errors.Is(err, errProviderRequired) {
 		t.Errorf("logout without a provider = %v, want %v", err, errProviderRequired)
+	}
+}
+
+// TestListValue checks that a list flag splits each use at commas and
+// spaces, adds each use to the list, and that a use with no names sets an
+// empty list, apart from the nil list of a flag not given.
+func TestListValue(t *testing.T) {
+	for _, tt := range []struct {
+		args []string
+		want []string
+	}{
+		{nil, nil},
+		{[]string{"--tools", ""}, []string{}},
+		{[]string{"--tools", "read,grep", "--tools", "ls  bash,"}, []string{"read", "grep", "ls", "bash"}},
+	} {
+		var got []string
+		fs := flag.NewFlagSet("flow", flag.ContinueOnError)
+		fs.Var(listValue{list: &got}, "tools", "")
+		if err := fs.Parse(tt.args); err != nil {
+			t.Fatal(err)
+		}
+		if (got == nil) != (tt.want == nil) || !slices.Equal(got, tt.want) {
+			t.Errorf("parse %q = %#v, want %#v", tt.args, got, tt.want)
+		}
+	}
+}
+
+// TestPositiveValue checks that a positive number flag takes a number above
+// zero alone.
+func TestPositiveValue(t *testing.T) {
+	var n int
+	v := positiveValue{n: &n}
+	if err := v.Set("4"); err != nil || n != 4 {
+		t.Errorf("Set(4) = %v, n = %d; want 4", err, n)
+	}
+	for _, s := range []string{"0", "-1", "x", ""} {
+		if err := v.Set(s); err == nil {
+			t.Errorf("Set(%q): no error", s)
+		}
 	}
 }

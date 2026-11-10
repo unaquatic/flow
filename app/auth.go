@@ -225,3 +225,65 @@ func (a *App) publishAccountsChanged(ctx context.Context, t agent.ProviderID) {
 	}
 	a.publish(EventAccountsChanged{EventBase: a.eventBase(), Provider: t, Active: st.Active})
 }
+
+// CheckStatus is whether a provider can take requests, as Accounts.Check
+// finds it.
+type CheckStatus string
+
+const (
+	// CheckReady is a provider whose credential is ready to use: its
+	// active account's, or the environment's.
+	CheckReady CheckStatus = "ready"
+	// CheckNotReady is a provider with no credential: no active account,
+	// and none from the environment.
+	CheckNotReady CheckStatus = "not_ready"
+	// CheckInvalid is a provider whose active account's credential cannot
+	// be used, such as an OAuth token that no longer refreshes.
+	CheckInvalid CheckStatus = "invalid"
+)
+
+// AuthCheck is what Accounts.Check finds of a provider.
+type AuthCheck struct {
+	// Provider is the provider checked.
+	Provider agent.ProviderID `json:"provider"`
+	// Status is whether it can take requests.
+	Status CheckStatus `json:"status"`
+	// Account is its active account, or empty when it has none.
+	Account agent.AccountID `json:"account,omitempty"`
+	// Ambient reports a provider that the environment's credentials
+	// authorize, as a cloud's application default credentials do its AI
+	// platform, with no account of its own.
+	Ambient bool `json:"ambient,omitempty"`
+	// Reason says why a provider is not ready, or empty when it is.
+	Reason string `json:"reason,omitempty"`
+}
+
+// Check reports whether provider t can take requests, without sending one:
+// whether it has an active account, or credentials of the environment, and
+// whether the active account's credential is usable, which refreshes and
+// saves an OAuth token about to expire, as a request would. It fails when t
+// is not registered, or the accounts cannot be read.
+func (c Accounts) Check(ctx context.Context, t agent.ProviderID) (AuthCheck, error) {
+	st, err := c.Status(ctx, t)
+	if err != nil {
+		return AuthCheck{}, err
+	}
+	out := AuthCheck{Provider: t, Account: st.Active}
+	if st.Active == "" {
+		if c.app.providers.Ambient(t) {
+			out.Status, out.Ambient = CheckReady, true
+			return out, nil
+		}
+		out.Status, out.Reason = CheckNotReady, fmt.Sprintf("%s has no active account", t)
+		return out, nil
+	}
+	if _, err := c.app.accounts.Authorize(ctx, t, nil); err != nil {
+		if ctx.Err() != nil {
+			return AuthCheck{}, err
+		}
+		out.Status, out.Reason = CheckInvalid, err.Error()
+		return out, nil
+	}
+	out.Status = CheckReady
+	return out, nil
+}

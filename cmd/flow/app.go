@@ -11,8 +11,8 @@ import (
 
 // newApp starts the app as flow is built: over the data directory, logging
 // to its log at the configured level, with the extensions built into flow,
-// whose protocol extension makes the providers of the catalog, and the other
-// parts opts gives.
+// whose protocol extension makes the providers of the catalog, unless opts
+// gives them, as extensionsWith makes them, and the other parts opts gives.
 func newApp(ctx context.Context, opts app.Options) (*app.App, error) {
 	dir, err := config.DataDir()
 	if err != nil {
@@ -24,7 +24,9 @@ func newApp(ctx context.Context, opts app.Options) (*app.App, error) {
 		return nil, err
 	}
 	app.InitLogging(dir, cfg.LogLevel)
-	opts.Extensions = extensions
+	if opts.Extensions == nil {
+		opts.Extensions = extensions
+	}
 	return app.New(ctx, conf, opts)
 }
 
