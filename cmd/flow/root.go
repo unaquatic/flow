@@ -56,6 +56,7 @@ func (o rootOptions) runOptions() RunOptions {
 		Output:       o.printed.Output,
 		NoSession:    o.printed.NoSession,
 		Dir:          o.dir,
+		Name:         o.printed.Name,
 	}
 }
 
@@ -87,7 +88,7 @@ func sessionFlags(fs *flag.FlagSet, o *rootOptions) {
 
 // errNeedsPrint is the error of a flag that shapes a printed run, given to
 // the root command without --print.
-var errNeedsPrint = errors.New("--format, --output and --no-session need --print")
+var errNeedsPrint = errors.New("--format, --output, --no-session and --name need --print")
 
 // errResumePrompt is the error of a prompt given to the root command with
 // --resume, whose session list chooses the session the prompt would go to.
@@ -113,7 +114,7 @@ var rootCmd = &cmdline.Command[rootOptions]{
 	},
 	Exclusive: [][]string{
 		{"resume", "continue", "session"}, {"print", "resume"}, {"dir", "session"},
-		{"no-session", "continue"}, {"no-session", "session"},
+		{"no-session", "continue"}, {"no-session", "session"}, {"no-session", "name"},
 	},
 	Args: cmdline.AnyArgs,
 	Run: func(ctx context.Context, o rootOptions, args []string) error {
@@ -125,7 +126,7 @@ var rootCmd = &cmdline.Command[rootOptions]{
 		if o.print {
 			return printRun(ctx, o.runOptions(), args)
 		}
-		if o.printed.Format != OutputText || o.printed.Output != "" || o.printed.NoSession {
+		if o.printed.Format != OutputText || o.printed.Output != "" || o.printed.NoSession || o.printed.Name != "" {
 			return errNeedsPrint
 		}
 		prompt := strings.TrimSpace(strings.Join(args, " "))

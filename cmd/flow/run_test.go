@@ -373,3 +373,45 @@ func evalPath(t *testing.T, path string) string {
 	}
 	return real
 }
+
+// TestRunPromptName checks that --name titles the run's session, a new one
+// or the one it continues, and that it is no error when the run stored
+// nothing.
+func TestRunPromptName(t *testing.T) {
+	a, gw := newRunTestApp(t, "All green.")
+	if err := runPrompt(t.Context(), new(strings.Builder), a, RunOptions{Format: OutputText, Name: "Fix the tests"}, "fix the tests"); err != nil {
+		t.Fatal(err)
+	}
+	sessions, err := a.Sessions().ListSessions(t.Context())
+	if err != nil || len(sessions) != 1 || sessions[0].Title != "Fix the tests" {
+		t.Fatalf("sessions = %+v, %v; want one titled Fix the tests", sessions, err)
+	}
+	if err := runPrompt(t.Context(), new(strings.Builder), a, RunOptions{Format: OutputText, Continue: true, Name: "Fix the lint"}, "and the lint"); err != nil {
+		t.Fatal(err)
+	}
+	if sess, err := a.Sessions().Session(t.Context(), sessions[0].ID); err != nil || sess.Title != "Fix the lint" {
+		t.Errorf("continued session = %+v, %v; want it titled Fix the lint", sess, err)
+	}
+
+	gw.StreamFunc = func() (agent.StreamResponse, error) { return nil, errors.New("upstream down") }
+	err = runPrompt(t.Context(), new(strings.Builder), a, RunOptions{Format: OutputText, Session: "ses_missing", Name: "x"}, "hi")
+	if err == nil || strings.Contains(err.Error(), "--name") {
+		t.Errorf("named run on a missing session: err = %v, want the session's error alone", err)
+	}
+}
+
+// TestRootFlagsAfterPrompt checks that the root command reads flags that
+// follow the prompt as flags, not as words of the prompt: --format without
+// --print is refused wherever it stands, and so is --name with
+// --no-session.
+func TestRootFlagsAfterPrompt(t *testing.T) {
+	for _, args := range [][]string{{"fix it", "--format", "json"}, {"fix", "--name", "x", "it"}} {
+		if err := rootCmd.Execute(t.Context(), args); !errors.Is(err, errNeedsPrint) {
+			t.Errorf("execute %q: err = %v, want %v", args, err, errNeedsPrint)
+		}
+	}
+	const want = "flow: use only one of --no-session and --name"
+	if err := rootCmd.Execute(t.Context(), []string{"-p", "hi", "--no-session", "-n", "x"}); err == nil || err.Error() != want {
+		t.Errorf("execute -p --no-session -n: err = %v, want %q", err, want)
+	}
+}

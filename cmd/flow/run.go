@@ -39,6 +39,9 @@ type RunOptions struct {
 	// Dir is the folder the run works in, in place of the one flow started
 	// in, or empty.
 	Dir string
+	// Name is the title the run gives its session, or empty to leave the
+	// title to the session's titling.
+	Name string
 }
 
 // Start returns the session the flags in o choose, as the terminal's Start
@@ -103,7 +106,7 @@ var runCmd = &cmdline.Command[RunOptions]{
 		dirFlag(fs, &o.Dir)
 		printFlags(fs, o)
 	},
-	Exclusive: [][]string{{"continue", "session"}, {"no-session", "continue"}, {"no-session", "session"}, {"dir", "session"}},
+	Exclusive: [][]string{{"continue", "session"}, {"no-session", "continue"}, {"no-session", "session"}, {"no-session", "name"}, {"dir", "session"}},
 	Args:      cmdline.AnyArgs,
 	Run:       printRun,
 }
@@ -116,6 +119,9 @@ func printFlags(fs *flag.FlagSet, o *RunOptions) {
 	fs.StringVar(&o.Output, "output", "", outputUsage)
 	fs.StringVar(&o.Output, "o", "", outputUsage)
 	fs.BoolVar(&o.NoSession, "no-session", false, "Keep no session of a printed run: delete it once the run ends")
+	const nameUsage = "Title the session of a printed run"
+	fs.StringVar(&o.Name, "name", "", nameUsage)
+	fs.StringVar(&o.Name, "n", "", nameUsage)
 }
 
 // dirFlag binds --dir, the folder a command works in, to dir.
@@ -194,9 +200,10 @@ func promptText(args []string, stdin io.Reader) (string, error) {
 // model, and writes the run to w in o's format: the final answer once the
 // run has finished, or every event as it comes. It writes the final answer
 // to o's output file too. It fails with the run's failure, and with
-// errStopped when ctx ends first, and then writes no answer. With
-// NoSession, it deletes the run's new session once the run has ended,
-// however it ended.
+// errStopped when ctx ends first, and then writes no answer. With Name, it
+// titles the session once the run has ended, unless a signal stopped it, or
+// it stored nothing. With NoSession, it deletes the run's new session once
+// the run has ended, however it ended.
 func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, prompt string) (err error) {
 	id, err := o.Start().FirstSession(ctx, a.Sessions())
 	if err != nil {
@@ -225,6 +232,11 @@ func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, promp
 			return err
 		}
 	}
+	if ctx.Err() == nil {
+		if err := nameSession(sess, o.Name); err != nil {
+			return errors.Join(runErr, err)
+		}
+	}
 	switch {
 	case runErr != nil:
 		return runErr
@@ -238,6 +250,18 @@ func runPrompt(ctx context.Context, w io.Writer, a *app.App, o RunOptions, promp
 	}
 	if o.Output != "" {
 		return os.WriteFile(o.Output, []byte(p.Answer), 0o644)
+	}
+	return nil
+}
+
+// nameSession titles sess name, unless name is empty. A session that is not
+// stored, as one whose run failed before it stored its prompt, is no error.
+func nameSession(sess app.Session, name string) error {
+	if name == "" {
+		return nil
+	}
+	if _, err := sess.SetTitle(name); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("--name: %w", err)
 	}
 	return nil
 }
