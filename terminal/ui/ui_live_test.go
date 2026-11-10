@@ -357,8 +357,9 @@ func TestLiveTextIsLastPart(t *testing.T) {
 }
 
 // TestLiveTop checks the first row of the live area of inline output: the
-// row that stands for the last block of text that streams, the row of the
-// first call that has not ended, and otherwise the indicator's.
+// row under the blocks shown of text that streams, where its last block
+// will show, the row of the first call that has not ended, and otherwise
+// the indicator's.
 func TestLiveTop(t *testing.T) {
 	ui := newBuiltTestUI(t, true)
 	ui.ShowIndicator(WorkingIndicator(time.Second, false))
@@ -366,8 +367,8 @@ func TestLiveTop(t *testing.T) {
 	startReply(ui, partEvent("start", text))
 	DrawInline(ui)
 	sm := ui.messageWidgets[liveReply].SegmentFor(liveReply).Parts["a1-text"].(*widget.StreamMarkdown)
-	if got, want := ui.LiveTop(), sm.Y()+sm.Height()-1; got != want {
-		t.Errorf("while text streams, live area from row %d, want the Writing… row, %d", got, want)
+	if got, want := ui.LiveTop(), sm.Y()+sm.Height(); got != want {
+		t.Errorf("while text streams, live area from row %d, want the row under its text, %d", got, want)
 	}
 
 	applyEvents(ui, runBash("a1-bash", "ls", nil)[0])
@@ -525,8 +526,10 @@ func replayDemo(ui *UI, each func(step string)) {
 // TestDemoTurnUnderATallInputBox replays the demo's turn while the input
 // holds a prompt taller than the screen, and checks that no event rewrites
 // a row in the scrollback, and that the input box keeps its height once the
-// run's first live rows show, rather than growing and shrinking as each
-// step's live rows come and go, which moves every row of it.
+// first step's live rows show, rather than growing and shrinking as each
+// step's live rows come and go, which moves every row of it. The first step
+// may shrink it twice: as its text starts, whose held block takes no rows,
+// and as its call shows.
 func TestDemoTurnUnderATallInputBox(t *testing.T) {
 	ui := newBuiltTestUI(t, true)
 	ui.service.state.Running = true
@@ -539,12 +542,14 @@ func TestDemoTurnUnderATallInputBox(t *testing.T) {
 		s.Frame(t, ui, step)
 		if h := ui.InputBoxHeight(); h != height {
 			changes++
-			t.Logf("%s: input box %d rows, was %d", step, h, height)
+			if !strings.HasPrefix(step, "step 0") {
+				t.Errorf("%s: input box %d rows, was %d, want it kept after the first step", step, h, height)
+			}
 			height = h
 		}
 	})
-	if changes > 1 {
-		t.Errorf("input box changed height %d times during the run, want once at most", changes)
+	if changes > 2 {
+		t.Errorf("input box changed height %d times during the run, want twice at most", changes)
 	}
 }
 

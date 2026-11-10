@@ -69,6 +69,14 @@ var Segments = []Segment{
 		},
 	},
 	{
+		Text: "I'll track the plan as a todo list.",
+		Tool: &Tool{
+			Name:   "todo",
+			Input:  json.RawMessage(`{"todos":[{"content":"Find the source and tests","status":"completed"},{"content":"Read the existing implementation","status":"in_progress"},{"content":"Add the method and regression tests","status":"pending"},{"content":"Run the package tests","status":"pending"}]}`),
+			Output: "[✓] Find the source and tests\n[–] Read the existing implementation\n[ ] Add the method and regression tests\n[ ] Run the package tests",
+		},
+	},
+	{
 		Text: "The package has a source file and a test file. I'll find the existing methods to match their style.",
 		Tool: &Tool{
 			Name: "grep", Input: json.RawMessage(`{"pattern":"^func \\(c \\*Calculator\\)","path":"calculator","include":"*.go"}`),

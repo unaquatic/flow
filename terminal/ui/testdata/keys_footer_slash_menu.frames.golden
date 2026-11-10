@@ -1,5 +1,5 @@
 === text ===
-|  Usage model context 0K in 0K out 0K cache 0K $0.00 work…  |
+|■ Usage model context 0K in 0K out 0K cache 0K $0.00 work…  |
 |                                                            |
 |■ Commands                                                  |
 |                                                            |
@@ -15,14 +15,14 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC BB BBBBB CCCCB  |
+|A AAAAA BBBBB AAAAAAA BB AA BB AAA BB AAAAA BB BBBBB AAAAB  |
 |                                                            |
 |B BBBBBBBB                                                  |
 |                                                            |
-|  DDDDDDD                   DDDD DDD DDDDDDD DDD DDDDDDD D  |
+|  CCCCCCC                   CCCC CCC CCCCCCC CCC CCCCCCC C  |
 |                                                            |
-|E BBBBB                                                     |
-|  FFF CCCCCC  FFF CCCC  FFF CCCCCCCC  FFFFFF CCC CCCCC      |
+|B BBBBB                                                     |
+|  AAA AAAAAA  AAA AAAA  AAA AAAAAAAA  AAAAAA AAA AAAAA      |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -47,10 +47,7 @@
 |                                                            |
 |                                                            |
 === legend ===
-A #8c8c8c
+A #8a8a8a
 B #e6e6e6
-C #707070
-D #232323 BoxBg
-E #ff5f00
-F #b4b4b4
+C #232323 BoxBg
 ░ #ff5f00

@@ -1,43 +1,29 @@
 === text ===
 |                                        |
-|  Run the tests                         |
+|■ Run the tests                         |
 |                                        |
-|  Snapshot [indexing]                   |
-|                                        |
-|  one                                   |
+|■ one                                   |
 |                                        |
 |  two                                   |
 |                                        |
 |  three                                 |
 |                                        |
 |  four                                  |
+|                                        |
+|  five                                  |
 === fg ===
 |                                        |
-|  AAA AAA AAAAA                         |
+|A AAA AAA AAAAA                         |
 |                                        |
-|  BBBBBBBB BBBBBBBBBB                   |
-|                                        |
-|  AAA                                   |
+|B AAA                                   |
 |                                        |
 |  AAA                                   |
 |                                        |
 |  AAAAA                                 |
 |                                        |
 |  AAAA                                  |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
+|  AAAA                                  |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-░ #232323 BoxBg
+B #eb7513

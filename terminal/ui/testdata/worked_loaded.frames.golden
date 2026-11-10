@@ -1,67 +1,46 @@
 === text ===
+|■ Run the tests                                                                 |
 |                                                                                |
-|  Run the tests                                                                 |
+|■ Bash go test ./...                                                            |
+|■ Cache read 0K write 0K                                                        |
+|                                                                                |
+|■ All tests pass.                                                               |
+|                                                                                |
+|■ Cache read 1.0K write 0.2K                                                    |
+|                                                                                |
+|■ Done [42s]                                                                    |
+|                                                                                |
+|■ commit it                                                                     |
+|                                                                                |
+|■ Committed.                                                                    |
+|                                                                                |
+|■ Done [7s]                                                                     |
 |                                                                                |
 |                                                                                |
-|  Bash go test ./...                                                            |
-|  Cache read 0K write 0K                                                        |
-|                                                                                |
-|  All tests pass.                                                               |
-|                                                                                |
-|  Cache read 1.0K write 0.2K                                                    |
-|                                                                                |
-|  Done [42s]                                                                    |
 |                                                                                |
 |                                                                                |
-|  commit it                                                                     |
-|                                                                                |
-|                                                                                |
-|  Committed.                                                                    |
-|                                                                                |
-|  Done [7s]                                                                     |
 === fg ===
+|A AAA AAA AAAAA                                                                 |
 |                                                                                |
-|  AAA AAA AAAAA                                                                 |
+|B BBBB BB BBBB BBBBB                                                            |
+|B BBBBB BBBB BB BBBBB BB                                                        |
 |                                                                                |
+|C AAA AAAAA AAAAA                                                               |
 |                                                                                |
-|  BBBB BB BBBB BBBBB                                                            |
-|  BBBBB BBBB BB BBBBB BB                                                        |
+|B BBBBB BBBB BBBB BBBBB BBBB                                                    |
 |                                                                                |
-|  AAA AAAAA AAAAA                                                               |
+|B BBBB BBBBB                                                                    |
 |                                                                                |
-|  BBBBB BBBB BBBB BBBBB BBBB                                                    |
+|A AAAAAA AA                                                                     |
 |                                                                                |
-|  BBBB BBBBB                                                                    |
+|C AAAAAAAAAA                                                                    |
 |                                                                                |
-|                                                                                |
-|  AAAAAA AA                                                                     |
-|                                                                                |
-|                                                                                |
-|  AAAAAAAAAA                                                                    |
-|                                                                                |
-|  BBBB BBBB                                                                     |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|                                                                                |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|B BBBB BBBB                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-░ #232323 BoxBg
+B #8a8a8a
+C #eb7513

@@ -1,0 +1,37 @@
+=== text ===
+|                                        |
+|  fix the divide test, then run the     |
+|  calculator tests again                |
+|                                        |
+|                                        |
+|■ Fixed the divide-by-zero check.       |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|                                        |
+|  AAA AAA AAAAAA AAAAA AAAA AAA AAA     |
+|  AAAAAAAAAA AAAAA AAAAA                |
+|                                        |
+|                                        |
+|B AAAAA AAA AAAAAAAAAAAAAA AAAAAA       |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #eb7513
+░ #232323 BoxBg

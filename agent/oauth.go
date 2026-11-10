@@ -189,7 +189,7 @@ func RequestOAuthToken(client *http.Client, req *http.Request) (OAuthToken, erro
 		return OAuthToken{}, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return OAuthToken{}, fmt.Errorf("%w (%d): %s", ErrTokenEndpoint, resp.StatusCode, body)
+		return OAuthToken{}, &TokenEndpointError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 	return ParseOAuthToken(body)
 }

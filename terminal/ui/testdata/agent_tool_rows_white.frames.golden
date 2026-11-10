@@ -1,25 +1,26 @@
 === text ===
-|  Running the tests.                    |
+|■ Running the tests.                    |
 |                                        |
-|  Bash go test ./... [exit 1]           |
-|  Read calc.go                          |
-|  Grep Divide [1 match]                 |
+|■ Bash go test ./... [exit 1]           |
+|■ Read calc.go                          |
+|■ Grep Divide [1 match]                 |
 |                                        |
-|  Fixed the zero check.                 |
+|■ Fixed the zero check.                 |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAA                    |
+|A BBBBBBB BBB BBBBBB                    |
 |                                        |
-|  AAAA BB BBBB BBBBB BBBBB BB           |
-|  AAAA BBBBBBB                          |
-|  AAAA BBBBBB BB BBBBBB                 |
+|B BBBB CC CCCC CCCCC CCCCC CC           |
+|B BBBB CCCCCCC                          |
+|B BBBB CCCCCC CC CCCCCC                 |
 |                                        |
-|  AAAAA AAA AAAA AAAAAA                 |
+|A BBBBB BBB BBBB BBBBBB                 |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
+A #eb7513
+B #e6e6e6
+C #8a8a8a

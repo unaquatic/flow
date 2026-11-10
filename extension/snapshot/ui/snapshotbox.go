@@ -94,12 +94,12 @@ func (b *SnapshotBox) SetShowDone(show bool) {
 }
 
 // ShowHeader writes SnapshotLabel in NameFg, not bold, then the part's status
-// in ui.ToolFg, as SnapshotStatus gives it.
+// in the color of Status, as SnapshotStatus gives it.
 func (b *SnapshotBox) ShowHeader() {
 	b.Header.SetStyledContent(style.NewStyledText(
 		style.TextChunk{Text: SnapshotLabel, Fg: b.NameFg},
 		style.Plain(" "),
-		style.TextChunk{Text: SnapshotStatus(b.Part), Fg: ui.ToolFg},
+		style.TextChunk{Text: SnapshotStatus(b.Part), Fg: b.Status.Fg()},
 	))
 }
 

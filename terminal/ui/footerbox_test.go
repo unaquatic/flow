@@ -63,7 +63,7 @@ func TestFooterText(t *testing.T) {
 // until the reply ends a turn, also with a cache use to show, and shows the
 // turn's time from then on, in the color it is given.
 func TestFooterBoxShowsOnceTurnEnds(t *testing.T) {
-	textFg := PanelDimFg
+	textFg := mutedFg
 	b := NewFooterBox(0, textFg)
 	b.SetCache("[cache 1.0K write 0K]")
 	if b.Visible() {

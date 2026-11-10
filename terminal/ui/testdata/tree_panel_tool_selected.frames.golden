@@ -18,17 +18,17 @@
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  CCCC DDD D DDDDDD DDDDDD DD DDD DDDDDDDDDD                            |
-|  AAAAA DDDD DDD DDDDDD DDDD D DDDD DDDDDD                              |
-|  BB CCCC DDDD DDD DDDDD                                                |
-|  B  AAAAA DDDDD DDDDDDDDDDD                                            |
-|  BB BBBB BBB BBBBBBBBBBBB BBBBB BBBBBBB                                |
-|     BBBB BBBBBBBBBBBB                                                  |
+|  AAAA BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
+|  CCCCC BBBB BBB BBBBBB BBBB B BBBB BBBBBB                              |
+|  BB AAAA BBBB BBB BBBBB                                                |
+|  B  CCCCC BBBBB BBBBBBBBBBB                                            |
+|  DD DDDD DDD DDDDDDDDDDDD DDDDD DDDDDDD                                |
+|     DDDD DDDDDDDDDDDD                                                  |
 |                                                                        |
-|     BBBB BBBBBBBBBBBB                                                  |
-|     BBBBB BBBBBBB BBB BBBBB BB B BBBBBB                                |
+|     DDDD DDDDDDDDDDDD                                                  |
+|     DDDDD DDDDDDD DDD DDDDD DD D DDDDDD                                |
 |                                                                        |
-|E                                                                       |
+|A                                                                       |
 |                                                                        |
 === bg ===
 |                                                                        |
@@ -48,8 +48,7 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8a8a8a
 C #eb7513
-D #b4b4b4
-E #ff5f00
+D #313132
 ░ #ff5f00

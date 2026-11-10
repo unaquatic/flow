@@ -1,7 +1,7 @@
 === text ===
 |■ Demos [↑/↓ move] [esc cancel]                                         |
 |                                                                        |
-|  Error   Run a simulated network error                                 |
+|  Error   Show each kind of error flow reports                          |
 |  Stream  Run a streamed demo reply                                     |
 |                                                                        |
 |■ err                                                                   |
@@ -12,10 +12,10 @@
 === fg ===
 |A AAAAA BBBB BBBBB BBBB BBBBBBB                                         |
 |                                                                        |
-|  CCCCC   CCC C CCCCCCCCC CCCCCCC CCCCC                                 |
+|  CCCCC   CCCC CCCC CCCC CC CCCCC CCCC CCCCCCC                          |
 |  AAAAAA  BBB B BBBBBBBB BBBB BBBBB                                     |
 |                                                                        |
-|D AAA                                                                   |
+|A AAA                                                                   |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -33,7 +33,6 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8a8a8a
 C #232323 BoxBg
-D #ff5f00
 ░ #ff5f00

@@ -232,13 +232,13 @@ func LeftEdge(row *widget.Box) *widget.CharFill {
 	return edge
 }
 
-// MarkInputEdges marks the left edge of the input's first row, in the
-// primary color, as a prompt's bar is, and of the title of every panel that
+// MarkInputEdges marks the left edge of the input's first row, in
+// PromptMarkerFg, as a prompt's bar is, and of the title of every panel that
 // opens in the input box, in titleFg, the color of the title, as MarkEdge
 // marks them.
 func (ui *UI) MarkInputEdges() {
 	if edge := LeftEdge(ui.inputContentRow); edge != nil {
-		ui.MarkEdge(edge, func() style.Color { return productFg })
+		ui.MarkEdge(edge, ui.PromptMarkerFg)
 	}
 	for _, h := range []*PanelHeader{ui.slashHeader, ui.sessionHeader, ui.bannerHeader, ui.treeHeader} {
 		if edge := LeftEdge(h.TitleRow); edge != nil {

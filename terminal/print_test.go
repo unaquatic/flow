@@ -19,7 +19,7 @@ var colorModes = []struct {
 	mode         style.ColorMode
 	orange, grey string
 }{
-	{name: "truecolor", mode: style.ColorTrueColor, orange: "\x1b[38;2;255;95;0m", grey: "\x1b[38;2;228;228;228m"},
+	{name: "truecolor", mode: style.ColorTrueColor, orange: "\x1b[38;2;255;95;0m", grey: "\x1b[38;2;230;230;230m"},
 	{name: "256", mode: style.Color256, orange: "\x1b[38;5;202m", grey: "\x1b[38;5;254m"},
 	{name: "16", mode: style.Color16, orange: "\x1b[37m", grey: "\x1b[97m"},
 }

@@ -1,5 +1,5 @@
 === text ===
-|  Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
+|■ Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
 |                                                            |
 |■ also update the README [queued] [alt+enter send now]      |
 |                                                            |
@@ -19,15 +19,15 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC B AAAAAAA AAAA  |
+|A AAAAA BBBBB AAAAAAA BB AA BB AAA BB AAAAA B AAAAAAA AAAA  |
 |                                                            |
-|D BBBB BBBBBB BBB BBBBBB CCCCCCCC CCCCCCCCCC CCCC CCCC      |
+|B BBBB BBBBBB BBB BBBBBB AAAAAAAA AAAAAAAAAA AAAA AAAA      |
 |                                                            |
-|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
+|B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
 |                                                            |
-|  EEEEEEE                   EEEE EEE EEEEEEE EEE EEEEEEE E  |
+|  CCCCCCC                   CCCC CCC CCCCCCC CCC CCCCCCC C  |
 |                                                            |
-|D BBBBB                                                     |
+|B BBBBB                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -59,9 +59,7 @@
 |                                                            |
 |                                                            |
 === legend ===
-A #8c8c8c
+A #8a8a8a
 B #e6e6e6
-C #707070
-D #ff5f00
-E #232323 BoxBg
+C #232323 BoxBg
 ░ #ff5f00

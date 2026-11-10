@@ -184,7 +184,9 @@ var errorCodes = []struct {
 // CodeProviderError when err is a provider's failed request or response, or
 // else CodeUnknown. When err is a provider's error response, as an
 // *agent.ResponseError, it also holds the provider, the status and the body
-// it answered with, cut to MaxErrorBody bytes, at a rune boundary.
+// it answered with, cut to MaxErrorBody bytes, at a rune boundary; and when
+// err is a token endpoint's, as an *agent.TokenEndpointError, the status and
+// the body alike.
 //
 // A session that is not stored is reported with an error wrapping
 // fs.ErrNotExist, which ErrorOf leaves as CodeUnknown, since a run can fail
@@ -194,6 +196,8 @@ func ErrorOf(err error) Error {
 	e := NewError(codeOf(err), err.Error())
 	if resp, ok := errors.AsType[*agent.ResponseError](err); ok {
 		e.Provider, e.Status, e.Body = agent.ProviderID(resp.Provider), resp.StatusCode, cutBody(resp.ResponseBody, MaxErrorBody)
+	} else if tok, ok := errors.AsType[*agent.TokenEndpointError](err); ok {
+		e.Status, e.Body = tok.StatusCode, cutBody(tok.Body, MaxErrorBody)
 	}
 	return e
 }

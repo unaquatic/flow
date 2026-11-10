@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/fluid/style"
@@ -165,8 +166,8 @@ func DiffSummary(files, add, del int) []style.TextChunk {
 func BuildDiffToastLines(files []app.FileDiff) []style.StyledText {
 	const maxFiles = 6
 
-	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
-	pathFn := style.New().WithFg(style.ColorFromInts(220, 220, 220, 255)).Func()
+	dim := style.New().WithFg(mutedFg).Func()
+	pathFn := style.New().WithFg(textFg).Func()
 
 	totalAdd, totalDel := 0, 0
 	for _, f := range files {
@@ -279,8 +280,8 @@ const MaxErrorDetailLines = 20
 // few but long lines, as minified JSON or HTML is, is cut short too.
 const MaxErrorDetailBytes = 2 << 10
 
-// ErrorIndicator returns the indicator of e, the error a run ended with: for
-// a provider's error response, its provider and status, such as
+// ErrorIndicator returns the indicator of e, the error a run or a login
+// ended with: for an error response, ErrorTitle of it, such as
 // "provider-a response error (400)", over the body it answered with, as
 // ErrorBody formats it; and for another error, its message alone.
 func ErrorIndicator(e app.Error) EventIndicatorShow {
@@ -289,11 +290,22 @@ func ErrorIndicator(e app.Error) EventIndicatorShow {
 	}
 	detail, isJSON := ErrorBody(e.Body)
 	return EventIndicatorShow{
-		Text:   fmt.Sprintf("%s response error (%d)", e.Provider, e.Status),
+		Text:   ErrorTitle(e),
 		Error:  true,
 		Detail: detail,
 		JSON:   isJSON,
 	}
+}
+
+// ErrorTitle returns the headline of e, an error response, as the agent's
+// error of its kind gives it: for a failed login, a token endpoint's, such
+// as "token endpoint error (401)", and otherwise a provider's, such as
+// "provider-a response error (400)".
+func ErrorTitle(e app.Error) string {
+	if e.Code == app.CodeLoginFailed {
+		return (&agent.TokenEndpointError{StatusCode: e.Status}).Title()
+	}
+	return (&agent.ResponseError{Provider: string(e.Provider), StatusCode: e.Status}).Title()
 }
 
 // ErrorBody returns body, a provider's error response body, as the
@@ -355,10 +367,4 @@ func (s *Service) HideIndicator() []UIEvent {
 // ResetError dismisses any visible error indicator.
 func (s *Service) ResetError() []UIEvent {
 	return s.HideIndicator()
-}
-
-// SimulateError displays a representative request failure, as ShowError
-// shows the error a run ends with.
-func (s *Service) SimulateError() []UIEvent {
-	return s.ShowError(app.NewError(app.CodeProviderError, "Request Failed: Post \"https://api.example.com/v1/responses\": EOF"))
 }

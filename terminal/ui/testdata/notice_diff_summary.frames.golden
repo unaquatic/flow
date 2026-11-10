@@ -1,6 +1,5 @@
 === text ===
-|                                        |
-|  7 files  +28 -6                       |
+|■ 7 files  +28 -6                       |
 |  /work/calc/calc.go  +1 -0             |
 |  /work/calc/calc_test.go  +2 -1        |
 |  /work/calc/divide.go  +3 -2           |
@@ -10,34 +9,21 @@
 |  [1 more]                              |
 |                                        |
 |                                        |
+|                                        |
 === fg ===
+|A A AAAAA  BBB CC                       |
+|  AAAAAAAAAAAAAAAAAA  BB CC             |
+|  AAAAAAAAAAAAAAAAAAAAAAA  BB CC        |
+|  AAAAAAAAAAAAAAAAAAAA  BB CC           |
+|  AAAAAAAAAAAAAAAAAAAAAAAAA  BB CC      |
+|  AAAAAAAAAAAAAAAAA  BB CC              |
+|  AAAAAAAAAAAAAAAAAAAA  BB CC           |
+|  DD DDDDD                              |
 |                                        |
-|  A AAAAA  BBB CC                       |
-|  DDDDDDDDDDDDDDDDDD  BB CC             |
-|  DDDDDDDDDDDDDDDDDDDDDDD  BB CC        |
-|  DDDDDDDDDDDDDDDDDDDD  BB CC           |
-|  DDDDDDDDDDDDDDDDDDDDDDDDD  BB CC      |
-|  DDDDDDDDDDDDDDDDD  BB CC              |
-|  DDDDDDDDDDDDDDDDDDDD  BB CC           |
-|  EE EEEEE                              |
 |                                        |
-|                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 === legend ===
 A #e6e6e6
 B #5fc882
 C #dc646e
-D #dcdcdc
-E #8c8c8c
-░ #1f1f1f SurfaceRaised/SuccessSurface
+D #8a8a8a

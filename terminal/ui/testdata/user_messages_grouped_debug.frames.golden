@@ -1,40 +1,27 @@
 === text ===
+|■ Run the tests                         |
 |                                        |
-|  Run the tests                         |
+|■ Snapshot [c1d2e3f4]                   |
+|                                        |
+|■ Run the tests                         |
+|                                        |
+|■ Snapshot [c1d2e3f4]                   |
 |                                        |
 |                                        |
-|  Snapshot [c1d2e3f4]                   |
 |                                        |
 |                                        |
-|  Run the tests                         |
-|                                        |
-|                                        |
-|  Snapshot [c1d2e3f4]                   |
 === fg ===
+|A AAA AAA AAAAA                         |
 |                                        |
-|  AAA AAA AAAAA                         |
+|B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
+|A AAA AAA AAAAA                         |
 |                                        |
-|  BBBBBBBB BBBBBBBBBB                   |
-|                                        |
-|                                        |
-|  AAA AAA AAAAA                         |
-|                                        |
-|                                        |
-|  BBBBBBBB BBBBBBBBBB                   |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
 |                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 |                                        |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-░ #232323 BoxBg
+B #8a8a8a

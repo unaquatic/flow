@@ -157,7 +157,7 @@ func ChatMessageWithToolsExpanded(expanded bool) ChatMessageOption {
 }
 
 // ChatMessageWithExpandStyle sets how the bubble's expanded tool calls show.
-// They are ExpandedBoxed by default.
+// They are ExpandedPlain by default.
 func ChatMessageWithExpandStyle(ts ExpandedStyle) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.ExpandStyle = ts }
 }
@@ -244,6 +244,18 @@ func RoleFg(t *style.Theme, role message.Role) style.Color {
 	default:
 		return t.TextStrong
 	}
+}
+
+// RoleMarkerFg returns the color of the marker that the text of role starts
+// with in the transcript, and of the label that names role in the session
+// tree and the session list's preview: the theme's Accent for a reply, and
+// its TextBase for a prompt.
+func RoleMarkerFg(t *style.Theme, role message.Role) style.Color {
+	t = themeOrDefault(t)
+	if role == message.RoleAgent {
+		return t.Accent
+	}
+	return t.ResolveTextBase()
 }
 
 // Filled reports whether the bubble's prose fills a background, as a
@@ -499,13 +511,13 @@ func (cm *ChatMessageBox) BuildSegment(msg ChatMessage) *MessageSegment {
 	// them, under the views.
 	cache := NewCacheBox()
 	cm.AdoptBox(cache.PartBox)
-	// The turn's time and cache use show in ToolFg, as a tool call's status
-	// does.
-	footer := NewFooterBox(cm.TurnWorked(msg), ToolFg)
+	// The turn's time and cache use show in the theme's TextMuted, as a tool
+	// call's status does.
+	footer := NewFooterBox(cm.TurnWorked(msg), cm.theme.TextMuted)
 	// The footer takes the marker of the bubble's tool calls, in their color.
 	// It has nothing to expand, so it keeps the marker while they expand.
 	footer.SetMarker(cm.FooterMarker())
-	footer.SetMarkerStyle(cm.MarkerShape, cm.ToolColor.Fg())
+	footer.SetMarkerStyle(cm.MarkerShape, cm.ToolColor.Fg(cm.theme))
 	// The views and the cache row sit beside ContentBox rather than inside
 	// it, so that the content children stay aligned one-to-one with the
 	// message's parts.
@@ -717,8 +729,8 @@ func (cm *ChatMessageBox) SyncHeld() {
 
 // LiveRow returns the first row of the bubble that may still change, as
 // last laid out, and reports whether there is one: the first row of
-// LivePart, or for text, of the row that stands for the block it holds
-// back, as PendingTop finds it, since the blocks above it are whole.
+// LivePart, or for text, the row where the block it holds back will show,
+// as PendingTop finds it, since the blocks above it are whole.
 func (cm *ChatMessageBox) LiveRow() (int, bool) {
 	switch w := cm.LivePart.(type) {
 	case nil:
@@ -732,13 +744,13 @@ func (cm *ChatMessageBox) LiveRow() (int, bool) {
 	}
 }
 
-// PendingTop returns the first row, as last laid out, of the row that
-// stands for the block sm holds back while it streams: that of its last
-// child that takes rows, or sm's own when none does.
+// PendingTop returns the row, as last laid out, where the block sm holds
+// back while it streams will show, which takes no rows until then: the row
+// under its last child that takes rows, or sm's first row when none does.
 func PendingTop(sm *widget.StreamMarkdown) int {
 	for _, c := range slices.Backward(sm.Children()) {
 		if n := c.LayoutNode(); c.Visible() && n.Computed.Height > 0 {
-			return n.Computed.Y
+			return n.Computed.Y + n.Computed.Height
 		}
 	}
 	return sm.LayoutNode().Computed.Y
@@ -762,13 +774,6 @@ func (cm *ChatMessageBox) UpsertContentPart(seg *MessageSegment, id string, part
 // a Filled bubble, such as a prompt's text, inside its background.
 const proseBlockPaddingY = 1
 
-// WritingRow returns the row that stands for the block that streaming text
-// holds back until it is whole, as widget.StreamMarkdown's SetStreaming
-// describes: "Writing…" in PanelDimFg.
-func WritingRow() style.StyledText {
-	return style.NewStyledText(style.TextChunk{Text: "Writing…", Fg: PanelDimFg})
-}
-
 // NewContentPart creates the widget for a content part. The text of a system
 // message shows in a SystemBox, collapsed as a tool call is.
 func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Renderable {
@@ -788,6 +793,8 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		box := NewUsageBox(p, cm.theme, cm.fg)
 		cm.AdoptBox(box.PartBox)
 		return box
+	case ErrorPart:
+		return NewErrorView(p, cm.theme, cm.MarkerShape)
 	}
 	if view := cm.NewPartView(part); view != nil {
 		if f, ok := view.(Framed); ok {
@@ -814,7 +821,6 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		widget.StreamMarkdownWithCodeBlockMargin(PaddingX),
 		widget.StreamMarkdownWithCodeBlockFit(true),
 		widget.StreamMarkdownWithProsePadding(PaddingX),
-		widget.StreamMarkdownWithPending(WritingRow()),
 		widget.StreamMarkdownWithLayout(layout.WithWidth(layout.Percent(100))),
 	)
 	if cm.Filled() {
@@ -851,10 +857,10 @@ func TextMarkerHost(sm *widget.StreamMarkdown) *render.BaseRenderable {
 
 // DrawTextMarker draws the marker of the bubble's tool calls at the left
 // edge of the first row of sm, a text part of a reply, in the left padding
-// before its prose, while the tool marker shows: its MarkerShape in the
-// color of the reply's prose, as a tool call's marker is in the color of its
-// name. A part that has yet to stream any text gets none, and one the reply
-// is writing gets none while the blink hides it, as TextMarkerBlinks says.
+// before its prose, while the tool marker shows: its MarkerShape in
+// RoleMarkerFg. A part that has yet to stream any text gets none, and one the
+// reply is writing gets none while the blink hides it, as TextMarkerBlinks
+// says.
 func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMarkdown) {
 	x, y := sm.X(), sm.Y()
 	if !cm.ToolMarkers || sm.Height() == 0 || strings.TrimSpace(sm.Content()) == "" {
@@ -863,7 +869,7 @@ func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMa
 	if cm.TextMarkerBlinks(sm) && cm.Blink.Off {
 		return
 	}
-	fg, bg := cm.fg, buf.Cell(x, y).Bg
+	fg, bg := RoleMarkerFg(cm.theme, message.RoleAgent), buf.Cell(x, y).Bg
 	if cm.MarkerShape.Filled() {
 		bg = fg
 	}
@@ -904,8 +910,8 @@ func (cm *ChatMessageBox) Writing(sm *widget.StreamMarkdown) bool {
 // TextMarkerBlinks reports whether the marker DrawTextMarker draws before
 // sm blinks: while the blink runs and the reply is Writing sm. A bubble
 // that Holds, as in inline mode, blinks it only while the first row of sm
-// is the row that stands for the block it holds back, which stays in the
-// live area: a row that scrolls into the terminal's scrollback cannot be
+// is where the block it holds back will show, which stays in the live
+// area: a row that scrolls into the terminal's scrollback cannot be
 // redrawn, and would keep the marker hidden there.
 func (cm *ChatMessageBox) TextMarkerBlinks(sm *widget.StreamMarkdown) bool {
 	if cm.Blink == nil || !cm.Blink.On.Load() || !cm.Writing(sm) {
@@ -1036,15 +1042,16 @@ func (cm *ChatMessageBox) Boxes() iter.Seq[*PartBox] {
 
 // AdoptBox shows box, the PartBox of one of the bubble's parts or views, as
 // the bubble shows the others: with its blink, as its tool call style,
-// markers, and name color say, expanded as they are, and spaced from the
-// rows around it each time its shape changes.
+// markers, and name color say, expanded as they are, or expanded whatever
+// they are when it is KeepExpanded, and spaced from the rows around it each
+// time its shape changes.
 func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
 	box.Blink = cm.Blink
 	box.SetStyle(cm.ExpandStyle)
 	box.SetMarker(cm.ToolMarkers)
-	box.SetNameFg(cm.ToolColor.Fg())
+	box.SetNameFg(cm.ToolColor.Fg(cm.theme))
 	box.SetMarkerShape(cm.MarkerShape)
-	box.SetExpanded(cm.ToolsExpanded)
+	box.SetExpanded(cm.ToolsExpanded || box.KeepExpanded)
 	// A click that expands the box, or collapses it, changes whether it
 	// stacks with the rows around it.
 	box.OnShapeChange = cm.SyncRows
@@ -1052,24 +1059,25 @@ func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
 
 // TogglesTools reports whether SetToolsExpanded(expanded) would show or hide
 // the details of any box shown in the bubble, such as a tool call's or a
-// step's changes.
+// step's changes. A KeepExpanded box is not among them.
 func (cm *ChatMessageBox) TogglesTools(expanded bool) bool {
 	for b := range cm.Boxes() {
-		if b.Expandable && b.Visible() && b.Expanded != expanded {
+		if b.FollowsToolsExpanded() && b.Visible() && b.Expanded != expanded {
 			return true
 		}
 	}
 	return false
 }
 
-// SetToolsExpanded shows or hides the details of every Expandable box in the
-// bubble, such as its tool calls and the changes of its steps, and of those
-// added to it later. A box already shown that way is left alone, so that it
-// is not laid out and painted again.
+// SetToolsExpanded shows or hides the details of every box in the bubble
+// that follows Ctrl+O, as FollowsToolsExpanded reports, such as its tool
+// calls and the changes of its steps, and of those added to it later. A box
+// already shown that way is left alone, so that it is not laid out and
+// painted again, and so is a KeepExpanded one.
 func (cm *ChatMessageBox) SetToolsExpanded(expanded bool) {
 	cm.ToolsExpanded = expanded
 	for b := range cm.Boxes() {
-		if b.Expandable && b.Expanded != expanded {
+		if b.FollowsToolsExpanded() && b.Expanded != expanded {
 			b.SetExpanded(expanded)
 		}
 	}
@@ -1127,10 +1135,10 @@ func (cm *ChatMessageBox) SetToolColor(c ToolNameColor) {
 	}
 	cm.ToolColor = c
 	for b := range cm.Boxes() {
-		b.SetNameFg(c.Fg())
+		b.SetNameFg(c.Fg(cm.theme))
 	}
 	for _, seg := range cm.segments {
-		seg.Footer.SetMarkerStyle(cm.MarkerShape, c.Fg())
+		seg.Footer.SetMarkerStyle(cm.MarkerShape, c.Fg(cm.theme))
 	}
 	cm.RepaintTextMarkers()
 	cm.RestyleViews()
@@ -1151,7 +1159,7 @@ func (cm *ChatMessageBox) SetMarkerShape(m MarkerShape) {
 		cm.PromptRail.SetShape(m)
 	}
 	for _, seg := range cm.segments {
-		seg.Footer.SetMarkerStyle(m, cm.ToolColor.Fg())
+		seg.Footer.SetMarkerStyle(m, cm.ToolColor.Fg(cm.theme))
 	}
 	cm.RepaintTextMarkers()
 	cm.RestyleViews()
@@ -1172,7 +1180,7 @@ func (cm *ChatMessageBox) SetDebug(on bool) {
 // ViewStyle returns how the bubble shows its parts, which the views of
 // extensions follow.
 func (cm *ChatMessageBox) ViewStyle() ViewStyle {
-	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(), Debug: cm.Debug}
+	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug}
 }
 
 // RestyleViews shows the bubble's StyledViews in its ViewStyle.

@@ -1,11 +1,9 @@
 package ui
 
 import (
-	"errors"
 	"fmt"
 	"math"
 
-	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/style"
 )
@@ -105,40 +103,6 @@ func Truncate(s string, n int) string {
 		cut--
 	}
 	return s[:cut] + "…"
-}
-
-// ErrorHeader returns a human-readable header for the error type.
-func ErrorHeader(err error) string {
-	var respErr *agent.ResponseError
-	var reqErr *agent.RequestError
-	var parseErr *agent.ResponseParseError
-	switch {
-	case errors.As(err, &respErr):
-		return fmt.Sprintf("Provider Error (%d)", respErr.StatusCode)
-	case errors.As(err, &reqErr):
-		return "Request Failed"
-	case errors.As(err, &parseErr):
-		return "Response Parse Error"
-	case errors.Is(err, agent.ErrNotAuthenticated):
-		return "Authentication Error"
-	case errors.Is(err, agent.ErrTokenEndpoint):
-		return "Token Error"
-	case errors.Is(err, agent.ErrDeviceCodeExpired):
-		return "Device Code Expired"
-	case errors.Is(err, agent.ErrProviderNotRegistered):
-		return "Provider Not Registered"
-	default:
-		return "Error"
-	}
-}
-
-// ErrorDetail returns the provider message for a response error and err.Error()
-// for other errors.
-func ErrorDetail(err error) string {
-	if respErr, ok := errors.AsType[*agent.ResponseError](err); ok {
-		return respErr.Message
-	}
-	return err.Error()
 }
 
 // JoinStyledLines joins styled text with newline chunks.

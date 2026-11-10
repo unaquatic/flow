@@ -1,5 +1,4 @@
 === text ===
-|                                                            |
 |  Grep TODO [2 matches]                                     |
 |                                                            |
 |  [path calculator] [include *.go]                          |
@@ -8,28 +7,17 @@
 |  calculator/calc_test.go:9:// TODO: test Divide            |
 |                                                            |
 |                                                            |
-=== fg ===
 |                                                            |
+=== fg ===
 |  AAAA AAAA AA AAAAAAAA                                     |
 |                                                            |
-|  BBBBB BBBBBBBBBBB BBBBBBBB BBBBB                          |
+|  AAAAA AAAAAAAAAAA AAAAAAAA AAAAA                          |
 |                                                            |
-|  CCCCCCCCCCCCCCCCCCCCCCC CCCCC CCCCCC CCCCCCCC             |
-|  CCCCCCCCCCCCCCCCCCCCCCCCCCCC CCCCC CCCC CCCCCC            |
+|  BBBBBBBBBBBBBBBBBBBBBBB BBBBB BBBBBB BBBBBBBB             |
+|  BBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBB BBBB BBBBBB            |
 |                                                            |
 |                                                            |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                            |
 === legend ===
-A #8c8c8c
-B #8a8a8a
-C #e6e6e6
-░ #1f1f1f SurfaceRaised/SuccessSurface
+A #8a8a8a
+B #e6e6e6

@@ -302,6 +302,46 @@ func TestResumeRestoresModel(t *testing.T) {
 	})
 }
 
+// TestSessionSwitchKeepsTheDefault checks that opening a session runs the
+// model its transcript last ran for that session alone: the config file's
+// default model stays, a new session starts on the terminal's default, and
+// so does a session whose transcript names no model. Choosing a model in
+// the menu while in such a session makes it the default for new sessions.
+func TestSessionSwitchKeepsTheDefault(t *testing.T) {
+	ran := agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}
+	s, a := newTestService(t)
+	start := s.state.Model
+	id := message.NewSessionID()
+	storeVariantMessage(t, a, id, ran)
+
+	s.HandleSessionSelect(id)
+	if s.state.Model != ran.String() {
+		t.Fatalf("model after the switch = %q, want %s", s.state.Model, ran)
+	}
+	if got, err := a.Models().Default(); got != start || err != nil {
+		t.Errorf("app default model after the switch = %q, %v, want %q kept", got, err, start)
+	}
+
+	s.ClearMessages()
+	if s.state.Model != start || s.state.ModelLabel != start || s.state.ReasoningEffort != "" {
+		t.Errorf("new session: model, label, level = %q, %q, %q, want %q at no level", s.state.Model, s.state.ModelLabel, s.state.ReasoningEffort, start)
+	}
+
+	s.HandleSessionSelect(id)
+	s.state.Messages = nil
+	s.RestoreSessionModel()
+	if s.state.Model != start {
+		t.Errorf("session that names no model: model = %q, want the default %q", s.state.Model, start)
+	}
+
+	s.HandleSessionSelect(id)
+	s.SelectModel("provider-a/provider-a/model-c:low")
+	s.ClearMessages()
+	if want := "provider-a/provider-a/model-c:low"; s.state.Model != want {
+		t.Errorf("new session after choosing a model = %q, want %q", s.state.Model, want)
+	}
+}
+
 // TestSessionUsagePricesModes checks that a reply is priced at the price of
 // the variant its model ran as, named as the catalog names it or as flow
 // named a mode before.

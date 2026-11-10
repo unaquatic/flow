@@ -27,7 +27,7 @@ func TestLineCount(t *testing.T) {
 // alone, its status the number of lines of its text, and that a new form of
 // the part counts its lines again.
 func TestSystemBox_ShowsItsLines(t *testing.T) {
-	b := NewSystemBox(message.TextPart{ID: "s1-text", Text: "You are flow.\n\nBe concise."}, nil, ToolFg)
+	b := NewSystemBox(message.TextPart{ID: "s1-text", Text: "You are flow.\n\nBe concise."}, nil, DefaultTheme().TextMuted)
 	if got := b.Header.PlainText(); got != ContextLabel {
 		t.Errorf("header = %q, want %q", got, ContextLabel)
 	}

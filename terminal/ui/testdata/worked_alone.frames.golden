@@ -1,18 +1,18 @@
 === text ===
-|  Bash go test ./...                                                            |
+|■ Bash go test ./...                                                            |
 |                                                                                |
-|  Done [3s]                                                                     |
+|■ Done [3s]                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === fg ===
-|  AAAA AA AAAA AAAAA                                                            |
+|A AAAA AA AAAA AAAAA                                                            |
 |                                                                                |
-|  AAAA AAAA                                                                     |
+|A AAAA AAAA                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === legend ===
-A #8c8c8c
+A #8a8a8a

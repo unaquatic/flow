@@ -1,0 +1,21 @@
+=== text ===
+|  Todo [1/3] [queued]                                       |
+|                                                            |
+|  [✓] Find the source and tests                             |
+|  [–] Add Divide                                            |
+|  [ ] Run the package tests                                 |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|  AAAA AAAAA AAAAAAAA                                       |
+|                                                            |
+|  AAA AAAA AAA AAAAAA AAA AAAAA                             |
+|  BBB BBB BBBBBB                                            |
+|  A A AAA AAA AAAAAAA AAAAA                                 |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8a8a8a
+B #e6e6e6

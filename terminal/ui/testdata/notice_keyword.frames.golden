@@ -1,19 +1,13 @@
 === text ===
+|■ Switched to provider-a/provider-a/model-a:high as the defaul  |
 |                                                                |
-|  Switched to provider-a/provider-a/model-a:high as the defaul  |
 |                                                                |
 |                                                                |
 === fg ===
+|A AAAAAAAA AA BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB AA AAA AAAAAA  |
 |                                                                |
-|  AAAAAAAA AA BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB AA AAA AAAAAA  |
 |                                                                |
-|                                                                |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                                |
 === legend ===
 A #e6e6e6
 B #ff5f00
-░ #1f1f1f SurfaceRaised/SuccessSurface

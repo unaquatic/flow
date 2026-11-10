@@ -1,15 +1,16 @@
 === text ===
-|  Done.                                                                         |
+|■ Done.                                                                         |
 |                                                                                |
-|  Done [42s]                                                                    |
+|■ Done [42s]                                                                    |
 |                                                                                |
 |                                                                                |
 === fg ===
-|  AAAAA                                                                         |
+|A BBBBB                                                                         |
 |                                                                                |
-|  BBBB BBBBB                                                                    |
+|C CCCC CCCCC                                                                    |
 |                                                                                |
 |                                                                                |
 === legend ===
-A #e6e6e6
-B #8c8c8c
+A #eb7513
+B #e6e6e6
+C #8a8a8a

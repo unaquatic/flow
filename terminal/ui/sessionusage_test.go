@@ -90,7 +90,7 @@ func TestContextChunk(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ContextChunk(tt.usage, panelTextFg, nil).Text; got != tt.want {
+			if got := ContextChunk(tt.usage, mutedFg, nil).Text; got != tt.want {
 				t.Errorf("context = %q, want %q", got, tt.want)
 			}
 		})
@@ -177,7 +177,7 @@ func TestContextChunkColor(t *testing.T) {
 	th := DefaultTheme()
 	name := func(c style.Color) string {
 		switch c {
-		case panelTextFg:
+		case th.TextMuted:
 			return "text"
 		case th.Warning:
 			return "warning"
@@ -197,7 +197,7 @@ func TestContextChunkColor(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			chunk := ContextChunk(SessionUsage{Context: tt.context, Window: 100}, panelTextFg, th)
+			chunk := ContextChunk(SessionUsage{Context: tt.context, Window: 100}, th.TextMuted, th)
 			if got := name(chunk.Fg); got != tt.want {
 				t.Errorf("context color = %s, want %s", got, tt.want)
 			}

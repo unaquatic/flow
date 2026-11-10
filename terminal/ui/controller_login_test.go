@@ -405,6 +405,11 @@ func TestAccountMenu(t *testing.T) {
 	if show.SelectedIdx != 1 {
 		t.Errorf("menu selects %d, want the active newer account at 1", show.SelectedIdx)
 	}
+	for i, want := range []string{"[api_key] [store]", "[api_key] [store] [active]"} {
+		if got := show.Items[i].Description; got != want {
+			t.Errorf("account %d reads %q, want %q", i, got, want)
+		}
+	}
 
 	s.HandleBannerSelect(show.Items[0].Value)
 	if st := providerAStatus(t, a); st.Active != older {
@@ -418,8 +423,9 @@ func TestAccountMenu(t *testing.T) {
 	}
 }
 
-// TestModelLabel checks that the label under the input and /status show the
-// model alone, whatever account is active.
+// TestModelLabel checks that the label under the input shows the model
+// alone, whatever account is active, and that /status shows the provider
+// and then the model without it.
 func TestModelLabel(t *testing.T) {
 	s, a := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -430,8 +436,11 @@ func TestModelLabel(t *testing.T) {
 		t.Fatal("/status shows no notice")
 	}
 	status, _ := toastOf(events[i])
-	if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == "Model     provider-a/model" }) {
-		t.Errorf("/status lines = %+v, want the model alone", status.Lines)
+	row := func(text string) int {
+		return slices.IndexFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
+	}
+	if p, m := row("Provider  provider-a"), row("Model     model"); p < 0 || m != p+1 {
+		t.Errorf("/status lines = %+v, want the provider row and then the model without it", status.Lines)
 	}
 
 	out := s.ApplyAgentEvent(app.EventAccountsChanged{Provider: providerA, Active: id})

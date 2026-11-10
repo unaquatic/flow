@@ -1,17 +1,18 @@
 === text ===
-|  Running the tests.                    |
+|■ Running the tests.                    |
 |                                        |
-|  Bash go test ./... [interrupted]      |
+|■ Bash go test ./... [interrupted]      |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAA                    |
+|A BBBBBBB BBB BBBBBB                    |
 |                                        |
-|  BBBB BB BBBB BBBBB BBBBBBBBBBBBB      |
+|C CCCC CC CCCC CCCCC CCCCCCCCCCCCC      |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
+A #eb7513
+B #e6e6e6
+C #8a8a8a

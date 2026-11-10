@@ -1,0 +1,34 @@
+=== text ===
+|■ Planning the change.                  |
+|                                        |
+|■ Read calc.go                          |
+|                                        |
+|■ Todo [1/3]                            |
+|                                        |
+|  [✓] Read calc.go                      |
+|  [–] Add Divide                        |
+|  [ ] Run the tests                     |
+|                                        |
+|■ Bash go test ./...                    |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A BBBBBBBB BBB BBBBBBB                  |
+|                                        |
+|C CCCC CCCCCCC                          |
+|                                        |
+|C CCCC CCCCC                            |
+|                                        |
+|  CCC CCCC CCCCCCC                      |
+|  BBB BBB BBBBBB                        |
+|  C C CCC CCC CCCCC                     |
+|                                        |
+|C CCCC CC CCCC CCCCC                    |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #eb7513
+B #e6e6e6
+C #8a8a8a

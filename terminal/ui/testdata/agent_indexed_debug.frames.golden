@@ -1,43 +1,30 @@
 === text ===
+|■ Run the tests                         |
 |                                        |
-|  Run the tests                         |
+|■ Snapshot [c1d2e3f4]                   |
+|                                        |
+|■ Running the tests.                    |
+|                                        |
+|■ Bash go test ./... [interrupted]      |
+|■ Snapshot [c1d2e3f4]                   |
 |                                        |
 |                                        |
-|  Snapshot [c1d2e3f4]                   |
-|                                        |
-|  Running the tests.                    |
-|                                        |
-|  Bash go test ./... [interrupted]      |
-|  Snapshot [c1d2e3f4]                   |
 |                                        |
 |                                        |
 === fg ===
+|A AAA AAA AAAAA                         |
 |                                        |
-|  AAA AAA AAAAA                         |
+|B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
+|C AAAAAAA AAA AAAAAA                    |
 |                                        |
-|  BBBBBBBB BBBBBBBBBB                   |
-|                                        |
-|  AAAAAAA AAA AAAAAA                    |
-|                                        |
-|  BBBB BB BBBB BBBBB BBBBBBBBBBBBB      |
-|  BBBBBBBB BBBBBBBBBB                   |
-|                                        |
-|                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
+|B BBBB BB BBBB BBBBB BBBBBBBBBBBBB      |
+|B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-░ #232323 BoxBg
+B #8a8a8a
+C #eb7513

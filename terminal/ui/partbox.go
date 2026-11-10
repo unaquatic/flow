@@ -71,7 +71,7 @@ type PartBox struct {
 	// box's shows through it.
 	Header *widget.Text
 	// Status shows the content's status, such as "[queued]", right after
-	// Header, in ToolFg. It is gone while the status is empty.
+	// Header, in the theme's TextMuted. It is gone while the status is empty.
 	Status *widget.Text
 	// Details holds the widgets the Content shows while the box is Open.
 	Details *widget.Box
@@ -85,6 +85,11 @@ type PartBox struct {
 	// Expandable reports whether a click on the header and Ctrl+O expand
 	// the box. A box that is not stays collapsed.
 	Expandable bool
+	// KeepExpanded shows the box expanded whatever Ctrl+O says, as for a
+	// todo list, which is read whole: the transcript adopts it expanded,
+	// and Ctrl+O leaves it as it is. A click on its header still expands
+	// and collapses it.
+	KeepExpanded bool
 	// Marked reports whether the box shows Marker as /settings says, as a
 	// tool call does.
 	Marked bool
@@ -93,7 +98,8 @@ type PartBox struct {
 	// MarkerOn reports that SetMarker shows Marker. It is off by default.
 	MarkerOn bool
 	// NameFg colors the name the Content writes in Header, and Marker unless
-	// MarkerFg is set, as SetNameFg sets it. It is ToolFg by default.
+	// MarkerFg is set, as SetNameFg sets it. It is the theme's TextMuted by
+	// default.
 	NameFg style.Color
 	// MarkerFg, when set, colors Marker in place of NameFg, as for a box
 	// whose header starts with a title rather than a tool's name.
@@ -126,11 +132,12 @@ type PartBox struct {
 
 var _ Framed = (*PartBox)(nil)
 
-// NewPartBox creates a collapsed, expandable box, a block on surface, padded
-// by a row above and below and by PaddingX at the sides, whose Header is in
-// fg. Its Shape is ShapeByStyle and its Style ExpandedBoxed, so that it
-// shows as a row until the caller says otherwise and calls ShowShape. The
-// caller sets Content before the box shows its header.
+// NewPartBox creates a collapsed, expandable box whose Header is in fg, and
+// whose block, in ExpandedBoxed, fills surface, padded by a row above and
+// below and by PaddingX at the sides. Its Shape is ShapeByStyle and its Style
+// ExpandedPlain, so that it shows as a row until the caller says otherwise
+// and calls ShowShape. The caller sets Content before the box shows its
+// header.
 func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 	theme = themeOrDefault(theme)
 	b := &PartBox{
@@ -148,10 +155,10 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 		HeaderRow: widget.NewBox(
 			widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
 		),
-		Marker: NewMarker(MarkerSquare, ToolFg),
+		Marker: NewMarker(MarkerSquare, theme.TextMuted),
 		Header: widget.NewText("", widget.TextWithFg(fg)),
 		Status: widget.NewText("",
-			widget.TextWithFg(ToolFg),
+			widget.TextWithFg(theme.TextMuted),
 			widget.TextWithTruncate(true),
 			widget.TextWithLayout(layout.WithFlexShrink(0)),
 		),
@@ -164,7 +171,7 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 		),
 		Expandable: true,
 		Marked:     true,
-		NameFg:     ToolFg,
+		NameFg:     theme.TextMuted,
 		Surface:    surface,
 	}
 	// Header shrinks, and Status does not, when the two do not fit.
@@ -347,6 +354,10 @@ func (b *PartBox) ShowOpen() {
 
 // ToggleExpanded shows or hides Details.
 func (b *PartBox) ToggleExpanded() { b.SetExpanded(!b.Expanded) }
+
+// FollowsToolsExpanded reports whether Ctrl+O expands and collapses the box:
+// whether it is Expandable and not KeepExpanded.
+func (b *PartBox) FollowsToolsExpanded() bool { return b.Expandable && !b.KeepExpanded }
 
 // ToggleInPlace shows or hides Details as a click on the header does,
 // keeping the header on the row it was clicked on. A scroll box that holds

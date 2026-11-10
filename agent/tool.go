@@ -38,6 +38,11 @@ type PropertySchema struct {
 	Enum []string `json:"enum,omitempty"`
 	// Items describes array elements.
 	Items *PropertySchema `json:"items,omitempty"`
+	// Properties contains the named fields of an object, such as each
+	// element of an array of objects.
+	Properties map[string]PropertySchema `json:"properties,omitempty"`
+	// Required lists the mandatory fields of an object.
+	Required []string `json:"required,omitempty"`
 }
 
 // Tool describes a model-visible tool and its local implementation.

@@ -22,9 +22,9 @@
 |AA AA   BBBB BBBBBBBB BBBBBBBB      |
 |AAAAA   BBBB  BBBBBB   BB  BB       |
 |                                    |
-|CCCCCC CCCC CCCCCCC CCCCC           |
-|  AAAA CCCCCCCCC CCCCCCCCCCCCCCCCCCC|
-|  CCCCCCCCCCCCCCCCC                 |
+|BBBBBB BBBB BBBBBBB BBBBB           |
+|  AAAA BBBBBBBBB BBBBBBBBBBBBBBBBBBB|
+|  BBBBBBBBBBBBBBBBB                 |
 |                                    |
 === attrs ===
 |                                    |
@@ -42,5 +42,4 @@
 |                                    |
 === legend ===
 A #ff5f00
-B #e4e4e4
-C #e6e6e6
+B #e6e6e6

@@ -1,22 +1,23 @@
 === text ===
-|  Updated the calculator.               |
+|■ Updated the calculator.               |
 |                                        |
-|  Diff 1 file  +2 -0                    |
+|■ Diff 1 file  +2 -0                    |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAAAAAAA               |
+|A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
-|  AAAA A AAAA  BB CC                    |
+|B BBBB B BBBB  CC DD                    |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #5fc882
-C #dc646e
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e

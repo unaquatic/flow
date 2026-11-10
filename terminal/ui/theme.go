@@ -7,9 +7,16 @@ import "github.com/unaquatic/fluid/style"
 // theme's TextBase.
 var textFg = DefaultTheme().TextBase
 
-// DefaultTheme returns a new default palette for the chat UI: Darcula Solid.
+// mutedFg is the dim text the UI draws outside of the theme: the count and
+// the keys after a panel's title, menu descriptions and values, the labels
+// of the Usage box and the diff toast, the indicator, the input's
+// placeholder, and the words between keys in the hints: the default theme's
+// TextMuted.
+var mutedFg = DefaultTheme().TextMuted
+
+// DefaultTheme returns a new default palette for the chat UI: Dark Flow.
 func DefaultTheme() *style.Theme {
-	return style.DarculaSolid()
+	return style.DarkFlow()
 }
 
 // themeOrDefault returns t, or a new default theme when t is nil.

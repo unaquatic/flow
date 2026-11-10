@@ -1,21 +1,15 @@
 === text ===
+|■ Run the tests                         |
 |                                        |
-|  Run the tests                         |
+|■ All tests pass.                       |
 |                                        |
 |                                        |
-|  All tests pass.                       |
 === fg ===
+|A AAA AAA AAAAA                         |
 |                                        |
-|  AAA AAA AAAAA                         |
-|                                        |
-|                                        |
-|  AAA AAAAA AAAAA                       |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|B AAA AAAAA AAAAA                       |
 |                                        |
 |                                        |
 === legend ===
 A #e6e6e6
-░ #232323 BoxBg
+B #eb7513

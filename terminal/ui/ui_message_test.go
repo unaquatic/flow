@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/extension/snapshot"
@@ -102,6 +104,36 @@ func TestMessageUpdatesKeepOneWidgetPerPart(t *testing.T) {
 	}
 }
 
+// TestMessageErrorKeepsOneView checks that the error a message failed with
+// shows in one ErrorView after its parts, whose line and body read as the
+// indicator's do, however often the message updates, and that the latest
+// error replaces the one before it.
+func TestMessageErrorKeepsOneView(t *testing.T) {
+	ui := newInlineTestUI(t)
+	msg := agentText("a1", "Reading the file.")
+	ui.AddMessage(msg)
+	msg.Error = errors.New("connection reset by peer")
+	ui.UpdateMessage(msg)
+	msg.Error = &agent.ResponseError{Provider: "gw", StatusCode: 401, ResponseBody: `{"error":"bad key"}`}
+	ui.UpdateMessage(msg)
+
+	var views []*ErrorView
+	for _, child := range ui.messageWidgets["a1"].SegmentFor("a1").ContentBox.Children() {
+		if v, ok := child.(*ErrorView); ok {
+			views = append(views, v)
+		}
+	}
+	if len(views) != 1 {
+		t.Fatalf("got %d error views, want 1", len(views))
+	}
+	if got, want := views[0].Label.Content().PlainText(), IndicatorErrorTitle+" gw response error (401)"; got != want {
+		t.Errorf("line = %q, want %q", got, want)
+	}
+	if got, want := views[0].Detail.Content().PlainText(), "{\n  \"error\": \"bad key\"\n}"; !views[0].Detail.Visible() || got != want {
+		t.Errorf("body = %q (shown %v), want %q", got, views[0].Detail.Visible(), want)
+	}
+}
+
 // TestMessagesHoldThePartsBefore checks that each message holds the parts of
 // the message before it, which the views of extensions show it against,
 // whether the transcript streams in or is loaded, and that the first holds
@@ -184,6 +216,39 @@ func TestToolBoxSkipsEqualTool(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestCtrlOLeavesKeptToolsExpanded checks that a call whose view keeps it
+// expanded, as a todo call's does, starts expanded among collapsed calls,
+// that Ctrl+O, expanding and collapsing the others, leaves it so, and that
+// TogglesTools does not count it.
+func TestCtrlOLeavesKeptToolsExpanded(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.AddMessage(agentParts("a1",
+		message.ToolPart{ID: "t1", CallID: "t1", Name: "todo", State: message.ToolStateCompleted{
+			Input: json.RawMessage(`{"todos":[{"content":"Add Divide","status":"in_progress"}]}`), Output: "[–] Add Divide"}},
+		message.ToolPart{ID: "t2", CallID: "t2", Name: "bash", State: message.ToolStateCompleted{
+			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}},
+	))
+	boxes := slices.Collect(ui.messageWidgets["a1"].ToolBoxes())
+	check := func(when string, todo, bash bool) {
+		t.Helper()
+		if boxes[0].Expanded != todo || boxes[1].Expanded != bash {
+			t.Errorf("%s: todo expanded %v, bash %v; want %v, %v", when, boxes[0].Expanded, boxes[1].Expanded, todo, bash)
+		}
+	}
+	check("new", true, false)
+	if ui.TogglesTools(false) {
+		t.Error("TogglesTools(false) = true with only the todo call expanded")
+	}
+	press := func() {
+		t.Helper()
+		ui.HandleKey(input.NewParser().Parse([]byte("\x0f"))[0].Key) // Ctrl+O
+	}
+	press()
+	check("Ctrl+O", true, true)
+	press()
+	check("Ctrl+O again", true, false)
 }
 
 // TestCtrlOTogglesTools checks that tool calls and step changes start
@@ -525,29 +590,35 @@ func TestToolMarkersSet(t *testing.T) {
 		return -1
 	}
 
-	check("new", false)
+	check("new", true)
 	shown := headerX()
 	if shown != PaddingX {
 		t.Fatalf("header at column %d, want %d, where prose starts", shown, PaddingX)
 	}
-	ui.Apply(ui.service.SetToolMarkers(true))
-	check("shown", true)
+	ui.Apply(ui.service.SetToolMarkers(false))
+	check("hidden", false)
 	if x := headerX(); x != shown {
-		t.Errorf("header at column %d with the marker, want %d, as without it", x, shown)
+		t.Errorf("header at column %d without the marker, want %d, as with it", x, shown)
 	}
 	ui.AddMessage(agentParts("a2", bash("t2")))
-	check("added shown", true, true)
-	// An expanded call shows no marker, and its name stays in its column.
+	check("added hidden", false, false)
+	ui.Apply(ui.service.SetToolMarkers(true))
+	check("shown", true, true)
+	// An expanded call keeps its marker while plain, and shows none while
+	// boxed, and its name stays in its column.
 	expandTools(ui)
-	check("expanded", false, false)
+	check("expanded plain", true, true)
 	if x := headerX(); x != shown {
 		t.Errorf("expanded header at column %d, want %d, as collapsed", x, shown)
+	}
+	ui.Apply(ui.service.SetExpandStyle(ExpandedBoxed))
+	check("expanded boxed", false, false)
+	if x := headerX(); x != shown {
+		t.Errorf("expanded boxed header at column %d, want %d, as collapsed", x, shown)
 	}
 	ui.service.SetToolsExpanded(false)
 	ui.SetToolsExpanded(false)
 	check("collapsed again", true, true)
-	ui.Apply(ui.service.SetToolMarkers(false))
-	check("hidden", false, false)
 }
 
 // TestToolColorSet checks that the tool name color applies to the marker and
@@ -560,6 +631,7 @@ func TestToolColorSet(t *testing.T) {
 			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}
 	}
 	ui.AddMessage(agentParts("a1", bash("t1")))
+	muted := ui.theme.TextMuted
 	check := func(when string, want style.Color, calls int) {
 		t.Helper()
 		n := 0
@@ -571,9 +643,9 @@ func TestToolColorSet(t *testing.T) {
 			for box := range cm.ToolBoxes() {
 				n++
 				chunks := box.Header.Content().Chunks
-				if box.Marker.Fg() != want || chunks[0].Fg != want || chunks[len(chunks)-1].Fg != ToolFg {
+				if box.Marker.Fg() != want || chunks[0].Fg != want || chunks[len(chunks)-1].Fg != muted {
 					t.Errorf("%s: marker %v, name %v, input %v; want the marker and the name %v, the input %v",
-						when, box.Marker.Fg(), chunks[0].Fg, chunks[len(chunks)-1].Fg, want, ToolFg)
+						when, box.Marker.Fg(), chunks[0].Fg, chunks[len(chunks)-1].Fg, want, muted)
 				}
 			}
 		}
@@ -582,13 +654,13 @@ func TestToolColorSet(t *testing.T) {
 		}
 	}
 
-	check("new", ToolFg, 1)
+	check("new", muted, 1)
 	ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 	check("white", titleFg, 1)
 	ui.AddMessage(agentParts("a2", bash("t2")))
 	check("added white", titleFg, 2)
 	ui.Apply(ui.service.SetToolColor(ToolNameGray))
-	check("gray", ToolFg, 2)
+	check("gray", muted, 2)
 }
 
 // TestExpandStyleSet checks that the expanded style applies to the calls
@@ -629,12 +701,12 @@ func TestExpandStyleSet(t *testing.T) {
 	}
 
 	check("new", "row")
-	ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
-	check("plain collapsed", "row")
-	expandTools(ui)
-	check("plain expanded", "plain")
-	ui.AddMessage(agentParts("a2", bash("t2")))
-	check("added plain expanded", "plain", "plain")
 	ui.Apply(ui.service.SetExpandStyle(ExpandedBoxed))
-	check("boxed expanded", "boxed", "boxed")
+	check("boxed collapsed", "row")
+	expandTools(ui)
+	check("boxed expanded", "boxed")
+	ui.AddMessage(agentParts("a2", bash("t2")))
+	check("added boxed expanded", "boxed", "boxed")
+	ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+	check("plain expanded", "plain", "plain")
 }

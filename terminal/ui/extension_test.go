@@ -101,7 +101,7 @@ func TestExtension_PartView(t *testing.T) {
 	ui.Apply(ui.service.SetDebug(true))
 	ui.Apply(ui.service.SetToolMarkers(true))
 	last := view.Styles[len(view.Styles)-1]
-	if !last.Debug || !last.ToolMarkers || last.NameFg != ToolNameGray.Fg() {
+	if !last.Debug || !last.ToolMarkers || last.NameFg != ToolNameGray.Fg(nil) {
 		t.Errorf("view style = %+v, want debug and markers on, in the tool name color", last)
 	}
 }

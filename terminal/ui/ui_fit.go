@@ -94,8 +94,8 @@ func (ui *UI) KeepInputBoxInView() {
 //
 // Inline mode needs the live area on screen. The terminal scrolls the rows
 // above its screen into the scrollback, where they cannot be redrawn, so a
-// box taller than the screen, or one that pushed a running call or the
-// "Writing…" row above it, could not be redrawn in place as they change.
+// box taller than the screen, or one that pushed a running call or the text
+// a reply is writing above it, could not be redrawn in place as they change.
 // The spare row is where the renderer scrolls the rows the transcript gains
 // in, above the live area, without redrawing it.
 func (ui *UI) FitInputBox(height int) {
@@ -112,7 +112,7 @@ func (ui *UI) FitInputBox(height int) {
 // ReserveLiveRows returns the rows FitInputBox keeps for the live rows of
 // the transcript: those LiveRows counts, and while a run goes on, the most
 // it has counted since the run began. Each step of a run brings live rows
-// and ends them, as a reply's "Writing…" row and a call that runs, and
+// and ends them, as a reply's text and a call that runs, and
 // keeping their rows for the whole run keeps the input box from growing and
 // shrinking, and its text from moving, at every step.
 func (ui *UI) ReserveLiveRows() int {

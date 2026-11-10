@@ -1,8 +1,7 @@
 === text ===
-|  Updated the calculator.               |
+|■ Updated the calculator.               |
 |                                        |
-|                                        |
-|  Diff                                  |
+|■ Diff                                  |
 |  2 files  +2 -1                        |
 |                                        |
 |  calc.go  +2 -0                        |
@@ -17,48 +16,30 @@
 |                                        |
 |                                        |
 |                                        |
+|                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAAAAAAA               |
+|A BBBBBBB BBB BBBBBBBBBBB               |
+|                                        |
+|B BBBB                                  |
+|  B BBBBB  CC DD                        |
+|                                        |
+|  BBBBBBB  CC DD                        |
+|  BB BBBB BBBB BB                       |
+|   BBBBBBB BBBB                         |
+|  E                                     |
+|  EEEEEEE EEEEEEEE                      |
+|                                        |
+|  BBBBBB  CC DD                         |
+|  BB BB BBBB BB                         |
+|  FFFFFFFF FFFF                         |
 |                                        |
 |                                        |
-|  AAAA                                  |
-|  A AAAAA  BB CC                        |
-|                                        |
-|  AAAAAAA  BB CC                        |
-|  AA AAAA AAAA AA                       |
-|   AAAAAAA AAAA                         |
-|  D                                     |
-|  DDDDDDD DDDDDDDD                      |
-|                                        |
-|  AAAAAA  BB CC                         |
-|  AA AA AAAA AA                         |
-|  EEEEEEEE EEEE                         |
-|                                        |
-|                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #5fc882
-C #dc646e
-D #91b557
-E #ff7c78
-░ #1f1f1f SurfaceRaised/SuccessSurface
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e
+E #91b557
+F #ff7c78

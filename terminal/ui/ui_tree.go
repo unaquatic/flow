@@ -99,13 +99,15 @@ func (ui *UI) DrawTree(v TreeView) {
 // connectors, and each message's text behind a colored label: "User",
 // "Agent", or the label of the tool a row's call runs, as the transcript
 // names it, such as "Read calc.go". The labels take the colors the
-// transcript marks the same rows with: "User" the theme's accent, "Agent"
-// the color of a reply's prose, and a tool's label ToolFg. A row of a fork
-// off the conversation opens with its type's tag, such as "[title]".
+// transcript marks the same rows with: "User" and "Agent" those of their
+// markers, as RoleMarkerFg gives them, and a tool's label the theme's
+// TextMuted, as are the text after the labels and the connectors. A row of a
+// fork off the conversation opens with its type's tag, such as "[title]".
 //
 // The rows of the transcript, from its root to the head, keep their colors,
-// and the rows of other branches are drawn dim, so that the transcript's
-// path stands out without a marker shifting its text. Rather than mark the
+// and the rows of other branches are drawn whole in the theme's TextWeak, so
+// that the transcript's path stands out without a marker shifting its text.
+// Rather than mark the
 // selected row, the lines open an empty line under it, where the next
 // prompt goes, as TreeView.InsertLine places it, with an arrow in activeFg
 // and the selected row's connectors running past it. Under a SelectionStyle
@@ -114,7 +116,7 @@ func (ui *UI) DrawTree(v TreeView) {
 func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 	theme = themeOrDefault(theme)
 	fg := func(c style.Color) func(string) style.TextChunk { return style.New().WithFg(c).Func() }
-	dim := fg(PanelDimFg)
+	weak := fg(theme.TextWeak)
 
 	lines := make([]style.StyledText, 0, len(v.Rows)+1)
 	insert, insertPrefix := v.InsertLine(), ""
@@ -125,10 +127,11 @@ func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 		if i == insert {
 			lines = append(lines, InsertLineText(insertPrefix))
 		}
-		text, muted := fg(panelTextFg), fg(theme.TextMuted)
-		accent, agent, tool := fg(theme.Accent), fg(RoleFg(theme, message.RoleAgent)), fg(ToolFg)
+		muted := fg(theme.TextMuted)
+		text, dim, tool := muted, muted, muted
+		user, agent := fg(RoleMarkerFg(theme, message.RoleUser)), fg(RoleMarkerFg(theme, message.RoleAgent))
 		if !row.Active {
-			text, muted, accent, agent, tool = dim, dim, dim, dim, dim
+			text, dim, muted, user, agent, tool = weak, weak, weak, weak, weak, weak
 		}
 		chunks := []style.TextChunk{text("  "), dim(row.Prefix)}
 		e := row.Entry
@@ -137,7 +140,7 @@ func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 		}
 		switch {
 		case e.Role == message.RoleUser:
-			chunks = append(chunks, accent("User "), text(e.Text))
+			chunks = append(chunks, user("User "), text(e.Text))
 		case e.Role == message.RoleSystem:
 			chunks = append(chunks, muted(ContextLabel+" "), muted(e.Text))
 		case e.ToolsOnly():
@@ -168,7 +171,7 @@ func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 func InsertLineText(prefix string) style.StyledText {
 	return style.NewStyledText(
 		style.TextChunk{Text: "→ ", Fg: activeFg},
-		style.TextChunk{Text: ContinuationPrefix(prefix), Fg: PanelDimFg},
+		style.TextChunk{Text: ContinuationPrefix(prefix), Fg: mutedFg},
 	)
 }
 

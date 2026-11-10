@@ -262,11 +262,11 @@ func (ui *UI) SyncInputHint() {
 	ui.SetInputHint(ui.service.InputHint(time.Now()))
 }
 
-// SetInputHint shows hint in the input while it is empty, in PanelDimFg, the
+// SetInputHint shows hint in the input while it is empty, in mutedFg, the
 // color the other bracketed hints show in, or nothing for an empty hint. The
 // input hides its cursor meanwhile, as HideCoveringCursor does.
 func (ui *UI) SetInputHint(hint string) {
-	ui.input.EditSurface().SetPlaceholderText(hint, PanelDimFg)
+	ui.input.EditSurface().SetPlaceholderText(hint, mutedFg)
 	ui.input.RequestRender()
 }
 

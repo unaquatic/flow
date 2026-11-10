@@ -1,0 +1,31 @@
+=== text ===
+|■ Error login to Provider A account work failed: token endpoint error   |
+|  (401)                                                                 |
+|  {                                                                     |
+|    "error": "invalid_grant",                                           |
+|    "error_description": "The code has expired."                        |
+|  }                                                                     |
+|                                                                        |
+|■                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== fg ===
+|A AAAAA BBBBB BB BBBBBBBB B BBBBBBB BBBB BBBBBBB BBBBB BBBBBBBB BBBBB   |
+|  BBBBB                                                                 |
+|  C                                                                     |
+|    CCCCCCCC DDDDDDDDDDDDDDDC                                           |
+|    CCCCCCCCCCCCCCCCCCCC DDDD DDDD DDD DDDDDDDDD                        |
+|  C                                                                     |
+|                                                                        |
+|C                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #ff7c78
+B #8a8a8a
+C #e6e6e6
+D #91b557

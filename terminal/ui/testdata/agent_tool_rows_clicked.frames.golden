@@ -1,53 +1,34 @@
 === text ===
-|  Running the tests.                    |
+|■ Running the tests.                    |
 |                                        |
-|  Bash go test ./... [exit 1]           |
+|■ Bash go test ./... [exit 1]           |
 |                                        |
-|                                        |
-|  Read calc.go                          |
+|■ Read calc.go                          |
 |                                        |
 |  package calc                          |
 |                                        |
+|■ Grep Divide [1 match]                 |
 |                                        |
-|  Grep Divide [1 match]                 |
+|■ Fixed the zero check.                 |
 |                                        |
-|  Fixed the zero check.                 |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAA                    |
+|A BBBBBBB BBB BBBBBB                    |
 |                                        |
-|  BBBB BB BBBB BBBBB BBBBB BB           |
+|C CCCC CC CCCC CCCCC CCCCC CC           |
 |                                        |
+|C CCCC CCCCCCC                          |
 |                                        |
-|  BBBB BBBBBBB                          |
+|  AAAAAAA BBBB                          |
 |                                        |
-|  CCCCCCC AAAA                          |
+|C CCCC CCCCCC CC CCCCCC                 |
 |                                        |
-|                                        |
-|  BBBB BBBBBB BB BBBBBB                 |
-|                                        |
-|  AAAAA AAA AAAA AAAAAA                 |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                        |
-|                                        |
+|A BBBBB BBB BBBB BBBBBB                 |
 |                                        |
 |                                        |
 |                                        |
@@ -56,7 +37,6 @@
 |                                        |
 |                                        |
 === attrs ===
-|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -74,8 +54,8 @@
 |                                        |
 |                                        |
 |                                        |
+|                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
-C #eb7513
-░ #1f1f1f SurfaceRaised/SuccessSurface
+A #eb7513
+B #e6e6e6
+C #8a8a8a

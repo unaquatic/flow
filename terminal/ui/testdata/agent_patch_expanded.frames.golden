@@ -1,8 +1,7 @@
 === text ===
-|  Updated the calculator.               |
+|■ Updated the calculator.               |
 |                                        |
-|                                        |
-|  Diff                                  |
+|■ Diff                                  |
 |  1 file  +2 -0                         |
 |                                        |
 |  calc.go  +2 -0                        |
@@ -14,41 +13,26 @@
 |                                        |
 |                                        |
 |                                        |
+|                                        |
 === fg ===
-|  AAAAAAA AAA AAAAAAAAAAA               |
+|A BBBBBBB BBB BBBBBBBBBBB               |
+|                                        |
+|B BBBB                                  |
+|  B BBBB  CC DD                         |
+|                                        |
+|  BBBBBBB  CC DD                        |
+|  BB BBBB BBBB BB                       |
+|   BBBBBBB BBBB                         |
+|  E                                     |
+|  EEEEEEE EEEEEEEE                      |
 |                                        |
 |                                        |
-|  AAAA                                  |
-|  A AAAA  BB CC                         |
-|                                        |
-|  AAAAAAA  BB CC                        |
-|  AA AAAA AAAA AA                       |
-|   AAAAAAA AAAA                         |
-|  D                                     |
-|  DDDDDDD DDDDDDDD                      |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-=== bg ===
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #5fc882
-C #dc646e
-D #91b557
-░ #1f1f1f SurfaceRaised/SuccessSurface
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e
+E #91b557

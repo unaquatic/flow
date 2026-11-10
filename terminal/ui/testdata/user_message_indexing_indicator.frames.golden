@@ -1,32 +1,21 @@
 === text ===
+|■ explore the repo                              |
 |                                                |
-|  explore the repo                              |
-|                                                |
-|                                                |
-|  Snapshot [indexing]                           |
+|■ Snapshot [indexing]                           |
 |                                                |
 |■ Working [2s] [esc cancel] [ctrl+o expand]     |
 |                                                |
+|                                                |
+|                                                |
 === fg ===
+|A AAAAAAA AAA AAAA                              |
 |                                                |
-|  AAAAAAA AAA AAAA                              |
+|B BBBBBBBB BBBBBBBBBB                           |
 |                                                |
-|                                                |
-|  BBBBBBBB BBBBBBBBBB                           |
-|                                                |
-|C CCCCCCC CCCC CCCC CCCCCCC CCCCCCC CCCCCCC     |
-|                                                |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                |
-|                                                |
+|B BBBBBBB BBBB BBBB BBBBBBB BBBBBBB BBBBBBB     |
 |                                                |
 |                                                |
 |                                                |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-C #707070
-░ #232323 BoxBg
+B #8a8a8a

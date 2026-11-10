@@ -19,11 +19,11 @@
 |  CCC CCCCCC  CCCCCCCCCCCCC  CCCCCCCCCC CCCCCCCC  CCCCCCCCCCCCCCCCCCCC  |
 |  AAAAAAAA    AAAAAAAAAAAAA  AAAAAAAAAA AAAAAAAA  AAAAAAAAAAAAAAAAAAAA  |
 |                                                                        |
-|  DDDD EEE E EEEEEE EEEEEE EE EEE EEEEEEEEEE                            |
-|  DDDD EEEE EEE EEEEE                                                   |
-|  DDDD EEE EEEEEEEEEEEE EEEEE EEEEEEE                                   |
+|  AAAA BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
+|  AAAA BBBB BBB BBBBB                                                   |
+|  AAAA BBB BBBBBBBBBBBB BBBBB BBBBBBB                                   |
 |                                                                        |
-|F                                                                       |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -45,9 +45,6 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8a8a8a
 C #232323 BoxBg
-D #eb7513
-E #b4b4b4
-F #ff5f00
 ░ #ff5f00

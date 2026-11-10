@@ -27,6 +27,15 @@ func TestErrorOf(t *testing.T) {
 		t.Errorf("ErrorOf(boom) = %+v, want %+v", got, want)
 	}
 
+	// A token endpoint's error response keeps its status and body too, and
+	// names no provider, which the login it failed names.
+	tok := &agent.TokenEndpointError{StatusCode: 401, Body: `{"error":"invalid_grant"}`}
+	got = ErrorOf(fmt.Errorf("token exchange: %w", tok))
+	want = Error{Code: CodeLoginFailed, Message: "token exchange: " + tok.Error(), Status: 401, Body: tok.Body}
+	if got != want {
+		t.Errorf("ErrorOf(token endpoint error) = %+v, want %+v", got, want)
+	}
+
 	// A body longer than MaxErrorBody is cut short at a rune boundary: the
 	// two-byte é that would straddle the cut is left out whole.
 	long := strings.Repeat("a", MaxErrorBody-1) + "é" + "tail"

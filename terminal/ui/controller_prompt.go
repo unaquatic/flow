@@ -72,6 +72,6 @@ func (s *Service) InputHint(now time.Time) string {
 // enter submits for action.
 func PromptHintStyled(action string) style.StyledText {
 	key := style.New().WithFg(textFg).Func()
-	dim := style.New().WithFg(style.ColorFromInts(80, 80, 80, 255)).Func()
+	dim := style.New().WithFg(mutedFg).Func()
 	return style.NewStyledText(key("enter"), dim(" "+action+" "), key("esc"), dim(" cancel"))
 }

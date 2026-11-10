@@ -167,10 +167,10 @@ const statusGap = " "
 // output tokens, and its prompt tokens read from a cache, which u totals,
 // what they cost at API prices, and worked, how long the session's turns
 // took. Values show in titleFg, as the slash menu's commands do, after their
-// labels in PanelDimFg, as its descriptions do, statusGap apart.
+// labels in mutedFg, as its descriptions do, statusGap apart.
 func StatusLine(model string, u SessionUsage, worked time.Duration, th *style.Theme) style.StyledText {
 	text := style.New().WithFg(titleFg).Func()
-	dim := style.New().WithFg(PanelDimFg).Func()
+	dim := style.New().WithFg(mutedFg).Func()
 	chunks := []style.TextChunk{
 		text(ModelName(model)), style.Plain(statusGap), dim("context "), ContextChunk(u, titleFg, th),
 	}

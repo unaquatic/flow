@@ -104,10 +104,10 @@ type UI struct {
 	// indicatorError reports that the indicator shows the error a run
 	// ended with, as EventIndicatorShow.Error says.
 	indicatorError bool
-	// indicatorDetail is the box under indicatorRow, filled as a tool box
-	// is, that shows indicatorDetailText, in indicatorDetailRow, which the
-	// fit bounds: an error's body, as EventIndicatorShow.Detail holds it. It
-	// is gone while there is none.
+	// indicatorDetail is the plain box right under indicatorRow, with no
+	// fill or padding, that shows indicatorDetailText, in
+	// indicatorDetailRow, which the fit bounds: an error's body, as
+	// EventIndicatorShow.Detail holds it. It is gone while there is none.
 	indicatorDetail     *widget.Box
 	indicatorDetailRow  *widget.Box
 	indicatorDetailText *widget.Text
@@ -487,7 +487,7 @@ func (ui *UI) BuildUI() {
 		widget.SelectWithFg(titleFg),
 		// The descriptions are dim, as the labels of the Usage box's values
 		// are, and the commands bright, as its values are.
-		widget.SelectWithDescriptionFg(PanelDimFg),
+		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
 		widget.SelectWithFocusedBold(false),
 		widget.SelectWithFocusedFg(activeFg),
 		widget.SelectWithSelectedFg(activeFg),
@@ -583,11 +583,11 @@ func (ui *UI) BuildUI() {
 		widget.SelectWithFocusedFg(activeFg),
 		widget.SelectWithSelectedBg(sessionBg),
 		widget.SelectWithSelectedFg(activeFg),
-		widget.SelectWithDescriptionFg(PanelDimFg),
+		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
 		// The active session's "[current]" stays dim on the selected row
 		// under SelectionArrow, and takes the fill's text color under the
 		// styles that fill it.
-		widget.SelectWithHintFg(PanelDimFg),
+		widget.SelectWithHintFg(ui.theme.TextMuted),
 		widget.SelectWithShowDescription(false),
 		widget.SelectWithWrapSelection(true),
 		widget.SelectWithOnItemSelected(func(_ int, item widget.SelectItem) {
@@ -605,7 +605,7 @@ func (ui *UI) BuildUI() {
 	ui.sessionMenu.SetFocusable(false)
 	ui.sessionText = widget.NewText("",
 		widget.TextWithID("session-text"),
-		widget.TextWithFg(style.ColorFromInts(92, 92, 92, 255)),
+		widget.TextWithFg(ui.theme.TextMuted),
 	)
 	ui.sessionPanel = NewInputPanel("session-panel")
 	ui.sessionHeader = AddPanelHeader(ui.sessionPanel, "session", "Sessions", inputBorderFg, sessionBg)
@@ -633,7 +633,7 @@ func (ui *UI) BuildUI() {
 	ui.bannerText = widget.NewText("",
 		widget.TextWithID("banner-text"),
 		widget.TextWithWrapMode(textbuf.WrapWord),
-		widget.TextWithFg(style.ColorFromInts(92, 92, 92, 255)),
+		widget.TextWithFg(ui.theme.TextMuted),
 	)
 	ui.bannerMenu = widget.NewSelect(
 		nil,
@@ -649,11 +649,11 @@ func (ui *UI) BuildUI() {
 		widget.SelectWithFg(titleFg),
 		// What follows a row's name, such as a setting's value or a demo's
 		// description, is dim, as in the slash menu.
-		widget.SelectWithDescriptionFg(PanelDimFg),
+		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
 		// A row's hint, such as "[default]", stays dim on the selected row
 		// under SelectionArrow, and takes the fill's text color under the
 		// styles that fill it.
-		widget.SelectWithHintFg(PanelDimFg),
+		widget.SelectWithHintFg(ui.theme.TextMuted),
 		widget.SelectWithWrapSelection(true),
 		widget.SelectWithShowScrollIndicator(false),
 		widget.SelectWithShowDescription(false),
@@ -689,13 +689,13 @@ func (ui *UI) BuildUI() {
 	// error, such as a provider's raw response body, wraps onto more lines.
 	ui.indicatorLabel = widget.NewText("",
 		widget.TextWithID("indicator-label"),
-		widget.TextWithFg(indicatorFg),
+		widget.TextWithFg(ui.theme.TextMuted),
 		widget.TextWithWrapMode(textbuf.WrapWord),
 		widget.TextWithLayout(layout.WithFlexGrow(1), layout.WithFlexShrink(1)),
 	)
 	// While a turn is in progress, a marker starts the line in its left
 	// padding, as a tool call's does, and blinks while the time shows.
-	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, indicatorHintFg)
+	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, ui.theme.TextMuted)
 	ui.indicatorMarker.SetGone(true)
 	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden)
 	ui.indicatorRow = widget.NewBox(
@@ -706,9 +706,8 @@ func (ui *UI) BuildUI() {
 	for menu := range ui.Menus() {
 		menu.RenderAfterHook = ui.MarkSelection(menu)
 	}
-	// An error's body shows under the line in a box filled as a tool box
-	// is, from edge to edge, its text inset as the line's is, a row below
-	// the line.
+	// An error's body shows right under the line, its text inset as the
+	// line's is, on the canvas: no fill, padding or margin of its own.
 	ui.indicatorDetailText = widget.NewText("",
 		widget.TextWithID("indicator-detail"),
 		widget.TextWithFg(textFg),
@@ -724,16 +723,7 @@ func (ui *UI) BuildUI() {
 		widget.Children(ui.indicatorDetailText),
 	)
 	ui.indicatorDetail = widget.NewBox(
-		widget.BoxWithLayout(
-			layout.WithFlexDirection(layout.DirectionColumn),
-			layout.WithPadding(layout.Points(1)),
-			layout.WithPaddingLeft(layout.Points(PaddingX)),
-			layout.WithPaddingRight(layout.Points(PaddingX)),
-			layout.WithMarginTop(layout.Points(1)),
-			layout.WithMarginLeft(layout.Points(-PaddingX)),
-			layout.WithMarginRight(layout.Points(-PaddingX)),
-		),
-		widget.BoxWithBg(ui.theme.ResolveSurfaceRaised()),
+		widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionColumn)),
 		widget.Children(ui.indicatorDetailRow),
 	)
 	ui.indicatorDetail.SetGone(true)

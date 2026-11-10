@@ -143,10 +143,10 @@ func TestSnapshotFrames(t *testing.T) {
 			patchTurn(u)
 			ui.ExpandTools(u)
 		}},
-		// The row takes the marker of the tool calls while /settings shows
-		// it, and keeps it expanded plain, as a tool call does.
-		{name: "agent_patch_marker", h: 8, add: func(u *ui.UI) {
-			u.Apply(u.Service().SetToolMarkers(true))
+		// The row drops the marker of the tool calls while /settings hides
+		// it, as a tool call does.
+		{name: "agent_patch_no_marker", h: 8, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetToolMarkers(false))
 			patchTurn(u)
 		}},
 		// Each file a step changed shows its path and counts, and right under
@@ -160,9 +160,10 @@ func TestSnapshotFrames(t *testing.T) {
 			u.Bubble("a1").SyncRows()
 			ui.ExpandTools(u)
 		}},
-		{name: "agent_patch_expanded_plain_marker", h: 15, add: func(u *ui.UI) {
-			u.Apply(u.Service().SetToolMarkers(true))
-			u.Apply(u.Service().SetExpandStyle(ui.ExpandedPlain))
+		// Expanded boxed, the changes show in a block on the surface, as a
+		// tool call's do.
+		{name: "agent_patch_expanded_boxed", h: 17, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetExpandStyle(ui.ExpandedBoxed))
 			patchTurn(u)
 			ui.ExpandTools(u)
 		}},
@@ -184,14 +185,16 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 	tests := []struct {
 		name   string
 		scroll int
-		bar    bool
+		filled bool
 	}{
 		// At the top, nothing is pinned yet.
 		{name: "fullscreen_snapshot_top"},
 		// A prompt by a bar fills no background, so once pinned it blanks the
 		// rows under it, and keeps a blank row above and under its text, the
 		// one above lying over the blank row that ends the row above it.
-		{name: "fullscreen_prompt_bar_pinned", scroll: 4, bar: true},
+		{name: "fullscreen_prompt_bar_pinned", scroll: 4},
+		// A filled prompt pins on its box background.
+		{name: "fullscreen_prompt_filled_pinned", scroll: 4, filled: true},
 		// The prompt's text is scrolled past and pinned, and its snapshot
 		// scrolls up under it, as a row of the reply would.
 		{name: "fullscreen_snapshot_scrolling", scroll: 1},
@@ -201,8 +204,8 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := ui.NewInputTestUI(t, snapshotViews())
-			if tt.bar {
-				u.Apply(u.Service().SetPromptStyle(ui.PromptBar))
+			if tt.filled {
+				u.Apply(u.Service().SetPromptStyle(ui.PromptFilled))
 			}
 			prompt := ui.UserText("u1", "Run the tests")
 			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Pending: true})

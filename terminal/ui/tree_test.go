@@ -388,6 +388,20 @@ func TestNewTreeEntry(t *testing.T) {
 				{Name: "bash", Input: "go test ./calculator/... -run 'TestDivide|TestDivideByZero' -count=1 -v"},
 			}},
 		},
+		// The text shows Markdown as plain text; the prompt keeps it as
+		// written, to edit and send again.
+		{
+			name: "prompt with Markdown",
+			msg:  treeMsg("u2", "", message.RoleUser, "add `Divide` to **calc.go**"),
+			want: TreeEntry{ID: "u2", Role: message.RoleUser, Text: "add Divide to calc.go", Prompt: "add `Divide` to **calc.go**"},
+		},
+		{
+			name: "reply with Markdown blocks",
+			msg: treeMsg("a4", "u2", message.RoleAgent,
+				"## Plan\n\n- read [the spec](https://spec.example)\n- add `Divide`\n\n```go\nfunc Divide() {}\n```"),
+			want: TreeEntry{ID: "a4", Parent: "u2", Role: message.RoleAgent,
+				Text: "Plan read the spec add Divide func Divide() {}"},
+		},
 		{
 			name: "reply with text skips reasoning",
 			msg: treeMsg("a2", "u1", message.RoleAgent, "Done.",
@@ -405,9 +419,9 @@ func TestNewTreeEntry(t *testing.T) {
 }
 
 // TestTreeLinesDimOtherBranches checks that the transcript's rows keep their
-// colors, "User" in the accent and "Agent" in a reply's prose color, and
-// other branches' rows are dim, the selected one too, which the insert line
-// marks rather than its colors.
+// colors, "User" and "Agent" in those of their markers in the transcript,
+// and other branches' rows are in TextWeak, the selected one too, which the
+// insert line marks rather than its colors.
 func TestTreeLinesDimOtherBranches(t *testing.T) {
 	theme := DefaultTheme()
 	st := NewSessionTree(forkedTree("a2"))
@@ -428,10 +442,10 @@ func TestTreeLinesDimOtherBranches(t *testing.T) {
 		id   message.ID
 		want style.Color
 	}{
-		{id: "u2", want: theme.Accent},
-		{id: "a2", want: RoleFg(theme, message.RoleAgent)},
-		{id: "u3", want: PanelDimFg},
-		{id: "a4", want: PanelDimFg},
+		{id: "u2", want: theme.ResolveTextBase()},
+		{id: "a2", want: theme.Accent},
+		{id: "u3", want: theme.TextWeak},
+		{id: "a4", want: theme.TextWeak},
 	}
 	for _, tt := range tests {
 		if got := labelFg(tt.id); got != tt.want {

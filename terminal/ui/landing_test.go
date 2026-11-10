@@ -17,28 +17,12 @@ import (
 // in.
 const LandingWidth = 62
 
-// LandingSettings are the terminal settings the landing page's frames are
-// drawn with, as /settings saves them in the config file: flow as it is used,
-// with tool markers and prompts marked by a bar.
-var LandingSettings = config.Terminal{
-	CacheUsage:      "off",
-	ExpandedTools:   "plain",
-	ToolMarker:      true,
-	ToolMarkerShape: "square",
-	ToolNameColor:   "gray",
-	KeyHints:        "title",
-	ListCount:       "below",
-	PromptStyle:     "bar",
-	InputStyle:      "bar",
-	Selection:       "full_width",
-}
-
-// NewLandingUI returns a test UI with LandingSettings applied, as the
-// terminal applies the config file's settings before it shows anything.
+// NewLandingUI returns a test UI drawn as the landing page's frames are: with
+// the default settings, as a terminal starts with no config file.
 func NewLandingUI(t *testing.T) *UI {
 	t.Helper()
 	ui := newInputTestUI(t)
-	ui.service.state.ApplyConfig(LandingSettings, false)
+	ui.service.state.ApplyConfig(config.Terminal{}, false)
 	ui.SetInputStyle(ui.service.state.InputStyle)
 	ui.ShowStatusMarker()
 	return ui
@@ -50,7 +34,7 @@ const LandingPrompt = "Add a Divide method that rejects a zero divisor"
 // LandingSteps are the steps of demo.Segments that the landing page's turn
 // takes, in order: its replies find and read the calculator, add the method,
 // write tests, see one fail, fix it, and run them again.
-var LandingSteps = []int{1, 2, 3, 4, 7, 8, 10, 11, 12, 13, 14}
+var LandingSteps = []int{1, 3, 4, 5, 8, 9, 11, 12, 13, 14, 15}
 
 // LandingSummary is the text of the last reply of the landing page's turn. Its
 // table fits in LandingWidth inside the transcript's padding.

@@ -10,17 +10,8 @@ import (
 // in the indicator.
 const IndicatorTick = time.Second
 
-// indicatorFg is the foreground of the indicator, and indicatorHintFg that of
-// a line with a hint, as the time of a run in progress with the key that
-// cancels it: PanelDimFg, the color of the keys a panel names after its
-// title.
-var (
-	indicatorFg     = style.ColorFromInts(120, 120, 120, 255)
-	indicatorHintFg = PanelDimFg
-)
-
 // ShowIndicator displays IndicatorText of e between the transcript and the
-// input, with e's detail in a box under it, and while it shows the time of a
+// input, with e's detail right under it, and while it shows the time of a
 // run in progress, blinks the markers.
 func (ui *UI) ShowIndicator(e EventIndicatorShow) {
 	ui.indicatorError = e.Error
@@ -40,19 +31,19 @@ const IndicatorErrorTitle = "Error"
 
 // IndicatorText returns the line the indicator shows for e: its text, in the
 // indicator's color, or, when e has a hint, its text and then a space and the
-// hint, all in indicatorHintFg. An error's text follows IndicatorErrorTitle,
-// in errorFg, and a space.
+// hint, all in mutedFg. An error's text follows IndicatorErrorTitle, in
+// errorFg, and a space, in mutedFg.
 func IndicatorText(e EventIndicatorShow, errorFg style.Color) style.StyledText {
 	if e.Error {
 		return style.NewStyledText(
 			style.TextChunk{Text: IndicatorErrorTitle, Fg: errorFg},
-			style.TextChunk{Text: " " + e.Text, Fg: indicatorFg},
+			style.TextChunk{Text: " " + e.Text, Fg: mutedFg},
 		)
 	}
 	if e.Hint == "" {
 		return style.NewStyledText(style.Plain(e.Text))
 	}
-	fg := indicatorHintFg
+	fg := mutedFg
 	return style.NewStyledText(
 		style.TextChunk{Text: e.Text, Fg: fg},
 		style.TextChunk{Text: " " + e.Hint, Fg: fg},
@@ -85,10 +76,9 @@ func (ui *UI) Tick() {
 	}
 }
 
-// ShowIndicatorDetail shows e's detail in the box under the indicator's
-// line, JSON highlighted as code is, or hides the box when e has none. A
-// hidden box keeps the detail it showed, so that ShowIndicatorWhile can
-// show it again.
+// ShowIndicatorDetail shows e's detail right under the indicator's line,
+// JSON highlighted as code is, or hides it when e has none. A hidden detail
+// keeps what it showed, so that ShowIndicatorWhile can show it again.
 func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
 	if ui.indicatorDetail == nil {
 		return
@@ -99,24 +89,10 @@ func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
 	}
 }
 
-// DetailText returns detail as the indicator's detail box shows it: in
-// textFg, and, when isJSON reports it is JSON, highlighted as JSON code is.
-// JSON the highlighter fails on shows in textFg.
+// DetailText returns detail as the indicator shows it under its line, as
+// HighlightDetail gives it with the UI's highlighter.
 func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {
-	if isJSON && ui.highlighter != nil {
-		lines, err := ui.highlighter.Highlight(detail, "json", textFg, style.ColorTransparent)
-		if err == nil && len(lines) > 0 {
-			var chunks []style.TextChunk
-			for i, line := range lines {
-				if i > 0 {
-					chunks = append(chunks, style.Plain("\n"))
-				}
-				chunks = AppendSpans(chunks, line)
-			}
-			return style.NewStyledText(chunks...)
-		}
-	}
-	return style.NewStyledText(style.TextChunk{Text: detail, Fg: textFg})
+	return HighlightDetail(ui.highlighter, detail, isJSON)
 }
 
 // HideIndicator dismisses the indicator.
@@ -191,12 +167,12 @@ func (ui *UI) ShowIndicatorMarker() {
 }
 
 // IndicatorMarkerFg returns the color of the marker before the indicator's
-// text: ErrorFg while it shows an error, and indicatorHintFg otherwise.
+// text: ErrorFg while it shows an error, and the theme's TextMuted otherwise.
 func (ui *UI) IndicatorMarkerFg() style.Color {
 	if ui.indicatorError {
 		return ui.ErrorFg()
 	}
-	return indicatorHintFg
+	return themeOrDefault(ui.theme).TextMuted
 }
 
 // IndicatorMarkerHidden reports whether the marker before the indicator's

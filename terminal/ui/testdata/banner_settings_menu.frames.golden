@@ -2,30 +2,18 @@
 |■ Settings [↑/↓ move] [←/→ change] [esc cancel]                         |
 |                                                                        |
 |  Fullscreen              On                                            |
-|  Cache usage             Off                                           |
-|  Expanded tools          Boxed                                         |
-|  Tool marker             Off                                           |
-|  Marker shape            ■ Square                                      |
-|  Tool name color         Gray                                          |
-|  Key hints               Title                                         |
-|  List count              Below                                         |
-|  Selection               Full width                                    |
-|  Prompt style            Filled                                        |
-|  Input style             Bar                                           |
+|  Debug                   Off                                           |
+|                                                                        |
+|■                                                                       |
+|                                                                        |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
 |                                                                        |
 |  CCCCCCCCCC              CC                                            |
-|  AAAAA AAAAA             BBB                                           |
-|  AAAAAAAA AAAAA          BBBBB                                         |
-|  AAAA AAAAAA             BBB                                           |
-|  AAAAAA AAAAA            B BBBBBB                                      |
-|  AAAA AAAA AAAAA         BBBB                                          |
-|  AAA AAAAA               BBBBB                                         |
-|  AAAA AAAAA              BBBBB                                         |
-|  AAAAAAAAA               BBBB BBBBB                                    |
-|  AAAAAA AAAAA            BBBBBB                                        |
-|  AAAAA AAAAA             BBB                                           |
+|  AAAAA                   BBB                                           |
+|                                                                        |
+|A                                                                       |
+|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
@@ -34,14 +22,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
+B #8a8a8a
 C #232323 BoxBg
 ░ #ff5f00

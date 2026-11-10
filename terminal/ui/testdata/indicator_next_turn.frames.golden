@@ -1,9 +1,7 @@
 === text ===
+|■ Run the tests                                                         |
 |                                                                        |
-|  Run the tests                                                         |
-|                                                                        |
-|                                                                        |
-|  Bash go test ./...                                                    |
+|■ Bash go test ./...                                                    |
 |                                                                        |
 |■ Working [12s] [esc cancel] [ctrl+o expand]                            |
 |                                                                        |
@@ -18,34 +16,16 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
+|A AAA AAA AAAAA                                                         |
 |                                                                        |
-|  AAA AAA AAAAA                                                         |
+|B BBBB BB BBBB BBBBB                                                    |
 |                                                                        |
+|B BBBBBBB BBBBB BBBB BBBBBBB BBBBBBB BBBBBBB                            |
 |                                                                        |
-|  BBBB BB BBBB BBBBB                                                    |
-|                                                                        |
-|C CCCCCCC CCCCC CCCC CCCCCCC CCCCCCC CCCCCCC                            |
-|                                                                        |
-|D                                                                       |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -60,7 +40,4 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #8c8c8c
-C #707070
-D #ff5f00
-░ #232323 BoxBg
+B #8a8a8a

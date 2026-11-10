@@ -29,20 +29,6 @@ var (
 	// SelectionFill and SelectionFullWidth, and fills the input's selected
 	// text: productFg, the product's primary color.
 	activeFg = productFg
-	// panelTextFg colors the rows of the session tree and the session list's
-	// prompt preview, and the keys the footer names.
-	panelTextFg = style.ColorFromInts(180, 180, 180, 255)
-	// PanelDimFg colors the count and the keys after a panel's title, what a
-	// menu's rows show after their names, such as a command's description or
-	// a setting's value, the labels of the Usage box's values, notices, and
-	// other secondary text.
-	PanelDimFg = style.ColorFromInts(112, 112, 112, 255)
-	// ToolFg colors the rows of the transcript that a tool call's collapsed
-	// row sets the look of: a call's status and the input after its name,
-	// its marker and name in ToolNameGray, and the rows that show as it
-	// does, such as the cache, usage, and snapshot rows and the footer that
-	// says how long a turn took, and reasoning.
-	ToolFg = style.ColorFromInts(140, 140, 140, 255)
 )
 
 // Menus yields the menus in the input box: the slash menu, the session list,
@@ -153,9 +139,8 @@ const keyHintGap = 2
 // one, so that a key is never parted from what it does, and measures its own
 // height for the width it is given, as a text does. A Bracketed view draws
 // them as a panel's title names them, such as "[esc cancel]", a space apart,
-// in PanelDimFg; otherwise it draws them as the footer does, such as "esc
-// cancel", keyHintGap apart, each key in panelTextFg and what it does in
-// PanelDimFg.
+// in mutedFg; otherwise it draws them as the footer does, such as "esc
+// cancel", keyHintGap apart, in mutedFg too.
 type KeyHintsView struct {
 	*render.BaseRenderable
 	// Hints are the key hints drawn.
@@ -262,14 +247,12 @@ func (v *KeyHintsView) RenderSelf(buf *buffer.Buffer, _ time.Duration) {
 				x += v.Gap()
 			}
 			if v.Bracketed {
-				buf.DrawText(hint.String(), x, y, PanelDimFg)
+				buf.DrawText(hint.String(), x, y, mutedFg)
 				x += textbuf.StringWidth(hint.String())
 				continue
 			}
-			buf.DrawText(hint.Key, x, y, panelTextFg)
-			x += textbuf.StringWidth(hint.Key)
-			buf.DrawText(" "+hint.Action, x, y, PanelDimFg)
-			x += 1 + textbuf.StringWidth(hint.Action)
+			buf.DrawText(hint.Key+" "+hint.Action, x, y, mutedFg)
+			x += textbuf.StringWidth(hint.Key) + 1 + textbuf.StringWidth(hint.Action)
 		}
 	}
 }
@@ -316,7 +299,7 @@ func AddPanelHeader(panel *widget.Box, id, title string, borderFg, bg style.Colo
 		SubtitleKeys: NewKeyHintsView(id+"-subtitle-keys", false),
 		Subtitle: widget.NewText("",
 			widget.TextWithID(id+"-subtitle"),
-			widget.TextWithFg(PanelDimFg),
+			widget.TextWithFg(mutedFg),
 		),
 	}
 	h.Keys.LayoutNode().FlexGrow = 1
@@ -370,7 +353,7 @@ func (h *PanelHeader) SetSubtitleKeys(hints []KeyHint) {
 }
 
 // ShowTitle shows Heading, not bold, and then, a space apart, Count in
-// PanelDimFg, before the keys, collapsing the row while it shows none of
+// mutedFg, before the keys, collapsing the row while it shows none of
 // them.
 func (h *PanelHeader) ShowTitle() {
 	var text style.StyledText
@@ -378,7 +361,7 @@ func (h *PanelHeader) ShowTitle() {
 		text.Chunks = append(text.Chunks, style.Plain(h.Heading))
 	}
 	if h.Count != "" {
-		count, fg := h.Count, PanelDimFg
+		count, fg := h.Count, mutedFg
 		if len(text.Chunks) > 0 {
 			count = " " + count
 		}
@@ -514,7 +497,7 @@ type PanelStatus struct {
 // AddPanelStatus appends an empty status line to panel, whose widget ID is
 // id.
 func AddPanelStatus(panel *widget.Box, id string, borderFg, bg style.Color) *PanelStatus {
-	s := &PanelStatus{Text: widget.NewText("", widget.TextWithID(id), widget.TextWithFg(PanelDimFg))}
+	s := &PanelStatus{Text: widget.NewText("", widget.TextWithID(id), widget.TextWithFg(mutedFg))}
 	s.Row = AddContentRow(panel, s.Text, borderFg, bg)
 	s.Set("")
 	return s

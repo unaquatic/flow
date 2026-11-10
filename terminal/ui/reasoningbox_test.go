@@ -8,12 +8,13 @@ import (
 	"github.com/unaquatic/fluid/style"
 )
 
-// TestReasoningFg checks that reasoning is drawn in ToolFg, as tool rows
-// are.
+// TestReasoningFg checks that reasoning is drawn in the theme's TextMuted, as
+// tool rows are.
 func TestReasoningFg(t *testing.T) {
-	box := NewReasoningBox(message.ReasoningPart{Text: "thinking"}, DefaultTheme())
-	if got := box.Body.Fg(); !got.Equals(ToolFg) {
-		t.Errorf("reasoning fg = %v, want ToolFg %v", got, ToolFg)
+	theme := DefaultTheme()
+	box := NewReasoningBox(message.ReasoningPart{Text: "thinking"}, theme)
+	if got := box.Body.Fg(); !got.Equals(theme.TextMuted) {
+		t.Errorf("reasoning fg = %v, want TextMuted %v", got, theme.TextMuted)
 	}
 }
 
@@ -24,7 +25,7 @@ func TestReasoningFg(t *testing.T) {
 func TestReasoningCodeFg(t *testing.T) {
 	theme := DefaultTheme()
 	code, got := theme.ResolveMarkdownCode().Fg.ToOKLCH(), ReasoningCodeFg(theme).ToOKLCH()
-	if want := ToolFg.ToOKLCH().L; math.Abs(got.L-want) > 0.01 {
+	if want := theme.TextMuted.ToOKLCH().L; math.Abs(got.L-want) > 0.01 {
 		t.Errorf("lightness = %.3f, want that of the reasoning text, %.3f", got.L, want)
 	}
 	if math.Abs(got.H-code.H) > 1 {
@@ -35,8 +36,8 @@ func TestReasoningCodeFg(t *testing.T) {
 	}
 }
 
-// TestReasoningCodeFgThemes checks that the color is as bright as ToolFg,
-// which reasoning is drawn in, whatever a theme's text, dark or light, and
+// TestReasoningCodeFgThemes checks that the color is as bright as the theme's
+// TextMuted, which reasoning is drawn in, whatever its text, dark or light, and
 // never more saturated than the theme's inline code, including when a text
 // color is black or the two are the same.
 func TestReasoningCodeFgThemes(t *testing.T) {
@@ -52,7 +53,7 @@ func TestReasoningCodeFgThemes(t *testing.T) {
 			theme := DefaultTheme()
 			theme.TextBase, theme.TextMuted = tt.base, tt.muted
 			code, got := theme.ResolveMarkdownCode().Fg.ToOKLCH(), ReasoningCodeFg(theme).ToOKLCH()
-			if want := ToolFg.ToOKLCH().L; math.Abs(got.L-want) > 0.02 {
+			if want := tt.muted.ToOKLCH().L; math.Abs(got.L-want) > 0.02 {
 				t.Errorf("lightness = %.3f, want %.3f", got.L, want)
 			}
 			// The color is rounded to 8 bits a channel, which can move its

@@ -1,5 +1,5 @@
 === text ===
-|  Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
+|■ Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
 |                                                            |
 |■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
@@ -19,17 +19,17 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAAA BBBBB CCCCCCC BB CC BB CCC BB CCCCC B AAAAAAA AAAA  |
+|A AAAAA BBBBB AAAAAAA BB AA BB AAA BB AAAAA B AAAAAAA AAAA  |
 |                                                            |
-|B BBBBBBBB CCCC CCCCC CCCC CCCCCCC                          |
+|B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
 |                                                            |
-|D DDDDDDD                   DDDDDD D DDDDDDDD DDDDDDD DDDD  |
-|  BBBB                      CCCCC CCC CCCC CCC CCCCC C CCC  |
-|  BBBBBB                    CCCCCC CCC CCCCC                |
-|  BBBBBBB                   CCCCCC CCC CCCCCCCCC CCCCCC     |
-|  BBBBBBB                   CCCC CCC CCCCCCC CCC CCCCCCC C  |
+|C CCCCCCC                   CCCCCC C CCCCCCCC CCCCCCC CCCC  |
+|  BBBB                      AAAAA AAA AAAA AAA AAAAA A AAA  |
+|  BBBBBB                    AAAAAA AAA AAAAA                |
+|  BBBBBBB                   AAAAAA AAA AAAAAAAAA AAAAAA     |
+|  BBBBBBB                   AAAA AAA AAAAAAA AAA AAAAAAA A  |
 |                                                            |
-|D BBBBB                                                     |
+|B BBBBB                                                     |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -39,7 +39,6 @@
 |                                                            |
 |                                                            |
 === legend ===
-A #8c8c8c
+A #8a8a8a
 B #e6e6e6
-C #707070
-D #ff5f00
+C #ff5f00

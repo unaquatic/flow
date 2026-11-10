@@ -1,34 +1,22 @@
 === text ===
+|■ ok                                                                    |
 |                                                                        |
-|  ok                                                                    |
-|                                                                        |
-|                                                                        |
-|■ Error Request Failed: Post "https://api.example.com/v1/messages":     |
+|■ Error request failed: Post "https://api.example.com/v1/messages":     |
 |  EOF                                                                   |
 |                                                                        |
 |■                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
-|                                                                        |
-|  AA                                                                    |
-|                                                                        |
+|A AA                                                                    |
 |                                                                        |
 |B BBBBB CCCCCCC CCCCCCC CCCC CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC     |
 |  CCC                                                                   |
 |                                                                        |
-|D                                                                       |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -37,6 +25,4 @@
 === legend ===
 A #e6e6e6
 B #ff7c78
-C #787878
-D #ff5f00
-░ #232323 BoxBg
+C #8a8a8a

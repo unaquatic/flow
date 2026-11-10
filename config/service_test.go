@@ -2,8 +2,10 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -65,14 +67,14 @@ func TestServiceGetReadsEverySetting(t *testing.T) {
 	t.Setenv("DEBUG", "")
 	write(t, dir, `{"default_model":"lab-a/model-a","default_provider":"provider-a","log_level":"warn","extensions":{"snapshot":{"enabled":false}},"catalog_source":"http://catalog.test",
 		"provider":{"provider-b":{"base_url":"http://provider-b.test"}},"agent":{"retry_max_attempts":2,"retry_delay":"1s"},
-		"debug":true,"terminal":{"fullscreen":true,"key_hints":"footer","tool_marker":true}}`)
+		"debug":true,"terminal":{"fullscreen":true}}`)
 	cfg, err := NewService(dir).Get()
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
 	if cfg.DefaultModel != "lab-a/model-a" || cfg.DefaultProvider != "provider-a" || cfg.LogLevel != LogWarn || string(cfg.Extensions["snapshot"]) != `{"enabled":false}` || cfg.CatalogSource != "http://catalog.test" ||
 		cfg.Provider["provider-b"].BaseURL != "http://provider-b.test" || cfg.Agent.RetryMaxAttempts != 2 || cfg.Agent.RetryDelay.Seconds() != 1 ||
-		!cfg.Debug || !cfg.Terminal.Fullscreen || cfg.Terminal.KeyHints != "footer" || !cfg.Terminal.ToolMarker {
+		!cfg.Debug || !cfg.Terminal.Fullscreen {
 		t.Errorf("config = %+v, want every setting of the file", cfg)
 	}
 }
@@ -120,13 +122,15 @@ func TestServiceSaveDefaultModel(t *testing.T) {
 
 // TestServiceSaveTerminalAndDebug checks that SaveTerminal replaces the
 // terminal settings of the config file and SaveDebug its debug setting,
-// each keeping the other settings, the model among them.
+// each keeping the other settings, the model among them. The terminal
+// settings an older file saved, such as its selection style, go with the
+// section SaveTerminal replaces.
 func TestServiceSaveTerminalAndDebug(t *testing.T) {
 	t.Setenv("DEBUG", "")
 	dir := t.TempDir()
 	write(t, dir, `{"default_model":"lab-a/model-a","default_provider":"provider-a","terminal":{"selection":"arrow"}}`)
 	s := NewService(dir)
-	if err := s.SaveTerminal(Terminal{Fullscreen: true, CacheUsage: "per_turn", ToolMarker: true}); err != nil {
+	if err := s.SaveTerminal(Terminal{Fullscreen: true}); err != nil {
 		t.Fatalf("SaveTerminal: %v", err)
 	}
 	if err := s.SaveDebug(true); err != nil {
@@ -136,11 +140,17 @@ func TestServiceSaveTerminalAndDebug(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	term := cfg.Terminal
-	if cfg.DefaultModel != "lab-a/model-a" || cfg.DefaultProvider != "provider-a" || !cfg.Debug || !term.Fullscreen || term.CacheUsage != "per_turn" ||
-		!term.ToolMarker || term.Selection != "" {
-		t.Errorf("config = model %q, debug %v, terminal %+v; want the model kept, debug on, and the saved terminal settings alone",
-			cfg.DefaultModel, cfg.Debug, term)
+	if cfg.DefaultModel != "lab-a/model-a" || cfg.DefaultProvider != "provider-a" || !cfg.Debug || !cfg.Terminal.Fullscreen {
+		t.Errorf("config = model %q, debug %v, terminal %+v; want the model kept, debug on, and fullscreen",
+			cfg.DefaultModel, cfg.Debug, cfg.Terminal)
+	}
+	keys, err := s.File().Read()
+	var section map[string]any
+	if err == nil {
+		err = json.Unmarshal(keys["terminal"], &section)
+	}
+	if err != nil || !maps.Equal(section, map[string]any{"fullscreen": true}) {
+		t.Errorf("terminal section = %s, %v, want the saved settings alone", keys["terminal"], err)
 	}
 }
 

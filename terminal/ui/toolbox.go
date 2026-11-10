@@ -37,6 +37,9 @@ type ToolBox struct {
 	Params *widget.Text
 	// Body displays tool-specific input or read output.
 	Body *widget.Markdown
+	// Lines displays the View's Lines in place of Body, wrapped to the box
+	// width.
+	Lines *widget.Text
 	// Output displays progress or completed output.
 	Output *widget.Markdown
 }
@@ -45,12 +48,12 @@ var _ BoxContent = (*ToolBox)(nil)
 
 // NewToolBox creates the box of a tool call, collapsed to a row on the
 // canvas, whose block, once it expands, fills the theme's success surface in
-// ExpandedBoxed. Its status is in ToolFg, as a panel colors its
-// keys after its title, and notes on its input in the theme's muted text
-// color. Its header is a single row: the call summary and then the status,
-// with the summary cut off with an ellipsis when the row is full, after
-// ToolMarker, in the box's left padding, once SetMarker shows it. The marker
-// and the tool's name are in ToolFg, as the input is. Clicking the header
+// ExpandedBoxed. Its status and the notes on its input are in the theme's
+// muted text color. Its header is a single row: the call summary and then
+// the status, with the summary cut off with an ellipsis when the row is
+// full, after ToolMarker, in the box's left padding, once SetMarker shows
+// it. The marker and the tool's name are in the muted text color too, as
+// the input is. Clicking the header
 // expands the block, and the header of an expanded call drops the summary of
 // its input, which the details show, and the marker. The call shows as the
 // first of formats that describes it says.
@@ -67,12 +70,18 @@ func NewToolBox(tool message.ToolPart, theme *style.Theme, fg style.Color, forma
 			widget.TextWithBg(style.ColorTransparent),
 			widget.TextWithWrapMode(textbuf.WrapWord),
 		),
-		Body:   NewToolBody(theme, fg, style.ColorTransparent),
+		Body: NewToolBody(theme, fg, style.ColorTransparent),
+		Lines: widget.NewText("",
+			widget.TextWithFg(fg),
+			widget.TextWithBg(style.ColorTransparent),
+			widget.TextWithWrapMode(textbuf.WrapWord),
+		),
 		Output: NewToolBody(theme, fg, style.ColorTransparent),
 	}
 	b.Content = b
 	b.Details.Add(b.Params)
 	b.Details.Add(b.Body)
+	b.Details.Add(b.Lines)
 	b.Details.Add(b.Output)
 	b.ShowTool(tool)
 	b.ShowShape()
@@ -112,15 +121,18 @@ func (b *ToolBox) Format(tool message.ToolPart) ToolView {
 // tool, as its View, which Format gives, says. The params show its main
 // param, the one its header sums its input up by unless the View names
 // another, then the View's notes, and then a note on each other param, as
-// ParamNotes gives them, but for those the View leaves unnoted. Input that is
+// ParamNotes gives them, but for those the View leaves unnoted, and the
+// View's Lines, when it has any, show in place of the body. Input that is
 // not a JSON object yet, as while it streams, is shown as it is in the body
 // instead. A call whose params show nothing, and that has nothing else to
 // show, shows its input in the body, as InputJSON gives it, so that
-// expanding it shows something. The box is busy while the call executes.
+// expanding it shows something. The box is busy while the call executes, and
+// KeepExpanded as the View says.
 func (b *ToolBox) ShowTool(tool message.ToolPart) {
 	b.Tool = tool
 	b.View = b.Format(tool)
 	view := b.View
+	b.KeepExpanded = view.KeepExpanded
 	_, status, output := ToolHeaderOutput(tool, view, b.NameFg, b.Status.Fg())
 	args := DecodeToolArgs(tool.Input())
 	key, param := SummaryField(args)
@@ -138,6 +150,10 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 	if view.OutputInBody {
 		content, output = output, ""
 	}
+	hasLines := len(view.Lines) > 0
+	if hasLines {
+		content = ""
+	}
 	notes := slices.Clone(view.Notes)
 	if args != nil {
 		notes = slices.AppendSeq(notes, ParamNotes(tool.Input(), append([]string{key}, view.Unnoted...)...))
@@ -145,7 +161,7 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 		content, filetype = string(tool.Input()), "json"
 	}
 	hasParams := param != "" || len(notes) > 0
-	if !hasParams && !inHeader && content == "" && output == "" && len(args) > 0 {
+	if !hasParams && !inHeader && !hasLines && content == "" && output == "" && len(args) > 0 {
 		content, filetype = InputJSON(tool.Input()), "json"
 	}
 	b.Params.SetStyledContent(b.ParamsText(param, view.Shell, notes))
@@ -153,6 +169,8 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 	b.ShowHeader()
 	b.Body.SetContent(ToolFence(filetype, content))
 	b.Body.SetGone(content == "")
+	b.Lines.SetStyledContent(b.LinesText(view.Lines))
+	b.Lines.SetGone(!hasLines)
 	b.Output.SetContent(ToolFence("text", output))
 	b.Output.SetGone(output == "")
 	b.SetStatus(status)
@@ -202,6 +220,24 @@ func (b *ToolBox) ParamsText(param string, shell bool, notes []string) style.Sty
 			chunks = append(chunks, style.Plain(" "))
 		}
 		chunks = append(chunks, style.TextChunk{Text: note, Fg: muted})
+	}
+	return style.NewStyledText(chunks...)
+}
+
+// LinesText returns lines one per row, each in the color of Lines or, when
+// Muted, in MutedFg.
+func (b *ToolBox) LinesText(lines []ToolLine) style.StyledText {
+	fg, muted := b.Lines.Fg(), b.MutedFg
+	var chunks []style.TextChunk
+	for i, line := range lines {
+		if i > 0 {
+			chunks = append(chunks, style.Plain("\n"))
+		}
+		c := style.TextChunk{Text: line.Text, Fg: fg}
+		if line.Muted {
+			c.Fg = muted
+		}
+		chunks = append(chunks, c)
 	}
 	return style.NewStyledText(chunks...)
 }

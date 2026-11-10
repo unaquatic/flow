@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
@@ -62,7 +63,11 @@ type StatusInfo struct {
 	Updated time.Time
 	// Messages counts the transcript's messages.
 	Messages int
-	// Model is the terminal's model variant.
+	// Provider identifies the provider of the terminal's model, by its
+	// catalog ID.
+	Provider agent.ProviderID
+	// Model is the terminal's model variant without its provider, in
+	// "model:option:effort" form, such as "lab-a/model-a:fast:high".
 	Model string
 	// Usage is the session's token use, whose context and window the
 	// Context row shows.
@@ -74,19 +79,31 @@ type StatusInfo struct {
 // statusLabelWidth is the width of the session info's label column.
 const statusLabelWidth = 10
 
+// StatusNone stands in the session info for a provider or model that is
+// not set.
+const StatusNone = "none"
+
 // StatusLines returns the rows of the session info, each a dim label and its
 // value: the version, the session's ID, its title when it has one, its last
-// update once it is stored, its message count, the model, the context, and
-// the working directory. The context reads as the tokens of the latest
-// request, the model's window and the share of it they fill, such as
-// "18K / 400K 5%", or the tokens alone when the window is not known, in th's
-// warning or danger color once they fill most of the window, as the slash
-// menu's status row colors them.
+// update once it is stored, its message count, the model's provider, the
+// model without its provider, the context, and the working directory. A
+// provider or model that is not set reads as StatusNone, dim as the labels
+// are. The context reads as the tokens of the latest request, the model's
+// window and the share of it they fill, such as "18K / 400K 5%", or the
+// tokens alone when the window is not known, in th's warning or danger color
+// once they fill most of the window, as the slash menu's status row colors
+// them. The labels are in th's TextMuted. A nil th uses the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
-	dim := style.New().WithFg(style.ColorFromInts(140, 140, 140, 255)).Func()
+	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
 	var lines []style.StyledText
 	add := func(label string, value style.TextChunk) {
 		lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("%-*s", statusLabelWidth, label)), value))
+	}
+	orNone := func(value string) style.TextChunk {
+		if value == "" {
+			return dim(StatusNone)
+		}
+		return style.Plain(value)
 	}
 	add("Version", style.Plain(info.Version))
 	add("Session", style.Plain(info.Session))
@@ -97,7 +114,8 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		add("Updated", style.Plain(info.Updated.Local().Format(time.DateTime)))
 	}
 	add("Messages", style.Plain(strconv.Itoa(info.Messages)))
-	add("Model", style.Plain(info.Model))
+	add("Provider", orNone(string(info.Provider)))
+	add("Model", orNone(info.Model))
 	context := FormatTokens(info.Usage.Context)
 	if info.Usage.Window > 0 {
 		context += " / " + FormatTokens(info.Usage.Window) + " " + ContextPercent(info.Usage)
@@ -118,12 +136,6 @@ func (s *Service) ShowInfo() []UIEvent {
 	return s.ShowInfoUnder(slices.Collect(LogoLines()))
 }
 
-// ShowLogo shows the product logo on the canvas, from the transcript's left
-// edge, as a new session opens under it.
-func (s *Service) ShowLogo() []UIEvent {
-	return s.AddNotice(Notice{Lines: slices.Collect(LogoLines()), Surface: NoticeCanvas})
-}
-
 // ShowInfoUnder reports the running version and the active session in the
 // transcript, as StatusLines lays them out, under logo as LogoNotice shows
 // it, or alone when logo is empty.
@@ -137,11 +149,13 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		return s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
 	}
 
+	provider, model := agent.ParseModel(s.state.Model)
 	info := StatusInfo{
 		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
 		Messages:  s.MessageCount(),
-		Model:     s.state.Model,
+		Provider:  provider,
+		Model:     model,
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
 	}
@@ -367,7 +381,9 @@ func Prompts(msgs []message.Content) iter.Seq[string] {
 }
 
 // HandleSessionSelect stops the active run, activates a session, loads its
-// persisted messages, and takes the model variant they last ran. Prompts
+// persisted messages, and takes the model variant they last ran, as
+// RestoreSessionModel does, for that session alone: the default model stays
+// as it was. Prompts
 // queued in the session left are dropped. A listed session of another
 // folder is not opened here: its tools and files are that folder's, so the
 // UI closes to reopen it there, as RelaunchIn does.
@@ -487,11 +503,11 @@ func ChatMessageOf(m message.Content) ChatMessage {
 
 // InitSession opens the initial session, the stored session id or a new one
 // when id is empty, and returns the load of its transcript, the product logo
-// followed by its messages, without the session info /status shows, and its
-// terminal title. A stored session
-// takes the model variant its messages last ran, unless state.KeepModel keeps
-// the terminal's. A stored session that fails to load leaves the new session
-// active, and says so under the logo.
+// and the session info /status shows, as ShowInfo shows them, followed by
+// its messages, and its terminal title. A stored session takes the model
+// variant its messages last ran, unless state.KeepModel keeps the
+// terminal's. A stored session that fails to load leaves the new session
+// active, and says so under the session info.
 //
 // The transcript is loaded whole, rather than a message at a time, so that
 // the UI builds the rows of the last messages alone, as BuildTranscript
@@ -508,22 +524,28 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The logo heads the transcript, above the messages it follows in.
+	// The logo and the session info head the transcript, above the messages
+	// they follow in. They show once the session and its model are set, so
+	// that the info reads them.
 	loaded := len(s.state.Messages)
-	s.ShowLogo()
+	s.ShowInfo()
 	s.state.Messages = slices.Concat(s.state.Messages[loaded:], s.state.Messages[:loaded])
 	return slices.Concat(restored, []UIEvent{EventSessionLoad{Messages: s.state.Messages}}, s.UpdateUsage(), s.UpdateTitle())
 }
 
 // ClearMessages stops the active run, empties the chat, and starts a fresh
-// session, whose /status notice then heads the transcript as at startup.
-// Prompts queued in the session left are dropped.
+// session on the terminal's DefaultModel, not the model of the session left,
+// whose /status notice then heads the transcript as at startup. Prompts
+// queued in the session left are dropped.
 func (s *Service) ClearMessages() []UIEvent {
 	s.Stop()
 	s.state.Messages = nil
 	s.NewSession()
+	// The model must be set before ShowInfo, which reads it.
+	restored := s.RestoreDefaultModel()
 	return slices.Concat(
 		[]UIEvent{EventClearMessages{}},
+		restored,
 		s.ShowInfo(),
 		s.UpdateUsage(),
 		s.ResetError(),

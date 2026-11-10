@@ -9,7 +9,7 @@ import (
 )
 
 // TestLoad checks that the extension loads, as a tool hook, with the tools
-// flow offers the model: read, write, edit, and bash.
+// flow offers the model: read, write, edit, bash, and todo.
 func TestLoad(t *testing.T) {
 	e, err := Load(t.Context(), extension.Host{})
 	if err != nil {
@@ -23,7 +23,7 @@ func TestLoad(t *testing.T) {
 	for _, tl := range h.Tools() {
 		names = append(names, tl.Name)
 	}
-	if want := []string{"read", "write", "edit", "bash"}; !slices.Equal(names, want) {
+	if want := []string{"read", "write", "edit", "bash", "todo"}; !slices.Equal(names, want) {
 		t.Errorf("tools = %v, want %v", names, want)
 	}
 }

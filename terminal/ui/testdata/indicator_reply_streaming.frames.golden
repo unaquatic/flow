@@ -1,9 +1,7 @@
 === text ===
+|■ ok                                                                    |
 |                                                                        |
-|  ok                                                                    |
-|                                                                        |
-|                                                                        |
-|  Running them now.                                                     |
+|■ Running them now.                                                     |
 |                                                                        |
 |■ Working [12s] [esc cancel] [ctrl+o expand]                            |
 |                                                                        |
@@ -12,28 +10,16 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
+|A AA                                                                    |
 |                                                                        |
-|  AA                                                                    |
+|B AAAAAAA AAAA AAAA                                                     |
 |                                                                        |
+|C CCCCCCC CCCCC CCCC CCCCCCC CCCCCCC CCCCCCC                            |
 |                                                                        |
-|  AAAAAAA AAAA AAAA                                                     |
-|                                                                        |
-|B BBBBBBB BBBBB BBBB BBBBBBB BBBBBBB BBBBBBB                            |
-|                                                                        |
-|C                                                                       |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-=== bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
+|A                                                                       |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -42,6 +28,5 @@
 |                                                                        |
 === legend ===
 A #e6e6e6
-B #707070
-C #ff5f00
-░ #232323 BoxBg
+B #eb7513
+C #8a8a8a

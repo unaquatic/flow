@@ -1,23 +1,24 @@
 === text ===
-|  Run this:                             |
+|■ Run this:                             |
 |                                        |
 |  go test ./...                         |
 |                                        |
-|  Cache read 7.7K write 0K              |
+|■ Cache read 7.7K write 0K              |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|  AAA AAAAA                             |
+|A BBB BBBBB                             |
 |                                        |
-|  AA AAAA AAAAA                         |
+|  BB BBBB BBBBB                         |
 |                                        |
-|  BBBBB BBBB BBBB BBBBB BB              |
+|C CCCCC CCCC CCCC CCCCC CC              |
 |                                        |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
-A #e6e6e6
-B #8c8c8c
+A #eb7513
+B #e6e6e6
+C #8a8a8a

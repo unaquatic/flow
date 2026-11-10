@@ -18,13 +18,13 @@ type ReasoningBox struct {
 }
 
 // ReasoningCodeFg returns the color of inline code in reasoning: the hue of
-// the theme's inline code, as bright as ToolFg, which reasoning is drawn
-// in, and with chroma scaled by the ratio of that text's lightness to
-// regular text's, so that the code dims as the prose around it does.
-// Regular text keeps the theme's own color.
+// the theme's inline code, as bright as the theme's TextMuted, which
+// reasoning is drawn in, and with chroma scaled by the ratio of that text's
+// lightness to regular text's, so that the code dims as the prose around it
+// does. Regular text keeps the theme's own color.
 func ReasoningCodeFg(theme *style.Theme) style.Color {
 	code := theme.ResolveMarkdownCode().Fg.ToOKLCH()
-	text, muted := theme.ResolveTextBase().ToOKLCH().L, ToolFg.ToOKLCH().L
+	text, muted := theme.ResolveTextBase().ToOKLCH().L, theme.TextMuted.ToOKLCH().L
 	dim := 1.0
 	if brighter := max(text, muted); brighter > 0 {
 		dim = min(text, muted) / brighter
@@ -35,9 +35,9 @@ func ReasoningCodeFg(theme *style.Theme) style.Color {
 
 // NewReasoningBox creates a reasoning block, padded by PaddingX at the sides,
 // that is transparent and sits flush against the surrounding rows, without
-// vertical padding. Its text is in ToolFg, as tool rows are, and its
-// inline code in the color ReasoningCodeFg gives, on the theme's code
-// background; fenced code keeps the theme's colors.
+// vertical padding. Its text is in the theme's TextMuted, as tool rows are,
+// and its inline code in the color ReasoningCodeFg gives, on the theme's
+// code background; fenced code keeps the theme's colors.
 func NewReasoningBox(part message.ReasoningPart, theme *style.Theme) *ReasoningBox {
 	theme = themeOrDefault(theme)
 	b := &ReasoningBox{
@@ -53,9 +53,8 @@ func NewReasoningBox(part message.ReasoningPart, theme *style.Theme) *ReasoningB
 		Body: widget.NewStreamMarkdown(
 			widget.StreamMarkdownWithTheme(theme),
 			widget.StreamMarkdownWithCode(theme.ResolveMarkdownCode().WithFg(ReasoningCodeFg(theme))),
-			widget.StreamMarkdownWithFg(ToolFg),
+			widget.StreamMarkdownWithFg(theme.TextMuted),
 			widget.StreamMarkdownWithBg(style.ColorTransparent),
-			widget.StreamMarkdownWithPending(WritingRow()),
 			widget.StreamMarkdownWithLayout(layout.WithWidth(layout.Percent(100))),
 		),
 	}

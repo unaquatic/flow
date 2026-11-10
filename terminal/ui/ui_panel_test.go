@@ -401,8 +401,8 @@ func TestPanelHeaderCount(t *testing.T) {
 	if chunks[0].Attributes&style.AttrBold != 0 {
 		t.Error("the title is bold")
 	}
-	if count := chunks[1]; count.Attributes&style.AttrBold != 0 || count.Fg != PanelDimFg {
-		t.Errorf("count = %+v, want it in PanelDimFg, not bold", count)
+	if count := chunks[1]; count.Attributes&style.AttrBold != 0 || count.Fg != mutedFg {
+		t.Errorf("count = %+v, want it in mutedFg, not bold", count)
 	}
 	h.SetCount("")
 	if got := h.Title.PlainText(); got != "Commands" {
@@ -530,8 +530,8 @@ func TestInputShowsQuitHint(t *testing.T) {
 			t.Fatalf("idle Ctrl+C = %v, want it to arm the quit", out)
 		}
 		ui.ShowQuitHint(enqueue)
-		if hint, fg := ui.input.EditSurface().PlaceholderText(); hint != QuitHint || fg != PanelDimFg {
-			t.Errorf("armed: input hint %q in %v, want %q in PanelDimFg", hint, fg, QuitHint)
+		if hint, fg := ui.input.EditSurface().PlaceholderText(); hint != QuitHint || fg != mutedFg {
+			t.Errorf("armed: input hint %q in %v, want %q in mutedFg", hint, fg, QuitHint)
 		}
 
 		time.Sleep(QuitWindow - time.Nanosecond)

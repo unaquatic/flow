@@ -208,7 +208,7 @@ func TestToolBox_ParamsNoteOtherParams(t *testing.T) {
 		"ls":         {"ls", `{"path":"calc","limit":5}`, "[limit 5]"},
 		"url":        {"webfetch", `{"url":"https://pkg.go.dev/errors","format":"markdown"}`, "https://pkg.go.dev/errors [format markdown]"},
 		// Without a main param, the notes alone are shown.
-		"no main param": {"todo", `{"id":3,"done":true}`, "[id 3] [done true]"},
+		"no main param": {"mark", `{"id":3,"done":true}`, "[id 3] [done true]"},
 		// A value that a note cannot hold on one line is shown as JSON, and
 		// an empty one not at all.
 		"other values": {"search", `{"query":"q","tags":["a", "b"],"filter":{"x": 1},"body":"one\ntwo","note":"","next":null}`,
