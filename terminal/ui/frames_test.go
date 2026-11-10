@@ -281,6 +281,20 @@ func TestTranscriptFrames(t *testing.T) {
 			info.Provider, info.Model, info.Usage.Window = "", "", 0
 			ui.AddNotice(LogoNotice(nil, StatusLines(info, nil))...)
 		}},
+		// /usage shows the session's context, tokens, cost and worked time
+		// on the system surface, the context colored as /status colors it.
+		{name: "usage_notice", w: 48, h: 12, add: func(ui *UI) {
+			ui.AddNotice(Notice{Title: UsageTitle, Surface: NoticeSystem, Lines: UsageLines(UsageInfo{
+				Model:  "provider-a/model-a:high",
+				Usage:  SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000, Cost: 0.42, Context: 300_000, Window: 400_000},
+				Worked: 3*time.Minute + 12*time.Second,
+			}, nil)})
+		}},
+		// /help lists the commands and then the keys, names in the primary
+		// color.
+		{name: "help_notice", w: 72, h: 34, add: func(ui *UI) {
+			ui.AddNotice(Notice{Title: HelpTitle, Surface: NoticeSystem, Lines: HelpLines(SlashCommands)})
+		}},
 		// /new heads the emptied transcript with the new session's /status.
 		{name: "new_chat", h: 22, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines())...)
@@ -387,7 +401,7 @@ func TestTranscriptFrames(t *testing.T) {
 			todoTurn(ui)
 			clickTool(ui, "a1", 1)
 		}},
-		// Hiding the tool marker in /settings leaves the padding before each
+		// Hiding the tool marker in /config leaves the padding before each
 		// row blank, and the rows' text where it was.
 		{name: "agent_tool_rows_no_marker", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
@@ -399,7 +413,7 @@ func TestTranscriptFrames(t *testing.T) {
 			toolRowsTurn(ui)
 			ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 		}},
-		// Expanded boxed, as /settings sets them, the calls show their
+		// Expanded boxed, as /config sets them, the calls show their
 		// details in a block on the success surface, between rows of
 		// padding.
 		{name: "agent_tool_expanded_boxed", h: 24, add: func(ui *UI) {
@@ -465,7 +479,7 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "fix the divide test"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check.\n\nThe tests pass now."))
 		}},
-		// The marker shape set in /settings marks the calls, the cache rows,
+		// The marker shape set in /config marks the calls, the cache rows,
 		// and the footer alike: here an unfilled circle.
 		{name: "agent_tool_rows_circle", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
@@ -680,7 +694,7 @@ func TestToolBoxHeaderFrames(t *testing.T) {
 }
 
 // TestUsageBoxFrames draws a usage box once shown, which it is not by
-// default, as /settings shows tool calls: collapsed to its header, a row,
+// default, as /config shows tool calls: collapsed to its header, a row,
 // with the marker when it is on, and expanded to every count the provider
 // reported, on the canvas, or in a block on the surface when boxed.
 func TestUsageBoxFrames(t *testing.T) {
@@ -824,7 +838,7 @@ func TestInputFrames(t *testing.T) {
 			ui.ShowSlashMenu(ui.service.SlashMenuItems("/st"))
 		}},
 		// In the bar input style, the default, the marker follows the shape
-		// /settings sets: in the primary color before the input, and in the
+		// /config sets: in the primary color before the input, and in the
 		// color of a panel's title before it.
 		{name: "input_bar_circle", h: 15, open: func(ui *UI) {
 			ui.Apply(ui.service.SetMarkerShape(MarkerCircle))
@@ -912,7 +926,7 @@ func TestSlashStatusFrames(t *testing.T) {
 		usage SessionUsage
 		// pinned pins the box and draws it with the slash menu closed.
 		pinned bool
-		// noMarker hides the tool marker, as /settings does.
+		// noMarker hides the tool marker, as /config does.
 		noMarker bool
 		// expanded expands tool calls, as Ctrl+O does.
 		expanded bool
@@ -1645,7 +1659,7 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_loading", h: 7, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{Title: "Models", Text: "Loading models..."})
 		}},
-		// While debug is off, /settings shows fullscreen and debug alone.
+		// While debug is off, /config shows fullscreen and debug alone.
 		{name: "banner_settings_menu", h: 7, open: func(ui *UI) {
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
@@ -1654,7 +1668,7 @@ func TestMenuFrames(t *testing.T) {
 			ui.Apply(ui.service.SetDebug(true))
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
-		// In the filled input style, /settings fills the box, its title
+		// In the filled input style, /config fills the box, its title
 		// unmarked.
 		{name: "banner_settings_filled", h: 7, open: func(ui *UI) {
 			ui.Apply(ui.service.SetInputStyle(InputFilled))
@@ -1688,7 +1702,7 @@ func TestMenuFrames(t *testing.T) {
 			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:high"))
 			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}))
 		}},
-		// The default is marked on the selected row too, as /effort shows it
+		// The default is marked on the selected row too, as the page shows it
 		// for a model that runs at its default.
 		{name: "banner_effort_default_selected", h: 14, open: func(ui *UI) {
 			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:medium"))

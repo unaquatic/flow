@@ -186,7 +186,7 @@ func walkFills(r render.Renderable, c style.Color, yield func(func(style.Color))
 }
 
 // MarkEdge has edge, the left border cell of a row of the input box, draw
-// the marker shape /settings sets, in the color fg gives, on its first row
+// the marker shape /config sets, in the color fg gives, on its first row
 // while the input shows in InputBar, as EdgeMarker draws it: the cell before
 // the input's first row, or before a panel's title, where a tool call's row
 // starts with its marker. RepaintEdgeMarks repaints it.

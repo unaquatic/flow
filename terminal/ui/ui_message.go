@@ -153,7 +153,7 @@ func (ui *UI) SetToolColor(c ToolNameColor) {
 }
 
 // ShowStatusMarker shows the Usage box's row with the tool marker, while
-// /settings shows it, and in the tool name color, as a row with nothing to
+// /config shows it, and in the tool name color, as a row with nothing to
 // expand shows them, whether tool calls are expanded or not.
 func (ui *UI) ShowStatusMarker() {
 	if ui.statusHeader == nil {
@@ -297,7 +297,7 @@ func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 // NewNoticeBarRow returns the row, with id, that shows lines, those of n, as
 // PromptBar shows a prompt: on the canvas, with no padding above or below,
 // inset by PaddingX at the sides like the prose. Its header starts with a
-// marker in its left padding, in the marker shape /settings sets and in
+// marker in its left padding, in the marker shape /config sets and in
 // titleFg, the color of the header it heads, and then n's Title, or without
 // one the first of lines.
 // The other lines follow under the header, unmarked. A blank row follows

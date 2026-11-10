@@ -15,7 +15,7 @@ const ContextLabel = "Context"
 
 // SystemBox is the PartBox of a text part of a system message, the
 // instructions a session opens with and every request of it sends first: a
-// box like a tool call's, shown as /settings and Ctrl+O show tool calls,
+// box like a tool call's, shown as /config and Ctrl+O show tool calls,
 // with ToolMarker as they have it. Its header is ContextLabel, with the
 // number of lines of the text after it as its Status, such as "[12 lines]",
 // and its details show the whole text, as the model is sent it.

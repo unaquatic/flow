@@ -280,11 +280,11 @@ func TestSlashMenuHasNoGaps(t *testing.T) {
 		t.Fatalf("menu lists %d rows, want one for each of the %d commands", got, want)
 	}
 	selected := func() Command { return ui.slashMenu.SelectedItem().Value.(Command) }
-	for range 5 {
+	for range len(SlashCommandGroups[0]) {
 		ui.slashMenu.MoveDown()
 	}
 	if got := selected(); got != CommandUndo {
-		t.Errorf("five rows down = %s, want %s, the first of the second group", got, CommandUndo)
+		t.Errorf("%d rows down = %s, want %s, the first of the second group", len(SlashCommandGroups[0]), got, CommandUndo)
 	}
 }
 

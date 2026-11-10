@@ -12,7 +12,7 @@ import (
 )
 
 // PatchBox is the ui.PartBox of the workspace changes one agent step made,
-// shown as a tool call is: a row on the canvas, marked as /settings marks
+// shown as a tool call is: a row on the canvas, marked as /config marks
 // tool calls, whose header sums them up, as PatchHeader gives it, and which
 // Ctrl+O expands with the tool calls. Expanded, the header is PatchTitle
 // alone, and the details show the summary under it, then the changes of each

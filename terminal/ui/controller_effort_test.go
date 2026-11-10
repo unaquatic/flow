@@ -96,15 +96,15 @@ func TestModelMenuWithoutEfforts(t *testing.T) {
 	}
 }
 
-// TestEffortCommand checks that /effort lists the levels of the terminal's
-// model under the title "Reasoning effort", selecting the one it runs at, and
-// that choosing one switches the same model and mode to that level and says
-// so.
-func TestEffortCommand(t *testing.T) {
+// TestEffortMenu checks that the effort page of the terminal's model lists
+// its levels under the title "Reasoning effort", selecting the one it runs
+// at, and that choosing one switches the same model and mode to that level
+// and says so.
+func TestEffortMenu(t *testing.T) {
 	s, _ := newTestService(t)
 	s.SelectModel("provider-a/provider-a/model-a:fast:xhigh")
 
-	page := bannerShown(t, s.HandleSubmit("/effort"))
+	page := bannerShown(t, s.ShowEffortMenu(s.Variant()))
 	if page.Title != "Reasoning effort" {
 		t.Errorf("page title = %q, want Reasoning effort", page.Title)
 	}
@@ -122,19 +122,6 @@ func TestEffortCommand(t *testing.T) {
 	}
 	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/provider-a/model-a:fast:low as the default model"}) {
 		t.Errorf("notices = %q, want Switched to provider-a/provider-a/model-a:fast:low", got)
-	}
-}
-
-// TestEffortCommandWithoutEfforts checks that /effort on a model that takes
-// no levels opens no menu, and says why.
-func TestEffortCommandWithoutEfforts(t *testing.T) {
-	s, _ := newTestService(t)
-	out := s.HandleSubmit("/effort")
-	if got := toasts(out); !slices.Equal(got, []string{"provider-a/model has no reasoning efforts"}) {
-		t.Errorf("notices = %q, want that provider-a/model has no reasoning efforts", got)
-	}
-	if s.state.Banner != NoBanner || s.state.Model != "provider-a/model" {
-		t.Errorf("banner %v, model %q, want no banner and provider-a/model", s.state.Banner, s.state.Model)
 	}
 }
 

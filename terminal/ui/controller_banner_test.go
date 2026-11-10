@@ -76,7 +76,7 @@ func TestSearchMenuChoose(t *testing.T) {
 
 func TestSettingsMenuToggleKeepsSearch(t *testing.T) {
 	s := &Service{state: &UIState{Inline: true}}
-	show := bannerShown(t, s.HandleSubmit("/settings"))
+	show := bannerShown(t, s.HandleSubmit("/config"))
 	if show.Items[0].Description != "Off" || show.NameWidth != settingValueColumn {
 		t.Fatalf("fullscreen = %q in a %d-wide name column, want Off in %d", show.Items[0].Description, show.NameWidth, settingValueColumn)
 	}
@@ -95,13 +95,13 @@ func TestSettingsMenuToggleKeepsSearch(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuKeyHints checks that /settings names the panels' keys
+// TestSettingsMenuKeyHints checks that /config names the panels' keys
 // after their titles by default, and that choosing the setting moves them
 // under the titles, to the footer, and back, keeping the menu open on the
 // setting.
 func TestSettingsMenuKeyHints(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	row := slices.Index(bannerNames(settings), keyHintsSetting)
 	if row < 0 || settings.Items[row].Description != KeyHintsTitle.String() {
 		t.Fatalf("settings = %+v, want key hints title", settings.Items)
@@ -118,12 +118,12 @@ func TestSettingsMenuKeyHints(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuListCount checks that /settings counts a list's rows below
+// TestSettingsMenuListCount checks that /config counts a list's rows below
 // them by default, and that choosing the setting moves the count after the
 // list's title and back, keeping the menu open on the setting.
 func TestSettingsMenuListCount(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	row := slices.Index(bannerNames(settings), listCountSetting)
 	if row < 0 || settings.Items[row].Description != CountBelow.String() {
 		t.Fatalf("settings = %+v, want list count below", settings.Items)
@@ -140,14 +140,14 @@ func TestSettingsMenuListCount(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuSelection checks that /settings fills a menu's selected row
+// TestSettingsMenuSelection checks that /config fills a menu's selected row
 // across the box by default, after the list count, and that choosing the
 // setting fills it a cell in from the box's edges instead, then marks it with
 // an arrow, and fills it across the box again, keeping the menu open on the
 // setting.
 func TestSettingsMenuSelection(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, selectionSetting)
 	if row < 0 || row != slices.Index(names, listCountSetting)+1 || settings.Items[row].Description != SelectionFullWidth.String() {
@@ -165,13 +165,13 @@ func TestSettingsMenuSelection(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuExpandedTools checks that /settings shows expanded tool
+// TestSettingsMenuExpandedTools checks that /config shows expanded tool
 // calls plain by default, after the cache usage, and that choosing the
 // setting makes them boxed and plain again, keeping the menu open on the
 // setting.
 func TestSettingsMenuExpandedTools(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, expandedSetting)
 	if row < 0 || row != slices.Index(names, cacheUsageSetting)+1 || settings.Items[row].Description != ExpandedPlain.String() {
@@ -189,12 +189,12 @@ func TestSettingsMenuExpandedTools(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuToolMarker checks that /settings shows the tool marker on
+// TestSettingsMenuToolMarker checks that /config shows the tool marker on
 // by default, after the expanded tools, and that choosing the setting hides it
 // and shows it again, keeping the menu open on the setting.
 func TestSettingsMenuToolMarker(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, toolMarkerSetting)
 	if row < 0 || row != slices.Index(names, expandedSetting)+1 || settings.Items[row].Description != "On" {
@@ -212,12 +212,12 @@ func TestSettingsMenuToolMarker(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuToolColor checks that /settings shows the tool name color
+// TestSettingsMenuToolColor checks that /config shows the tool name color
 // gray by default, after the tool marker, and that choosing the setting
 // makes it white and gray again, keeping the menu open on the setting.
 func TestSettingsMenuToolColor(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, toolColorSetting)
 	if row < 0 || row != slices.Index(names, markerShapeSetting)+1 || settings.Items[row].Description != ToolNameGray.String() {
@@ -235,13 +235,13 @@ func TestSettingsMenuToolColor(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuMarkerShape checks that /settings shows the marker shape
+// TestSettingsMenuMarkerShape checks that /config shows the marker shape
 // as a filled square by default, after the tool marker, and that choosing
 // the setting goes through every shape and back, keeping the menu open on
 // the setting.
 func TestSettingsMenuMarkerShape(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, markerShapeSetting)
 	if row < 0 || row != slices.Index(names, toolMarkerSetting)+1 || settings.Items[row].Description != "■ Square" {
@@ -259,12 +259,12 @@ func TestSettingsMenuMarkerShape(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuPromptStyle checks that /settings shows prompts by a bar by
+// TestSettingsMenuPromptStyle checks that /config shows prompts by a bar by
 // default, after the selection, and that choosing the setting fills them and
 // shows them by a bar again, keeping the menu open on the setting.
 func TestSettingsMenuPromptStyle(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, promptSetting)
 	if row < 0 || row != slices.Index(names, selectionSetting)+1 || settings.Items[row].Description != PromptBar.String() {
@@ -282,12 +282,12 @@ func TestSettingsMenuPromptStyle(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuInputStyle checks that /settings shows the input by a bar
+// TestSettingsMenuInputStyle checks that /config shows the input by a bar
 // by default, after the prompt style, and that choosing the setting fills it
 // and shows it by a bar again, keeping the menu open on the setting.
 func TestSettingsMenuInputStyle(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, inputSetting)
 	if row < 0 || row != slices.Index(names, promptSetting)+1 || settings.Items[row].Description != InputBar.String() {
@@ -305,14 +305,14 @@ func TestSettingsMenuInputStyle(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuDebug checks that /settings shows fullscreen and debug
+// TestSettingsMenuDebug checks that /config shows fullscreen and debug
 // alone while debug is off, debug off by default as the last row, that
 // choosing it switches debug on and shows the style settings between the
 // two, and that choosing it again hides them, keeping the menu open on the
 // setting.
 func TestSettingsMenuDebug(t *testing.T) {
 	s := &Service{state: &UIState{}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	plain := []string{fullscreenSetting, debugSetting}
 	if names := bannerNames(settings); !slices.Equal(names, plain) || settings.Items[1].Description != "Off" {
 		t.Fatalf("settings = %+v, want %q with debug off", settings.Items, plain)
@@ -337,7 +337,7 @@ func TestSettingsMenuDebug(t *testing.T) {
 }
 
 // TestSettingsPersist checks that fullscreen and debug are saved in the
-// config file as /settings changes them, that the style settings are not,
+// config file as /config changes them, that the style settings are not,
 // and that the next terminal starts with the saved settings and the style
 // settings' defaults.
 func TestSettingsPersist(t *testing.T) {
@@ -405,14 +405,14 @@ func TestSettingsPersistFailure(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuCacheUsage checks that /settings shows the cache usage off
+// TestSettingsMenuCacheUsage checks that /config shows the cache usage off
 // by default, that choosing it moves it to the next of off, per turn, and
 // per message, after the last back to the first, that ←/→ move it back and
 // forth, and that the menu stays open on the cache usage row, which shows
 // the mode in use.
 func TestSettingsMenuCacheUsage(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
-	settings := bannerShown(t, s.HandleSubmit("/settings"))
+	settings := bannerShown(t, s.HandleSubmit("/config"))
 	row := slices.Index(bannerNames(settings), cacheUsageSetting)
 	if row < 0 || settings.Items[row].Description != CacheOff.String() {
 		t.Fatalf("settings = %+v, want cache usage off", settings.Items)
@@ -462,9 +462,9 @@ func TestCtrlCClosesMenus(t *testing.T) {
 		// hide is the event that closes the page.
 		hide UIEvent
 	}{
-		{name: "settings", open: func(_ *testing.T, s *Service, _ *app.App) { s.HandleSubmit("/settings") }, hide: EventBannerHide{}},
+		{name: "settings", open: func(_ *testing.T, s *Service, _ *app.App) { s.HandleSubmit("/config") }, hide: EventBannerHide{}},
 		{name: "settings searched", open: func(_ *testing.T, s *Service, _ *app.App) {
-			s.HandleSubmit("/settings")
+			s.HandleSubmit("/config")
 			s.HandleBannerSearch("cache")
 		}, hide: EventBannerHide{}},
 		{name: "model", open: func(_ *testing.T, s *Service, _ *app.App) { s.HandleSubmit("/model") }, hide: EventBannerHide{}},

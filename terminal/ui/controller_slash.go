@@ -15,16 +15,19 @@ type Command string
 // The slash commands.
 const (
 	CommandResume   Command = "resume"
-	CommandModel    Command = "model"
-	CommandEffort   Command = "effort"
 	CommandNew      Command = "new"
-	CommandTree     Command = "tree"
-	CommandContinue Command = "continue"
+	CommandModel    Command = "model"
+	CommandStatus   Command = "status"
+	CommandUsage    Command = "usage"
 	CommandUndo     Command = "undo"
 	CommandRedo     Command = "redo"
-	CommandStatus   Command = "status"
-	CommandSettings Command = "settings"
+	CommandContinue Command = "continue"
+	CommandCheckout Command = "checkout"
+	CommandCopy     Command = "copy"
+	CommandExport   Command = "export"
+	CommandConfig   Command = "config"
 	CommandLogin    Command = "login"
+	CommandHelp     Command = "help"
 	CommandQuit     Command = "quit"
 )
 
@@ -70,37 +73,48 @@ func (c SlashCommand) Names() iter.Seq[Command] {
 }
 
 // SlashCommandGroups are the slash commands in groups, in the order the menu
-// lists them: the session and its model, moves through its history, and the
-// app.
+// lists them: the session and its model, moves through its history, what
+// takes the chat out of flow, and the app.
 var SlashCommandGroups = [][]SlashCommand{
 	{
 		{Name: CommandResume, Aliases: []Command{"session", "history"},
 			Desc: "Resume a session from history", Run: (*Service).HandleSessionList},
 		{Name: CommandNew, Aliases: []Command{"clear"},
 			Desc: "Clear the chat and start over", Run: (*Service).ClearMessages},
-		{Name: CommandModel, Desc: "Switch the model", Run: (*Service).ShowModelMenu},
-		{Name: CommandEffort, Desc: "Change the reasoning effort", Run: (*Service).HandleEffort},
+		{Name: CommandModel, Desc: "Switch the model and effort", Run: (*Service).ShowModelMenu},
 		{Name: CommandStatus, Aliases: []Command{"info"},
 			Desc: "Show the version and session info", Run: (*Service).ShowStatus},
+		{Name: CommandUsage, Aliases: []Command{"context"},
+			Desc: "Show context, tokens and cost", Run: (*Service).ShowUsage},
 	},
 	{
 		{Name: CommandUndo, Desc: "Move the workspace back one turn", Run: (*Service).HandleUndo},
 		{Name: CommandRedo, Desc: "Move the workspace forward one turn", Run: (*Service).HandleRedo},
 		{Name: CommandContinue, Desc: "Continue from where the chat ends", Run: (*Service).HandleContinue},
-		{Name: CommandTree, Desc: "Jump to any point in the session tree", Run: (*Service).ShowTree},
+		{Name: CommandCheckout, Aliases: []Command{"tree"},
+			Desc: "Check out a point in the session tree", Run: (*Service).ShowTree},
 	},
 	{
-		{Name: CommandSettings, Aliases: []Command{"config"},
-			Desc: "Change the config", Run: (*Service).ShowSettingsMenu},
+		{Name: CommandCopy, Desc: "Copy the last reply", Run: (*Service).HandleCopy},
+		{Name: CommandExport, Desc: "Save the chat as Markdown", Run: (*Service).HandleExport},
+	},
+	{
+		{Name: CommandConfig, Aliases: []Command{"settings"},
+			Desc: "Change the settings", Run: (*Service).ShowSettingsMenu},
 		{Name: CommandLogin, Aliases: []Command{"auth"},
 			Desc: "Authenticate with a provider account", Run: (*Service).ShowLoginMenu},
+		{Name: CommandHelp, Desc: "List commands and keys", Run: (*Service).ShowHelp},
 		{Name: CommandQuit, Aliases: []Command{"exit"}, Desc: "Exit", Run: (*Service).Quit},
 	},
 }
 
 // SlashCommands are the UI's own slash commands, in the order the menu offers
-// them.
-var SlashCommands = slices.Concat(SlashCommandGroups...)
+// them. They are joined in init, since /help, one of them, lists them.
+var SlashCommands []SlashCommand
+
+func init() {
+	SlashCommands = slices.Concat(SlashCommandGroups...)
+}
 
 // CommandsWith returns the slash commands of a UI that runs with exts, in the
 // order the menu offers them: SlashCommands, with the commands of each
@@ -161,16 +175,21 @@ func (s *Service) SlashMenuItems(query string) []widget.SelectItem {
 
 // MatchSlashCommands returns the slash commands among cmds that query matches
 // by name or by alias, best first as [RankByName] ranks them. A command is
-// ranked by its best match, and on a tie by its place in cmds.
+// ranked by its best match; on a tie a match by name comes before one by
+// alias, and then the command's place in cmds decides, so that "/con" offers
+// /continue and /config ahead of /usage, which "context" names.
 func MatchSlashCommands(cmds []SlashCommand, query string) []SlashCommand {
 	type named struct {
 		cmd  SlashCommand
 		name Command
 	}
-	var all []named
+	all := make([]named, 0, len(cmds))
 	for _, cmd := range cmds {
-		for name := range cmd.Names() {
-			all = append(all, named{cmd, name})
+		all = append(all, named{cmd, cmd.Name})
+	}
+	for _, cmd := range cmds {
+		for _, alias := range cmd.Aliases {
+			all = append(all, named{cmd, alias})
 		}
 	}
 	var out []SlashCommand

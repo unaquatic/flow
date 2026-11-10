@@ -98,43 +98,26 @@ func (s *Service) ToggleTreeHidden() []UIEvent {
 	return s.UpdateTree((*SessionTree).ToggleHidden)
 }
 
-// ChooseTreeRow closes the session tree and moves the session to the
-// selected message, as pi's /tree does:
-//
-//   - A prompt ends the transcript before it, at the message it continues,
-//     and puts its text in the input, to edit and send again. The prompt
-//     sent opens a branch beside the chosen one, so that the two prompts
-//     share a parent.
-//   - A reply or its tool calls end the transcript at them, for /continue to
-//     pick the work up from there.
-//
-// A message of a fork off the conversation, which the tree shows while its
-// hidden messages are, is not one the transcript can end at: choosing it
-// says so and leaves the tree open.
-//
-// The move stops the active run first and runs off the event loop, so its
-// result arrives later. The app resolves the move at that point, so a run
-// that moved the transcript since the tree was read cannot mislead it.
+// ChooseTreeRow closes the session tree and checks out the selected message.
+// A reply ends the transcript at it; a prompt ends it before it and goes back
+// in the input, so that sending it again opens a branch beside it. A message
+// off the conversation cannot be checked out, so choosing one leaves the tree
+// open. The move stops the active run and completes off the event loop.
 func (s *Service) ChooseTreeRow() []UIEvent {
-	t := s.state.Tree
-	if t == nil {
+	if s.state.Tree == nil {
 		return nil
 	}
-	row, ok := t.SelectedRow()
+	row, ok := s.state.Tree.SelectedRow()
 	if !ok {
 		return nil
 	}
-	if row.Entry.Hidden() {
-		return s.ShowToast(fmt.Sprintf("A %s message is not part of the conversation", row.Entry.Type))
+	e := row.Entry
+	if e.Hidden() {
+		return s.ShowToast(fmt.Sprintf("A %s message is not part of the conversation", e.Type))
 	}
 	closed := s.CancelBanner()
 	s.Stop()
-	e := row.Entry
-	return append(closed, EventTreeMoveRequested{
-		MessageID: e.ID,
-		Edit:      e.Role == message.RoleUser,
-		Prompt:    e.Prompt,
-	})
+	return append(closed, EventTreeMoveRequested{MessageID: e.ID, Edit: e.Role == message.RoleUser, Prompt: e.Prompt})
 }
 
 // CompleteTreeMove reports what a finished move to a message chosen in the

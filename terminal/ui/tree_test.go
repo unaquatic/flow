@@ -526,10 +526,10 @@ func TestShowTree(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	out = s.HandleSubmit("/tree")
+	out = s.HandleSubmit("/checkout")
 	show, ok := out[len(out)-1].(EventTreeShow)
 	if !ok {
-		t.Fatalf("/tree = %#v, want the tree drawn last", out)
+		t.Fatalf("/checkout = %#v, want the tree drawn last", out)
 	}
 	if got := drawn(s.state.Tree); !slices.Equal(got, []string{"u1*", "a1*"}) {
 		t.Errorf("rows = %q, want the stored prompt and reply", got)

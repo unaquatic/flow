@@ -17,22 +17,13 @@ func (s *Service) noEffort() []UIEvent {
 	return s.ShowKeywordToast("", s.Variant().WithEffort("").String(), " has no reasoning efforts")
 }
 
-// HandleEffort runs /effort: it shows the effort levels of the terminal's
-// model, as ShowEffortMenu does, or says that the model takes none.
-func (s *Service) HandleEffort() []UIEvent {
-	if len(s.EffortChoices()) == 0 {
-		return s.noEffort()
-	}
-	return s.ShowEffortMenu(s.Variant())
-}
-
 // ShowEffortMenu shows the effort levels the catalog lists for v's model, in
 // its order and capitalized, such as "High", under the title effortTitle,
 // searched from the input, marking the model's default with DefaultHint,
 // and selecting the one v would run at for the terminal's chosen level. It is
-// the page of the model menu that follows choosing model v, and what /effort
-// shows for the terminal's model. Choosing a level switches the terminal to
-// v at that level and saves it as the default model, as SelectModel does.
+// the page of the model menu that follows choosing model v. Choosing a level
+// switches the terminal to v at that level and saves it as the default
+// model, as SelectModel does.
 func (s *Service) ShowEffortMenu(v agent.Variant) []UIEvent {
 	levels := s.app.Models().Efforts(v)
 	fallback := agent.Fit(levels, "", s.app.Models().DefaultEffort(v))

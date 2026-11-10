@@ -1,0 +1,30 @@
+=== text ===
+|■ Usage                                         |
+|  Model        model-a high                     |
+|  Context      300K / 400K 75%                  |
+|  Input        120K                             |
+|  Output       8.4K                             |
+|  Cache read   310K                             |
+|  Cache write  2.0K                             |
+|  Cost         $0.42                            |
+|  Worked       3m 12s                           |
+|                                                |
+|                                                |
+|                                                |
+=== fg ===
+|A AAAAA                                         |
+|  BBBBB        AAAAAAA AAAA                     |
+|  BBBBBBB      CCCC C CCCC CCC                  |
+|  BBBBB        AAAA                             |
+|  BBBBBB       AAAA                             |
+|  BBBBB BBBB   AAAA                             |
+|  BBBBB BBBBB  AAAA                             |
+|  BBBB         AAAAA                            |
+|  BBBBBB       AA AAA                           |
+|                                                |
+|                                                |
+|                                                |
+=== legend ===
+A #e6e6e6
+B #8a8a8a
+C #eb7513

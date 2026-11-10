@@ -92,7 +92,7 @@ func (ui *UI) DropLeadingRows(n int) {
 // RebuildTranscript builds the transcript again from the messages of the
 // active session, and the notices among them, as BuildTranscript builds it,
 // with the rows as they show now: the tool calls and the views as Ctrl+O and
-// /settings now show them.
+// /config now show them.
 func (ui *UI) RebuildTranscript() {
 	ui.DropTranscript()
 	ui.BuildTranscript(ui.service.state.Messages)
@@ -226,7 +226,7 @@ func (ui *UI) ReprintTranscript() {
 
 // ReprintCommitted has the next frame write the whole inline transcript
 // again, its committed rows too, as terminal.Renderer's ReprintInline does,
-// while any are: a change to how rows show, as Ctrl+O and /settings make,
+// while any are: a change to how rows show, as Ctrl+O and /config make,
 // reaches only the rows the transcript still holds.
 func (ui *UI) ReprintCommitted() {
 	if ui.inline && ui.committed {

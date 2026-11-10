@@ -94,7 +94,7 @@ type Config struct {
 	ShowBorder bool `json:"show_border,omitempty"`
 
 	// Debug enables additional terminal diagnostics, such as the snapshot
-	// each message ends with. The terminal's /settings menu sets it.
+	// each message ends with. The terminal's /config menu sets it.
 	Debug bool `json:"debug,omitempty"`
 
 	// AutoUpdate makes the terminal UI check for a newer release of flow
@@ -104,7 +104,7 @@ type Config struct {
 	// either way.
 	AutoUpdate bool `json:"auto_update,omitempty"`
 
-	// Terminal holds the settings of the terminal UI, which its /settings
+	// Terminal holds the settings of the terminal UI, which its /config
 	// menu sets.
 	Terminal Terminal `json:"terminal,omitzero"`
 
@@ -162,8 +162,8 @@ type Agent struct {
 	SystemPrompt string `json:"system_prompt,omitempty"`
 }
 
-// Terminal holds the settings of the terminal UI, which its /settings
-// menu sets and saves. The terminal's style settings, which /settings shows
+// Terminal holds the settings of the terminal UI, which its /config
+// menu sets and saves. The terminal's style settings, which /config shows
 // while debug is on, are not saved: each terminal starts with their
 // defaults.
 type Terminal struct {

@@ -161,11 +161,11 @@ func TestModelMenuCustomModel(t *testing.T) {
 	}
 
 	settings := &Service{state: &UIState{}}
-	if show := bannerShown(t, settings.HandleSubmit("/settings")); slices.Contains(show.Hints(), HintCustom) {
+	if show := bannerShown(t, settings.HandleSubmit("/config")); slices.Contains(show.Hints(), HintCustom) {
 		t.Errorf("settings keys %v name %v", show.Hints(), HintCustom)
 	}
 	if custom, _ := settings.HandleBannerCustom(); custom {
-		t.Error("Tab enters a custom entry in /settings")
+		t.Error("Tab enters a custom entry in /config")
 	}
 }
 

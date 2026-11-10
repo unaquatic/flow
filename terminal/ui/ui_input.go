@@ -129,7 +129,7 @@ func (ui *UI) HandleSendNow() {
 }
 
 // HandleBannerKey handles banner navigation, ←/→ without modifiers, which
-// change the value of the selected row when it has values, as in /settings,
+// change the value of the selected row when it has values, as in /config,
 // Tab, which enters an entry the menu does not list when it takes one, as in
 // /model. Other keys go to the input when it searches the banner's menu,
 // where ←/→ move its cursor, and are dropped otherwise so that they cannot
@@ -137,10 +137,7 @@ func (ui *UI) HandleSendNow() {
 func (ui *UI) HandleBannerKey(k *input.KeyEvent) {
 	if ui.service.state.Login != nil {
 		if k.Name == "l" && k.Mods == input.ModCtrl {
-			// OSC 52 copies through the terminal, including remote sessions.
-			url := ui.service.state.Login.URL
-			_, err := ui.renderer.Backend().WriteOut([]byte("\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(url)) + "\x1b\\"))
-			if err != nil {
+			if err := ui.CopyToClipboard(ui.service.state.Login.URL); err != nil {
 				ui.SetBannerText(ui.service.LoginPanel("Could not send URL to terminal clipboard: " + err.Error()).Text)
 			} else {
 				ui.SetBannerText(ui.service.LoginPanel("URL sent to terminal clipboard.").Text)
@@ -172,6 +169,18 @@ func (ui *UI) HandleBannerKey(k *input.KeyEvent) {
 		}
 	}
 	k.PreventDefault()
+}
+
+// CopyToClipboard puts text on the clipboard with OSC 52, which copies
+// through the terminal, remote sessions included.
+func (ui *UI) CopyToClipboard(text string) error {
+	_, err := ui.renderer.Backend().WriteOut([]byte(OSC52(text)))
+	return err
+}
+
+// OSC52 returns the escape sequence that sets the clipboard to text.
+func OSC52(text string) string {
+	return "\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(text)) + "\x1b\\"
 }
 
 // ChangeBannerRow moves the value of the selected banner row step places, as
