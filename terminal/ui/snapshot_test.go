@@ -55,7 +55,7 @@ func TestSnapshotFrames(t *testing.T) {
 		// its text.
 		{name: "user_message_indexing", h: 6, add: func(u *ui.UI) {
 			msg := ui.UserText("u1", "Run the tests")
-			msg.Parts = append(msg.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
+			msg.Parts = append(msg.Parts, snapshot.SnapshotPart{ID: "u1-step", Pending: true})
 			u.AddMessage(msg)
 		}},
 		// Once the snapshot of a prompt is taken, its row is gone, and the
@@ -63,10 +63,10 @@ func TestSnapshotFrames(t *testing.T) {
 		// parts it from the reply.
 		{name: "user_message_indexed", h: 5, add: func(u *ui.UI) {
 			prompt := ui.UserText("u1", "Run the tests")
-			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
+			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Pending: true})
 			u.AddMessage(prompt)
 			taken := prompt
-			taken.Parts = []message.ContentPart{prompt.Parts[0], snapshot.StepPart{ID: "u1-step", Snapshot: ui.ToolTurnTree}}
+			taken.Parts = []message.ContentPart{prompt.Parts[0], snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnTree}}
 			u.UpdateMessage(taken)
 			u.AddMessage(ui.AgentText("a1", "All tests pass."))
 		}},
@@ -76,7 +76,7 @@ func TestSnapshotFrames(t *testing.T) {
 			u.AddMessage(ui.AgentParts("a1",
 				message.TextPart{ID: "a1-text", Text: "Running the tests."},
 				interruptedBash(),
-				snapshot.StepPart{ID: "a1-step", Pending: true},
+				snapshot.SnapshotPart{ID: "a1-step", Pending: true},
 			))
 		}},
 		// A reply with no call shows its snapshot being taken a blank row
@@ -85,7 +85,7 @@ func TestSnapshotFrames(t *testing.T) {
 		{name: "agent_indexing_white", h: 5, add: func(u *ui.UI) {
 			u.AddMessage(ui.AgentParts("a1",
 				message.TextPart{ID: "a1-text", Text: "All tests pass."},
-				snapshot.StepPart{ID: "a1-step", Pending: true},
+				snapshot.SnapshotPart{ID: "a1-step", Pending: true},
 			))
 			u.Apply(u.Service().SetToolColor(ui.ToolNameWhite))
 		}},
@@ -93,8 +93,8 @@ func TestSnapshotFrames(t *testing.T) {
 		// where its call does.
 		{name: "agent_indexed", h: 6, add: func(u *ui.UI) {
 			text := message.TextPart{ID: "a1-text", Text: "Running the tests."}
-			u.AddMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.StepPart{ID: "a1-step", Pending: true}))
-			u.UpdateMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.StepPart{ID: "a1-step", Snapshot: ui.ToolTurnTree}))
+			u.AddMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.SnapshotPart{ID: "a1-step", Pending: true}))
+			u.UpdateMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.SnapshotPart{ID: "a1-step", Tree: ui.ToolTurnTree}))
 		}},
 		// Consecutive prompts share a bubble, each its own block a blank row
 		// under the one above, with its snapshot under it.
@@ -103,7 +103,7 @@ func TestSnapshotFrames(t *testing.T) {
 			for _, id := range []message.ID{"u1", "u2"} {
 				prompt := ui.UserText(id, "Run the tests")
 				prompt.ParentID = "u1"
-				prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: message.PartID(id + "-step"), Snapshot: ui.ToolTurnTree})
+				prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: message.PartID(id + "-step"), Tree: ui.ToolTurnTree})
 				u.AddMessage(prompt)
 			}
 		}},
@@ -112,11 +112,11 @@ func TestSnapshotFrames(t *testing.T) {
 		{name: "agent_indexed_debug", h: 12, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetDebug(true))
 			prompt := ui.UserText("u1", "Run the tests")
-			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Snapshot: ui.ToolTurnTree})
+			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnTree})
 			u.AddMessage(prompt)
 			text := message.TextPart{ID: "a1-text", Text: "Running the tests."}
-			u.AddMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.StepPart{ID: "a1-step", Pending: true}))
-			u.UpdateMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.StepPart{ID: "a1-step", Snapshot: ui.ToolTurnTree}))
+			u.AddMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.SnapshotPart{ID: "a1-step", Pending: true}))
+			u.UpdateMessage(ui.AgentParts("a1", text, interruptedBash(), snapshot.SnapshotPart{ID: "a1-step", Tree: ui.ToolTurnTree}))
 		}},
 		// A reply that ends its turn shows its snapshot, its cache row, and
 		// its footer: the three stack as rows would but for the footer, which
@@ -125,11 +125,11 @@ func TestSnapshotFrames(t *testing.T) {
 			u.Apply(u.Service().SetDebug(true))
 			u.Apply(u.Service().SetCacheMode(ui.CachePerMessage))
 			prompt := ui.UserText("u1", "Hi")
-			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Snapshot: ui.ToolTurnTree})
+			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnTree})
 			u.AddMessage(prompt)
 			reply := ui.AgentParts("a1",
 				message.TextPart{ID: "a1-text", Text: "Hi! How can I help you today?"},
-				snapshot.StepPart{ID: "a1-step", Snapshot: ui.ToolTurnTree},
+				snapshot.SnapshotPart{ID: "a1-step", Tree: ui.ToolTurnTree},
 			)
 			reply.Usage, reply.Worked = message.Usage{InputTokens: 12}, 3*time.Second
 			u.AddMessage(reply)
@@ -205,7 +205,7 @@ func TestSnapshotFullscreenFrames(t *testing.T) {
 				u.Apply(u.Service().SetPromptStyle(ui.PromptBar))
 			}
 			prompt := ui.UserText("u1", "Run the tests")
-			prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
+			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Pending: true})
 			u.AddMessage(prompt)
 			u.AddMessage(ui.AgentText("a1", "one\n\ntwo\n\nthree\n\nfour\n\nfive\n\nsix\n\nseven\n\neight"))
 			ui.AssertFullscreenFrames(t, u, tt.name, 40, 12, tt.scroll)
@@ -221,7 +221,7 @@ func TestPromptPinsWithoutItsSnapshot(t *testing.T) {
 	u := ui.NewInputTestUI(t, snapshotViews())
 	for _, n := range []string{"1", "2"} {
 		prompt := ui.UserText(message.ID("u"+n), "Run the tests")
-		prompt.Parts = append(prompt.Parts, snapshot.StepPart{ID: message.PartID("u" + n + "-step"), Pending: true})
+		prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: message.PartID("u" + n + "-step"), Pending: true})
 		u.AddMessage(prompt)
 		u.AddMessage(ui.AgentText(message.ID("a"+n), "one\n\ntwo\n\nthree\n\nfour\n\nfive\n\nsix"))
 	}
@@ -284,13 +284,13 @@ func TestPromptsDoNotShareABubble(t *testing.T) {
 func TestSnapshotIndicatorFrames(t *testing.T) {
 	u := ui.NewInputTestUI(t, snapshotViews())
 	msg := ui.UserText("u1", "explore the repo")
-	msg.Parts = append(msg.Parts, snapshot.StepPart{ID: "u1-step", Pending: true})
+	msg.Parts = append(msg.Parts, snapshot.SnapshotPart{ID: "u1-step", Pending: true})
 	u.AddMessage(msg)
 	ui.AssertIndicatorFrames(t, u, "user_message_indexing_indicator", 48, 8)
 }
 
 // TestSnapshotPatchBounds checks that a reply's changes are bounded by the
-// tree the message before it ended with and the tree of its own step part,
+// tree the message before it ended with and the tree of its own snapshot part,
 // once it arrives.
 func TestSnapshotPatchBounds(t *testing.T) {
 	u := ui.NewInlineTestUI(t, snapshotViews())
@@ -306,7 +306,7 @@ func TestSnapshotPatchBounds(t *testing.T) {
 func TestSnapshotDebugSet(t *testing.T) {
 	u := ui.NewInlineTestUI(t, snapshotViews())
 	step := func(id message.PartID) message.ContentPart {
-		return snapshot.StepPart{ID: id, Snapshot: ui.ToolTurnTree}
+		return snapshot.SnapshotPart{ID: id, Tree: ui.ToolTurnTree}
 	}
 	prompt := ui.UserText("u1", "Run the tests")
 	prompt.Parts = append(prompt.Parts, step("u1-step"))
@@ -318,7 +318,7 @@ func TestSnapshotDebugSet(t *testing.T) {
 		for _, id := range []message.ID{"u1", "a1", "a2"} {
 			if cm := u.Bubble(id); cm != nil {
 				for v := range cm.StyledViews() {
-					if box, ok := v.(*snapshotui.StepBox); ok {
+					if box, ok := v.(*snapshotui.SnapshotBox); ok {
 						got = append(got, box.Visible())
 					}
 				}

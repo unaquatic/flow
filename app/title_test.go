@@ -74,6 +74,16 @@ func texts(msgs []agent.Message) []string {
 	return out
 }
 
+// chatTexts returns the text of each message of msgs after the system
+// message they open with, which a session's first prompt stores, or nil
+// when they open with none, which no conversation sent from the app does.
+func chatTexts(msgs []agent.Message) []string {
+	if len(msgs) == 0 || msgs[0].Role != message.RoleSystem {
+		return nil
+	}
+	return texts(msgs[1:])
+}
+
 // titleOf returns the stored title of session id.
 func titleOf(t *testing.T, a *App, id message.SessionID) string {
 	t.Helper()
@@ -126,7 +136,7 @@ func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 		}
 		tt := asks[0]
 		if tt.SessionID != id || tt.MessageID != "msg_first" || tt.Text != "hi" || tt.Model == "" ||
-			!slices.Equal(texts(tt.History), []string{"hi"}) || tt.Title != "" {
+			!slices.Equal(chatTexts(tt.History), []string{"hi"}) || tt.Title != "" {
 			t.Errorf("%s was asked for %+v, want the first prompt of an untitled session", h.name, tt)
 		}
 	}
@@ -139,7 +149,7 @@ func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 	if len(asks) != 2 {
 		t.Fatalf("the generating hook was asked %d times over two prompts, want twice", len(asks))
 	}
-	if tt := asks[1]; tt.Text != "again" || !slices.Equal(texts(tt.History), []string{"hi", "Greeting the agent", "again"}) || tt.Title != "Greeting the agent" {
+	if tt := asks[1]; tt.Text != "again" || !slices.Equal(chatTexts(tt.History), []string{"hi", "Greeting the agent", "again"}) || tt.Title != "Greeting the agent" {
 		t.Errorf("second titling = %+v, want the history through the second prompt and the current title", tt)
 	}
 	if n := len(eventsOfType[EventSessionUpdated](second)); n != 0 {
@@ -218,13 +228,16 @@ func TestTitling_ForksTheSession(t *testing.T) {
 			}
 		}
 	}
-	if !slices.Equal(texts(forked), []string{"hi", "title this"}) {
-		t.Errorf("fork sent %q, want the prompt and the hook's message", texts(forked))
+	if !slices.Equal(chatTexts(forked), []string{"hi", "title this"}) {
+		t.Errorf("fork sent %q, want the system message, the prompt and the hook's message", texts(forked))
 	}
 
-	branch, err := a.Sessions().Branch(t.Context(), id)
-	if err != nil || len(branch) != 2 || branch[0].ID != "msg_first" || branch[1].Role != message.RoleAgent {
-		t.Fatalf("branch = %+v, %v; want the prompt and its reply alone", branch, err)
+	whole, err := a.Sessions().Branch(t.Context(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if branch := conversation(t, whole); len(branch) != 2 || branch[0].ID != "msg_first" || branch[1].Role != message.RoleAgent {
+		t.Fatalf("branch = %+v; want the system message, the prompt and its reply alone", whole)
 	}
 	asked, err := a.Sessions().ForkChildren(t.Context(), id, "msg_first", message.TypeTitle)
 	if err != nil || len(asked) != 1 || asked[0].Role != message.RoleUser || asked[0].Type != message.TypeTitle {
@@ -241,14 +254,14 @@ func TestTitling_ForksTheSession(t *testing.T) {
 		t.Errorf("fork's reply = %q, want the model's", got)
 	}
 	all, err := a.Sessions().Messages(t.Context(), id)
-	if err != nil || len(all) != 2 {
-		t.Errorf("tree holds %d messages, %v; want the branch's two", len(all), err)
+	if err != nil || len(all) != 3 {
+		t.Errorf("tree holds %d messages, %v; want the branch's three", len(all), err)
 	}
 	tree, err := a.Session(id).Tree()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tree.Messages) != 2 || len(tree.Forks) != 2 || tree.Forks[0].ID != asked[0].ID || tree.Forks[1].ID != replied[0].ID {
-		t.Errorf("tree = %d messages and forks %+v; want the branch's two, and the fork's request and reply", len(tree.Messages), tree.Forks)
+	if len(tree.Messages) != 3 || len(tree.Forks) != 2 || tree.Forks[0].ID != asked[0].ID || tree.Forks[1].ID != replied[0].ID {
+		t.Errorf("tree = %d messages and forks %+v; want the branch's three, and the fork's request and reply", len(tree.Messages), tree.Forks)
 	}
 }

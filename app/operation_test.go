@@ -45,7 +45,11 @@ func eventsOfType[E Event](events []Event) []E {
 	return out
 }
 
-// newActorTestApp returns an isolated app with a stubbed text stream.
+// testInstructions is the AGENTS.md of the user of newActorTestApp's app.
+const testInstructions = "Be brief."
+
+// newActorTestApp returns an isolated app with a stubbed text stream, whose
+// user's AGENTS.md holds testInstructions.
 func newActorTestApp(t *testing.T, streamText string) (*App, *agenttest.Gateway) {
 	t.Helper()
 	db, project := openTestDatabase(t, t.TempDir())
@@ -56,6 +60,10 @@ func newActorTestApp(t *testing.T, streamText string) (*App, *agenttest.Gateway)
 	t.Cleanup(cancel)
 	home := t.TempDir()
 	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"model":"mock/test-model"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// The user's instructions give each new session a system message.
+	if err := os.WriteFile(filepath.Join(home, InstructionsFile), []byte(testInstructions), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return &App{
@@ -134,26 +142,40 @@ func TestSend_StreamsAndPersists(t *testing.T) {
 		}
 	}
 
-	// The run starts, then the prompt starts with its text, and ends once
-	// stored, with its creation time. Snapshots are off, so no part event
-	// comes between.
-	if len(got) < 3 {
-		t.Fatalf("got %d events, want the run's start and the prompt's start and end first", len(got))
+	// The run starts, then the system message the new session opens with
+	// starts and ends, stored, which stores the session, then the prompt
+	// starts with its text, and ends once stored, with its creation time.
+	// Snapshots are off, so no part event comes between.
+	if len(got) < 6 {
+		t.Fatalf("got %d events, want the run's start, the system message's start and end, the stored session, and the prompt's start and end first", len(got))
 	}
 	if _, ok := got[0].(EventAgentStarted); !ok {
 		t.Errorf("first event = %+v, want the start of the run", got[0])
 	}
-	started, ok := got[1].(EventMessageStarted)
+	system, ok := got[1].(EventMessageStarted)
+	if !ok || system.Message.Role != message.RoleSystem || system.Message.ParentID != nil {
+		t.Fatalf("second event = %+v, want the start of the system message at the root", got[1])
+	}
+	if text := system.Message.Parts[0].(message.TextPart).Text; text != testInstructions {
+		t.Errorf("system message = %q, want the user's instructions", text)
+	}
+	if e, ok := got[2].(EventMessageEnded); !ok || e.Message.ID != system.Message.ID || e.Message.CreatedAt.IsZero() {
+		t.Errorf("third event = %+v, want the end of the system message, stored", got[2])
+	}
+	if _, ok := got[3].(EventSessionUpdated); !ok {
+		t.Errorf("fourth event = %+v, want the session the system message stored", got[3])
+	}
+	started, ok := got[4].(EventMessageStarted)
 	if !ok || started.Message.ID != "msg_user1" || started.Message.Role != message.RoleUser || started.SessionID != "ses_actor" {
-		t.Fatalf("second event = %+v, want the start of user message msg_user1 in ses_actor", got[1])
+		t.Fatalf("fifth event = %+v, want the start of user message msg_user1 in ses_actor", got[4])
 	}
 	if !started.Message.CreatedAt.IsZero() {
 		t.Errorf("prompt started with creation time %v, want none before it is stored", started.Message.CreatedAt)
 	}
-	ended, ok := got[2].(EventMessageEnded)
+	ended, ok := got[5].(EventMessageEnded)
 	if !ok || ended.Message.ID != started.Message.ID || !reflect.DeepEqual(ended.Message.Parts, started.Message.Parts) ||
 		ended.Message.CreatedAt.IsZero() || ended.Error != nil {
-		t.Errorf("third event = %+v, want the end of the same prompt, stored", got[2])
+		t.Errorf("sixth event = %+v, want the end of the same prompt, stored", got[5])
 	}
 	if tp, ok := started.Message.Parts[0].(message.TextPart); !ok || tp.Text != "hi" || tp.ID == "" {
 		t.Errorf("prompt parts = %+v, want the text with a part ID", started.Message.Parts)
@@ -164,11 +186,136 @@ func TestSend_StreamsAndPersists(t *testing.T) {
 	}
 
 	msgs := branchOf(t, a.Sessions(), "ses_actor")
-	if len(msgs) != 2 {
-		t.Fatalf("persisted %d messages, want 2", len(msgs))
+	if len(msgs) != 3 {
+		t.Fatalf("persisted %d messages, want 3", len(msgs))
 	}
-	if msgs[0].Role != message.RoleUser || msgs[1].Role != message.RoleAgent {
-		t.Errorf("roles = %v, %v; want user, agent", msgs[0].Role, msgs[1].Role)
+	if msgs[0].ID != system.Message.ID || msgs[1].Role != message.RoleUser || msgs[2].Role != message.RoleAgent {
+		t.Errorf("roles = %v, %v, %v; want system, user, agent", msgs[0].Role, msgs[1].Role, msgs[2].Role)
+	}
+}
+
+// conversation returns branch without the system message that opens it,
+// failing the test when it opens with none, as a session's first prompt
+// stores one.
+func conversation(t *testing.T, branch []message.Content) []message.Content {
+	t.Helper()
+	if len(branch) == 0 || branch[0].Role != message.RoleSystem || branch[0].ParentID != nil {
+		t.Fatalf("branch = %+v, want it to open with a system message at the root", branch)
+	}
+	return branch[1:]
+}
+
+// TestSend_OpensWithTheSystemPrompt checks that a session's first prompt is
+// stored below a system message holding the user's and the project's
+// AGENTS.md and the configuration's agent.system_prompt, and nothing else,
+// that every request of the session sends it first, and that a later prompt
+// stores no other.
+func TestSend_OpensWithTheSystemPrompt(t *testing.T) {
+	a, gw := newActorTestApp(t, "reply")
+	a.workingDir = t.TempDir()
+	userFile, projectFile := filepath.Join(a.config.Dir, InstructionsFile), filepath.Join(a.workingDir, InstructionsFile)
+	for path, body := range map[string]string{
+		filepath.Join(a.config.Dir, config.FileName): `{"model":"mock/test-model","agent":{"system_prompt":"Answer in haiku."}}`,
+		userFile:    "Call me Sam.\n",
+		projectFile: "\n# Project\n\nUse tabs.\n",
+	} {
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	events := a.Subscribe(t.Context())
+	send(t, a, "ses_system", SendInput{Text: "hi"})
+	collectUntilIdle(t, events)
+	// A change to the instructions reaches the sessions opened after it.
+	if err := os.WriteFile(projectFile, []byte("Use spaces."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	send(t, a, "ses_system", SendInput{Text: "again"})
+	collectUntilIdle(t, events)
+
+	branch := branchOf(t, a.Sessions(), "ses_system")
+	conversation(t, branch)
+	var systems int
+	for _, m := range branch {
+		if m.Role == message.RoleSystem {
+			systems++
+		}
+	}
+	if systems != 1 {
+		t.Errorf("stored %d system messages, want 1", systems)
+	}
+	text := branch[0].Parts[0].(message.TextPart).Text
+	want := "Call me Sam.\n\n# Project\n\nUse tabs.\n\nAnswer in haiku."
+	if text != want {
+		t.Errorf("system message = %q, want %q", text, want)
+	}
+	if len(gw.StreamCalls) != 2 {
+		t.Fatalf("gateway saw %d stream calls, want 2", len(gw.StreamCalls))
+	}
+	for i, call := range gw.StreamCalls {
+		if len(call) == 0 || call[0].Role != message.RoleSystem || call[0].TextContent() != text {
+			t.Errorf("request %d opens with %+v, want the stored system message", i+1, call[:min(1, len(call))])
+		}
+	}
+}
+
+// TestSend_WithoutInstructionsSendsNoSystemMessage checks that a session
+// with no AGENTS.md and no agent.system_prompt has no system message to
+// send, and so stores none: its first prompt opens its history.
+func TestSend_WithoutInstructionsSendsNoSystemMessage(t *testing.T) {
+	a, gw := newActorTestApp(t, "reply")
+	if err := os.Remove(filepath.Join(a.config.Dir, InstructionsFile)); err != nil {
+		t.Fatal(err)
+	}
+	events := a.Subscribe(t.Context())
+	send(t, a, "ses_bare", SendInput{Text: "hi"})
+	collectUntilIdle(t, events)
+
+	branch := branchOf(t, a.Sessions(), "ses_bare")
+	if len(branch) != 2 || branch[0].Role != message.RoleUser || branch[0].ParentID != nil {
+		t.Errorf("branch = %+v, want the prompt at the root and its reply", branch)
+	}
+	if len(gw.StreamCalls) != 1 || gw.StreamCalls[0][0].Role != message.RoleUser {
+		t.Errorf("request = %+v, want it to open with the prompt", gw.StreamCalls)
+	}
+}
+
+// TestUndo_KeepsTheSystemMessage checks that undoing a session's first
+// prompt leaves the head on the system message it was sent with, which has
+// nothing to continue or undo, and that the prompt sent next is stored below
+// that message, beside the one undone, without another system message.
+func TestUndo_KeepsTheSystemMessage(t *testing.T) {
+	a, _ := newActorTestApp(t, "reply")
+	a.extensions = nil
+	const id = "ses_undo_system"
+	events := a.Subscribe(t.Context())
+	send(t, a, id, SendInput{Text: "first"})
+	collectUntilIdle(t, events)
+	system := branchOf(t, a.Sessions(), id)[0]
+
+	s := a.Session(id)
+	if _, err := s.Undo(); err != nil {
+		t.Fatalf("undo: %v", err)
+	}
+	if h := storedSession(t, a.Sessions(), id).Head; h.ID != system.ID {
+		t.Errorf("head after undo = %q, want the system message %q", h.ID, system.ID)
+	}
+	if _, err := s.Undo(); !errors.Is(err, ErrNothingToUndo) {
+		t.Errorf("second undo = %v, want ErrNothingToUndo", err)
+	}
+	if err := s.Continue(""); !errors.Is(err, ErrNothingToContinue) {
+		t.Errorf("Continue = %v, want ErrNothingToContinue", err)
+	}
+
+	send(t, a, id, SendInput{Text: "second"})
+	collectUntilIdle(t, events)
+	branch := branchOf(t, a.Sessions(), id)
+	if len(branch) != 3 || branch[0].ID != system.ID || branch[1].Role != message.RoleUser {
+		t.Fatalf("branch = %+v, want the system message, the second prompt and its reply", branch)
+	}
+	children, err := a.Sessions().Children(t.Context(), id, system.ID)
+	if err != nil || len(children) != 2 {
+		t.Errorf("prompts below the system message = %d, %v; want both", len(children), err)
 	}
 }
 
@@ -254,7 +401,7 @@ func toolState(t *testing.T, msg message.Content) message.ToolState {
 
 // TestSend_StoresResponseWhenTurnEnds checks that a response is stored
 // once its turn ends, after its tools have run, and that the prompt and each
-// response end with a step part recording the workspace.
+// response end with a snapshot part recording the workspace.
 func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	a, _ := newActorTestApp(t, "unused")
 	a.extensions = []extension.Extension{snapshotForAgentTest(t)}
@@ -283,11 +430,11 @@ func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	if duringErr != nil {
 		t.Fatal(duringErr)
 	}
-	if len(during) != 1 {
+	if len(conversation(t, during)) != 1 {
 		t.Fatalf("while the tool ran the session held %d messages, want only the prompt", len(during))
 	}
 
-	after := branchOf(t, a.Sessions(), "ses_store")
+	after := conversation(t, branchOf(t, a.Sessions(), "ses_store"))
 	if len(after) != 3 {
 		t.Fatalf("stored %d messages, want the prompt and two responses", len(after))
 	}
@@ -297,8 +444,8 @@ func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	for _, m := range after {
 		if parts := m.Parts; len(parts) == 0 {
 			t.Errorf("stored %s message has no parts", m.Role)
-		} else if step, ok := parts[len(parts)-1].(snapshot.StepPart); !ok || step.Snapshot.IsZero() {
-			t.Errorf("stored %s message ends with %+v, want a step part holding a tree", m.Role, parts[len(parts)-1])
+		} else if step, ok := parts[len(parts)-1].(snapshot.SnapshotPart); !ok || step.Tree.IsZero() {
+			t.Errorf("stored %s message ends with %+v, want a snapshot part holding a tree", m.Role, parts[len(parts)-1])
 		}
 	}
 
@@ -311,8 +458,8 @@ func TestSend_StoresResponseWhenTurnEnds(t *testing.T) {
 	}
 }
 
-// TestSend_PromptSnapshotEvents checks that a prompt's step part, which the
-// snapshot extension adds, arrives through the part events between the
+// TestSend_PromptSnapshotEvents checks that a prompt's snapshot part, which
+// the snapshot extension adds, arrives through the part events between the
 // prompt's start and its end: pending first when recording the workspace
 // takes longer than the extension's IndexingDelay, as a delay of zero makes
 // it, and with its tree at once when recording is quicker. The prompt ends
@@ -335,7 +482,7 @@ func TestSend_PromptSnapshotEvents(t *testing.T) {
 			send(t, a, "ses_snap", SendInput{Text: "hi", MessageID: "msg_prompt"})
 
 			var types []EventType
-			var steps []snapshot.StepPart
+			var steps []snapshot.SnapshotPart
 			var ended EventMessageEnded
 			for _, ev := range collectUntilIdle(t, events) {
 				switch e := ev.(type) {
@@ -345,11 +492,11 @@ func TestSend_PromptSnapshotEvents(t *testing.T) {
 					}
 				case EventPartStarted:
 					if e.MessageID == "msg_prompt" {
-						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.StepPart))
+						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.SnapshotPart))
 					}
 				case EventPartEnded:
 					if e.MessageID == "msg_prompt" {
-						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.StepPart))
+						types, steps = append(types, e.EventType()), append(steps, e.Part.(snapshot.SnapshotPart))
 					}
 				case EventMessageEnded:
 					if e.Message.ID == "msg_prompt" {
@@ -361,14 +508,14 @@ func TestSend_PromptSnapshotEvents(t *testing.T) {
 				t.Fatalf("prompt events = %v, want %v", types, want)
 			}
 			started, last := steps[0], steps[1]
-			if started.Pending != tt.pending || started.Pending == !started.Snapshot.IsZero() {
+			if started.Pending != tt.pending || started.Pending == !started.Tree.IsZero() {
 				t.Errorf("step started as %+v, want pending = %v, with a tree unless pending", started, tt.pending)
 			}
-			if last.Pending || last.Snapshot.IsZero() || last.ID != started.ID {
+			if last.Pending || last.Tree.IsZero() || last.ID != started.ID {
 				t.Errorf("step ended as %+v, want the part %q with its tree", last, started.ID)
 			}
-			if ended.Message.CreatedAt.IsZero() || snapshot.TreeIn(ended.Message.Parts) != last.Snapshot {
-				t.Errorf("prompt ended as %+v, want it stored with the step's tree", ended.Message)
+			if ended.Message.CreatedAt.IsZero() || snapshot.TreeIn(ended.Message.Parts) != last.Tree {
+				t.Errorf("prompt ended as %+v, want it stored with the snapshot's tree", ended.Message)
 			}
 		})
 	}
@@ -457,7 +604,7 @@ func TestSend_ShutdownStoresTheStreamingMessage(t *testing.T) {
 	close(release)
 	a.wg.Wait()
 
-	msgs := branchOf(t, a.Sessions(), "ses_shutdown")
+	msgs := conversation(t, branchOf(t, a.Sessions(), "ses_shutdown"))
 	if len(msgs) != 2 {
 		t.Fatalf("stored %d messages, want the prompt and the partial reply", len(msgs))
 	}
@@ -506,7 +653,7 @@ func TestSend_StopDuringToolArgumentsInterruptsTheCall(t *testing.T) {
 	if len(ended) != 1 || !reflect.DeepEqual(toolState(t, message.Content{Parts: ended[0].Message.Parts}), want) {
 		t.Fatalf("EventMessageEnded = %+v, want the call interrupted", ended)
 	}
-	stored := branchOf(t, a.Sessions(), "ses_args")
+	stored := conversation(t, branchOf(t, a.Sessions(), "ses_args"))
 	if len(stored) != 2 || !reflect.DeepEqual(toolState(t, stored[1]), want) {
 		t.Fatalf("stored %+v, want the prompt and the interrupted call", stored)
 	}
@@ -645,13 +792,13 @@ func TestSession_OneOperationAtATime(t *testing.T) {
 		t.Error("the stopped run still holds the session after Wait")
 	}
 	collectUntilIdle(t, events)
-	if msgs := branchOf(t, a.Sessions(), id); len(msgs) != 2 {
+	if msgs := conversation(t, branchOf(t, a.Sessions(), id)); len(msgs) != 2 {
 		t.Fatalf("stored %d messages, want the first prompt and its reply only", len(msgs))
 	}
 
 	send(t, a, id, SendInput{Text: "second"})
 	collectUntilIdle(t, events)
-	if msgs := branchOf(t, a.Sessions(), id); len(msgs) != 4 {
+	if msgs := conversation(t, branchOf(t, a.Sessions(), id)); len(msgs) != 4 {
 		t.Errorf("stored %d messages, want both prompts and their replies", len(msgs))
 	}
 }
@@ -724,7 +871,7 @@ func TestSession_Stream(t *testing.T) {
 	if got := eventTypes(collectUntilIdle(t, events)); !slices.Equal(got, types) {
 		t.Errorf("subscriber received %v, want %v", got, types)
 	}
-	if msgs := branchOf(t, a.Sessions(), id); len(msgs) != 2 {
+	if msgs := conversation(t, branchOf(t, a.Sessions(), id)); len(msgs) != 2 {
 		t.Errorf("stored %d messages, want the prompt and its reply", len(msgs))
 	}
 }
@@ -805,7 +952,7 @@ func TestSession_StreamBreakStopsTheRun(t *testing.T) {
 	if s.Busy() {
 		t.Error("the run still holds the session after the loop ended")
 	}
-	if msgs := branchOf(t, a.Sessions(), id); len(msgs) != 2 {
+	if msgs := conversation(t, branchOf(t, a.Sessions(), id)); len(msgs) != 2 {
 		t.Errorf("stored %d messages, want the prompt and the partial reply", len(msgs))
 	}
 }
@@ -862,7 +1009,7 @@ func TestPlay_StoresItsTurns(t *testing.T) {
 		t.Fatalf("the script ended with %+v", end.Error)
 	}
 
-	msgs := branchOf(t, a.Sessions(), id)
+	msgs := conversation(t, branchOf(t, a.Sessions(), id))
 	if text, _ := message.LastPart[message.TextPart](msgs[0].Parts); len(msgs) != 3 || msgs[0].Role != message.RoleUser || text.Text != "play" {
 		t.Fatalf("stored %d messages, want the script's prompt and its 2 replies", len(msgs))
 	}
@@ -910,7 +1057,10 @@ func TestSend_RecordsVariant(t *testing.T) {
 			if !slices.Equal(gw.StreamModels, []string{"model-a"}) {
 				t.Errorf("provider got models %q, want model-a", gw.StreamModels)
 			}
-			ended := eventsOfType[EventMessageEnded](got)
+			// The system message names no model: no model wrote it.
+			ended := slices.DeleteFunc(eventsOfType[EventMessageEnded](got), func(e EventMessageEnded) bool {
+				return e.Message.Role == message.RoleSystem && e.Message.Model == ""
+			})
 			if len(ended) != 2 {
 				t.Fatalf("got %d message ends, want the prompt's and the reply's", len(ended))
 			}
@@ -919,7 +1069,7 @@ func TestSend_RecordsVariant(t *testing.T) {
 					t.Errorf("%v message ended as %s, want %s", m.Role, m.Model, tt.want)
 				}
 			}
-			for _, m := range branchOf(t, a.Sessions(), "ses_variant") {
+			for _, m := range conversation(t, branchOf(t, a.Sessions(), "ses_variant")) {
 				if m.Model != tt.want {
 					t.Errorf("stored %v message as %s, want %s", m.Role, m.Model, tt.want)
 				}

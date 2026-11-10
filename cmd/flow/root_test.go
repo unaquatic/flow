@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -82,5 +83,53 @@ func TestRootExclusiveSessionFlags(t *testing.T) {
 		if err := rootCmd.Execute(t.Context(), args); err == nil || err.Error() != want {
 			t.Errorf("execute %q: err = %v, want %q", args, err, want)
 		}
+	}
+}
+
+// TestRelaunchArgs checks the arguments that start flow again on a session
+// of another folder: the session, which --session opens in its folder, and
+// the color mode only when --color chose one, not the session flags that
+// chose the session left, and that the root command reads them back.
+func TestRelaunchArgs(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "plain", want: []string{"--session", "ses_2"}},
+		{name: "auto color", args: []string{"--color", "auto"}, want: []string{"--session", "ses_2"}},
+		{name: "chosen color", args: []string{"--color", "256"}, want: []string{"--session", "ses_2", "--color", "256"}},
+		{name: "from the list", args: []string{"-r"}, want: []string{"--session", "ses_2"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var o rootOptions
+			fs := flag.NewFlagSet("flow", flag.ContinueOnError)
+			fs.SetOutput(io.Discard)
+			colorFlags(fs, &o.color)
+			sessionFlags(fs, &o)
+			if err := fs.Parse(tt.args); err != nil {
+				t.Fatalf("parse %q: %v", tt.args, err)
+			}
+			got := relaunchArgs(o, "ses_2")
+			if !slices.Equal(got, tt.want) {
+				t.Fatalf("relaunch args = %q, want %q", got, tt.want)
+			}
+
+			var again rootOptions
+			fs = flag.NewFlagSet("flow", flag.ContinueOnError)
+			fs.SetOutput(io.Discard)
+			colorFlags(fs, &again.color)
+			sessionFlags(fs, &again)
+			if err := fs.Parse(got); err != nil {
+				t.Fatalf("parse the relaunch args %q: %v", got, err)
+			}
+			if start := again.start(); start.Mode != terminal.StartID || start.ID != "ses_2" {
+				t.Errorf("relaunched start = %+v, want session ses_2", start)
+			}
+			if rootAppOptions(again).Session != "ses_2" {
+				t.Errorf("relaunched app options = %+v, want them on session ses_2", rootAppOptions(again))
+			}
+		})
 	}
 }

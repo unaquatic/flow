@@ -1,9 +1,9 @@
 === text ===
 |■ Sessions [↑/↓ move] [esc cancel]                                      |
 |                                                                        |
-|→ Add Divide  01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7  2026-09-28 09:14:0  |
-|  Untitled    01a0e33d-4571-7ed4-b06b-4229c726c313  2026-09-27 21:40:5  |
-|  Untitled    019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2  2026-09-26 16:03:1  |
+|→ Add Divide  /work/project  2026-09-28 09:14:02  01a0e1b4-77a3-7028-9  |
+|  Untitled    /work/project  2026-09-27 21:40:55  01a0e33d-4571-7ed4-b  |
+|  Untitled    /work/other    2026-09-26 16:03:18  019ff2c8-0b1e-7c55-a  |
 |                                                                        |
 |■                                                                       |
 |                                                                        |
@@ -13,9 +13,9 @@
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB                                      |
 |                                                                        |
-|C CCC CCCCCC  CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC  CCCCCCCCCC CCCCCCC  |
-|  AAAAAAAA    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  AAAAAAAAAA AAAAAAA  |
-|  AAAAAAAA    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  AAAAAAAAAA AAAAAAA  |
+|C CCC CCCCCC  CCCCCCCCCCCCC  CCCCCCCCCC CCCCCCCC  CCCCCCCCCCCCCCCCCCCC  |
+|  AAAAAAAA    AAAAAAAAAAAAA  AAAAAAAAAA AAAAAAAA  AAAAAAAAAAAAAAAAAAAA  |
+|  AAAAAAAA    AAAAAAAAAAA    AAAAAAAAAA AAAAAAAA  AAAAAAAAAAAAAAAAAAAA  |
 |                                                                        |
 |C                                                                       |
 |                                                                        |

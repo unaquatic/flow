@@ -197,10 +197,16 @@ func (s Session) continuable() error {
 	if err != nil {
 		return err
 	}
-	if len(history) == 0 {
+	if !Continues(history) {
 		return ErrNothingToContinue
 	}
 	return nil
+}
+
+// Continues reports whether a run has anything to pick up from in history:
+// a message other than the system messages that open it.
+func Continues(history []agent.Message) bool {
+	return slices.ContainsFunc(history, func(m agent.Message) bool { return m.Role != message.RoleSystem })
 }
 
 // start holds the session and runs work on it in a goroutine of its own, as
@@ -425,18 +431,22 @@ func (s Session) emitSessionLoaded() error {
 //
 // A prompt sent while the head sits behind its branch forks the history: the
 // prompt is stored below the head, and the messages that previously followed
-// it stay on the branch left behind.
+// it stay on the branch left behind. A prompt that would open the history
+// is stored below the system message emitSystem stores first.
 func (s Session) processSend(ctx context.Context, snd SendInput) error {
+	v, err := s.app.Models().Resolve(snd.Model)
+	if err != nil {
+		return err
+	}
+	if err := s.emitSystem(); err != nil {
+		return err
+	}
 	history, err := s.historyFromLog()
 	if err != nil {
 		return err
 	}
 	history = append(history, agent.NewUserMessage(snd.Text))
 
-	v, err := s.app.Models().Resolve(snd.Model)
-	if err != nil {
-		return err
-	}
 	if err := s.emitPrompt(snd, v, s.app.extensions); err != nil {
 		return err
 	}
@@ -446,13 +456,13 @@ func (s Session) processSend(ctx context.Context, snd SendInput) error {
 // processContinue runs the agent against the rebuilt history, with no new
 // prompt, until ctx, the run's context, ends, settling as processSend does.
 // It checks the history again, since it may have changed before the run held
-// the session.
+// the session. A history of system messages alone has nothing to continue.
 func (s Session) processContinue(ctx context.Context, model string) error {
 	history, err := s.historyFromLog()
 	if err != nil {
 		return err
 	}
-	if len(history) == 0 {
+	if !Continues(history) {
 		return ErrNothingToContinue
 	}
 	v, err := s.app.Models().Resolve(model)

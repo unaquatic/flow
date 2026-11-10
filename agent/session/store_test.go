@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io/fs"
 	"slices"
 	"testing"
@@ -116,6 +117,57 @@ func TestListSessions_ScopesToProject(t *testing.T) {
 	}
 }
 
+// TestListAllSessions_ListsEveryProject checks that the sessions of every
+// project are listed, newest first, each with its project's worktree, which
+// the project's own reads carry too, and that WorktreeOf finds a session's
+// worktree by ID alone.
+func TestListAllSessions_ListsEveryProject(t *testing.T) {
+	db := openTestDB(t)
+	a := newProjectStore(t, db, "/work/a")
+	b := newProjectStore(t, db, "/work/b")
+	ctx := t.Context()
+	appendAt(t, a, "ses_a", "", "msg_1")
+	appendAt(t, b, "ses_b", "", "msg_1")
+	// Times are whole seconds, so ses_a is made an hour older to order the
+	// two.
+	if _, err := db.ExecContext(ctx, `UPDATE sessions SET updated_at = ? WHERE id = 'ses_a'`,
+		encodeTime(time.Now().Add(-time.Hour))); err != nil {
+		t.Fatal(err)
+	}
+
+	all, err := a.ListAllSessions(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type row struct {
+		ID       message.SessionID
+		Worktree string
+	}
+	var got []row
+	for _, s := range all {
+		got = append(got, row{s.ID, s.Worktree})
+	}
+	if want := []row{{"ses_b", "/work/b"}, {"ses_a", "/work/a"}}; !slices.Equal(got, want) {
+		t.Errorf("all sessions = %v, want %v", got, want)
+	}
+
+	own, err := a.ListSessions(ctx)
+	if err != nil || len(own) != 1 || own[0].Worktree != "/work/a" {
+		t.Errorf("project a's sessions = %+v, %v; want ses_a in /work/a", own, err)
+	}
+	if sess, err := a.Session(ctx, "ses_b"); err != nil || sess.Worktree != "/work/b" {
+		t.Errorf("another project's session = %+v, %v; want it in /work/b", sess, err)
+	}
+	for id, want := range map[message.SessionID]string{"ses_a": "/work/a", "ses_b": "/work/b"} {
+		if dir, ok, err := WorktreeOf(ctx, db, id); err != nil || !ok || dir != want {
+			t.Errorf("WorktreeOf(%s) = %q, %v, %v; want %q", id, dir, ok, err, want)
+		}
+	}
+	if dir, ok, err := WorktreeOf(ctx, db, "ses_missing"); err != nil || ok || dir != "" {
+		t.Errorf("WorktreeOf of a missing session = %q, %v, %v; want none", dir, ok, err)
+	}
+}
+
 // TestFindSession_ScopesToProject checks that FindSession, unlike Session,
 // finds only the stored sessions of the store's project.
 func TestFindSession_ScopesToProject(t *testing.T) {
@@ -150,23 +202,30 @@ func TestFindSession_ScopesToProject(t *testing.T) {
 	}
 }
 
-// TestSetHead_RoundTripsThroughStore checks the head columns end to end,
-// since the write path names them too.
-func TestSetHead_RoundTripsThroughStore(t *testing.T) {
-	store := newTestStore(t)
-	ctx := context.Background()
-
-	if _, err := store.db.ExecContext(ctx, `
-		INSERT INTO sessions (id, project, title, created_at, updated_at) VALUES ('ses_new', ?, '', ?, ?)`,
-		store.project, encodeTime(time.Now()), encodeTime(time.Now())); err != nil {
+// headColumns returns the stored head_id and forward_id of a session.
+func headColumns(t *testing.T, store *Store, id message.SessionID) (head, forward sql.Null[string]) {
+	t.Helper()
+	if err := store.db.QueryRowContext(t.Context(), `
+		SELECT head_id, forward_id FROM sessions WHERE id = ?`, id).Scan(&head, &forward); err != nil {
 		t.Fatal(err)
 	}
+	return head, forward
+}
 
-	want := Head{ID: "msg_42", Forward: "msg_99"}
-	if err := store.SetHead(ctx, "ses_new", want); err != nil {
+// TestSetHead_RoundTripsThroughStore checks the head columns end to end,
+// since the write path names them too, and that none is stored as NULL.
+func TestSetHead_RoundTripsThroughStore(t *testing.T) {
+	store := newTestStore(t)
+	ctx := t.Context()
+	const id = "ses_new"
+	appendAt(t, store, id, "", "msg_1")
+	appendAt(t, store, id, "msg_1", "msg_2")
+
+	want := Head{ID: "msg_1", Forward: "msg_2"}
+	if err := store.SetHead(ctx, id, want); err != nil {
 		t.Fatalf("set head: %v", err)
 	}
-	sess, err := store.Session(ctx, "ses_new")
+	sess, err := store.Session(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,14 +233,62 @@ func TestSetHead_RoundTripsThroughStore(t *testing.T) {
 		t.Fatalf("stored head = %+v, want %+v", sess.Head, want)
 	}
 
-	if err := store.SetHead(ctx, "ses_new", Head{}); err != nil {
+	if err := store.SetHead(ctx, id, Head{}); err != nil {
 		t.Fatalf("clear head: %v", err)
 	}
-	if sess, err = store.Session(ctx, "ses_new"); err != nil {
+	if sess, err = store.Session(ctx, id); err != nil {
 		t.Fatal(err)
 	}
 	if sess.Head != (Head{}) {
 		t.Fatalf("head survived clearing: %+v", sess.Head)
+	}
+	if head, forward := headColumns(t, store, id); head.Valid || forward.Valid {
+		t.Errorf("cleared head stored as %v, %v; want NULL for both", head, forward)
+	}
+}
+
+// TestSetHead_RefusesMessagesOffTheConversation checks that the head and
+// the forward marker rest only on live chat messages of the session, and
+// that a refused move leaves both where they were.
+func TestSetHead_RefusesMessagesOffTheConversation(t *testing.T) {
+	store := newTestStore(t)
+	ctx := t.Context()
+	const id = "ses_head"
+	appendAt(t, store, id, "", "msg_1")
+	appendAt(t, store, id, "msg_1", "msg_gone")
+	appendAt(t, store, id, "msg_1", "msg_2")
+	appendAt(t, store, "ses_other", "", "msg_elsewhere")
+	if err := store.AppendFork(ctx, id, "msg_2", &message.Content{ID: "msg_fork", Role: message.RoleUser, Type: message.TypeTitle}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DeleteMessage(ctx, id, "msg_gone"); err != nil {
+		t.Fatal(err)
+	}
+	before, err := store.Session(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := map[string]struct {
+		head Head
+		want error
+	}{
+		"unknown head":        {Head{ID: "msg_missing"}, ErrMessageNotFound},
+		"unknown forward":     {Head{ID: "msg_1", Forward: "msg_missing"}, ErrMessageNotFound},
+		"another session's":   {Head{ID: "msg_elsewhere"}, ErrMessageNotFound},
+		"deleted message":     {Head{ID: "msg_gone"}, ErrMessageNotFound},
+		"fork message":        {Head{ID: "msg_fork"}, ErrMessageType},
+		"forward onto a fork": {Head{ID: "msg_1", Forward: "msg_fork"}, ErrMessageType},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			if err := store.SetHead(ctx, id, tt.head); !errors.Is(err, tt.want) {
+				t.Errorf("err = %v, want %v", err, tt.want)
+			}
+			if after, err := store.Session(ctx, id); err != nil || after.Head != before.Head {
+				t.Errorf("head after a refused move = %+v, %v; want %+v", after.Head, err, before.Head)
+			}
+		})
 	}
 }
 
@@ -242,20 +349,49 @@ func TestAppendMessage_KeepsCreatedAt(t *testing.T) {
 	}
 }
 
-// TestDeleteSession_IsSoft checks that a deleted session keeps its rows, and
-// that every read and change treats it as a session the store does not hold,
-// except that its ID cannot start a session again.
-func TestDeleteSession_IsSoft(t *testing.T) {
+// countRows returns the rows of table that belong to session id: its own
+// row in sessions, its messages, and its messages' parts.
+func countRows(t *testing.T, store *Store, table string, id message.SessionID) int {
+	t.Helper()
+	query := map[string]string{
+		"sessions":      `SELECT COUNT(*) FROM sessions WHERE id = ?`,
+		"messages":      `SELECT COUNT(*) FROM messages WHERE session_id = ?`,
+		"message_parts": `SELECT COUNT(*) FROM message_parts WHERE message IN (SELECT seq FROM messages WHERE session_id = ?)`,
+	}[table]
+	var n int
+	if err := store.db.QueryRowContext(t.Context(), query, id).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// TestDeleteSession_RemovesItsRows checks that deleting a session removes
+// it with its messages and their parts, and no other session's, that every
+// read and change then treats it as a session the store does not hold, and
+// that appending under its ID stores a new session.
+func TestDeleteSession_RemovesItsRows(t *testing.T) {
 	store := newTestStore(t)
 	ctx := t.Context()
-	appendAt(t, store, "ses_a", "", "msg_1")
-	appendAt(t, store, "ses_a", "msg_1", "msg_2")
-	appendAt(t, store, "ses_a", "msg_1", "msg_3")
+	for _, sess := range []message.SessionID{"ses_a", "ses_kept"} {
+		for i, parent := range []message.ID{"", "msg_1", "msg_1"} {
+			if err := store.SetHead(ctx, sess, Head{ID: parent}); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				t.Fatal(err)
+			}
+			msg := message.Content{ID: message.ID(fmt.Sprintf("msg_%d", i+1)), Role: message.RoleUser,
+				Parts: []message.ContentPart{message.TextPart{Text: "hi"}}}
+			if err := store.AppendMessage(ctx, sess, &msg); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 
 	// Each read counts what it returns, which is something before the
 	// session is deleted and nothing after.
 	reads := map[string]func() (int, error){
-		"list":     func() (int, error) { s, err := store.ListSessions(ctx); return len(s), err },
+		"list": func() (int, error) {
+			s, err := store.ListSessions(ctx)
+			return len(s) - 1, err // ses_kept stays listed
+		},
 		"branch":   func() (int, error) { m, err := store.Branch(ctx, "ses_a"); return len(m), err },
 		"path":     func() (int, error) { m, err := store.Path(ctx, "ses_a", "msg_2"); return len(m), err },
 		"messages": func() (int, error) { m, err := store.Messages(ctx, "ses_a"); return len(m), err },
@@ -273,17 +409,13 @@ func TestDeleteSession_IsSoft(t *testing.T) {
 	if err := store.DeleteSession(ctx, "ses_a"); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	var (
-		deletedAt sql.Null[string]
-		kept      int
-	)
-	if err := store.db.QueryRowContext(ctx, `
-		SELECT deleted_at, (SELECT COUNT(*) FROM messages WHERE session_id = 'ses_a')
-		FROM sessions WHERE id = 'ses_a'`).Scan(&deletedAt, &kept); err != nil {
-		t.Fatalf("deleted row: %v", err)
-	}
-	if !deletedAt.Valid || kept != 3 {
-		t.Errorf("deleted_at %v with %d messages kept, want a time and all 3", deletedAt, kept)
+	for table, want := range map[string]int{"sessions": 1, "messages": 3, "message_parts": 3} {
+		if n := countRows(t, store, table, "ses_a"); n != 0 {
+			t.Errorf("%d %s rows of the deleted session, want none", n, table)
+		}
+		if n := countRows(t, store, table, "ses_kept"); n != want {
+			t.Errorf("%d %s rows of the other session, want its %d", n, table, want)
+		}
 	}
 
 	for name, read := range reads {
@@ -297,18 +429,17 @@ func TestDeleteSession_IsSoft(t *testing.T) {
 		run  func() error
 		want error
 	}{
-		"session":   {func() error { _, err := store.Session(ctx, "ses_a"); return err }, fs.ErrNotExist},
-		"find":      {func() error { _, err := store.FindSession(ctx, "ses_a"); return err }, fs.ErrNotExist},
-		"set title": {func() error { return store.SetTitle(ctx, "ses_a", "back") }, fs.ErrNotExist},
-		"set head":  {func() error { return store.SetHead(ctx, "ses_a", Head{ID: "msg_1"}) }, fs.ErrNotExist},
-		"delete":    {func() error { return store.DeleteSession(ctx, "ses_a") }, fs.ErrNotExist},
-		"append": {func() error {
-			msg := message.Content{ID: "msg_4", Role: message.RoleUser}
-			return store.AppendMessage(ctx, "ses_a", &msg)
-		}, fs.ErrNotExist},
+		"session":        {func() error { _, err := store.Session(ctx, "ses_a"); return err }, fs.ErrNotExist},
+		"find":           {func() error { _, err := store.FindSession(ctx, "ses_a"); return err }, fs.ErrNotExist},
+		"set title":      {func() error { return store.SetTitle(ctx, "ses_a", "back") }, fs.ErrNotExist},
+		"set head":       {func() error { return store.SetHead(ctx, "ses_a", Head{ID: "msg_1"}) }, fs.ErrNotExist},
+		"delete":         {func() error { return store.DeleteSession(ctx, "ses_a") }, fs.ErrNotExist},
 		"message":        {func() error { _, err := store.Message(ctx, "ses_a", "msg_1"); return err }, ErrMessageNotFound},
 		"leaf of":        {func() error { _, err := store.Leaf(ctx, "ses_a", "msg_1"); return err }, ErrMessageNotFound},
 		"delete message": {func() error { return store.DeleteMessage(ctx, "ses_a", "msg_1") }, ErrMessageNotFound},
+		"fork": {func() error {
+			return store.AppendFork(ctx, "ses_a", "msg_1", &message.Content{ID: "msg_x", Role: message.RoleUser, Type: message.TypeTitle})
+		}, ErrMessageNotFound},
 	}
 	for name, tt := range unknown {
 		t.Run(name, func(t *testing.T) {
@@ -316,6 +447,14 @@ func TestDeleteSession_IsSoft(t *testing.T) {
 				t.Errorf("err = %v, want %v", err, tt.want)
 			}
 		})
+	}
+
+	again := message.Content{ID: "msg_new", Role: message.RoleUser}
+	if err := store.AppendMessage(ctx, "ses_a", &again); err != nil {
+		t.Fatalf("append under the deleted ID: %v", err)
+	}
+	if branch, err := store.Branch(ctx, "ses_a"); err != nil || !equal(ids(branch), []message.ID{"msg_new"}) {
+		t.Errorf("branch of the new session = %v, %v; want msg_new alone", ids(branch), err)
 	}
 }
 
@@ -341,7 +480,7 @@ func TestSetTitle_RoundTrips(t *testing.T) {
 
 // TestAppendMessage_StampsItsTimes checks that a stored message, of the
 // conversation or a fork, is updated when it is created, since it does not
-// change, and is not deleted.
+// change.
 func TestAppendMessage_StampsItsTimes(t *testing.T) {
 	ctx := t.Context()
 	store := newTestStore(t)
@@ -351,15 +490,8 @@ func TestAppendMessage_StampsItsTimes(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, msg := range []message.ID{"msg_1", "msg_fork"} {
-		var created, updated string
-		var deleted sql.Null[string]
-		if err := store.db.QueryRowContext(ctx, `
-			SELECT created_at, updated_at, deleted_at FROM messages WHERE session_id = ? AND id = ?`,
-			id, string(msg)).Scan(&created, &updated, &deleted); err != nil {
-			t.Fatal(err)
-		}
-		if updated != created || deleted.Valid {
-			t.Errorf("%s: created %s, updated %s, deleted %v; want updated as created, and not deleted", msg, created, updated, deleted)
+		if created, updated := messageTimes(t, store, id, msg); updated != created {
+			t.Errorf("%s: created %s, updated %s; want updated as created", msg, created, updated)
 		}
 	}
 }

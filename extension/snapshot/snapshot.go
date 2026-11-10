@@ -2,8 +2,8 @@
 // each session's history. It plugs into flow at the three points package
 // extension describes:
 //
-//   - Content: StepPart, the workspace tree each prompt and reply ends with
-//     (part.go).
+//   - Content: SnapshotPart, the workspace tree each prompt and reply ends
+//     with (part.go).
 //   - Behaviour: it records that tree as each prompt is sent and each turn
 //     ends (track.go), and restores the files as they stood at the
 //     destination of every move through the history (move.go).
@@ -67,7 +67,7 @@ var (
 	ErrNoSnapshot error = extension.Refusal("no snapshot recorded for that point")
 )
 
-// Extension records the workspace in the step part each prompt and reply
+// Extension records the workspace in the snapshot part each prompt and reply
 // ends with, and restores it on every move through a session's history. It
 // implements extension.PromptHook, extension.TurnHook, and extension.MoveHook. While its
 // Service is disabled it records nothing and refuses every move. The zero
@@ -76,10 +76,10 @@ type Extension struct {
 	// Service records and restores the workspace. Load creates it.
 	Service *engine.Service
 	// IndexingDelay is how long recording the workspace may take before the
-	// step part that records it starts pending, as Track describes. Zero
+	// snapshot part that records it starts pending, as Track describes. Zero
 	// starts it pending at once.
 	IndexingDelay time.Duration
-	// TrackDelay is extra time each step part's recording takes once the
+	// TrackDelay is extra time each snapshot part's recording takes once the
 	// workspace is recorded, so that the pending part can be looked at. It
 	// is for previewing the UI: it only delays the part Track adds, not the
 	// moves through the history. To see the part pending it must exceed

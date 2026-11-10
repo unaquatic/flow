@@ -48,7 +48,7 @@ func loadSnapshot(t *testing.T, worktree string) *snapshot.Extension {
 }
 
 // snapshotForAgentTest returns the snapshot extension over an isolated
-// worktree with one file, whose step parts start pending at once.
+// worktree with one file, whose snapshot parts start pending at once.
 func snapshotForAgentTest(t *testing.T) *snapshot.Extension {
 	t.Helper()
 	worktree := filepath.Join(t.TempDir(), "worktree")
@@ -97,7 +97,7 @@ func partChangesOf(events []agent.Event) (kinds []partKind, changes []agent.Part
 }
 
 // TestAgentEvents_PartsRebuildTheFinalMessage checks that applying a
-// message's part events in order gives its final parts, its step part
+// message's part events in order gives its final parts, its snapshot part
 // included, and that every part ends exactly once.
 func TestAgentEvents_PartsRebuildTheFinalMessage(t *testing.T) {
 	ag := &agent.Agent{
@@ -412,7 +412,7 @@ func TestAgentEvents_ReasoningKeepsItsSignature(t *testing.T) {
 }
 
 // TestAgentEvents_MessageLifecycle checks that a message's events open with
-// MessageStarted, start and end its step part after all its content, and
+// MessageStarted, start and end its snapshot part after all its content, and
 // close with MessageEnded.
 func TestAgentEvents_MessageLifecycle(t *testing.T) {
 	ag := &agent.Agent{
@@ -439,29 +439,30 @@ func TestAgentEvents_MessageLifecycle(t *testing.T) {
 	types, changes := partChangesOf(events)
 	n := len(changes)
 	if n < 3 {
-		t.Fatalf("got part events %v, want content, then the step part's start and end", types)
+		t.Fatalf("got part events %v, want content, then the snapshot part's start and end", types)
 	}
-	if _, ok := changes[n-2].Part.(snapshot.StepPart); !ok || types[n-2] != partStarted {
-		t.Errorf("second-last part event = %s %T, want %s StepPart", types[n-2], changes[n-2].Part, partStarted)
+	if _, ok := changes[n-2].Part.(snapshot.SnapshotPart); !ok || types[n-2] != partStarted {
+		t.Errorf("second-last part event = %s %T, want %s SnapshotPart", types[n-2], changes[n-2].Part, partStarted)
 	}
 	if types[n-1] != partEnded || changes[n-1].Part.PartID() != changes[n-2].Part.PartID() {
-		t.Errorf("last part event = %s %q, want %s of the step part", types[n-1], changes[n-1].Part.PartID(), partEnded)
+		t.Errorf("last part event = %s %q, want %s of the snapshot part", types[n-1], changes[n-1].Part.PartID(), partEnded)
 	}
 	parts := turns[0].Parts
-	if step, ok := parts[len(parts)-1].(snapshot.StepPart); !ok || step.Snapshot.IsZero() {
-		t.Errorf("last part = %+v, want a step part with a tree", parts[len(parts)-1])
+	if step, ok := parts[len(parts)-1].(snapshot.SnapshotPart); !ok || step.Tree.IsZero() {
+		t.Errorf("last part = %+v, want a snapshot part with a tree", parts[len(parts)-1])
 	}
-	if steps := countSteps(parts); steps != 1 {
-		t.Errorf("message holds %d step parts, want 1", steps)
+	if steps := countSnapshots(parts); steps != 1 {
+		t.Errorf("message holds %d snapshot parts, want 1", steps)
 	}
 }
 
-// TestAgentEvents_StepPendingWhileSlow checks that a turn's step part starts
-// pending when recording the workspace takes longer than the snapshot
-// extension's IndexingDelay, as a delay of zero makes it, so that the reply
-// shows the snapshot being taken, and starts with its tree when recording is
-// quicker. Either way it ends with the tree, under the ID it started with.
-func TestAgentEvents_StepPendingWhileSlow(t *testing.T) {
+// TestAgentEvents_SnapshotPendingWhileSlow checks that a turn's snapshot
+// part starts pending when recording the workspace takes longer than the
+// snapshot extension's IndexingDelay, as a delay of zero makes it, so that
+// the reply shows the snapshot being taken, and starts with its tree when
+// recording is quicker. Either way it ends with the tree, under the ID it
+// started with.
+func TestAgentEvents_SnapshotPendingWhileSlow(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		delay   time.Duration
@@ -484,32 +485,32 @@ func TestAgentEvents_StepPendingWhileSlow(t *testing.T) {
 			if err != nil {
 				t.Fatalf("agent run: %v", err)
 			}
-			var steps []snapshot.StepPart
+			var steps []snapshot.SnapshotPart
 			_, changes := partChangesOf(events)
 			for _, c := range changes {
-				if step, ok := c.Part.(snapshot.StepPart); ok {
+				if step, ok := c.Part.(snapshot.SnapshotPart); ok {
 					steps = append(steps, step)
 				}
 			}
 			if len(steps) != 2 {
-				t.Fatalf("got %d step part events, want its start and end", len(steps))
+				t.Fatalf("got %d snapshot part events, want its start and end", len(steps))
 			}
 			started, ended := steps[0], steps[1]
-			if started.Pending != tt.pending || started.Pending == !started.Snapshot.IsZero() {
+			if started.Pending != tt.pending || started.Pending == !started.Tree.IsZero() {
 				t.Errorf("step started as %+v, want pending = %v, with a tree unless pending", started, tt.pending)
 			}
-			if ended.Pending || ended.Snapshot.IsZero() || ended.ID != started.ID {
+			if ended.Pending || ended.Tree.IsZero() || ended.ID != started.ID {
 				t.Errorf("step ended as %+v, want the part %q with its tree", ended, started.ID)
 			}
 		})
 	}
 }
 
-// countSteps returns the number of step parts among parts.
-func countSteps(parts []message.ContentPart) int {
+// countSnapshots returns the number of snapshot parts among parts.
+func countSnapshots(parts []message.ContentPart) int {
 	n := 0
 	for _, p := range parts {
-		if _, ok := p.(snapshot.StepPart); ok {
+		if _, ok := p.(snapshot.SnapshotPart); ok {
 			n++
 		}
 	}
@@ -518,7 +519,7 @@ func countSteps(parts []message.ContentPart) int {
 
 // TestAgentEvents_UsageBecomesOnePart checks that the usage a provider
 // reports becomes one usage part once the response stops streaming, after
-// the tool calls the response made and before its step part, holding the
+// the tool calls the response made and before its snapshot part, holding the
 // counts of the last report, which replace those before it. A response that
 // reports no usage has no usage part.
 func TestAgentEvents_UsageBecomesOnePart(t *testing.T) {
@@ -573,8 +574,8 @@ func TestAgentEvents_UsageBecomesOnePart(t *testing.T) {
 				if _, ok := parts[i-1].(message.ToolPart); !ok {
 					t.Errorf("usage follows %T, want the tool call", parts[i-1])
 				}
-				if _, ok := parts[i+1].(snapshot.StepPart); !ok {
-					t.Errorf("usage precedes %T, want the step part", parts[i+1])
+				if _, ok := parts[i+1].(snapshot.SnapshotPart); !ok {
+					t.Errorf("usage precedes %T, want the snapshot part", parts[i+1])
 				}
 			}
 			if !slices.Equal(got, tt.want) {
@@ -678,7 +679,7 @@ func TestAgentEvents_NoStepMarkersWithoutSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("agent run: %v", err)
 	}
-	if n := countSteps(turns[0].Parts); n != 0 {
-		t.Fatalf("message holds %d step parts, want none with snapshots disabled", n)
+	if n := countSnapshots(turns[0].Parts); n != 0 {
+		t.Fatalf("message holds %d snapshot parts, want none with snapshots disabled", n)
 	}
 }

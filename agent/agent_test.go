@@ -616,8 +616,8 @@ func TestAgent_StoppedTurnRecordsItsStep(t *testing.T) {
 		t.Fatalf("stored %d messages, want 1", len(store.msgs))
 	}
 	parts := store.msgs[0].Parts
-	if step, ok := parts[len(parts)-1].(snapshot.StepPart); !ok || step.Snapshot.IsZero() {
-		t.Errorf("stored parts = %+v, want them to end with a step part holding a tree", parts)
+	if step, ok := parts[len(parts)-1].(snapshot.SnapshotPart); !ok || step.Tree.IsZero() {
+		t.Errorf("stored parts = %+v, want them to end with a snapshot part holding a tree", parts)
 	}
 }
 

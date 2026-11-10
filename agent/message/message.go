@@ -2,6 +2,8 @@ package message
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"time"
 	"uuid"
 )
@@ -30,10 +32,17 @@ var roleFromString = map[string]Role{
 	"system": RoleSystem,
 }
 
+// ErrUnknownRole reports a role name that names no [Role].
+var ErrUnknownRole = errors.New("unknown message role")
+
 // ParseRole returns the role named by s, which is the form String writes. An
-// unrecognized name returns RoleAgent.
-func ParseRole(s string) Role {
-	return roleFromString[s]
+// unrecognized name fails with [ErrUnknownRole].
+func ParseRole(s string) (Role, error) {
+	r, ok := roleFromString[s]
+	if !ok {
+		return 0, fmt.Errorf("%w %q", ErrUnknownRole, s)
+	}
+	return r, nil
 }
 
 // String returns the wire name of r, or "unknown" for an unsupported role.

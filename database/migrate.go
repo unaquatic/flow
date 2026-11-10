@@ -17,13 +17,19 @@ const Name = "database"
 // ErrInvalidMigrationID reports a migration ID that is not snake_case.
 var ErrInvalidMigrationID = errors.New("migration id is not snake_case")
 
+// ErrNewerSchema reports tables that a newer build of the program has
+// upgraded past the migrations this build knows, which it cannot safely read
+// or write.
+var ErrNewerSchema = errors.New("database schema is newer than this program")
+
 // migrationID matches a snake_case ID: words of lowercase ASCII letters and
 // digits, joined by single underscores, the first starting with a letter.
 var migrationID = regexp.MustCompile(`^[a-z][a-z0-9]*(_[a-z0-9]+)*$`)
 
 // migrations are the schema upgrades of the package's own tables, in version
 // order. An applied migration is never edited: databases have already
-// recorded it, so a change to the tables is always a new entry. The other
+// recorded it, so a change to the tables, or to what their values mean, is
+// always a new entry. The other
 // tables belong to package agent/session and to the extensions, which create
 // and upgrade them with Migrate.
 var migrations = []string{
@@ -67,17 +73,39 @@ func migrate(db *sql.DB) error {
 // db, which Open has created: steps holds them in version order, and an
 // applied one is never edited. The owner is this package, package
 // agent/session, or an extension, under the extension's name; id is
-// snake_case, or Migrate fails with [ErrInvalidMigrationID]. Each step is
-// applied and recorded under id in one transaction, so a process that races
-// another to apply one applies it once.
+// snake_case, or Migrate fails with [ErrInvalidMigrationID]. Tables that db
+// records at a version past the last of steps, as a newer build leaves them,
+// fail with [ErrNewerSchema] before any step runs. Each step is applied and
+// recorded under id in one transaction, so a process that races another to
+// apply one applies it once.
+//
+// Once Migrate returns, the [Guard] of db, which [Open] sets up, knows
+// len(steps) as the version of id's tables, and a later step that another
+// process applies stops this one from using db. So a change in what stored
+// values mean, with no change to the tables, is a new step too, even an
+// empty one (""), or a build that writes the old meaning goes on doing so.
 func Migrate(ctx context.Context, db *sql.DB, id string, steps []string) error {
 	if !migrationID.MatchString(id) {
 		return fmt.Errorf("migrate %q: %w", id, ErrInvalidMigrationID)
+	}
+	// Recorded versions only grow, so one read before the steps is enough.
+	var current int
+	if err := db.QueryRowContext(ctx,
+		`SELECT COALESCE(MAX(version), 0) FROM migrations WHERE id = ?`, id,
+	).Scan(&current); err != nil {
+		return fmt.Errorf("migrate %s: %w", id, err)
+	}
+	if current > len(steps) {
+		return fmt.Errorf("migrate %s: at v%d, this program knows up to v%d: %w",
+			id, current, len(steps), ErrNewerSchema)
 	}
 	for v, step := range steps {
 		if err := applyMigration(ctx, db, id, v, step); err != nil {
 			return fmt.Errorf("migrate %s to v%d: %w", id, v+1, err)
 		}
+	}
+	if g, ok := db.Driver().(*Guard); ok {
+		g.Know(id, len(steps))
 	}
 	return nil
 }

@@ -3,7 +3,9 @@ package session
 // Migrations are the schema upgrades of the tables sessions are stored in,
 // in version order, which [Open] applies with database.Migrate under [Name].
 // An applied migration is never edited: databases have already recorded it,
-// so a change to the tables is always a new entry.
+// so a change to the tables, or to what their values mean, is always a new
+// entry, even an empty one (""): it stops older builds still running from
+// writing to them.
 var Migrations = []string{
 	migrationV1,
 }
@@ -11,14 +13,13 @@ var Migrations = []string{
 // migrationV1 creates the tables.
 //
 // A session's row is written with its first message, at created_at, so a new
-// session has none. Deleting a session sets deleted_at and keeps the session
-// and its messages, which no read returns: a deleted session reads as one
-// that does not exist, though its ID stays taken. sessions_project indexes
-// only the sessions that are not deleted, which are the only ones listed.
-// Sessions belong to a project, whose table is package database's.
+// session has none. Sessions belong to a project, whose table is package
+// database's.
 //
 // Messages form a tree through parent_id, and a session reads back the path
-// from its root to head_id; forward_id is the leaf a redo returns to. A
+// from its root to head_id; forward_id is the leaf a redo returns to. NULL
+// stands for none in all three: a root message has no parent, and a session
+// that shows no messages, or has nothing to redo, has no head or forward. A
 // message's model is the variant that produced it, or that a prompt was sent
 // to, in "provider/model:option:effort" form, such as
 // provider-a/model-a:fast:xhigh: the catalog variant's option, which
@@ -26,24 +27,42 @@ var Migrations = []string{
 // the provider chose it. Telling the option and the effort from the rest of
 // the model ID takes the catalog.
 //
+// Foreign keys hold every link: a message's session, its parent, which is a
+// message of the same session, and a session's head and forward, which are
+// messages of the session. Sessions and messages reference each other, and a
+// session's row is written after its first message, so the keys are checked
+// when the transaction commits.
+//
 // A message's type says what it is for, as message.Type names it: 'chat'
 // for the session's conversation, or another type, such as 'title', for the
-// forks that AppendFork stores below a message. The head never rests on a
-// fork, and the reads of the conversation leave forks out, but deleting the
-// message one hangs from deletes it too. A message's updated_at is its
-// created_at, as a stored message does not change. Its deleted_at is kept
-// for deleting messages softly, as sessions are deleted; nothing sets it
-// yet, and DeleteMessage removes the rows.
+// forks that AppendFork stores below a message. A type is lowercase ASCII
+// letters, digits and underscores, led by a letter, and a role is one of the
+// names message.Role writes; the table refuses any other value. The head
+// never rests on a fork, and the reads of the conversation leave forks out,
+// but deleting the message one hangs from deletes it too. A message's
+// updated_at is when it last changed; a stored message does not change, so
+// it is its created_at.
+//
+// Deleting removes rows. Deleting a session removes its messages, whose
+// parts follow them, through the foreign keys. DeleteMessage removes a
+// message and every message below it itself, rather than through a key on
+// parent_id: SQLite cascades one level of a tree at a time, up to a depth
+// far below that of a long conversation.
 //
 // Parts live in their own rows, ordered by seq, because they are the only
-// part of a message whose shape varies. The token usage of a reply is one of
-// them, so messages holds no counts.
+// part of a message whose shape varies. A part's ID and type, as
+// message.ContentType names it, such as 'text', 'tool' or an extension's
+// 'snapshot', are columns of their own, and data is a JSON object of its
+// other fields, which the type decides: the tagged form message.PartJSON
+// encodes, without "type" and "id". A part is stored with its message and
+// does not change, so its times are its message's. The token usage of a
+// reply is one of them, so messages holds no counts.
 //
 // Session and message times are RFC 3339 to whole seconds. The nanosecond
 // form omits the fraction when it is zero, which makes values of differing
 // width and stops the column sorting chronologically. Only sessions carries
-// defaults, because only sessions is written by inserts that name some of its
-// columns.
+// defaults, because only sessions is written by inserts that name some of
+// its columns.
 const migrationV1 = `
 CREATE TABLE sessions (
 	id           TEXT    PRIMARY KEY,
@@ -51,25 +70,26 @@ CREATE TABLE sessions (
 	title        TEXT    NOT NULL DEFAULT '',
 	created_at   TEXT    NOT NULL,
 	updated_at   TEXT    NOT NULL,
-	deleted_at   TEXT,
-	head_id      TEXT    NOT NULL DEFAULT '',
-	forward_id   TEXT    NOT NULL DEFAULT ''
+	head_id      TEXT,
+	forward_id   TEXT,
+	FOREIGN KEY (id, head_id) REFERENCES messages (session_id, id) DEFERRABLE INITIALLY DEFERRED,
+	FOREIGN KEY (id, forward_id) REFERENCES messages (session_id, id) DEFERRABLE INITIALLY DEFERRED
 );
 
-CREATE INDEX sessions_project ON sessions (project, updated_at) WHERE deleted_at IS NULL;
+CREATE INDEX sessions_project ON sessions (project, updated_at);
 
 CREATE TABLE messages (
 	seq        INTEGER PRIMARY KEY,
-	session_id TEXT NOT NULL,
+	session_id TEXT NOT NULL REFERENCES sessions (id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED,
 	id         TEXT NOT NULL,
 	parent_id  TEXT,
-	type       TEXT NOT NULL,
-	role       TEXT NOT NULL,
+	type       TEXT NOT NULL CHECK (type GLOB '[a-z]*' AND type NOT GLOB '*[^a-z0-9_]*'),
+	role       TEXT NOT NULL CHECK (role IN ('agent', 'user', 'system')),
 	model      TEXT NOT NULL,
 	created_at TEXT NOT NULL,
 	updated_at TEXT NOT NULL,
-	deleted_at TEXT,
-	UNIQUE (session_id, id)
+	UNIQUE (session_id, id),
+	FOREIGN KEY (session_id, parent_id) REFERENCES messages (session_id, id) DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE INDEX messages_parent ON messages (session_id, parent_id);
@@ -77,8 +97,9 @@ CREATE INDEX messages_parent ON messages (session_id, parent_id);
 CREATE TABLE message_parts (
 	seq     INTEGER PRIMARY KEY,
 	message INTEGER NOT NULL REFERENCES messages (seq) ON DELETE CASCADE,
-	id      TEXT NOT NULL,
-	data    TEXT NOT NULL,
+	id      TEXT    NOT NULL CHECK (id <> ''),
+	type    TEXT    NOT NULL CHECK (type GLOB '[a-z]*' AND type NOT GLOB '*[^a-z0-9_]*'),
+	data    TEXT    NOT NULL CHECK (json_type(data) = 'object'),
 	UNIQUE (message, id)
 );
 

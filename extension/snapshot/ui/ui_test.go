@@ -28,33 +28,34 @@ func mustHash(s string) snapshot.Hash {
 	return h
 }
 
-// TestNewPartView checks that the extension shows step parts, and leaves
+// TestNewPartView checks that the extension shows snapshot parts, and leaves
 // other parts to the transcript.
 func TestNewPartView(t *testing.T) {
 	e := New(t.Context(), nil)
 	host := ui.ViewHost{Style: ui.ViewStyle{Debug: true, NameFg: ui.PanelDimFg}}
-	box, ok := e.NewPartView(snapshot.StepPart{ID: "s", Snapshot: tree}, host).(*StepBox)
+	box, ok := e.NewPartView(snapshot.SnapshotPart{ID: "s", Tree: tree}, host).(*SnapshotBox)
 	if !ok || !box.Visible() {
-		t.Fatalf("view of a step part = %T, want a StepBox shown, as debug is on", box)
+		t.Fatalf("view of a snapshot part = %T, want a SnapshotBox shown, as debug is on", box)
 	}
 	if view := e.NewPartView(message.TextPart{Text: "hi"}, host); view != nil {
 		t.Errorf("view of a text part = %T, want none", view)
 	}
 }
 
-// TestStepBox_ShownWhilePending checks that a step part shows as a row while
-// the snapshot is being taken, and is gone before and once it holds its tree.
-func TestStepBox_ShownWhilePending(t *testing.T) {
-	box := NewStepBox(snapshot.StepPart{ID: "s"})
+// TestSnapshotBox_ShownWhilePending checks that a snapshot part shows as a
+// row while the snapshot is being taken, and is gone before and once it holds
+// its tree.
+func TestSnapshotBox_ShownWhilePending(t *testing.T) {
+	box := NewSnapshotBox(snapshot.SnapshotPart{ID: "s"})
 	if box.Visible() {
-		t.Fatal("a step part with its tree is visible, want it gone")
+		t.Fatal("a snapshot part with its tree is visible, want it gone")
 	}
 	for _, step := range []struct {
-		part snapshot.StepPart
+		part snapshot.SnapshotPart
 		want bool
 	}{
-		{snapshot.StepPart{ID: "s", Pending: true}, true},
-		{snapshot.StepPart{ID: "s", Snapshot: tree}, false},
+		{snapshot.SnapshotPart{ID: "s", Pending: true}, true},
+		{snapshot.SnapshotPart{ID: "s", Tree: tree}, false},
 	} {
 		ui.UpdateContentPart(box, step.part)
 		if box.Visible() != step.want {
@@ -62,24 +63,24 @@ func TestStepBox_ShownWhilePending(t *testing.T) {
 		}
 	}
 	if !ui.IsToolRow(box) {
-		t.Error("a step row does not stack as a tool call row")
+		t.Error("a snapshot row does not stack as a tool call row")
 	}
 }
 
-// TestStepBox_ShowDone checks that a step part kept once taken stays a row,
-// reads as being indexed while pending, and then shows its tree's short hash in
-// brackets, as a history move's notice names what it checked out,
-// or that recording it failed.
-func TestStepBox_ShowDone(t *testing.T) {
-	box := NewStepBox(snapshot.StepPart{ID: "s", Pending: true})
+// TestSnapshotBox_ShowDone checks that a snapshot part kept once taken stays
+// a row, reads as being indexed while pending, and then shows its tree's
+// short hash in brackets, as a history move's notice names what it checked
+// out, or that recording it failed.
+func TestSnapshotBox_ShowDone(t *testing.T) {
+	box := NewSnapshotBox(snapshot.SnapshotPart{ID: "s", Pending: true})
 	box.SetShowDone(true)
 	for _, step := range []struct {
-		part snapshot.StepPart
+		part snapshot.SnapshotPart
 		want string
 	}{
-		{snapshot.StepPart{ID: "s", Pending: true}, "Snapshot " + IndexingStatus},
-		{snapshot.StepPart{ID: "s", Snapshot: tree}, "Snapshot [" + tree.String()[:engine.ShortHashLen] + "]"},
-		{snapshot.StepPart{ID: "s"}, "Snapshot " + FailedStatus},
+		{snapshot.SnapshotPart{ID: "s", Pending: true}, "Snapshot " + IndexingStatus},
+		{snapshot.SnapshotPart{ID: "s", Tree: tree}, "Snapshot [" + tree.String()[:engine.ShortHashLen] + "]"},
+		{snapshot.SnapshotPart{ID: "s"}, "Snapshot " + FailedStatus},
 	} {
 		ui.UpdateContentPart(box, step.part)
 		if !box.Visible() || box.Header.PlainText() != step.want {
@@ -88,24 +89,25 @@ func TestStepBox_ShowDone(t *testing.T) {
 	}
 	box.SetShowDone(false)
 	if box.Visible() {
-		t.Error("a step part taken is visible once not kept, want it gone")
+		t.Error("a snapshot part taken is visible once not kept, want it gone")
 	}
 }
 
 // TestPatchBox_LoadsOnceBothTreesAreKnown checks that a reply's changes are
 // fetched once, between the tree the message before it ended with and the
-// tree of its own step part, once that arrives, and that a prompt's are not.
+// tree of its own snapshot part, once that arrives, and that a prompt's are
+// not.
 func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 	var loads [][2]snapshot.Hash
 	box := NewPatchBox(nil, style.Color{})
 	box.Load = func(from, to snapshot.Hash) { loads = append(loads, [2]snapshot.Hash{from, to}) }
 	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
-		Prev: []message.ContentPart{snapshot.StepPart{Snapshot: base}}}
+		Prev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}}}
 	box.SetMessage(reply)
 	if len(loads) != 0 {
 		t.Fatalf("loaded %v before the reply's tree arrived", loads)
 	}
-	reply.Parts = []message.ContentPart{snapshot.StepPart{Snapshot: tree}}
+	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
 	box.SetMessage(reply)
 	box.SetMessage(reply)
 	if want := [][2]snapshot.Hash{{base, tree}}; len(loads) != 1 || loads[0] != want[0] {
@@ -115,8 +117,8 @@ func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 	prompt := NewPatchBox(nil, style.Color{})
 	prompt.Load = func(from, to snapshot.Hash) { t.Errorf("a prompt loaded %s..%s", from, to) }
 	prompt.SetMessage(ui.ChatMessage{ID: "u2", Role: message.RoleUser,
-		Prev:  []message.ContentPart{snapshot.StepPart{Snapshot: base}},
-		Parts: []message.ContentPart{snapshot.StepPart{Snapshot: tree}}})
+		Prev:  []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		Parts: []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}})
 }
 
 // readPatches returns an Extension whose patches are patch, or err, and the
@@ -145,8 +147,8 @@ func TestNewSegmentView_ShowsThePatchAtOnce(t *testing.T) {
 	relayouts := 0
 	host := ui.ViewHost{Enqueue: func(func()) {}, Relayout: func() { relayouts++ }}
 	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
-		Prev:  []message.ContentPart{snapshot.StepPart{Snapshot: base}},
-		Parts: []message.ContentPart{snapshot.StepPart{Snapshot: tree}}}
+		Prev:  []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		Parts: []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
 
 	box := e.NewSegmentView(reply, host).(*PatchBox)
 

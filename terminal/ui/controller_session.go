@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"iter"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -150,10 +152,10 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 	return s.AddNotice(LogoNotice(logo, StatusLines(info, nil))...)
 }
 
-// HandleSessionList displays the stored sessions, one row each, searched
-// from the input.
+// HandleSessionList displays the stored sessions of every folder, one row
+// each, searched from the input.
 func (s *Service) HandleSessionList() []UIEvent {
-	sessions, err := s.app.Sessions().ListSessions(s.ctx)
+	sessions, err := s.app.Sessions().ListAllSessions(s.ctx)
 	if err != nil {
 		return s.ShowToast(fmt.Sprintf("Loading sessions failed: %v", err))
 	}
@@ -204,30 +206,77 @@ func (s *Service) SessionRows() []widget.SelectItem {
 const UntitledName = "Untitled"
 
 // sessionTitleMax is the most cells a title takes in the session list,
-// which cuts a longer one, so that the IDs stay in view.
+// which cuts a longer one, so that the other columns stay in view.
 const sessionTitleMax = 32
+
+// sessionDirMax is the most cells a folder takes in the session list, which
+// cuts a longer one from the left, keeping the folder's own name in view.
+const sessionDirMax = 32
 
 // sessionColumnGap is the space between the session list's columns.
 const sessionColumnGap = "  "
 
 // SessionRowNames returns the text of each session's row in the session
-// list: its title, or UntitledName, in a column as wide as the widest of
-// them, cut to sessionTitleMax cells, then its ID, and when it was last
-// updated, in local time. Session IDs are UUIDs of one width, so the times
-// line up in a column too.
+// list: its title, or UntitledName, cut to sessionTitleMax cells, then its
+// folder, as SessionDir names it, cut to sessionDirMax cells from the left,
+// each in a column as wide as the widest of them, then when it was last
+// updated, in local time, and its ID. The times are of one width, so the IDs
+// line up in a column too. The folder column is left out when no session
+// has a folder.
 func SessionRowNames(sessions []session.Session) []string {
 	titles := make([]string, len(sessions))
-	width := 0
+	dirs := make([]string, len(sessions))
+	titleWidth, dirWidth := 0, 0
 	for i, sess := range sessions {
 		titles[i] = TruncateWidth(SessionTitle(sess.Title), sessionTitleMax)
-		width = max(width, textbuf.StringWidth(titles[i]))
+		titleWidth = max(titleWidth, textbuf.StringWidth(titles[i]))
+		dirs[i] = TruncateWidthLeft(SessionDir(sess.Worktree), sessionDirMax)
+		dirWidth = max(dirWidth, textbuf.StringWidth(dirs[i]))
 	}
 	names := make([]string, len(sessions))
 	for i, sess := range sessions {
-		pad := strings.Repeat(" ", width-textbuf.StringWidth(titles[i]))
-		names[i] = titles[i] + pad + sessionColumnGap + string(sess.ID) + sessionColumnGap + sess.UpdatedAt.Local().Format(time.DateTime)
+		var b strings.Builder
+		b.WriteString(PadWidth(titles[i], titleWidth))
+		if dirWidth > 0 {
+			b.WriteString(sessionColumnGap + PadWidth(dirs[i], dirWidth))
+		}
+		b.WriteString(sessionColumnGap + sess.UpdatedAt.Local().Format(time.DateTime))
+		b.WriteString(sessionColumnGap + string(sess.ID))
+		names[i] = b.String()
 	}
 	return names
+}
+
+// PadWidth returns s padded with spaces to n cells, as the terminal draws
+// them, or s itself when it is as wide already.
+func PadWidth(s string, n int) string {
+	return s + strings.Repeat(" ", max(0, n-textbuf.StringWidth(s)))
+}
+
+// SessionDir returns dir, the folder of a session, as the session list
+// shows it: with the home folder written as ~, as shells write it.
+func SessionDir(dir string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return dir
+	}
+	return TildeDir(dir, home)
+}
+
+// TildeDir returns dir with its leading home, the home folder, written as ~:
+// "~" for home itself and "~/" before a folder inside it. Any other dir,
+// such as one that only shares home's prefix, is returned as it is.
+func TildeDir(dir, home string) string {
+	if home == "" || home == string(filepath.Separator) {
+		return dir
+	}
+	if dir == home {
+		return "~"
+	}
+	if rest, ok := strings.CutPrefix(dir, home+string(filepath.Separator)); ok {
+		return "~" + string(filepath.Separator) + rest
+	}
+	return dir
 }
 
 // SessionTitle returns title, a session's title on one line, or
@@ -256,6 +305,26 @@ func TruncateWidth(s string, n int) string {
 		used += w
 	}
 	return b.String() + "…"
+}
+
+// TruncateWidthLeft returns s cut to at most n cells, as the terminal draws
+// them, from the left, with an ellipsis in the first cell when it is cut, so
+// that its end stays in view.
+func TruncateWidthLeft(s string, n int) string {
+	if textbuf.StringWidth(s) <= n {
+		return s
+	}
+	runes := []rune(s)
+	used, start := 0, len(runes)
+	for start > 0 {
+		w := textbuf.RuneWidth(runes[start-1])
+		if used+w > n-1 {
+			break
+		}
+		used += w
+		start--
+	}
+	return "…" + string(runes[start:])
 }
 
 // HideSessionMenu dismisses the session list.
@@ -299,11 +368,16 @@ func Prompts(msgs []message.Content) iter.Seq[string] {
 
 // HandleSessionSelect stops the active run, activates a session, loads its
 // persisted messages, and takes the model variant they last ran. Prompts
-// queued in the session left are dropped.
+// queued in the session left are dropped. A listed session of another
+// folder is not opened here: its tools and files are that folder's, so the
+// UI closes to reopen it there, as RelaunchIn does.
 func (s *Service) HandleSessionSelect(value any) []UIEvent {
 	id, ok := value.(message.SessionID)
 	if !ok {
 		return nil
+	}
+	if dir := s.ListedWorktree(id); dir != "" && dir != s.app.WorkingDir() {
+		return s.RelaunchIn(id)
 	}
 	if err := s.OpenSession(id); err != nil {
 		return s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
@@ -318,6 +392,25 @@ func (s *Service) HandleSessionSelect(value any) []UIEvent {
 		s.SetProgress(s.state.Running),
 		s.SettleIndicator(),
 	)
+}
+
+// ListedWorktree returns the folder of session id as the open session list
+// holds it, or "" when the list holds no such session.
+func (s *Service) ListedWorktree(id message.SessionID) string {
+	i := slices.IndexFunc(s.state.SessionChoices, func(sess session.Session) bool { return sess.ID == id })
+	if i < 0 {
+		return ""
+	}
+	return s.state.SessionChoices[i].Worktree
+}
+
+// RelaunchIn records session id, of another folder, as the session to
+// reopen there, as RelaunchID reports it, and closes the session list and
+// the UI, so that the program can start flow again on it in its folder, as
+// Result.Relaunch tells.
+func (s *Service) RelaunchIn(id message.SessionID) []UIEvent {
+	s.relaunch.Store(&id)
+	return slices.Concat(s.HideSessionMenu(), []UIEvent{EventQuit{}})
 }
 
 // SettleIndicator hides the working indicator when no run of the active

@@ -37,18 +37,45 @@ var ErrMessageNotFound = errors.New("no such message in this session")
 var ErrMessageType = errors.New("message of the wrong type")
 
 // Open creates the session tables of db, which must have been opened by
-// [database.Open], or brings them up to date with [Migrations], and returns
-// a store working on behalf of project in it. Closing db is up to the
-// caller.
+// [database.Open], or brings them up to date with [Migrations], as Migrate
+// does, and returns a store working on behalf of project in it. Closing db
+// is up to the caller.
 func Open(ctx context.Context, db *sql.DB, project database.ProjectID) (*Store, error) {
-	if err := database.Migrate(ctx, db, Name, Migrations); err != nil {
-		return nil, fmt.Errorf("session: %w", err)
+	if err := Migrate(ctx, db); err != nil {
+		return nil, err
 	}
 	return NewStore(db, project), nil
 }
 
+// Migrate creates the session tables of db, which must have been opened by
+// [database.Open], or brings them up to date with [Migrations], so that
+// they can be read before a store is opened, as WorktreeOf reads them.
+func Migrate(ctx context.Context, db *sql.DB) error {
+	if err := database.Migrate(ctx, db, Name, Migrations); err != nil {
+		return fmt.Errorf("session: %w", err)
+	}
+	return nil
+}
+
+// WorktreeOf returns the worktree of the project that the stored session id
+// belongs to, the folder its tools ran in, and reports whether db holds the
+// session. The session tables must exist, as Migrate creates them.
+func WorktreeOf(ctx context.Context, db *sql.DB, id message.SessionID) (string, bool, error) {
+	var worktree string
+	err := db.QueryRowContext(ctx, `
+		SELECT p.worktree FROM sessions s JOIN projects p ON p.id = s.project
+		WHERE s.id = ?`, id).Scan(&worktree)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return "", false, nil
+	case err != nil:
+		return "", false, fmt.Errorf("session %s: %w", id, err)
+	}
+	return worktree, true, nil
+}
+
 // Session contains persisted conversation metadata. It encodes as the JSON
-// of the HTTP API's session routes, which leave out its Head.
+// of the HTTP API's session routes, which leave out its Head and Worktree.
 type Session struct {
 	// ID identifies the session.
 	ID message.SessionID `json:"id"`
@@ -61,6 +88,9 @@ type Session struct {
 
 	// Head selects the branch the session is currently on.
 	Head Head `json:"-"`
+	// Worktree is the worktree of the project the session belongs to, the
+	// folder its tools ran in. It is empty for a session not yet stored.
+	Worktree string `json:"-"`
 }
 
 // Head records where a session's visible transcript ends.

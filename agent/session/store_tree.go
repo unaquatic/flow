@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/unaquatic/flow/agent/message"
 )
@@ -12,14 +13,15 @@ import (
 // order, for a query that joins the messages table as m.
 const messageColumns = `m.seq, m.id, m.parent_id, m.role, m.model, m.created_at, m.type`
 
-// liveSQL is the condition, for a query that reads the messages table as m,
-// that m belongs to a session that is not deleted. A deleted session keeps
-// its messages, and every message query starts from rows that meet it, so
-// that none returns them. The messages a recursive query reaches from there
-// belong to the same session.
-const liveSQL = `EXISTS (
-	SELECT 1 FROM sessions s WHERE s.id = m.session_id AND s.deleted_at IS NULL
-)`
+// partColumns lists the part fields every message query selects after
+// messageColumns, in scan order, for a query that left-joins the
+// message_parts table as mp. They are NULL on the row of a message without
+// parts.
+const partColumns = `mp.id, mp.type, mp.data`
+
+// partsJoinSQL joins the parts of the messages table, read as m, as mp,
+// which partColumns then selects.
+const partsJoinSQL = `LEFT JOIN message_parts mp ON mp.message = m.seq`
 
 // pathSQL walks parent links from one message back to its root and attaches
 // each message's parts. Depth counts steps taken upwards, so ordering by it
@@ -28,59 +30,59 @@ const liveSQL = `EXISTS (
 const pathSQL = `
 WITH RECURSIVE path(seq, parent, depth) AS (
 	SELECT m.seq, m.parent_id, 0 FROM messages m
-	WHERE m.session_id = ? AND m.id = ? AND ` + liveSQL + `
+	WHERE m.session_id = ? AND m.id = ?
 	UNION ALL
 	SELECT m.seq, m.parent_id, path.depth + 1 FROM messages m
 	JOIN path ON m.id = path.parent
 	WHERE m.session_id = ?
 )
-SELECT ` + messageColumns + `, mp.data
+SELECT ` + messageColumns + `, ` + partColumns + `
 FROM path
 JOIN messages m ON m.seq = path.seq
-LEFT JOIN message_parts mp ON mp.message = m.seq
+` + partsJoinSQL + `
 ORDER BY path.depth DESC, mp.seq`
 
 // messagesSQL selects every message of a session with its parts, in the order
 // the messages were stored, leaving out forks, which are not chat.
 const messagesSQL = `
-SELECT ` + messageColumns + `, mp.data
+SELECT ` + messageColumns + `, ` + partColumns + `
 FROM messages m
-LEFT JOIN message_parts mp ON mp.message = m.seq
-WHERE m.session_id = ? AND m.type = 'chat' AND ` + liveSQL + `
+` + partsJoinSQL + `
+WHERE m.session_id = ? AND m.type = 'chat'
 ORDER BY m.seq, mp.seq`
 
 // childrenSQL selects the direct children of one message with their parts,
 // leaving out forks.
 const childrenSQL = `
-SELECT ` + messageColumns + `, mp.data
+SELECT ` + messageColumns + `, ` + partColumns + `
 FROM messages m
-LEFT JOIN message_parts mp ON mp.message = m.seq
-WHERE m.session_id = ? AND m.parent_id IS ? AND m.type = 'chat' AND ` + liveSQL + `
+` + partsJoinSQL + `
+WHERE m.session_id = ? AND m.parent_id IS ? AND m.type = 'chat'
 ORDER BY m.seq, mp.seq`
 
 // forkMessagesSQL selects every message of a session's forks with its
 // parts, in the order the messages were stored.
 const forkMessagesSQL = `
-SELECT ` + messageColumns + `, mp.data
+SELECT ` + messageColumns + `, ` + partColumns + `
 FROM messages m
-LEFT JOIN message_parts mp ON mp.message = m.seq
-WHERE m.session_id = ? AND m.type != 'chat' AND ` + liveSQL + `
+` + partsJoinSQL + `
+WHERE m.session_id = ? AND m.type != 'chat'
 ORDER BY m.seq, mp.seq`
 
 // forkChildrenSQL selects the children of one message of one type with
 // their parts.
 const forkChildrenSQL = `
-SELECT ` + messageColumns + `, mp.data
+SELECT ` + messageColumns + `, ` + partColumns + `
 FROM messages m
-LEFT JOIN message_parts mp ON mp.message = m.seq
-WHERE m.session_id = ? AND m.parent_id IS ? AND m.type = ? AND ` + liveSQL + `
+` + partsJoinSQL + `
+WHERE m.session_id = ? AND m.parent_id IS ? AND m.type = ?
 ORDER BY m.seq, mp.seq`
 
 // subtreeSQL collects a message and every message descending from it, with
 // each one's type. The messages below a fork are of its type too.
 const subtreeSQL = `
 WITH RECURSIVE subtree(id, seq, type) AS (
-	SELECT m.id, m.seq, m.type FROM messages m WHERE m.session_id = ? AND m.id = ? AND ` + liveSQL + `
+	SELECT m.id, m.seq, m.type FROM messages m WHERE m.session_id = ? AND m.id = ?
 	UNION ALL
 	SELECT m.id, m.seq, m.type FROM messages m
 	JOIN subtree ON m.parent_id = subtree.id
@@ -92,7 +94,8 @@ WITH RECURSIVE subtree(id, seq, type) AS (
 const leafSQL = subtreeSQL + `
 SELECT subtree.id FROM subtree
 WHERE subtree.type = 'chat' AND NOT EXISTS (
-	SELECT 1 FROM messages c WHERE c.session_id = ? AND c.parent_id = subtree.id AND c.type = 'chat'
+	SELECT 1 FROM messages c
+	WHERE c.session_id = ? AND c.parent_id = subtree.id AND c.type = 'chat'
 )
 ORDER BY subtree.seq DESC LIMIT 1`
 
@@ -110,24 +113,25 @@ WHERE session_id = ? AND id IN (SELECT id FROM subtree)`
 // leafSQL selects one in a subtree.
 const newestLeafSQL = `
 SELECT m.id FROM messages m
-WHERE m.session_id = ? AND m.type = 'chat' AND ` + liveSQL + ` AND NOT EXISTS (
-	SELECT 1 FROM messages c WHERE c.session_id = ? AND c.parent_id = m.id AND c.type = 'chat'
+WHERE m.session_id = ? AND m.type = 'chat' AND NOT EXISTS (
+	SELECT 1 FROM messages c
+	WHERE c.session_id = ? AND c.parent_id = m.id AND c.type = 'chat'
 )
 ORDER BY m.seq DESC LIMIT 1`
 
 // Branch returns the messages on the session's active branch, ordered from its
 // root to its head.
 func (s *Store) Branch(ctx context.Context, sessionID message.SessionID) ([]message.Content, error) {
-	var head message.ID
+	var head sql.Null[string]
 	err := s.db.QueryRowContext(ctx, `
-		SELECT head_id FROM sessions WHERE id = ? AND deleted_at IS NULL`, sessionID).Scan(&head)
+		SELECT head_id FROM sessions WHERE id = ?`, sessionID).Scan(&head)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	return s.Path(ctx, sessionID, head)
+	return s.Path(ctx, sessionID, message.ID(head.V))
 }
 
 // rolePathSQL walks parent links from the session's head back to its root,
@@ -138,7 +142,7 @@ func (s *Store) Branch(ctx context.Context, sessionID message.SessionID) ([]mess
 const rolePathSQL = `
 WITH RECURSIVE path(seq, parent, role, depth) AS (
 	SELECT m.seq, m.parent_id, m.role, 0 FROM messages m
-	JOIN sessions s ON s.id = m.session_id AND s.head_id = m.id AND s.deleted_at IS NULL
+	JOIN sessions s ON s.id = m.session_id AND s.head_id = m.id
 	WHERE m.session_id = ?
 	UNION ALL
 	SELECT m.seq, m.parent_id, m.role, path.depth + 1 FROM messages m
@@ -152,10 +156,10 @@ picked AS (SELECT seq, depth FROM path WHERE role = ?)`
 // count of all the messages it keeps. The walk is taken once for both.
 const latestRoleSQL = rolePathSQL + `,
 latest AS (SELECT seq, depth FROM picked ORDER BY depth LIMIT ?)
-SELECT (SELECT COUNT(*) FROM picked), ` + messageColumns + `, mp.data
+SELECT (SELECT COUNT(*) FROM picked), ` + messageColumns + `, ` + partColumns + `
 FROM latest
 JOIN messages m ON m.seq = latest.seq
-LEFT JOIN message_parts mp ON mp.message = m.seq
+` + partsJoinSQL + `
 ORDER BY latest.depth DESC, mp.seq`
 
 // Prompts returns the newest limit prompts, the user's messages, on the
@@ -257,7 +261,7 @@ func (s *Store) Leaf(ctx context.Context, sessionID message.SessionID, from mess
 func (s *Store) Forks(ctx context.Context, sessionID message.SessionID) (map[message.ID]int, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT m.parent_id, COUNT(*) FROM messages m
-		WHERE m.session_id = ? AND m.type = 'chat' AND `+liveSQL+`
+		WHERE m.session_id = ? AND m.type = 'chat'
 		GROUP BY m.parent_id HAVING COUNT(*) > 1`, sessionID)
 	if err != nil {
 		return nil, err
@@ -300,21 +304,24 @@ type messageRow struct {
 }
 
 // scan reads one joined row. Its targets follow lead, the columns a query
-// selects before them, then messageColumns in order, with the part last.
+// selects before them, then messageColumns in order, with partColumns last.
 func (r *messageRow) scan(rows *sql.Rows, lead ...any) error {
 	m := &r.Message
 	var (
-		parent    sql.Null[string]
-		role      string
-		createdAt string
-		typ       string
-		part      []byte
+		parent           sql.Null[string]
+		role             string
+		createdAt        string
+		typ              string
+		partID, partType sql.Null[string]
+		part             []byte
 	)
-	err := rows.Scan(append(lead, &r.Seq, &m.ID, &parent, &role, &m.Model, &createdAt, &typ, &part)...)
+	err := rows.Scan(append(lead, &r.Seq, &m.ID, &parent, &role, &m.Model, &createdAt, &typ, &partID, &partType, &part)...)
 	if err != nil {
 		return err
 	}
-	m.Role = message.ParseRole(role)
+	if m.Role, err = message.ParseRole(role); err != nil {
+		return fmt.Errorf("message %s: %w", m.ID, err)
+	}
 	// A chat message reads back with the zero Type, as it was written.
 	if t := message.Type(typ); !t.IsChat() {
 		m.Type = t
@@ -323,10 +330,10 @@ func (r *messageRow) scan(rows *sql.Rows, lead ...any) error {
 	if m.CreatedAt, err = decodeTime(createdAt); err != nil {
 		return err
 	}
-	if part == nil {
+	if !partID.Valid {
 		return nil
 	}
-	r.Part, err = decodePart(part)
+	r.Part, err = decodePart(message.PartID(partID.V), message.ContentType(partType.V), part)
 	return err
 }
 

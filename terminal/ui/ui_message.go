@@ -73,11 +73,12 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 
 // ChatMessageOptions returns bubble options for role.
 func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
-	// Agent prose sits on the canvas; that of other roles fills a block,
-	// but for a prompt in PromptBar, which sits on the canvas by a bar.
+	// Agent prose sits on the canvas, as does the system message, whose
+	// text shows in a box like a tool call's; that of prompts fills a
+	// block, but in PromptBar, where a prompt sits on the canvas by a bar.
 	bg, bar := ui.BoxBg(), style.ColorTransparent
 	switch {
-	case role == message.RoleAgent:
+	case role == message.RoleAgent || role == message.RoleSystem:
 		bg = style.ColorTransparent
 	case role == message.RoleUser && ui.service.state.PromptStyle == PromptBar:
 		bg, bar = style.ColorTransparent, productFg

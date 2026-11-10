@@ -49,13 +49,13 @@ func (o rootOptions) start() terminal.Start {
 // sessionFlags binds the flags that choose the session the terminal opens
 // with.
 func sessionFlags(fs *flag.FlagSet, o *rootOptions) {
-	const resumeUsage = "Pick a session of this project to resume"
+	const resumeUsage = "Pick a session to resume, from any folder"
 	fs.BoolVar(&o.resume, "resume", false, resumeUsage)
 	fs.BoolVar(&o.resume, "r", false, resumeUsage)
 	const continueUsage = "Continue the most recent session of this project"
 	fs.BoolVar(&o.cont, "continue", false, continueUsage)
 	fs.BoolVar(&o.cont, "c", false, continueUsage)
-	fs.StringVar(&o.session, "session", "", "Resume the session with this `id`")
+	fs.StringVar(&o.session, "session", "", "Resume the session with this `id`, in its own folder")
 }
 
 // rootCmd is named after the application.
@@ -77,7 +77,18 @@ var rootCmd = &cmdline.Command[rootOptions]{
 			printVersion(os.Stdout, cmdline.UseColor(os.Stdout), o.color.mode())
 			return nil
 		}
-		return withApp(runTerminal)(ctx, o, args)
+		// The UI closes on a session of another folder to have flow
+		// started again on it, in that folder, once this app has closed.
+		var next message.SessionID
+		err := withAppOptions(rootAppOptions, func(ctx context.Context, _ io.Writer, a *app.App, o rootOptions, _ []string) error {
+			var err error
+			next, err = runTerminal(ctx, a, o)
+			return err
+		})(ctx, o, args)
+		if err != nil || next == "" {
+			return err
+		}
+		return relaunch(relaunchArgs(o, next))
 	},
 	Commands: []cmdline.Node{
 		versionCmd,
@@ -98,20 +109,42 @@ func envVars() []cmdline.EnvVar {
 	return vars
 }
 
+// rootAppOptions returns the app options of the root command's flags: a
+// session that --session names makes the app work in that session's folder.
+func rootAppOptions(o rootOptions) app.Options {
+	return app.Options{Session: message.SessionID(o.session)}
+}
+
 // runTerminal runs the terminal UI of a on the session that o chooses, with
-// the model and in the color mode of o. The UI draws on the terminal itself,
-// not on w, and leaves the command that resumes the session it closes on.
-func runTerminal(ctx context.Context, _ io.Writer, a *app.App, o rootOptions, _ []string) error {
+// the model and in the color mode of o. The UI draws on the terminal itself
+// and leaves the command that resumes the session it closes on. It returns
+// the session of another folder that the UI closed to reopen there, or "".
+func runTerminal(ctx context.Context, a *app.App, o rootOptions) (message.SessionID, error) {
 	start := o.start()
 	model, err := selectModel(ctx, a, o.modelOptions)
 	if err != nil {
-		return err
+		return "", err
 	}
 	start.Model = model
 	mode := o.color.mode()
 	start.ColorMode = &mode
 	start.NoColor = !cmdline.UseColor(os.Stdout)
-	return terminal.New(a, start, views(ctx, a)...).Run(ctx)
+	p := terminal.New(a, start, views(ctx, a)...)
+	if err := p.Run(ctx); err != nil {
+		return "", err
+	}
+	return p.Relaunch(), nil
+}
+
+// relaunchArgs returns the arguments that start flow again on session id,
+// as --session opens it in its own folder, in the color mode that o's
+// --color chose, if any.
+func relaunchArgs(o rootOptions, id message.SessionID) []string {
+	args := []string{"--session", string(id)}
+	if o.color != "" && o.color != colorAuto {
+		args = append(args, "--color", string(o.color))
+	}
+	return args
 }
 
 // colorMode is the color mode of the terminal, as the terminal UI detects it,

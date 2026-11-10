@@ -166,9 +166,11 @@ func (ui *UI) OnQuitArmed(EventQuitArmed) { ui.ShowQuitHint(ui.renderer.Enqueue)
 // terminal: the transcript alone, without the input box or the indicator,
 // which no longer apply, and under it what follows: the notice that tells
 // how to resume a stored session, which Run then reports shown, or else the
-// shell's prompt. The transcript ends in a blank row, which parts the two.
+// shell's prompt, or flow again, reopened on a session of another folder,
+// which needs no notice. The transcript ends in a blank row, which parts the
+// two.
 func (ui *UI) PrepareInlineQuit() {
-	if id := ui.service.Resumable(); id != "" {
+	if id := ui.service.Resumable(); id != "" && ui.service.RelaunchID() == "" {
 		ui.AppendResumeNotice(id)
 		ui.resumeShown.Store(true)
 	}

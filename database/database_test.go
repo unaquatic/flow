@@ -183,6 +183,34 @@ func TestMigrate_TakesSnakeCaseIDs(t *testing.T) {
 	}
 }
 
+// TestMigrate_RefusesNewerSchema checks that a build that knows fewer steps
+// than the database recorded, as an older build opening a database a newer
+// one upgraded, fails with ErrNewerSchema and applies and records nothing,
+// while the build that knows every step still opens it.
+func TestMigrate_RefusesNewerSchema(t *testing.T) {
+	db := openTest(t)
+	newer := []string{`CREATE TABLE newer_a (x INTEGER)`, `ALTER TABLE newer_a ADD COLUMN y INTEGER`}
+	if err := Migrate(t.Context(), db, "newer", newer); err != nil {
+		t.Fatalf("migrate with every step: %v", err)
+	}
+	for name, steps := range map[string][]string{
+		"one step fewer": newer[:1],
+		"no steps":       nil,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := Migrate(t.Context(), db, "newer", steps); !errors.Is(err, ErrNewerSchema) {
+				t.Errorf("err = %v, want ErrNewerSchema", err)
+			}
+		})
+	}
+	if got := versions(t, db, "newer"); !slices.Equal(got, []int{1, 2}) {
+		t.Errorf("recorded versions %v, want [1 2]", got)
+	}
+	if err := Migrate(t.Context(), db, "newer", newer); err != nil {
+		t.Errorf("migrate again with every step: %v", err)
+	}
+}
+
 // TestOpen_ReopensWithoutReapplying checks that a database survives being
 // closed and opened again, which is the path every run after the first takes.
 func TestOpen_ReopensWithoutReapplying(t *testing.T) {

@@ -41,18 +41,29 @@ type ProjectID int64
 // A new database gets 16 KiB pages, which store the large blobs of snapshots
 // in fewer pages than the default 4 KiB. An existing database keeps its page
 // size.
+//
+// The returned DB runs on a [Guard]: once a newer build running in another
+// process upgrades tables that this build has migrated, its transactions and
+// statements fail with [ErrNewerSchema].
 func Open(path string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return nil, err
 	}
 	// The driver runs the _pragma values sorted by name and _journal_mode
 	// after them, so page_size applies before WAL mode fixes the page size.
-	db, err := sql.Open("sqlite", "file:"+path+
-		"?_pragma=busy_timeout(30000)&_pragma=page_size(16384)&_pragma=synchronous(NORMAL)"+
-		"&_pragma=foreign_keys(1)&_journal_mode=WAL&_txlock=immediate")
+	dsn := "file:" + path +
+		"?_pragma=busy_timeout(30000)&_pragma=page_size(16384)&_pragma=synchronous(NORMAL)" +
+		"&_pragma=foreign_keys(1)&_journal_mode=WAL&_txlock=immediate"
+	// sql.Open connects to nothing; it only looks up the registered driver.
+	probe, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}
+	inner := probe.Driver()
+	if err := probe.Close(); err != nil {
+		return nil, err
+	}
+	db := sql.OpenDB(&Guard{Inner: inner, DSN: dsn})
 	// Serialize this process's transactions to avoid competing SQLite writers.
 	db.SetMaxOpenConns(1)
 	if err := migrate(db); err != nil {

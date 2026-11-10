@@ -2,6 +2,8 @@ package ui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -15,6 +17,7 @@ import (
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
+	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
 )
 
@@ -42,15 +45,16 @@ func sessionMenuShown(t *testing.T, out []UIEvent) EventSessionMenuShow {
 }
 
 // TestSessionMenuRows checks that each session's row reads its title, or
-// Untitled, in a column as wide as the widest, then its ID and last update.
+// Untitled, in a column as wide as the widest, then its last update and ID,
+// and no folder column when no session has a folder.
 func TestSessionMenuRows(t *testing.T) {
 	s, _ := newTestService(t)
 	newer, older := openSessionMenu(s)
 
 	show := sessionMenuShown(t, s.FilterSessions(""))
 	want := []widget.SelectItem{
-		{Name: "Fix the login  0199bbbb-2222  2026-09-27 14:03:11", Hint: CurrentHint, Value: newer.ID},
-		{Name: "Untitled       0199aaaa-1111  2026-09-26 09:30:00", Value: older.ID},
+		{Name: "Fix the login  2026-09-27 14:03:11  0199bbbb-2222", Hint: CurrentHint, Value: newer.ID},
+		{Name: "Untitled       2026-09-26 09:30:00  0199aaaa-1111", Value: older.ID},
 	}
 	if !slices.Equal(show.Items, want) {
 		t.Errorf("rows = %+v, want %+v", show.Items, want)
@@ -347,11 +351,133 @@ func TestSessionRowNamesCutLongTitles(t *testing.T) {
 	})
 	cut := strings.Repeat("长", 15) + "…"
 	want := []string{
-		cut + "  s1  2026-09-27 14:03:11",
-		"two lines" + strings.Repeat(" ", 31-9) + "  s2  2026-09-27 14:03:11",
+		cut + "  2026-09-27 14:03:11  s1",
+		"two lines" + strings.Repeat(" ", 31-9) + "  2026-09-27 14:03:11  s2",
 	}
 	if !slices.Equal(names, want) {
 		t.Errorf("rows = %q, want %q", names, want)
+	}
+}
+
+// TestSessionRowNamesShowFolders checks that each session's row shows its
+// folder after its title, in a column as wide as the widest, with the home
+// folder written as ~, a long folder cut from the left so that its own name
+// stays in view, and a blank cell for a session without one.
+func TestSessionRowNamesShowFolders(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("no home folder")
+	}
+	at := time.Date(2026, 9, 27, 14, 3, 11, 0, time.Local)
+	long := "/work/" + strings.Repeat("deep/", 8) + "project"
+	names := SessionRowNames([]session.Session{
+		{ID: "s1", Title: "Home", Worktree: filepath.Join(home, "code", "flow"), UpdatedAt: at},
+		{ID: "s2", Title: "Deep", Worktree: long, UpdatedAt: at},
+		{ID: "s3", Title: "New", UpdatedAt: at},
+	})
+	deep := TruncateWidthLeft(long, sessionDirMax)
+	want := []string{
+		"Home  " + PadWidth("~/code/flow", sessionDirMax) + "  2026-09-27 14:03:11  s1",
+		"Deep  " + deep + "  2026-09-27 14:03:11  s2",
+		"New   " + strings.Repeat(" ", sessionDirMax) + "  2026-09-27 14:03:11  s3",
+	}
+	if !slices.Equal(names, want) {
+		t.Errorf("rows =\n%q\nwant\n%q", names, want)
+	}
+	if !strings.HasPrefix(deep, "…") || !strings.HasSuffix(deep, "/deep/project") || textbuf.StringWidth(deep) != sessionDirMax {
+		t.Errorf("long folder = %q, want it cut from the left to %d cells, keeping its end", deep, sessionDirMax)
+	}
+}
+
+// TestTildeDir checks that the home folder, and a folder inside it, are
+// written with ~, and that no other folder is, even one that shares the
+// home folder's prefix.
+func TestTildeDir(t *testing.T) {
+	const home = "/home/user-a"
+	tests := map[string]string{
+		"/home/user-a":           "~",
+		"/home/user-a/code/flow": "~/code/flow",
+		"/home/user-ab/code":     "/home/user-ab/code",
+		"/work/project":          "/work/project",
+		"":                       "",
+	}
+	for dir, want := range tests {
+		if got := TildeDir(dir, home); got != want {
+			t.Errorf("TildeDir(%q) = %q, want %q", dir, got, want)
+		}
+	}
+	if got := TildeDir("/work/project", ""); got != "/work/project" {
+		t.Errorf("TildeDir without a home = %q, want the folder as it is", got)
+	}
+}
+
+// TestTruncateWidthLeft checks that a string wider than n cells is cut from
+// the left, with an ellipsis in its first cell, counting wide characters as
+// two cells, and that a narrower one is left as it is.
+func TestTruncateWidthLeft(t *testing.T) {
+	tests := []struct {
+		s    string
+		n    int
+		want string
+	}{
+		{"/work/project", 20, "/work/project"},
+		{"/work/project", 13, "/work/project"},
+		{"/work/project", 9, "…/project"},
+		{"/长长/项目", 6, "…/项目"},
+		{"/长长/项目", 5, "…项目"},
+	}
+	for _, tt := range tests {
+		got := TruncateWidthLeft(tt.s, tt.n)
+		if got != tt.want || textbuf.StringWidth(got) > tt.n {
+			t.Errorf("TruncateWidthLeft(%q, %d) = %q, want %q", tt.s, tt.n, got, tt.want)
+		}
+	}
+}
+
+// TestSessionSelect_RelaunchesInAnotherFolder checks that picking a listed
+// session of another folder closes the list and the UI, leaving the active
+// session as it was, for the program to reopen the picked one in its own
+// folder, and that a session of the app's folder opens as before.
+func TestSessionSelect_RelaunchesInAnotherFolder(t *testing.T) {
+	s, a := newTestService(t)
+	here := message.Content{ID: "msg_1", Role: message.RoleUser}
+	if err := a.Sessions().AppendMessage(t.Context(), "ses_here", &here); err != nil {
+		t.Fatal(err)
+	}
+	s.NewSession()
+	active := s.SessionID()
+	s.state.SessionMenuVisible = true
+	s.state.SessionChoices = []session.Session{
+		{ID: "ses_here", Worktree: a.WorkingDir()},
+		{ID: "ses_there", Worktree: "/work/elsewhere"},
+	}
+
+	out := s.HandleSessionSelect(message.SessionID("ses_there"))
+	if !slices.ContainsFunc(out, func(ev UIEvent) bool { _, ok := ev.(EventQuit); return ok }) {
+		t.Errorf("events = %v, want the UI to quit", out)
+	}
+	if s.state.SessionMenuVisible {
+		t.Error("the session list stayed open")
+	}
+	if got := s.RelaunchID(); got != "ses_there" {
+		t.Errorf("relaunch = %q, want ses_there", got)
+	}
+	if s.SessionID() != active {
+		t.Errorf("active session = %q, want %q kept", s.SessionID(), active)
+	}
+
+	s2, a2 := newTestService(t)
+	if err := a2.Sessions().AppendMessage(t.Context(), "ses_here", &message.Content{ID: "msg_1", Role: message.RoleUser}); err != nil {
+		t.Fatal(err)
+	}
+	s2.state.SessionMenuVisible = true
+	s2.state.SessionChoices = []session.Session{{ID: "ses_here", Worktree: a2.WorkingDir()}}
+	out = s2.HandleSessionSelect(message.SessionID("ses_here"))
+	if slices.ContainsFunc(out, func(ev UIEvent) bool { _, ok := ev.(EventQuit); return ok }) {
+		t.Errorf("events = %v, want the session opened without quitting", out)
+	}
+	if s2.SessionID() != "ses_here" || s2.RelaunchID() != "" {
+		t.Errorf("active = %q, relaunch = %q; want ses_here open here", s2.SessionID(), s2.RelaunchID())
 	}
 }
 

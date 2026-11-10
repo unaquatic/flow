@@ -18,7 +18,9 @@ import (
 // Program runs the interactive terminal UI of an app. When the UI closes on
 // a stored session, Run leaves the notice that tells how to resume it in the
 // terminal: the last frame of inline mode shows it, and Run prints it after
-// fullscreen mode. After Run returns, Resumable reports that session.
+// fullscreen mode. After Run returns, Resumable reports that session, and
+// Relaunch the session of another folder that the UI closed to reopen there,
+// which needs no notice.
 type Program struct {
 	app   *app.App
 	start Start
@@ -27,6 +29,9 @@ type Program struct {
 	views []ui.Extension
 	// closed is the session the UI closed on, once Run has returned.
 	closed message.SessionID
+	// relaunch is the session of another folder the UI closed to reopen
+	// there, once Run has returned, or "".
+	relaunch message.SessionID
 }
 
 // New returns a Program that runs the terminal UI of a on the first session
@@ -51,8 +56,8 @@ func (p *Program) Run(ctx context.Context) error {
 		PickSession: p.start.Mode == StartPick,
 		Extensions:  p.views,
 	})
-	p.closed = res.Closed
-	if err != nil || res.ResumeShown {
+	p.closed, p.relaunch = res.Closed, res.Relaunch
+	if err != nil || res.ResumeShown || p.relaunch != "" {
 		return err
 	}
 	// Fullscreen mode took its screen along, and a notice on it.
@@ -79,3 +84,8 @@ func (p *Program) Resumable(ctx context.Context) message.SessionID {
 	}
 	return p.closed
 }
+
+// Relaunch returns the session of another folder that was picked from the
+// session list, which the UI closed for the caller to start flow again on in
+// that folder, and "" otherwise or before Run has returned.
+func (p *Program) Relaunch() message.SessionID { return p.relaunch }

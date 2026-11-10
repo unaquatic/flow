@@ -1,0 +1,38 @@
+=== text ===
+|■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
+|               [ctrl+t hidden] [esc cancel]                             |
+|                                                                        |
+|  Context # Calc Use tabs.                                              |
+|  User Run the tests                                                    |
+|  Agent All tests pass.                                                 |
+|                                                                        |
+|                                                                        |
+|■                                                                       |
+=== fg ===
+|A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
+|               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
+|                                                                        |
+|  CCCCCCC C CCCC CCC CCCCC                                              |
+|  DDDD EEE EEE EEEEE                                                    |
+|  AAAAA EEE EEEEE EEEEE                                                 |
+|                                                                        |
+|                                                                        |
+|F                                                                       |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #707070
+C #8a8a8a
+D #eb7513
+E #b4b4b4
+F #ff5f00
+░ #ff5f00

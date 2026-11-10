@@ -91,6 +91,31 @@ func agentText(id message.ID, text string) ChatMessage {
 	return agentParts(id, message.TextPart{ID: message.PartID(id + "-text"), Text: text})
 }
 
+// systemText returns a system message holding text.
+func systemText(id message.ID, text string) ChatMessage {
+	return ChatMessage{ID: id, ParentID: id, Role: message.RoleSystem,
+		Parts: []message.ContentPart{message.TextPart{ID: message.PartID(id + "-text"), Text: text}}}
+}
+
+// systemTurn adds the system message a session opens with, then its first
+// prompt and the reply.
+func systemTurn(ui *UI) {
+	ui.AddMessage(systemText("s1", "# Calc\n\n- Run the tests before every commit you make.\n- Use tabs."))
+	ui.AddMessage(userText("u1", "Run the tests"))
+	ui.AddMessage(agentText("a1", "All tests pass."))
+}
+
+// clickSystem clicks the header of the system box of the bubble that holds
+// message id, as a click that expands or collapses it does.
+func clickSystem(ui *UI, id message.ID) {
+	for b := range ui.messageWidgets[id].Boxes() {
+		if sys, ok := b.Content.(*SystemBox); ok {
+			sys.HeaderRow.OnMouseDownHandler(&input.MouseEvent{Type: input.MouseDown, Button: input.ButtonLeft})
+			return
+		}
+	}
+}
+
 // expandTools expands the details of every tool call and step change in the
 // transcript of ui, as Ctrl+O does, without the input box that ui, built
 // without one, does not have.
@@ -269,6 +294,24 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(msg)
 			msg.Error = errors.New("connection reset by peer")
 			ui.UpdateMessage(msg)
+		}},
+		// The system message a session opens with shows above its first
+		// prompt as a collapsed row, as a tool call does: its name, then the
+		// number of lines of its text as its status.
+		{name: "system_collapsed", h: 10, add: systemTurn},
+		// A click on the row shows the text whole, as the model is sent it,
+		// in a block a blank row above the prompt.
+		{name: "system_expanded", h: 17, add: func(ui *UI) {
+			systemTurn(ui)
+			clickSystem(ui, "s1")
+		}},
+		// Ctrl+O expands it with the tool calls, and the marker /settings
+		// shows marks it as it marks them.
+		{name: "system_expanded_plain_marker", h: 15, add: func(ui *UI) {
+			systemTurn(ui)
+			ui.Apply(ui.service.SetToolMarkers(true))
+			ui.Apply(ui.service.SetExpandStyle(ExpandedPlain))
+			expandTools(ui)
 		}},
 		// Tool calls start collapsed to their header, and Ctrl+O expands them.
 		{name: "agent_tool_streamed", h: 12, add: streamToolTurn},
@@ -1031,11 +1074,11 @@ func TestWorkedFrames(t *testing.T) {
 			ui.AddMessage(msg)
 		}},
 		// A last reply that shows nothing but metadata that no extension
-		// shows, such as its step part, and so counted no tokens, is parted
+		// shows, such as its snapshot part, and so counted no tokens, is parted
 		// from the reply above it by one blank row, as a reply is.
 		{name: "worked_alone", h: 7, add: func(ui *UI) {
 			ui.AddMessage(agentParts("a1", bash))
-			last := agentParts("a2", snapshot.StepPart{ID: "a2-step"})
+			last := agentParts("a2", snapshot.SnapshotPart{ID: "a2-step"})
 			last.ParentID, last.Worked = "a1", 3*time.Second
 			ui.AddMessage(last)
 		}},
@@ -1260,9 +1303,9 @@ func TestCountInTitleFrames(t *testing.T) {
 func threeSessionRows() []widget.SelectItem {
 	rows := sessionRows("s1", "s2")
 	names := SessionRowNames([]session.Session{
-		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
-		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
-		{ID: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2", UpdatedAt: time.Date(2026, 9, 26, 16, 3, 18, 0, time.Local)},
+		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
+		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
+		{ID: "019ff2c8-0b1e-7c55-a2d4-6c1f3e8a90b2", Worktree: "/work/other", UpdatedAt: time.Date(2026, 9, 26, 16, 3, 18, 0, time.Local)},
 	})
 	return append(rows, widget.SelectItem{Name: names[2], Value: "s3"})
 }
@@ -1271,8 +1314,8 @@ func threeSessionRows() []widget.SelectItem {
 // them, the first titled and active, with values first and second.
 func sessionRows(first, second any) []widget.SelectItem {
 	names := SessionRowNames([]session.Session{
-		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
-		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
+		{ID: "01a0e1b4-77a3-7028-9d5e-4e14a6e9b5e7", Title: "Add Divide", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 28, 9, 14, 2, 0, time.Local)},
+		{ID: "01a0e33d-4571-7ed4-b06b-4229c726c313", Worktree: "/work/project", UpdatedAt: time.Date(2026, 9, 27, 21, 40, 55, 0, time.Local)},
 	})
 	return []widget.SelectItem{
 		{Name: names[0], Hint: CurrentHint, Value: first},
@@ -1661,6 +1704,15 @@ func TestMenuFrames(t *testing.T) {
 			ui.Apply(ui.service.OpenTree(titledTree("a2")))
 			ui.Apply(ui.service.ToggleTreeHidden())
 			ui.Apply(ui.service.MoveTree(-1))
+		}},
+		// The system message a session opens with heads its tree, named and
+		// its text muted, as the transcript heads it.
+		{name: "tree_panel_system", h: 9, open: func(ui *UI) {
+			ui.Apply(ui.service.OpenTree(app.Tree{Head: "a1", Messages: []message.Content{
+				treeMsg("s1", "", message.RoleSystem, "# Calc\n\nUse tabs."),
+				treeMsg("u1", "s1", message.RoleUser, "Run the tests"),
+				treeMsg("a1", "u1", message.RoleAgent, "All tests pass."),
+			}}))
 		}},
 		{name: "tree_panel_user_only", h: 12, open: func(ui *UI) {
 			ui.Apply(ui.service.OpenTree(forkedTree("a2")))

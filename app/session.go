@@ -37,9 +37,9 @@ func (a *App) Sessions() *session.Store {
 }
 
 // DeleteSession stops the session's operation in progress, waits for it to
-// end, deletes the session softly while holding it, as
-// [session.Store.DeleteSession] does: its data stays stored, out of reach,
-// and publishes EventSessionDeleted. Nothing is deleted, and the error is
+// end, removes the session while holding it, with its messages and their
+// parts, as [session.Store.DeleteSession] does, and publishes
+// EventSessionDeleted. Nothing is deleted, and the error is
 // ErrSessionBusy, when another process is changing the session, or ErrBusy
 // when another operation starts on it first. The error wraps
 // [fs.ErrNotExist] when no session sessionID is stored.

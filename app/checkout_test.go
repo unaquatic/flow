@@ -64,7 +64,7 @@ func loadSnapshot(t *testing.T, db *sql.DB, project database.ProjectID, worktree
 }
 
 // snapshotForAgentTest returns the snapshot extension over an isolated
-// worktree with one file, whose step parts start pending at once.
+// worktree with one file, whose snapshot parts start pending at once.
 func snapshotForAgentTest(t *testing.T) *snapshot.Extension {
 	t.Helper()
 	worktree := filepath.Join(t.TempDir(), "worktree")
@@ -203,7 +203,7 @@ func seedTurn(t *testing.T, w Session, worktree, prompt string, edits map[string
 		Role: message.RoleUser,
 		Parts: []message.ContentPart{
 			message.TextPart{Text: prompt},
-			snapshot.StepPart{Snapshot: sentHash},
+			snapshot.SnapshotPart{Tree: sentHash},
 		},
 	}
 	appendMessage(t, w.app.sessions, w.id, user)
@@ -214,7 +214,7 @@ func seedTurn(t *testing.T, w Session, worktree, prompt string, edits map[string
 		Role: message.RoleAgent,
 		Parts: []message.ContentPart{
 			message.TextPart{Text: "ok"},
-			snapshot.StepPart{Snapshot: editedHash},
+			snapshot.SnapshotPart{Tree: editedHash},
 		},
 	})
 
@@ -403,14 +403,14 @@ func TestCheckout_NoSnapshotRecorded(t *testing.T) {
 	user := &message.Content{
 		ID:    message.NewID(),
 		Role:  message.RoleUser,
-		Parts: []message.ContentPart{message.TextPart{Text: "hi"}, snapshot.StepPart{}},
+		Parts: []message.ContentPart{message.TextPart{Text: "hi"}, snapshot.SnapshotPart{}},
 	}
 	appendMessage(t, w.app.sessions, w.id, user)
 	time.Sleep(2 * time.Millisecond)
 	appendMessage(t, w.app.sessions, w.id, &message.Content{
 		ID:    message.NewID(),
 		Role:  message.RoleAgent,
-		Parts: []message.ContentPart{message.TextPart{Text: "ok"}, snapshot.StepPart{}},
+		Parts: []message.ContentPart{message.TextPart{Text: "ok"}, snapshot.SnapshotPart{}},
 	})
 
 	if _, err := w.undo(); !errors.Is(err, snapshot.ErrNoSnapshot) {
