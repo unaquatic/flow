@@ -28,7 +28,7 @@ func TestRunDemoUpdate(t *testing.T) {
 		"$ flow update --check\nNew update available: 1.2.2 → 1.2.3\n\nUpdate with:\n  flow update\n",
 		"$ flow update\nUpdating 1.2.2 → 1.2.3\n  npm install -g @unaquatic/flow@1.2.3\n\nInstalled successfully\n",
 		"for a flow the install script installed\n$ flow update\nUpdating 1.2.2 → 1.2.3\n\nInstalled successfully\n",
-		"# A newer release, whose download breaks off\n$ flow update\nUpdating 1.2.2 → 1.2.3\n\nerror: flow update: download failed: " + demoReleaseURL + ": unexpected EOF\n",
+		"# A newer release, whose download breaks off, from the mirror too\n$ flow update\nUpdating 1.2.2 → 1.2.3\n\nerror: flow update: download failed: " + demoReleaseURL + ": unexpected EOF, and the mirror: download failed: " + demoMirrorURL + ": unexpected EOF\n",
 		"error: flow update: not writable: " + root + ", run npm install -g @unaquatic/flow@1.2.3\n",
 		"error: flow update: not installed by npm, pnpm or the install script: /usr/local/bin/flow, run curl -fsSL https://aquatic.dev/flow/install | sh\n",
 		"# A development build\n$ flow update\nerror: flow (devel) is a development build, run flow update --force to install\n",
