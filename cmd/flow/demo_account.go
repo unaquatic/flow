@@ -154,6 +154,14 @@ var accountDemos = []demoCase{
 		run: accountDemo(runAccountUse, string(demoLoginProvider), string(demoKeyAccount))},
 	{name: "use-invalid", desc: "An account ID that is not one", line: "account use " + string(demoLoginProvider) + " 123",
 		run: accountDemo(runAccountUse, string(demoLoginProvider), "123")},
+	{name: "list-json", desc: "Every provider's accounts, as JSON, as the HTTP API lists them", line: "account --format json",
+		run: withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
+			return listAccounts(ctx, w, a, AccountOptions{Format: OutputJSON})
+		})},
+	{name: "current-json", desc: "The active accounts, as JSON", line: "account current --format json",
+		run: accountDemoIn(OutputJSON, runAccountCurrent)},
+	{name: "use-json", desc: "The account switched to, as JSON", line: "account use " + string(demoLoginProvider) + " " + string(demoKeyAccount) + " --format json",
+		run: accountDemoIn(OutputJSON, runAccountUse, string(demoLoginProvider), string(demoKeyAccount))},
 	{name: "check", desc: "A provider that can take requests", line: "account check " + string(demoLoginProvider),
 		run: accountDemo(runAccountCheck, string(demoLoginProvider))},
 	{name: "check-not-ready", desc: "A provider with no account, which exits with status 1, and why on standard error", line: "account check " + string(demoKeyProvider),
@@ -199,6 +207,8 @@ var loginDemos = []demoCase{
 		run: loginDemo(loginOptions{method: keyMethod, provider: demoKeyProvider}, demoKey+"\n")},
 	{name: "no-login", desc: "A provider that takes an API key alone", line: "login --provider " + string(demoKeyProvider),
 		run: loginDemo(loginOptions{method: loginMethod(agent.LoginBrowser), provider: demoKeyProvider}, "")},
+	{name: "key-json", desc: "An API key, typed in, and the account saved as JSON, the steps on standard error", line: "login --provider " + string(demoKeyProvider) + " --method key --format json",
+		run: withStderr(loginDemo(loginOptions{method: keyMethod, provider: demoKeyProvider, format: OutputJSON}, demoKey+"\n"))},
 	{name: "no-provider", desc: "No provider named", line: "login",
 		run: func(ctx context.Context, _ io.Writer, _ bool) error { return loginCmd.Run(ctx, loginOptions{}, nil) }},
 }
@@ -217,6 +227,10 @@ var logoutDemos = []demoCase{
 	{name: "remove", desc: "A saved account", line: "logout --provider " + string(demoLoginProvider) + " --account " + string(demoAccount),
 		run: withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
 			return runLogout(ctx, w, a, logoutOptions{provider: demoLoginProvider, account: demoAccount}, nil)
+		})},
+	{name: "remove-json", desc: "A saved account, removed, as JSON", line: "logout --provider " + string(demoLoginProvider) + " --account " + string(demoAccount) + " --format json",
+		run: withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
+			return runLogout(ctx, w, a, logoutOptions{provider: demoLoginProvider, account: demoAccount, format: OutputJSON}, nil)
 		})},
 	{name: "no-account", desc: "No account named", line: "logout --provider " + string(demoLoginProvider),
 		run: func(ctx context.Context, _ io.Writer, _ bool) error {

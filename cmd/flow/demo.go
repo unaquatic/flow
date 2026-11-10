@@ -138,6 +138,13 @@ var versionDemos = []demoCase{{
 		printVersion(w)
 		return nil
 	},
+}, {
+	name: "json",
+	desc: "The version, as JSON",
+	line: "version --format json",
+	run: func(_ context.Context, w io.Writer, _ bool) error {
+		return writeVersionJSON(w)
+	},
 }}
 
 // updateDemoInstall is where the flow of an update demo is installed.
@@ -395,6 +402,7 @@ func demoInstall(cmd *exec.Cmd) error {
 var serveDemos = []demoCase{
 	{name: "local", desc: "Listening on this machine alone", line: "serve", run: serveDemo(serveOptions{port: demoPort})},
 	{name: "exposed", desc: "Reachable from other machines, with no password", line: "serve --hostname 0.0.0.0", run: serveDemo(serveOptions{hostname: "0.0.0.0", port: demoPort})},
+	{name: "json", desc: "Listening on this machine alone, as one line of JSON for a script to read", line: "serve --format json", run: serveDemo(serveOptions{port: demoPort, format: OutputJSON})},
 }
 
 // demoPort is the port of the serve demos, flow serve's default.

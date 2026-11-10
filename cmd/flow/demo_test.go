@@ -82,6 +82,7 @@ func TestDemos(t *testing.T) {
 	}{
 		{command: "version", cases: versionDemos, want: map[string]string{
 			"version": regexp.QuoteMeta("flow " + product.Version() + "\n"),
+			"json":    regexp.QuoteMeta("{\n  \"name\": \"flow\",\n  \"version\": \"" + product.Version() + "\"\n}\n"),
 		}},
 		{command: "login", cases: loginDemos, want: map[string]string{
 			"browser":     regexp.QuoteMeta("Open this URL in your browser:\n  https://login.example/authorize\n\nWaiting for authorization...\n\nLogged in successfully\n"),
@@ -89,17 +90,28 @@ func TestDemos(t *testing.T) {
 			"key":         regexp.QuoteMeta("Enter the API key: " + demoKey + "\n\nAPI key saved\n"),
 			"no-login":    regexp.QuoteMeta("error: login to provider-b: unsupported operation\n"),
 			"no-provider": regexp.QuoteMeta("error: " + errProviderRequired.Error() + "\n"),
+			"key-json": regexp.QuoteMeta("Enter the API key: "+demoKey+"\n{\n  \"provider\": \"provider-b\",\n  \"account\": {\n    \"id\": \"") +
+				`[0-9a-f-]{36}` + regexp.QuoteMeta("\",\n    \"kind\": \"api_key\",\n    \"source\": \"store\"\n  }\n}\n"),
 		}},
 		{command: "logout", cases: logoutDemos, want: map[string]string{
-			"remove":     regexp.QuoteMeta("Removed:\n  provider-a  " + a + "  oauth  store\n"),
-			"no-account": regexp.QuoteMeta("error: --account is required; list account IDs with flow account\n"),
+			"remove":      regexp.QuoteMeta("Removed:\n  provider-a  " + a + "  oauth  store\n"),
+			"no-account":  regexp.QuoteMeta("error: --account is required; list account IDs with flow account\n"),
+			"remove-json": regexp.QuoteMeta("{\n  \"provider\": \"provider-a\",\n  \"account\": {\n    \"id\": \"" + a + "\",\n    \"kind\": \"oauth\",\n    \"source\": \"store\"\n  }\n}\n"),
 		}},
 		{command: "account", cases: accountDemos, want: map[string]string{
-			"list":              regexp.QuoteMeta("provider-a\n* " + a + "  oauth    store\n  " + k + "  api_key  store\nprovider-b\n  [no accounts]\n"),
-			"current":           regexp.QuoteMeta("Current account:\n  provider-a  " + a + "  oauth  store\n"),
-			"current-none":      regexp.QuoteMeta("error: no active account: provider-b\n"),
-			"use":               regexp.QuoteMeta("Switched to:\n  provider-a  " + k + "  api_key  store\n"),
-			"use-invalid":       regexp.QuoteMeta(`error: invalid account id "123"` + "\n"),
+			"list":         regexp.QuoteMeta("provider-a\n* " + a + "  oauth    store\n  " + k + "  api_key  store\nprovider-b\n  [no accounts]\n"),
+			"current":      regexp.QuoteMeta("Current account:\n  provider-a  " + a + "  oauth  store\n"),
+			"current-none": regexp.QuoteMeta("error: no active account: provider-b\n"),
+			"use":          regexp.QuoteMeta("Switched to:\n  provider-a  " + k + "  api_key  store\n"),
+			"use-invalid":  regexp.QuoteMeta(`error: invalid account id "123"` + "\n"),
+			"list-json": regexp.QuoteMeta("[\n  {\n    \"provider\": \"provider-a\",\n    \"active\": \"" + a + "\",\n    \"accounts\": [\n" +
+				"      {\n        \"id\": \"" + a + "\",\n        \"kind\": \"oauth\",\n        \"source\": \"store\"\n      },\n" +
+				"      {\n        \"id\": \"" + k + "\",\n        \"kind\": \"api_key\",\n        \"source\": \"store\"\n      }\n    ],\n" +
+				"    \"login_methods\": [\n      \"browser\",\n      \"device\"\n    ],\n    \"built_in\": false\n  },\n" +
+				"  {\n    \"provider\": \"provider-b\",\n    \"accounts\": [],\n    \"login_methods\": [],\n    \"built_in\": false\n  }\n]\n"),
+			"current-json": regexp.QuoteMeta("[\n  {\n    \"provider\": \"provider-a\",\n    \"account\": {\n      \"id\": \"" + a +
+				"\",\n      \"kind\": \"oauth\",\n      \"source\": \"store\"\n    }\n  }\n]\n"),
+			"use-json":          regexp.QuoteMeta("{\n  \"provider\": \"provider-a\",\n  \"account\": {\n    \"id\": \"" + k + "\",\n    \"kind\": \"api_key\",\n    \"source\": \"store\"\n  }\n}\n"),
 			"check":             regexp.QuoteMeta("ready\n"),
 			"check-not-ready":   regexp.QuoteMeta("not_ready\nprovider-b has no active account; log in with flow login --provider provider-b\n"),
 			"check-json":        regexp.QuoteMeta("{\n  \"provider\": \"provider-a\",\n  \"status\": \"ready\",\n  \"account\": \"" + a + "\"\n}\n"),
@@ -108,6 +120,7 @@ func TestDemos(t *testing.T) {
 		{command: "serve", cases: serveDemos, want: map[string]string{
 			"local":   regexp.QuoteMeta("Server listening on:\n  http://127.0.0.1:4096\n"),
 			"exposed": regexp.QuoteMeta("warning: FLOW_SERVER_PASSWORD is not set, so anyone who reaches 0.0.0.0 can run commands on this machine\nServer listening on:\n  http://0.0.0.0:4096\n"),
+			"json":    regexp.QuoteMeta(`{"url":"http://127.0.0.1:4096"}` + "\n"),
 		}},
 	} {
 		for _, c := range tt.cases {
