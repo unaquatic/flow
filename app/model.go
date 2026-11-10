@@ -25,6 +25,10 @@ var (
 	// ErrModelFormat reports a model not named in "provider/model" format,
 	// or a default model without its provider or its model.
 	ErrModelFormat = errors.New("model must be provider/model")
+
+	// ErrNoModelSet reports a request that names no model when the config
+	// file sets no default model either.
+	ErrNoModelSet = errors.New("no model selected and no default model set")
 )
 
 // Models is the model catalog, and the model the app sends a prompt to that
@@ -133,12 +137,16 @@ func (m Models) SaveDefault(model string) error {
 // cannot be read. ParseVariant reads it, and FitEffort fits its
 // effort to the model, or sets the default effort when it names none, so the
 // effort it reports is the one the model runs at. A model that names no
-// provider fails with ErrModelFormat.
+// provider fails with ErrModelFormat, and an empty model when the config
+// file sets no default with ErrNoModelSet.
 func (m Models) Resolve(model string) (agent.Variant, error) {
 	if model == "" {
 		var err error
 		if model, err = m.Default(); err != nil {
 			return agent.Variant{}, err
+		}
+		if model == "" {
+			return agent.Variant{}, ErrNoModelSet
 		}
 	}
 	v := m.ParseVariant(model)
@@ -153,14 +161,15 @@ func (m Models) Resolve(model string) (agent.Variant, error) {
 // Find finds it, or the default model when pattern is empty. Its effort
 // is effort when that is not empty, else the one pattern names, fitted to the
 // model as FitEffort fits it. It fails when the catalog does not
-// list effort for the model.
+// list effort for the model, and with ErrNoModelSet when pattern is empty
+// and the config file sets no default model.
 func (m Models) Select(ctx context.Context, t agent.ProviderID, pattern string, effort agent.ReasoningEffort) (agent.Variant, error) {
 	var model string
 	var err error
 	if pattern != "" {
 		model, err = m.Find(ctx, t, pattern)
-	} else {
-		model, err = m.Default()
+	} else if model, err = m.Default(); err == nil && model == "" {
+		err = ErrNoModelSet
 	}
 	if err != nil {
 		return agent.Variant{}, err

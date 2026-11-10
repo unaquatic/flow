@@ -52,6 +52,9 @@ const (
 	// CodeInvalidModel reports a model that is not written as
 	// "provider/model", as ErrModelFormat does.
 	CodeInvalidModel ErrorCode = "invalid_model"
+	// CodeNoModelSet reports a request that names no model when no default
+	// model is set either, as ErrNoModelSet does.
+	CodeNoModelSet ErrorCode = "no_model_set"
 	// CodeAmbiguousModel reports a model named without its lab that models
 	// of more than one lab have, as ErrAmbiguousModel does.
 	CodeAmbiguousModel ErrorCode = "ambiguous_model"
@@ -160,6 +163,7 @@ var errorCodes = []struct {
 	{ErrNoBranches, CodeNoBranches},
 	{extension.ErrRefused, CodeRefused},
 	{ErrModelFormat, CodeInvalidModel},
+	{ErrNoModelSet, CodeNoModelSet},
 	{ErrNoModel, CodeModelNotFound},
 	{ErrAmbiguousModel, CodeAmbiguousModel},
 	{agent.ErrModelNotFound, CodeModelNotFound},

@@ -1070,6 +1070,10 @@ func TestIndicatorFrames(t *testing.T) {
 		// tool call's row starts with its marker and name.
 		{name: "indicator_error", h: 11, add: replyStarted,
 			show: ErrorIndicator(app.ErrorOf(&agent.RequestError{Err: &url.Error{Op: "Post", URL: "https://api.example.com/v1/messages", Err: io.EOF}}))},
+		// A prompt sent with no model and no default model says so, and
+		// names the command that picks one.
+		{name: "indicator_no_model", h: 6, add: func(*UI) {},
+			show: ErrorIndicator(app.ErrorOf(app.ErrNoModelSet))},
 		// A provider's error names the provider and status, over the body it
 		// answered with, formatted and highlighted, in a box filled as a
 		// tool's is.

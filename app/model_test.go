@@ -290,6 +290,23 @@ func TestModelsDefaultReadsTheConfigFile(t *testing.T) {
 	}
 }
 
+// TestModelsNoModelSet checks that a request naming no model, when the
+// config file sets no default model, fails with ErrNoModelSet rather than
+// ErrModelFormat, as it names no malformed model.
+func TestModelsNoModelSet(t *testing.T) {
+	home := t.TempDir()
+	a := &App{config: config.NewService(home)}
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Models().Resolve(""); !errors.Is(err, ErrNoModelSet) || errors.Is(err, ErrModelFormat) {
+		t.Errorf("Models.Resolve with no model and no default = %v, want ErrNoModelSet", err)
+	}
+	if _, err := a.Models().Select(t.Context(), "", "", "low"); !errors.Is(err, ErrNoModelSet) {
+		t.Errorf("Models.Select with no model and no default = %v, want ErrNoModelSet", err)
+	}
+}
+
 // TestModelsFindReportsFailedRefresh checks that when no model matches and the
 // catalog cannot be downloaded, Find reports the failed download along
 // with ErrNoModel, rather than ErrNoModel alone.
