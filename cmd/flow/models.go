@@ -30,7 +30,7 @@ var errNoModels = errors.New("no models found: log in to a provider with flow lo
 var modelsCmd = &cmdline.Command[ModelsOptions]{
 	Name:  "models",
 	Usage: "[provider]",
-	Short: "List the models of the signed-in providers, as --model names them",
+	Short: "List the models of the signed-in providers, with their reasoning efforts",
 	Flags: func(fs *flag.FlagSet, o *ModelsOptions) {
 		fs.BoolVar(&o.Refresh, "refresh", false, "Download the model catalog first")
 		formatFlag(fs, &o.Format)
@@ -41,10 +41,9 @@ var modelsCmd = &cmdline.Command[ModelsOptions]{
 
 // runModels writes to w the models of each signed-in provider, or of the
 // provider args names, as Models.Listings lists them, after downloading
-// the catalog with o.Refresh: in OutputText, a row for each variant, its
-// name as --model takes it and the reasoning efforts --effort takes for it;
-// in OutputJSON, as the HTTP API lists them. It fails with errNoModels when
-// it has no row to write.
+// the catalog with o.Refresh: in OutputText, a row for each variant, as
+// writeModelRows writes it; in OutputJSON, as the HTTP API lists them. It
+// fails with errNoModels when it has no row to write.
 func runModels(ctx context.Context, w io.Writer, a *app.App, o ModelsOptions, args []string) error {
 	var provider agent.ProviderID
 	if len(args) == 1 {
@@ -69,17 +68,20 @@ func runModels(ctx context.Context, w io.Writer, a *app.App, o ModelsOptions, ar
 	return writeModelRows(w, rows)
 }
 
-// writeModelRows writes rows to w, a line each: its name, and its efforts
-// after it, in a column of their own.
+// writeModelRows writes rows to w, a line each, in columns as wide as their
+// widest value: the provider, as --provider takes it, the model, as --model
+// takes it at that provider, and the reasoning efforts --effort takes for
+// it, when it takes any.
 func writeModelRows(w io.Writer, rows []ModelRow) error {
-	width := 0
+	providers, models := 0, 0
 	for _, r := range rows {
-		width = max(width, len(r.Name))
+		providers = max(providers, len(r.Provider))
+		models = max(models, len(r.Model))
 	}
 	for _, r := range rows {
-		line := r.Name
+		line := ui.PadWidth(string(r.Provider), providers) + "  " + r.Model
 		if len(r.Efforts) > 0 {
-			line = ui.PadWidth(r.Name, width) + "  " + strings.Join(r.Efforts, ", ")
+			line = ui.PadWidth(line, providers+2+models) + "  " + strings.Join(r.Efforts, ", ")
 		}
 		if _, err := fmt.Fprintln(w, line); err != nil {
 			return err
@@ -88,11 +90,14 @@ func writeModelRows(w io.Writer, rows []ModelRow) error {
 	return nil
 }
 
-// ModelRow is a row of flow models: a variant, as --model names it, and
-// the reasoning efforts --effort takes for its model.
+// ModelRow is a row of flow models: a variant, its provider and its model
+// apart, and the reasoning efforts --effort takes for its model.
 type ModelRow struct {
-	// Name is the variant in the form agent.Variant.String writes.
-	Name string
+	// Provider is the variant's provider.
+	Provider agent.ProviderID
+	// Model is the variant without its provider, in the form
+	// agent.Variant.Ref writes, such as "lab-a/model-a:fast".
+	Model string
 	// Efforts are the model's reasoning efforts, in the catalog's order.
 	Efforts []string
 }
@@ -109,7 +114,7 @@ func modelRows(listings []app.ModelListing) []ModelRow {
 				efforts = append(efforts, string(e))
 			}
 			for _, v := range m.Variants(l.Provider) {
-				rows = append(rows, ModelRow{Name: v.String(), Efforts: efforts})
+				rows = append(rows, ModelRow{Provider: v.Provider, Model: v.Ref(), Efforts: efforts})
 			}
 		}
 	}

@@ -29,7 +29,7 @@ func TestSessionDemos(t *testing.T) {
 			"empty": "No sessions found\n",
 		}},
 		{command: "models", cases: modelsDemos, want: map[string]string{
-			"list":          q("provider-a/lab-a/model-a  low, medium, high\nprovider-a/lab-a/model-b\n"),
+			"list":          q("provider-a  lab-a/model-a  low, medium, high\nprovider-a  lab-a/model-b\n"),
 			"not-signed-in": q("error: " + errNoModels.Error() + "\n"),
 		}},
 		{command: "export", cases: exportDemos, want: map[string]string{

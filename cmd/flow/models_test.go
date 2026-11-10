@@ -16,20 +16,27 @@ import (
 	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 )
 
-// TestWriteModelRows checks that each variant is a line of its own, and
-// that the reasoning efforts of a model that takes them follow its name in
-// a column.
+// TestWriteModelRows checks that each variant is a line of its own, its
+// provider and its model in columns, and that the reasoning efforts of a
+// model that takes them follow in a column of their own.
 func TestWriteModelRows(t *testing.T) {
-	listing := app.ModelListing{
+	listings := []app.ModelListing{{
 		Provider:         "provider-a",
 		Models:           []agent.Listing{{Model: "lab-a/model-a"}, {Model: "lab-a/model-bb"}},
 		ReasoningEfforts: map[string][]agent.ReasoningEffort{"lab-a/model-a": {"low", "high"}},
-	}
+	}, {
+		Provider:         "provider-bb",
+		Models:           []agent.Listing{{Model: "lab-b/model-x"}},
+		ReasoningEfforts: map[string][]agent.ReasoningEffort{"lab-b/model-x": {"medium"}},
+	}}
 	var out strings.Builder
-	if err := writeModelRows(&out, modelRows([]app.ModelListing{listing})); err != nil {
+	if err := writeModelRows(&out, modelRows(listings)); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), "provider-a/lab-a/model-a   low, high\nprovider-a/lab-a/model-bb\n"; got != want {
+	want := "provider-a   lab-a/model-a   low, high\n" +
+		"provider-a   lab-a/model-bb\n" +
+		"provider-bb  lab-b/model-x   medium\n"
+	if got := out.String(); got != want {
 		t.Errorf("rows = %q, want %q", got, want)
 	}
 }
@@ -55,7 +62,7 @@ func TestModels(t *testing.T) {
 		if err := runModels(t.Context(), &out, a, ModelsOptions{Format: OutputText}, args); err != nil {
 			t.Fatal(err)
 		}
-		if got, want := out.String(), "provider-a/lab-a/model-a\n"; got != want {
+		if got, want := out.String(), "provider-a  lab-a/model-a\n"; got != want {
 			t.Errorf("models %q = %q, want %q", args, got, want)
 		}
 	}
