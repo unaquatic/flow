@@ -462,7 +462,7 @@ func TestApplyLoginPrompt(t *testing.T) {
 	if !ok {
 		t.Fatalf("first event is %T, want EventBannerUpdate", out[0])
 	}
-	if want := "open https://login.test/device and enter code ABCD"; update.Text != want {
+	if want := "Open https://login.test/device and enter code ABCD"; update.Text != want {
 		t.Errorf("banner text = %q, want %q", update.Text, want)
 	}
 }

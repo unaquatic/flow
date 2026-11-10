@@ -127,7 +127,7 @@ func (s *Service) SubmitKey(pt agent.ProviderID, key string) []UIEvent {
 	if err != nil {
 		return s.ShowToast(fmt.Sprintf("saving the %s API key failed: %v", s.ProviderName(pt), err))
 	}
-	return s.ShowToast(fmt.Sprintf("Saved the API key as %s account %s; it is now active.", s.ProviderName(pt), id))
+	return s.ShowToast(fmt.Sprintf("Saved the API key as %s account %s.", s.ProviderName(pt), id))
 }
 
 // SettleLogin hides an open login banner and reports the result in the

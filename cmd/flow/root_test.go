@@ -12,26 +12,13 @@ import (
 	"github.com/unaquatic/fluid/style"
 )
 
-// TestPrintVersion checks that the logo follows a blank line, and the version
-// follows the logo after another. With color, the logo is terminal.LogoBanner
-// in the mode given; without, the mode is ignored.
+// TestPrintVersion checks that the version is the name and the version of
+// the application alone, on one line, with no logo.
 func TestPrintVersion(t *testing.T) {
-	version := "\n\n" + product.Name + " " + product.Version() + "\n"
-	for _, tt := range []struct {
-		name  string
-		color bool
-		want  string
-	}{
-		{name: "plain", want: "\n" + product.Logo + version},
-		{name: "color", color: true, want: terminal.ANSI(terminal.LogoBanner(), style.Color256) + version},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			var out strings.Builder
-			printVersion(&out, tt.color, style.Color256)
-			if out.String() != tt.want {
-				t.Errorf("version =\n%q\nwant\n%q", out.String(), tt.want)
-			}
-		})
+	var out strings.Builder
+	printVersion(&out)
+	if got, want := out.String(), product.Name+" "+product.Version()+"\n"; got != want {
+		t.Errorf("version = %q, want %q", got, want)
 	}
 }
 
@@ -131,5 +118,42 @@ func TestRelaunchArgs(t *testing.T) {
 				t.Errorf("relaunched app options = %+v, want them on session ses_2", rootAppOptions(again))
 			}
 		})
+	}
+}
+
+// TestHighlight checks that a value shows in the primary color where colors
+// are shown, as it is elsewhere, and that a writer that is no terminal gets
+// it as it is.
+func TestHighlight(t *testing.T) {
+	const id = "0192f3c4-5a6b-7c8d-9e0f-1a2b3c4d5e01"
+	if got := highlight(id, false); got != id {
+		t.Errorf("highlight without color = %q, want %q", got, id)
+	}
+	primary := style.New().WithFg(style.ColorFromHex(product.PrimaryColor)).Func()
+	if got, want := highlight(id, true), terminal.ANSI(style.NewStyledText(primary(id)), colorMode); got != want || !strings.Contains(got, "\x1b[") {
+		t.Errorf("highlight with color = %q, want %q", got, want)
+	}
+	if got := highlight("", true); got != "" {
+		t.Errorf("highlight of nothing = %q, want it empty", got)
+	}
+	if got := highlighter(io.Discard)(id); got != id {
+		t.Errorf("highlighter of a writer that is no terminal = %q, want %q", got, id)
+	}
+}
+
+// TestWriteField checks that a field is its label on a line, bold where
+// colors are shown, and its value under it, indented as the resume command
+// is, and that a writer that is no terminal gets them plain.
+func TestWriteField(t *testing.T) {
+	var out strings.Builder
+	writeField(&out, "Open this URL in your browser:", "https://login.example/device")
+	if got, want := out.String(), "Open this URL in your browser:\n  https://login.example/device\n"; got != want {
+		t.Errorf("field = %q, want %q", got, want)
+	}
+	if got := introLine("Waiting for authorization...", false); got != "Waiting for authorization..." {
+		t.Errorf("intro line without color = %q, want it plain", got)
+	}
+	if got := introLine("Waiting for authorization...", true); !strings.Contains(got, "\x1b[1m") || !strings.Contains(got, "Waiting for authorization...") {
+		t.Errorf("intro line with color = %q, want it bold", got)
 	}
 }

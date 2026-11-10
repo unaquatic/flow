@@ -205,7 +205,7 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 		}
 
 	case app.EventLoginSucceeded:
-		out = s.SettleLogin(fmt.Sprintf("logged in to %s account %s; it is now active.", s.ProviderName(e.Provider), e.Account))
+		out = s.SettleLogin(fmt.Sprintf("logged in to %s account %s.", s.ProviderName(e.Provider), e.Account))
 
 	case app.EventLoginFailed:
 		if p := s.state.Login; p != nil && p.Provider == e.Provider && p.Account == e.Account && e.Retry {

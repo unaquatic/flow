@@ -734,3 +734,16 @@ func TestLoginMethods(t *testing.T) {
 		}
 	}
 }
+
+// TestLoginPromptString checks that a login prompt reads as a sentence that
+// starts with a capital, naming the page, and the code when it has one.
+func TestLoginPromptString(t *testing.T) {
+	for p, want := range map[LoginPrompt]string{
+		{URL: "https://login.test/authorize"}:                 "Open https://login.test/authorize in your browser",
+		{URL: "https://login.test/device", Code: "ABCD-1234"}: "Open https://login.test/device and enter code ABCD-1234",
+	} {
+		if got := p.String(); got != want {
+			t.Errorf("String() = %q, want %q", got, want)
+		}
+	}
+}

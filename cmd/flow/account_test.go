@@ -14,7 +14,6 @@ import (
 	"github.com/unaquatic/flow/extension/protocol"
 	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/flow/internal/cmdline"
-	"github.com/unaquatic/flow/product"
 )
 
 // testProvider is the provider of the test app's catalog, and keyEnv the
@@ -32,11 +31,11 @@ func TestAccountCurrentNone(t *testing.T) {
 	if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), "(no active accounts; run "+product.Name+" login)\n"; got != want {
+	if got, want := out.String(), "Current account:\n  [no active accounts]\n"; got != want {
 		t.Errorf("account current = %q, want %q", got, want)
 	}
 	err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, []string{"provider-a"})
-	if err == nil || !strings.Contains(err.Error(), "provider-a has no active account") {
+	if err == nil || !strings.Contains(err.Error(), "no active account: provider-a") {
 		t.Errorf("account current provider-a: err = %v, want no active account", err)
 	}
 }
@@ -65,9 +64,9 @@ func newTestApp(t *testing.T) *app.App {
 }
 
 // TestAccountCommands checks what the account commands write: the account
-// list marks the active account, account use names the account it makes
-// active, by the provider's alias too, account current shows the active
-// account alone, and logout the account it removes.
+// list marks the active account, account use shows the row of the account
+// it switches to, account current shows the active account alone, and
+// logout the account it removes.
 func TestAccountCommands(t *testing.T) {
 	a := newTestApp(t)
 	id, err := a.Accounts().SetKey(t.Context(), testProvider, "", agent.APIKey("sk-test"))
@@ -79,7 +78,7 @@ func TestAccountCommands(t *testing.T) {
 	if err := listAccounts(t.Context(), &out, a); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "provider-a\n * "+string(id)) {
+	if !strings.Contains(out.String(), "provider-a\n* "+string(id)) {
 		t.Errorf("account list =\n%s\nwant the active provider-a account %s", out.String(), id)
 	}
 
@@ -87,7 +86,7 @@ func TestAccountCommands(t *testing.T) {
 	if err := runAccountUse(t.Context(), &out, a, cmdline.NoOptions{}, []string{"provider-a", string(id)}); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), "Active provider-a account: "+string(id)+".\n"; got != want {
+	if got, want := out.String(), "Switched to:\n  provider-a  "+string(id)+"  api_key  store\n"; got != want {
 		t.Errorf("account use = %q, want %q", got, want)
 	}
 
@@ -104,7 +103,7 @@ func TestAccountCommands(t *testing.T) {
 		if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, args); err != nil {
 			t.Fatal(err)
 		}
-		if got := out.String(); !strings.HasPrefix(got, "provider-a  "+string(id)+"  ") || strings.Count(got, "\n") != 1 || strings.Contains(got, string(other)) {
+		if got := out.String(); !strings.HasPrefix(got, "Current account:\n  provider-a  "+string(id)+"  ") || strings.Count(got, "\n") != 2 || strings.Contains(got, string(other)) {
 			t.Errorf("account current %q =\n%s\nwant the active account %s alone", args, got, id)
 		}
 	}
@@ -116,7 +115,31 @@ func TestAccountCommands(t *testing.T) {
 	if err := runLogout(t.Context(), &out, a, logoutOptions{provider: testProvider, account: id}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := out.String(), "Removed provider-a account "+string(id)+".\n"; got != want {
+	if got, want := out.String(), "Removed:\n  provider-a  "+string(id)+"  api_key  store\n"; got != want {
 		t.Errorf("logout = %q, want %q", got, want)
+	}
+}
+
+// TestAccountCurrentPlural checks that account current heads the active
+// accounts of several providers as accounts, a row each in provider order.
+func TestAccountCurrentPlural(t *testing.T) {
+	a, closeApp, err := newDemoApp(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeApp()
+	id, err := a.Accounts().SetKey(t.Context(), demoKeyProvider, "", demoKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out strings.Builder
+	if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, nil); err != nil {
+		t.Fatal(err)
+	}
+	want := "Current accounts:\n" +
+		"  provider-a  " + string(demoAccount) + "  oauth    store\n" +
+		"  provider-b  " + string(id) + "  api_key  store\n"
+	if got := out.String(); got != want {
+		t.Errorf("account current =\n%s\nwant\n%s", got, want)
 	}
 }

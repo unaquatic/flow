@@ -68,10 +68,11 @@ func runServer(ctx context.Context, w io.Writer, a *app.App, o serveOptions, _ [
 }
 
 // serve serves the HTTP API of a, as server.Serve does, on the listener that
-// listen opens at the address o names, until ctx is done. A request that
-// names no model goes to the default model in the config file, which PATCH
-// /config sets. It warns on w when the server is reachable from other
-// machines with no password.
+// listen opens at the address o names, until ctx is done, once it has
+// written to w the URL it listens at, as writeURLField lays it out, with the
+// port the listener picked when o names none. A request that names no model goes to
+// the default model in the config file, which PATCH /config sets. It warns
+// on w when the server is reachable from other machines with no password.
 func serve(ctx context.Context, w io.Writer, a *app.App, o serveOptions, listen func(network, address string) (net.Listener, error)) error {
 	username, password := config.ServerCredentials()
 	opts := server.Options{Hostname: o.hostname, Port: o.port, CORS: o.cors, Username: username, Password: password}
@@ -82,5 +83,6 @@ func serve(ctx context.Context, w io.Writer, a *app.App, o serveOptions, listen 
 	if err != nil {
 		return err
 	}
-	return server.Serve(ctx, w, a, opts, ln)
+	writeURLField(w, "Server listening on:", "http://"+ln.Addr().String())
+	return server.Serve(ctx, a, opts, ln)
 }

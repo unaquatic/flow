@@ -51,9 +51,9 @@ func withDemoApp(run func(ctx context.Context, w io.Writer, a *app.App) error) f
 // newDemoApp returns an app over a new temporary data directory, which
 // downloads no catalog and loads no extension, with demoLoginProvider and
 // demoKeyProvider in place of the catalog's providers, demoLoginProvider's
-// login flow a demoLoginFlow, and its accounts saved, and the func that
-// closes it and removes the directory. Nothing of the user's is read or
-// changed.
+// login flow a demoLoginFlow, and its accounts saved, named as demoCatalog
+// names them, and the func that closes it and removes the directory.
+// Nothing of the user's is read or changed.
 func newDemoApp(ctx context.Context) (*app.App, func(), error) {
 	dir, err := os.MkdirTemp("", product.ID+"-demo-")
 	if err != nil {
@@ -85,11 +85,18 @@ func openDemoApp(ctx context.Context, dir string) (*app.App, error) {
 	if err != nil {
 		return nil, err
 	}
-	providers := agent.NewProviders(
-		agent.ProviderOptions{Catalog: gateway.NewStore(gateway.StoreOptions{Dir: dir, Source: demoNowhere})},
-		demoProvider(demoLoginProvider), demoProvider(demoKeyProvider),
-	)
+	store := gateway.NewStore(gateway.StoreOptions{Dir: dir, Source: demoNowhere, Snapshot: demoCatalog})
+	providers := agent.NewProviders(agent.ProviderOptions{Catalog: store}, demoProvider(demoLoginProvider), demoProvider(demoKeyProvider))
 	return app.New(ctx, config.NewService(dir), app.Options{Accounts: accounts, Providers: providers, BuiltIn: []agent.ProviderID{}})
+}
+
+// demoCatalog returns the catalog of the demo app, which names its
+// providers, as "Provider A", and lists no model.
+func demoCatalog() *gateway.Catalog {
+	return &gateway.Catalog{Providers: map[gateway.ProviderID]gateway.Provider{
+		demoLoginProvider: {ID: demoLoginProvider, Name: "Provider A"},
+		demoKeyProvider:   {ID: demoKeyProvider, Name: "Provider B"},
+	}}
 }
 
 // demoProvider is a provider of the demo app, by its ID, whose models
@@ -181,26 +188,12 @@ func loginDemo(o loginOptions, input string) func(context.Context, io.Writer, bo
 
 // logoutDemos are the cases of flow logout, each on a demo app of its own.
 var logoutDemos = []demoCase{
-	{name: "active", desc: "The active account, another taking its place", line: "logout --provider " + string(demoLoginProvider) + " --account " + string(demoAccount),
-		run: logoutDemo(demoAccount)},
-	{name: "last", desc: "The last account of its provider", line: "logout --provider " + string(demoLoginProvider) + " --account " + string(demoAccount),
-		run: logoutDemo(demoAccount, demoKeyAccount)},
+	{name: "remove", desc: "A saved account", line: "logout --provider " + string(demoLoginProvider) + " --account " + string(demoAccount),
+		run: withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
+			return runLogout(ctx, w, a, logoutOptions{provider: demoLoginProvider, account: demoAccount}, nil)
+		})},
 	{name: "no-account", desc: "No account named", line: "logout --provider " + string(demoLoginProvider),
 		run: func(ctx context.Context, _ io.Writer, _ bool) error {
 			return logoutCmd.Run(ctx, logoutOptions{provider: demoLoginProvider}, nil)
 		}},
-}
-
-// logoutDemo returns the run of a case of flow logout that removes account
-// id of demoLoginProvider on a demo app, once the accounts of before are
-// gone.
-func logoutDemo(id agent.AccountID, before ...agent.AccountID) func(context.Context, io.Writer, bool) error {
-	return withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
-		for _, gone := range before {
-			if _, err := a.Accounts().Logout(ctx, demoLoginProvider, gone); err != nil {
-				return err
-			}
-		}
-		return runLogout(ctx, w, a, logoutOptions{provider: demoLoginProvider, account: id}, nil)
-	})
 }

@@ -117,10 +117,10 @@ func runDemo(ctx context.Context, w io.Writer, color bool, cases []demoCase, nam
 // versionDemos are the cases of flow version.
 var versionDemos = []demoCase{{
 	name: "version",
-	desc: "The banner and the version of the running flow",
+	desc: "The version of the running flow",
 	line: "version",
-	run: func(_ context.Context, w io.Writer, color bool) error {
-		printVersion(w, color, colorMode)
+	run: func(_ context.Context, w io.Writer, _ bool) error {
+		printVersion(w)
 		return nil
 	},
 }}

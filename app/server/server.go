@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -115,10 +114,8 @@ func (w *statusRecorder) WriteHeader(status int) { w.status = status }
 func (w *statusRecorder) Write(p []byte) (int, error) { return len(p), nil }
 
 // Serve serves the HTTP API of a on ln, as opts configures it, until ctx
-// is done, and then closes ln. It writes to w the address it serves on,
-// with the port the listener picked when opts names none, before it accepts
-// a request.
-func Serve(ctx context.Context, w io.Writer, a *app.App, opts Options, ln net.Listener) error {
+// is done, and then closes ln.
+func Serve(ctx context.Context, a *app.App, opts Options, ln net.Listener) error {
 	srv := &http.Server{
 		Handler:           New(a, opts).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
@@ -134,7 +131,6 @@ func Serve(ctx context.Context, w io.Writer, a *app.App, opts Options, ln net.Li
 			slog.Warn("server shutdown", "err", err)
 		}
 	}()
-	fmt.Fprintf(w, "server listening on http://%s\n", ln.Addr())
 	if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
