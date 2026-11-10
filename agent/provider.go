@@ -22,8 +22,13 @@ func ParseModel(s string) (ProviderID, string) {
 	return "", s
 }
 
-// FormatModel returns the canonical "provider/model" string.
+// FormatModel returns the canonical "provider/model" string, which
+// ParseModel reads back, or "" when t and model are both empty, so that no
+// model reads as none rather than as "/".
 func FormatModel(t ProviderID, model string) string {
+	if t == "" && model == "" {
+		return ""
+	}
 	return string(t) + "/" + model
 }
 

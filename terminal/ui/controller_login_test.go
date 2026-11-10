@@ -423,8 +423,9 @@ func TestAccountMenu(t *testing.T) {
 	}
 }
 
-// TestModelLabel checks that the label under the input and /status show the
-// model alone, whatever account is active.
+// TestModelLabel checks that the label under the input shows the model
+// alone, whatever account is active, and that /status shows the provider
+// and then the model without it.
 func TestModelLabel(t *testing.T) {
 	s, a := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -435,8 +436,11 @@ func TestModelLabel(t *testing.T) {
 		t.Fatal("/status shows no notice")
 	}
 	status, _ := toastOf(events[i])
-	if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == "Model     provider-a/model" }) {
-		t.Errorf("/status lines = %+v, want the model alone", status.Lines)
+	row := func(text string) int {
+		return slices.IndexFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
+	}
+	if p, m := row("Provider  provider-a"), row("Model     model"); p < 0 || m != p+1 {
+		t.Errorf("/status lines = %+v, want the provider row and then the model without it", status.Lines)
 	}
 
 	out := s.ApplyAgentEvent(app.EventAccountsChanged{Provider: providerA, Active: id})

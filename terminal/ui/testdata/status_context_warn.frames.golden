@@ -3,20 +3,20 @@
 |  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
 |  Messages  4                           |
-|  Model     provider/model              |
+|  Provider  provider-a                  |
+|  Model     lab-a/model-a               |
 |  Context   300K / 400K 75%             |
 |  Directory /work/project               |
-|                                        |
 |                                        |
 === fg ===
 |A AAAAAA                                |
 |  BBBBBBB   AAAA AAAAAA                 |
 |  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
 |  BBBBBBBB  A                           |
-|  BBBBB     AAAAAAAAAAAAAA              |
+|  BBBBBBBB  AAAAAAAAAA                  |
+|  BBBBB     AAAAAAAAAAAAA               |
 |  BBBBBBB   CCCC C CCCC CCC             |
 |  BBBBBBBBB AAAAAAAAAAAAA               |
-|                                        |
 |                                        |
 === legend ===
 A #e6e6e6

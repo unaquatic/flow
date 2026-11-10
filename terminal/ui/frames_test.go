@@ -204,7 +204,8 @@ func statusInfo(context int) StatusInfo {
 		Version:   product.Name + " v0.1.0",
 		Session:   "01a0e33d-4571-7ed4-b06b-4229c726c313",
 		Messages:  4,
-		Model:     "provider/model",
+		Provider:  "provider-a",
+		Model:     "lab-a/model-a",
 		Usage:     SessionUsage{Context: context, Window: 400_000},
 		Directory: "/work/project",
 	}
@@ -266,6 +267,13 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		{name: "status_context_danger", h: 9, add: func(ui *UI) {
 			ui.AddNotice(LogoNotice(nil, StatusLines(statusInfo(380_000), nil))...)
+		}},
+		// With no model set, the provider and the model read as StatusNone,
+		// dim as the labels are.
+		{name: "status_no_model", h: 9, add: func(ui *UI) {
+			info := statusInfo(0)
+			info.Provider, info.Model, info.Usage.Window = "", "", 0
+			ui.AddNotice(LogoNotice(nil, StatusLines(info, nil))...)
 		}},
 		// /new heads the emptied transcript with the new session's /status.
 		{name: "new_chat", h: 22, add: func(ui *UI) {

@@ -228,6 +228,19 @@ func TestVariantString(t *testing.T) {
 	if got := agent.ParseVariant("provider-a/provider-a/model-a:NONE", cat).String(); got != "provider-a/provider-a/model-a:none" {
 		t.Errorf("String = %q, want provider-a/provider-a/model-a:none", got)
 	}
+	// No model writes as none, not "/", and reads back as none.
+	if got := (agent.Variant{}).String(); got != "" {
+		t.Errorf("Variant{}.String() = %q, want \"\"", got)
+	}
+	if v := agent.ParseVariant("", cat); v != (agent.Variant{}) {
+		t.Errorf("ParseVariant(\"\") = %+v, want the zero Variant", v)
+	}
+	// A model without a provider keeps its slash, so that a model ID with
+	// a lab in it is not read back as a provider.
+	v := agent.Variant{Model: "lab-a/model-a"}
+	if got := v.String(); got != "/lab-a/model-a" || agent.ParseVariant(got, cat) != v {
+		t.Errorf("String() = %q, read back as %+v, want /lab-a/model-a and %+v", got, agent.ParseVariant(got, cat), v)
+	}
 }
 
 // TestVariantRef checks that Ref writes a variant without its provider, as
