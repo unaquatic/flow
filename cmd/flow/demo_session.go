@@ -44,6 +44,23 @@ var sessionDemos = []demoCase{
 		})},
 }
 
+// sessionDeleteDemos are the cases of flow session delete, each on a demo
+// app of its own, which holds the sessions storeDemoSessions stores.
+var sessionDeleteDemos = []demoCase{
+	{name: "delete", desc: "A session deleted, with its messages", line: "session delete " + string(demoSession),
+		run: storedDemo(true, func(ctx context.Context, w io.Writer, a *app.App) error {
+			return runSessionDelete(ctx, w, a, SessionDeleteOptions{Format: OutputText}, []string{string(demoSession)})
+		})},
+	{name: "delete-json", desc: "The sessions deleted, as JSON", line: "session delete " + string(demoSession) + " --format json",
+		run: storedDemo(true, func(ctx context.Context, w io.Writer, a *app.App) error {
+			return runSessionDelete(ctx, w, a, SessionDeleteOptions{Format: OutputJSON}, []string{string(demoSession)})
+		})},
+	{name: "delete-missing", desc: "A session that is not stored, which deletes none of the others named", line: "session delete " + string(demoUntitledSession) + " " + demoMissingSession,
+		run: storedDemo(true, func(ctx context.Context, w io.Writer, a *app.App) error {
+			return runSessionDelete(ctx, w, a, SessionDeleteOptions{Format: OutputText}, []string{string(demoUntitledSession), demoMissingSession})
+		})},
+}
+
 // modelsDemos are the cases of flow models, each on a demo app of its own.
 var modelsDemos = []demoCase{
 	{name: "list", desc: "The models of the signed-in providers, with their reasoning efforts", line: "models",

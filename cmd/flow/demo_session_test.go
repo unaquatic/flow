@@ -28,6 +28,11 @@ func TestSessionDemos(t *testing.T) {
 			"json":  `(?s)\[\n  \{\n    "id": "` + titled + `",\n    "title": "` + q(demoSessionTitle) + `",.*"id": "` + untitled + `",.*\]\n`,
 			"empty": "No sessions found\n",
 		}},
+		{command: "session-delete", cases: sessionDeleteDemos, want: map[string]string{
+			"delete":         `Deleted:\n  ` + q(demoSessionTitle) + `  \S+  ` + updated + `  ` + titled + "\n",
+			"delete-json":    `(?s)\[\n  \{\n    "id": "` + titled + `",\n    "title": "` + q(demoSessionTitle) + `",\n.*"worktree": "[^"]+"\n  \}\n\]\n`,
+			"delete-missing": q(`error: no stored session matches "` + demoMissingSession + `"` + "\n"),
+		}},
 		{command: "models", cases: modelsDemos, want: map[string]string{
 			"list":          q("provider-a  lab-a/model-a  low, medium, high\nprovider-a  lab-a/model-b\n"),
 			"not-signed-in": q("error: " + errNoModels.Error() + "\n"),

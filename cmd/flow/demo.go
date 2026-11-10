@@ -42,6 +42,7 @@ var demoCmd = &cmdline.Command[cmdline.NoOptions]{
 	Commands: []cmdline.Node{
 		demoCommand("run", "Show what flow run prints in each case, with demo models", runDemos),
 		demoCommand("session", "Show what flow session list prints in each case, with demo sessions", sessionDemos),
+		demoCommand("session-delete", "Show what flow session delete prints in each case, with demo sessions", sessionDeleteDemos),
 		demoCommand("models", "Show what flow models prints in each case, with a demo catalog", modelsDemos),
 		demoCommand("export", "Show what flow export prints in each case, with demo sessions", exportDemos),
 		demoCommand("version", "Show what flow version prints", versionDemos),

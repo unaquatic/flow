@@ -3,22 +3,25 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"strings"
 
+	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/internal/cmdline"
 	"github.com/unaquatic/flow/terminal/ui"
 )
 
-// sessionCmd groups the commands that read the saved sessions.
+// sessionCmd groups the commands that read and delete the saved sessions.
 var sessionCmd = &cmdline.Command[cmdline.NoOptions]{
 	Name:     "session",
-	Short:    "List saved sessions",
-	Commands: []cmdline.Node{sessionListCmd},
+	Short:    "List and delete saved sessions",
+	Commands: []cmdline.Node{sessionListCmd, sessionDeleteCmd},
 }
 
 // SessionListOptions are the flags of flow session list.
@@ -73,6 +76,61 @@ func runSessionList(ctx context.Context, w io.Writer, a *app.App, o SessionListO
 	}
 	for _, row := range ui.SessionRowNames(sessions) {
 		if _, err := fmt.Fprintln(w, strings.TrimRight(row, " ")); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SessionDeleteOptions are the flags of flow session delete.
+type SessionDeleteOptions struct {
+	// Format is how the deleted sessions are written.
+	Format OutputFormat
+}
+
+// sessionDeleteCmd deletes saved sessions.
+var sessionDeleteCmd = &cmdline.Command[SessionDeleteOptions]{
+	Name:  "delete",
+	Usage: "<session-id>...",
+	Short: "Delete saved sessions, of any folder, with their messages",
+	Flags: func(fs *flag.FlagSet, o *SessionDeleteOptions) { formatFlag(fs, &o.Format) },
+	Args:  cmdline.MinArgs(1),
+	Run:   withApp(runSessionDelete),
+}
+
+// runSessionDelete deletes the sessions that args name, of any folder, with
+// their messages, as app.App.DeleteSession does, which stops a run of this
+// process in progress on one first, and writes to w the sessions it deleted:
+// in OutputText, under "Deleted:", as introLine draws it, a row each, as
+// the terminal's session list shows them; in OutputJSON, as the HTTP API
+// lists them. It deletes none, and fails, when one is not stored; a session
+// that another process is changing fails it there, after the sessions
+// before it are deleted.
+func runSessionDelete(ctx context.Context, w io.Writer, a *app.App, o SessionDeleteOptions, args []string) error {
+	sessions := make([]session.Session, 0, len(args))
+	for _, id := range args {
+		sess, err := a.Sessions().Session(ctx, message.SessionID(id))
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("no stored session matches %q", id)
+		}
+		if err != nil {
+			return err
+		}
+		sessions = append(sessions, *sess)
+	}
+	for _, sess := range sessions {
+		if err := a.DeleteSession(ctx, sess.ID); err != nil {
+			return fmt.Errorf("delete session %s: %w", sess.ID, err)
+		}
+	}
+	if o.Format == OutputJSON {
+		return writeJSON(w, sessions)
+	}
+	if _, err := fmt.Fprintln(w, introLine("Deleted:", showsColor(w))); err != nil {
+		return err
+	}
+	for _, row := range ui.SessionRowNames(sessions) {
+		if _, err := fmt.Fprintln(w, accountIndent+strings.TrimRight(row, " ")); err != nil {
 			return err
 		}
 	}

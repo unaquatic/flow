@@ -259,6 +259,19 @@ func TestReportExitError(t *testing.T) {
 	}
 }
 
+// TestMinArgs checks that MinArgs demands n arguments or more.
+func TestMinArgs(t *testing.T) {
+	check := MinArgs(1)
+	for _, args := range [][]string{{"a"}, {"a", "b"}} {
+		if err := check(args); err != nil {
+			t.Errorf("MinArgs(1)(%q) = %v", args, err)
+		}
+	}
+	if err := check(nil); err == nil || err.Error() != "expects at least 1 argument, got 0" {
+		t.Errorf("MinArgs(1) of none = %v, want expects at least 1 argument, got 0", err)
+	}
+}
+
 // TestMaxArgs checks that MaxArgs takes up to n arguments and refuses more.
 func TestMaxArgs(t *testing.T) {
 	check := MaxArgs(1)
