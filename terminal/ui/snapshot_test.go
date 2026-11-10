@@ -81,7 +81,7 @@ func TestSnapshotFrames(t *testing.T) {
 		}},
 		// A reply with no call shows its snapshot being taken a blank row
 		// under its text, as it would show a call, in the white tool name
-		// color when /settings picks it.
+		// color when /config picks it.
 		{name: "agent_indexing_white", h: 5, add: func(u *ui.UI) {
 			u.AddMessage(ui.AgentParts("a1",
 				message.TextPart{ID: "a1-text", Text: "All tests pass."},
@@ -107,7 +107,7 @@ func TestSnapshotFrames(t *testing.T) {
 				u.AddMessage(prompt)
 			}
 		}},
-		// With debug on in /settings, the snapshot stays once taken, as a row
+		// With debug on in /config, the snapshot stays once taken, as a row
 		// that shows its hash, under the prompt and under the reply's call.
 		{name: "agent_indexed_debug", h: 12, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetDebug(true))
@@ -143,7 +143,7 @@ func TestSnapshotFrames(t *testing.T) {
 			patchTurn(u)
 			ui.ExpandTools(u)
 		}},
-		// The row drops the marker of the tool calls while /settings hides
+		// The row drops the marker of the tool calls while /config hides
 		// it, as a tool call does.
 		{name: "agent_patch_no_marker", h: 8, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetToolMarkers(false))

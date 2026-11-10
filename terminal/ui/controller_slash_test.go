@@ -13,10 +13,16 @@ import (
 )
 
 // menuCommands returns the commands the slash menu offers while the input
-// holds text, best first, or nil when the menu is hidden.
+// holds text, with debug off, best first, or nil when the menu is hidden.
 func menuCommands(t *testing.T, text string) []Command {
 	t.Helper()
-	s := &Service{state: &UIState{}, Commands: builtinCommands(t)}
+	return menuCommandsIn(t, &Service{state: &UIState{}, Commands: builtinCommands(t)}, text)
+}
+
+// menuCommandsIn returns the commands the slash menu of s offers while the
+// input holds text, as menuCommands does.
+func menuCommandsIn(t *testing.T, s *Service, text string) []Command {
+	t.Helper()
 	var cmds []Command
 	for _, ev := range s.UpdateSlashMenu(text) {
 		if show, ok := ev.(EventSlashMenuShow); ok {
@@ -33,16 +39,18 @@ func TestSlashMenuOrder(t *testing.T) {
 		name, text string
 		want       []Command
 	}{
-		// Every command, group after group, with no gap between groups.
+		// Every command, group after group, with no gap between groups,
+		// and without /demo while debug is off.
 		{name: "slash", text: "/", want: []Command{
-			CommandResume, CommandNew, CommandModel, CommandEffort, CommandStatus,
-			CommandUndo, CommandRedo, CommandContinue, CommandTree,
-			CommandSettings, CommandLogin, "demo", CommandQuit,
+			CommandResume, CommandNew, CommandModel, CommandStatus, CommandUsage,
+			CommandUndo, CommandRedo, CommandContinue, CommandCheckout,
+			CommandCopy, CommandExport,
+			CommandConfig, CommandLogin, CommandHelp, CommandQuit,
 		}},
 		// Prefixes rank ahead of the subsequence in the alias "history".
-		{name: "prefix before subsequence", text: "/st", want: []Command{CommandStatus, CommandSettings, CommandResume}},
+		{name: "prefix before subsequence", text: "/st", want: []Command{CommandStatus, CommandConfig, CommandResume}},
 		// Prefixes rank ahead of the substring in "tree".
-		{name: "prefixes in menu order", text: "/re", want: []Command{CommandResume, CommandRedo, CommandTree}},
+		{name: "prefixes in menu order", text: "/re", want: []Command{CommandResume, CommandRedo, CommandCheckout}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,6 +61,32 @@ func TestSlashMenuOrder(t *testing.T) {
 	}
 }
 
+// TestDebugCommands checks that /demo, a debug command, shows in the menu
+// and in /help only while debug is on, and runs when typed either way.
+func TestDebugCommands(t *testing.T) {
+	const demo Command = "demo"
+	for _, debug := range []bool{false, true} {
+		s, _ := newTestService(t)
+		s.Commands = builtinCommands(t)
+		s.InitSession(t.Context(), "")
+		s.state.Debug = debug
+		if got := slices.Contains(menuCommandsIn(t, s, "/"), demo); got != debug {
+			t.Errorf("debug %v: menu offers /demo = %v", debug, got)
+		}
+		if got := slices.Contains(menuCommandsIn(t, s, "/dem"), demo); got != debug {
+			t.Errorf("debug %v: search finds /demo = %v", debug, got)
+		}
+		help := JoinStyledLines(HelpLines(s.ShownCommands())).PlainText()
+		if got := strings.Contains(help, demo.String()); got != debug {
+			t.Errorf("debug %v: /help lists /demo = %v", debug, got)
+		}
+		if out := s.HandleSubmit(demo.String()); s.state.Banner == NoBanner {
+			t.Errorf("debug %v: typed /demo = %#v, want the demo menu", debug, out)
+		}
+		s.CancelBanner()
+	}
+}
+
 func TestSlashMenuBestMatch(t *testing.T) {
 	tests := []struct {
 		name, text string
@@ -60,13 +94,18 @@ func TestSlashMenuBestMatch(t *testing.T) {
 	}{
 		{name: "exact", text: "/status", want: CommandStatus},
 		{name: "upper case", text: "/Status", want: CommandStatus},
-		{name: "prefix", text: "/set", want: CommandSettings},
-		{name: "subsequence", text: "/tr", want: CommandTree},
+		{name: "prefix", text: "/conf", want: CommandConfig},
+		// A name ranks ahead of an alias that matches as well: "context" names /usage.
+		{name: "name before alias", text: "/con", want: CommandContinue},
+		{name: "alias prefix", text: "/set", want: CommandConfig},
+		{name: "subsequence", text: "/chk", want: CommandCheckout},
+		{name: "alias subsequence", text: "/tr", want: CommandCheckout},
 		{name: "subsequence fewer skips", text: "/sts", want: CommandStatus},
 		{name: "subsequence vowels dropped", text: "/mdl", want: CommandModel},
-		{name: "prefix effort", text: "/eff", want: CommandEffort},
+		{name: "prefix export", text: "/exp", want: CommandExport},
+		{name: "alias context", text: "/ctx", want: CommandUsage},
 		{name: "subsequence short", text: "/qt", want: CommandQuit},
-		{name: "missing letter", text: "/setings", want: CommandSettings},
+		{name: "missing letter", text: "/chekout", want: CommandCheckout},
 		{name: "swapped letters", text: "/lgoin", want: CommandLogin},
 		{name: "swapped at end", text: "/modle", want: CommandModel},
 		{name: "swapped short", text: "/nwe", want: CommandNew},
@@ -115,14 +154,16 @@ func TestCommandsWhileStreaming(t *testing.T) {
 		step  func(*testing.T, *app.App) step
 		stops bool
 	}{
-		{name: "settings", step: func(*testing.T, *app.App) step { return submit("/settings") }},
+		{name: "config", step: func(*testing.T, *app.App) step { return submit("/config") }},
 		{name: "status", step: func(*testing.T, *app.App) step { return submit("/status") }},
-		// A run keeps the level it started at; a new one is for the next run.
-		{name: "effort", step: func(*testing.T, *app.App) step { return submit("/effort") }},
+		{name: "usage", step: func(*testing.T, *app.App) step { return submit("/usage") }},
+		{name: "help", step: func(*testing.T, *app.App) step { return submit("/help") }},
+		{name: "copy", step: func(*testing.T, *app.App) step { return submit("/copy") }},
+		{name: "export", step: func(*testing.T, *app.App) step { return submit("/export") }},
 		{name: "login", step: func(*testing.T, *app.App) step { return submit("/login") }},
 		{name: "quit", step: func(*testing.T, *app.App) step { return submit("/quit") }},
 		{name: "resume menu", step: func(*testing.T, *app.App) step { return submit("/resume") }},
-		{name: "tree", step: func(*testing.T, *app.App) step { return submit("/tree") }},
+		{name: "checkout", step: func(*testing.T, *app.App) step { return submit("/checkout") }},
 		// A run in progress is left to go on.
 		{name: "continue", step: func(*testing.T, *app.App) step { return submit("/continue") }},
 		{name: "new", step: func(*testing.T, *app.App) step { return submit("/new") }, stops: true},
@@ -302,7 +343,8 @@ func TestSlashAliases(t *testing.T) {
 	}
 	for alias, want := range map[Command]Command{
 		"session": CommandResume, "history": CommandResume, "clear": CommandNew, "info": CommandStatus,
-		"config": CommandSettings, "auth": CommandLogin, "exit": CommandQuit,
+		"settings": CommandConfig, "auth": CommandLogin, "exit": CommandQuit, "context": CommandUsage,
+		"tree": CommandCheckout,
 	} {
 		if seen[alias] != want {
 			t.Errorf("alias %q runs %q, want %s", alias, seen[alias], want)
@@ -316,7 +358,8 @@ func TestSlashAliases(t *testing.T) {
 func TestSlashMenuFindsAliases(t *testing.T) {
 	s := &Service{state: &UIState{}}
 	for query, want := range map[string]Command{
-		"hist": CommandResume, "session": CommandResume, "clear": CommandNew, "exit": CommandQuit, "config": CommandSettings,
+		"hist": CommandResume, "session": CommandResume, "clear": CommandNew, "exit": CommandQuit, "settings": CommandConfig,
+		"context": CommandUsage,
 	} {
 		opts := s.SlashMenuItems(query)
 		if len(opts) == 0 {

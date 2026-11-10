@@ -7,7 +7,7 @@ import (
 	"github.com/unaquatic/flow/config"
 )
 
-// SettingsStore saves the settings that /settings sets, as the app saves them
+// SettingsStore saves the settings that /config sets, as the app saves them
 // in its config file: the terminal's, and debug.
 type SettingsStore interface {
 	// SaveTerminal saves the terminal's settings.
@@ -17,7 +17,7 @@ type SettingsStore interface {
 }
 
 // ApplyConfig sets the settings of st as the config file saves them: t, the
-// terminal's, and debug. The style settings /settings shows while debug is
+// terminal's, and debug. The style settings /config shows while debug is
 // on keep their defaults, as the config file saves none of them.
 func (st *UIState) ApplyConfig(t config.Terminal, debug bool) {
 	st.Inline = !t.Fullscreen

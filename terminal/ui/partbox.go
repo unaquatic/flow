@@ -36,7 +36,7 @@ type BoxContent interface {
 }
 
 // Framed is a widget that shows in a PartBox, which the transcript expands
-// with Ctrl+O, shows as /settings says, and stacks with the rows around it: a
+// with Ctrl+O, shows as /config says, and stacks with the rows around it: a
 // tool call, or the view of an extension that embeds a PartBox, such as a
 // snapshot being taken.
 type Framed interface {
@@ -50,7 +50,7 @@ type Framed interface {
 // row on the canvas or a block that fills Surface, as Shape says; a click on
 // its header, or Ctrl+O, expands it into a block that shows Details, when it
 // is Expandable, unless it is Held. Its header row holds Marker, while
-// /settings shows it and the box is Marked, then Header, which is cut off
+// /config shows it and the box is Marked, then Header, which is cut off
 // with an ellipsis when the row is full, and then Status, which stays whole.
 // While its content is Busy, Marker blinks.
 type PartBox struct {
@@ -90,7 +90,7 @@ type PartBox struct {
 	// and Ctrl+O leaves it as it is. A click on its header still expands
 	// and collapses it.
 	KeepExpanded bool
-	// Marked reports whether the box shows Marker as /settings says, as a
+	// Marked reports whether the box shows Marker as /config says, as a
 	// tool call does.
 	Marked bool
 	// MarkerShape is the symbol of Marker, as SetMarkerShape sets it.
@@ -438,7 +438,7 @@ func EnclosingScrollBox(r render.Renderable) *widget.ScrollBox {
 }
 
 // ToolMarker marks the header of every tool call, at the left edge of its
-// box, before the tool's name, when /settings shows it, in the symbol of the
+// box, before the tool's name, when /config shows it, in the symbol of the
 // default MarkerShape.
 var ToolMarker = MarkerSquare.Glyph()
 

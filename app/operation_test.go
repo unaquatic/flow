@@ -359,13 +359,13 @@ func TestSend_KeepsReasoningOfTheModelThatRuns(t *testing.T) {
 	stored := func(role message.Role, provider agent.ProviderID, model string, parts ...message.ContentPart) {
 		appendMessage(t, a.sessions, "ses_mixed", &message.Content{ID: message.NewID(), Role: role, Provider: provider, Model: model, Parts: parts})
 	}
-	stored(message.RoleUser, providerA, "provider-a/model-a:fast:high", message.TextPart{Text: "hi"})
-	stored(message.RoleAgent, providerA, "provider-a/model-a:fast:high", message.ReasoningPart{Text: "own"}, message.TextPart{Text: "one"})
+	stored(message.RoleUser, providerA, "lab-a/model-a:fast:high", message.TextPart{Text: "hi"})
+	stored(message.RoleAgent, providerA, "lab-a/model-a:fast:high", message.ReasoningPart{Text: "own"}, message.TextPart{Text: "one"})
 	stored(message.RoleUser, "provider-b", "model-x", message.TextPart{Text: "and you?"})
 	stored(message.RoleAgent, "provider-b", "model-x", message.ReasoningPart{Text: "other"}, message.TextPart{Text: "two"})
 
 	events := a.Subscribe(t.Context())
-	send(t, a, "ses_mixed", SendInput{Text: "again", Model: "provider-a/provider-a/model-a:xhigh"})
+	send(t, a, "ses_mixed", SendInput{Text: "again", Model: "provider-a/lab-a/model-a:xhigh"})
 	collectUntilIdle(t, events)
 
 	if len(gw.StreamCalls) != 1 {
@@ -1040,9 +1040,9 @@ func TestSend_RecordsVariant(t *testing.T) {
 	tests := []struct {
 		model, want string
 	}{
-		{model: "provider-a/provider-a/model-a:fast:high", want: "provider-a/model-a:fast:high"},
-		{model: "provider-a/provider-a/model-a:xhigh", want: "provider-a/model-a:xhigh"},
-		{model: "provider-a/provider-a/model-a", want: "provider-a/model-a:medium"},
+		{model: "provider-a/lab-a/model-a:fast:high", want: "lab-a/model-a:fast:high"},
+		{model: "provider-a/lab-a/model-a:xhigh", want: "lab-a/model-a:xhigh"},
+		{model: "provider-a/lab-a/model-a", want: "lab-a/model-a:medium"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.model, func(t *testing.T) {
@@ -1055,8 +1055,8 @@ func TestSend_RecordsVariant(t *testing.T) {
 			send(t, a, "ses_variant", SendInput{Text: "hi", Model: tt.model})
 			got := collectUntilIdle(t, events)
 
-			if !slices.Equal(gw.StreamModels, []string{"model-a"}) {
-				t.Errorf("provider got models %q, want model-a", gw.StreamModels)
+			if !slices.Equal(gw.StreamModels, []string{"lab-a/model-a"}) {
+				t.Errorf("provider got models %q, want lab-a/model-a", gw.StreamModels)
 			}
 			// The system message names no model: no model wrote it.
 			ended := slices.DeleteFunc(eventsOfType[EventMessageEnded](got), func(e EventMessageEnded) bool {

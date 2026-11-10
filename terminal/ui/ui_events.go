@@ -91,7 +91,14 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnInputStyleSet(e)
 	case EventInputHintChanged:
 		ui.OnInputHintChanged(e)
+	case EventClipboardCopy:
+		ui.OnClipboardCopy(e)
 	}
+}
+
+// OnClipboardCopy puts e's text on the clipboard and reports how that went.
+func (ui *UI) OnClipboardCopy(e EventClipboardCopy) {
+	ui.Apply(ui.service.CompleteCopy(ui.CopyToClipboard(e.Text)))
 }
 
 // OnInputHintChanged shows the hint the empty input now shows.

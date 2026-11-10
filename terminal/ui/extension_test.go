@@ -86,7 +86,7 @@ func newExtensionTestUI(t *testing.T) *UI {
 
 // TestExtension_PartView checks that a part an extension shows gets the
 // extension's view, in the transcript's style, which follows the parts and
-// the style /settings sets.
+// the style /config sets.
 func TestExtension_PartView(t *testing.T) {
 	ui := newExtensionTestUI(t)
 	ui.AddMessage(agentParts("a1", message.TextPart{ID: "a1-text", Text: "hi"}, notePart{ID: "a1-note", Text: "one"}))

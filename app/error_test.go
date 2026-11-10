@@ -65,6 +65,7 @@ func TestErrorOfCode(t *testing.T) {
 		{ErrNoBranches, CodeNoBranches},
 		{extension.ErrRefused, CodeRefused},
 		{ErrModelFormat, CodeInvalidModel},
+		{ErrNoModelSet, CodeNoModelSet},
 		{ErrNoModel, CodeModelNotFound},
 		{agent.ErrModelNotFound, CodeModelNotFound},
 		{agent.ErrVariantNotFound, CodeModelNotFound},

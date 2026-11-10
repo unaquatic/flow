@@ -52,7 +52,7 @@ func (f *fork) Fork(_ context.Context, model string, msgs ...agent.Message) (*ag
 // titling returns the titling of a session titled title, forked with f.
 func titling(f *fork, title string) extension.Titling {
 	return extension.Titling{
-		Prompt:  extension.Prompt{SessionID: "ses_a", MessageID: "msg_a", Text: "fix the login loop", Model: "provider-a/model-a:high"},
+		Prompt:  extension.Prompt{SessionID: "ses_a", MessageID: "msg_a", Text: "fix the login loop", Model: "provider-a/lab-a/model-a:high"},
 		History: []agent.Message{agent.NewUserMessage("fix the login loop")},
 		Title:   title,
 		Fork:    f.Fork,
@@ -65,8 +65,8 @@ func TestLoad(t *testing.T) {
 	if e := load(t, `{"enabled": false}`); e != nil {
 		t.Errorf("disabled settings loaded %v, want none", e)
 	}
-	e, ok := load(t, `{"model": " provider-a/model-small "}`).(*Extension)
-	if !ok || e.Model != "provider-a/model-small" {
+	e, ok := load(t, `{"model": " provider-a/lab-a/model-small "}`).(*Extension)
+	if !ok || e.Model != "provider-a/lab-a/model-small" {
 		t.Fatalf("loaded %+v, want the extension with the model the settings name", e)
 	}
 }
@@ -90,11 +90,11 @@ func TestTitle(t *testing.T) {
 		t.Errorf("forked with %+v, want Ask of the current title", f.asks)
 	}
 
-	e.Model = "provider-a/model-small"
+	e.Model = "provider-a/lab-a/model-small"
 	if _, err := e.Title(ctx, titling(f, "")); err != nil {
 		t.Fatal(err)
 	}
-	if got := f.models[1]; got != "provider-a/model-small" {
+	if got := f.models[1]; got != "provider-a/lab-a/model-small" {
 		t.Errorf("forked to %q, want the model the settings name", got)
 	}
 }

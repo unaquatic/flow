@@ -3,6 +3,7 @@ package agent_test
 import (
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/unaquatic/catalog/gateway"
@@ -21,42 +22,42 @@ const (
 // models have: effort lists, token budgets, a toggle, and fast and pro
 // modes, and a model-d whose effort list holds levels flow does not know,
 // light and xxxhigh, and the nil and "default" values that name none. A
-// gateway, router, serves model-a too, which it ties to provider-a's.
+// gateway, router, serves lab-a/model-a too, the model provider-a serves.
 const variantDoc = `{
 "provider-b":{"id":"provider-b","format":"messages","models":{
-  "model-f":{"id":"model-f","reasoning":true,"limit":{"context":200000,"output":64000},
+  "lab-b/model-f":{"id":"lab-b/model-f","reasoning":true,"limit":{"context":200000,"output":64000},
     "reasoning_options":[{"type":"budget_tokens","min":1024}]},
-  "model-g":{"id":"model-g","reasoning":true,"limit":{"context":200000,"output":64000},
+  "lab-b/model-g":{"id":"lab-b/model-g","reasoning":true,"limit":{"context":200000,"output":64000},
     "reasoning_options":[{"type":"toggle"},{"type":"effort","values":["low","medium","high"]},{"type":"budget_tokens","min":1024}]},
-  "model-h":{"id":"model-h","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-b/model-h":{"id":"lab-b/model-h","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["low","medium","high","max"]},{"type":"budget_tokens","min":1024}]},
-  "model-i":{"id":"model-i","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-b/model-i":{"id":"lab-b/model-i","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}],
     "cost":{"input":5,"output":25},
     "experimental":{"modes":{"fast":{"cost":{"input":10,"output":50},
       "provider":{"body":{"speed":"fast"},"headers":{"provider-beta":"fast-mode-2026-02-01"}}}}}},
-  "model-j":{"id":"model-j","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-b/model-j":{"id":"lab-b/model-j","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"toggle"},{"type":"effort","values":["low","medium","high","xhigh","max"]}]}
 }},
 "provider-a":{"id":"provider-a","format":"responses","models":{
-  "model-e":{"id":"model-e","limit":{"context":1000000,"output":32768}},
-  "model-b":{"id":"model-b","reasoning":true,"limit":{"context":400000,"output":128000},
+  "lab-a/model-e":{"id":"lab-a/model-e","limit":{"context":1000000,"output":32768}},
+  "lab-a/model-b":{"id":"lab-a/model-b","reasoning":true,"limit":{"context":400000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["minimal","low","medium","high"]}]},
-  "model-c-pro":{"id":"model-c-pro","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-a/model-c-pro":{"id":"lab-a/model-c-pro","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["medium","high","xhigh"]}]},
-  "model-c":{"id":"model-c","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-a/model-c":{"id":"lab-a/model-c","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh"]}],
     "experimental":{"modes":{"pro":{"provider":{"body":{"reasoning":{"mode":"pro"}}}}}}},
-  "model-a":{"id":"model-a","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-a/model-a":{"id":"lab-a/model-a","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh","max"]}],
     "experimental":{"modes":{
       "fast":{"provider":{"body":{"service_tier":"priority"}}},
       "pro":{"provider":{"body":{"reasoning":{"mode":"pro"}}}}}}},
-  "model-d":{"id":"model-d","reasoning":true,"limit":{"context":1000000,"output":128000},
+  "lab-a/model-d":{"id":"lab-a/model-d","reasoning":true,"limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["light","low","medium","high","max","xxxhigh",null,"default"]}]}
 }},
 "router":{"id":"router","models":{
-  "provider-a/model-a":{"id":"provider-a/model-a","canonical_model_id":"provider-a/model-a","reasoning":true,
+  "lab-a/model-a":{"id":"lab-a/model-a","reasoning":true,
     "limit":{"context":1000000,"output":128000},
     "reasoning_options":[{"type":"effort","values":["low","medium","high"]}]}
 }}}`
@@ -69,12 +70,14 @@ func variantCatalog(t *testing.T) *gateway.Catalog {
 }
 
 // catalogModel returns the offering of model id, without its lab, of
-// provider p in variantDoc.
+// provider p in variantDoc, whose models of provider-a are lab-a's, and
+// of provider-b lab-b's.
 func catalogModel(t *testing.T, p agent.ProviderID, id string) gateway.Offering {
 	t.Helper()
-	off, ok := agent.Lookup(variantCatalog(t), agent.Variant{Provider: p, Model: string(p) + "/" + id})
+	model := strings.Replace(string(p), "provider-", "lab-", 1) + "/" + id
+	off, ok := agent.Lookup(variantCatalog(t), agent.Variant{Provider: p, Model: model})
 	if !ok {
-		t.Fatalf("variantDoc lists no %s/%s", p, id)
+		t.Fatalf("variantDoc lists no %s at %s", model, p)
 	}
 	return off
 }
@@ -171,34 +174,34 @@ func TestParseVariant(t *testing.T) {
 		in   string
 		want agent.Variant
 	}{
-		{"provider-a/provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a"}},
-		{"provider-a/provider-a/model-a:high", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "high"}},
-		{"provider-a/provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}},
+		{"provider-a/lab-a/model-a", agent.Variant{Provider: providerA, Model: "lab-a/model-a"}},
+		{"provider-a/lab-a/model-a:high", agent.Variant{Provider: providerA, Model: "lab-a/model-a", Effort: "high"}},
+		{"provider-a/lab-a/model-a:fast", agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: "fast"}},
 		// A pro mode is a model of its own.
-		{"provider-a/provider-a/model-a-pro:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "none"}},
-		{"provider-a/provider-a/model-a:pro", agent.Variant{Provider: providerA, Model: "provider-a/model-a:pro"}},
+		{"provider-a/lab-a/model-a-pro:none", agent.Variant{Provider: providerA, Model: "lab-a/model-a-pro", Effort: "none"}},
+		{"provider-a/lab-a/model-a:pro", agent.Variant{Provider: providerA, Model: "lab-a/model-a:pro"}},
 		// A model ID without its lab is not the catalog's.
 		{"provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "model-a:fast"}},
-		{"router/provider-a/model-a:high", agent.Variant{Provider: "router", Model: "provider-a/model-a", Effort: "high"}},
-		{"provider-b/provider-b/model-i:fast:max", agent.Variant{Provider: providerB, Model: "provider-b/model-i", Option: "fast", Effort: "max"}},
+		{"router/lab-a/model-a:high", agent.Variant{Provider: "router", Model: "lab-a/model-a", Effort: "high"}},
+		{"provider-b/lab-b/model-i:fast:max", agent.Variant{Provider: providerB, Model: "lab-b/model-i", Option: "fast", Effort: "max"}},
 		// A model without a provider names none, and stays whole.
 		{"model-i:fast:max", agent.Variant{Model: "model-i:fast:max"}},
 		// The catalog's IDs are lower case, and name a variant whatever its
 		// case.
-		{"provider-a/PROVIDER-A/MODEL-A:Fast:HIGH", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}},
+		{"provider-a/LAB-A/MODEL-A:Fast:HIGH", agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: "fast", Effort: "high"}},
 		// A model named with a mode, as no variant is, is not the catalog's.
-		{"provider-a/provider-a/model-a-fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a-fast"}},
+		{"provider-a/lab-a/model-a-fast", agent.Variant{Provider: providerA, Model: "lab-a/model-a-fast"}},
 		// A level the model does not list is part of the ID.
-		{"provider-a/provider-a/model-b:none", agent.Variant{Provider: providerA, Model: "provider-a/model-b:none"}},
+		{"provider-a/lab-a/model-b:none", agent.Variant{Provider: providerA, Model: "lab-a/model-b:none"}},
 		// A listed ID is never cut, though it ends in a mode's name.
-		{"provider-a/provider-a/model-c-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-c-pro"}},
+		{"provider-a/lab-a/model-c-pro", agent.Variant{Provider: providerA, Model: "lab-a/model-c-pro"}},
 		// A variant the model lacks stays whole.
-		{"provider-a/provider-a/model-b:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-b:fast"}},
+		{"provider-a/lab-a/model-b:fast", agent.Variant{Provider: providerA, Model: "lab-a/model-b:fast"}},
 		// A suffix that names no level is part of the ID.
 		{"provider-a/ft:model-b:org", agent.Variant{Provider: providerA, Model: "ft:model-b:org"}},
 		// A level the catalog lists is one, though flow does not know it.
-		{"provider-a/provider-a/model-d:XXXHIGH", agent.Variant{Provider: providerA, Model: "provider-a/model-d", Effort: "xxxhigh"}},
-		{"provider-a/provider-a/model-d:bogus", agent.Variant{Provider: providerA, Model: "provider-a/model-d:bogus"}},
+		{"provider-a/lab-a/model-d:XXXHIGH", agent.Variant{Provider: providerA, Model: "lab-a/model-d", Effort: "xxxhigh"}},
+		{"provider-a/lab-a/model-d:bogus", agent.Variant{Provider: providerA, Model: "lab-a/model-d:bogus"}},
 	}
 	for _, tt := range tests {
 		got := agent.ParseVariant(tt.in, cat)
@@ -213,11 +216,11 @@ func TestParseVariant(t *testing.T) {
 func TestVariantString(t *testing.T) {
 	cat := variantCatalog(t)
 	for _, s := range []string{
-		"provider-a/provider-a/model-a",
-		"provider-a/provider-a/model-a:fast",
-		"provider-a/provider-a/model-a-pro:xhigh",
-		"provider-b/provider-b/model-j:high",
-		"router/provider-a/model-a:high",
+		"provider-a/lab-a/model-a",
+		"provider-a/lab-a/model-a:fast",
+		"provider-a/lab-a/model-a-pro:xhigh",
+		"provider-b/lab-b/model-j:high",
+		"router/lab-a/model-a:high",
 	} {
 		v := agent.ParseVariant(s, cat)
 		if got := v.String(); got != s || got != string(v.Provider)+"/"+v.Ref() {
@@ -225,8 +228,8 @@ func TestVariantString(t *testing.T) {
 		}
 	}
 	// Levels are written in lower case, as the catalog lists them.
-	if got := agent.ParseVariant("provider-a/provider-a/model-a:NONE", cat).String(); got != "provider-a/provider-a/model-a:none" {
-		t.Errorf("String = %q, want provider-a/provider-a/model-a:none", got)
+	if got := agent.ParseVariant("provider-a/lab-a/model-a:NONE", cat).String(); got != "provider-a/lab-a/model-a:none" {
+		t.Errorf("String = %q, want provider-a/lab-a/model-a:none", got)
 	}
 	// No model writes as none, not "/", and reads back as none.
 	if got := (agent.Variant{}).String(); got != "" {
@@ -252,11 +255,11 @@ func TestVariantRef(t *testing.T) {
 		provider agent.ProviderID
 		ref      string
 	}{
-		{providerA, "provider-a/model-a"},
-		{providerA, "provider-a/model-a:fast"},
-		{providerA, "provider-a/model-a-pro:xhigh"},
-		{providerB, "provider-b/model-j:high"},
-		{"router", "provider-a/model-a:high"},
+		{providerA, "lab-a/model-a"},
+		{providerA, "lab-a/model-a:fast"},
+		{providerA, "lab-a/model-a-pro:xhigh"},
+		{providerB, "lab-b/model-j:high"},
+		{"router", "lab-a/model-a:high"},
 		// A model the catalog does not list keeps the ID it is named by.
 		{providerA, "model-b:fast"},
 	}
@@ -275,19 +278,19 @@ func TestVariantRef(t *testing.T) {
 // order, each tier and mode after the variant it is of.
 func TestVariants(t *testing.T) {
 	cat := variantCatalog(t)
-	v := agent.Variant{Provider: providerA, Model: "provider-a/model-a"}
+	v := agent.Variant{Provider: providerA, Model: "lab-a/model-a"}
 	off, _ := agent.Lookup(cat, v)
 	var got []string
 	for _, w := range agent.Variants(v.Provider, v.Model, off) {
 		got = append(got, w.String())
 	}
-	if want := []string{"provider-a/provider-a/model-a", "provider-a/provider-a/model-a:fast"}; !slices.Equal(got, want) {
+	if want := []string{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:fast"}; !slices.Equal(got, want) {
 		t.Errorf("Variants = %q, want %q", got, want)
 	}
 	// The pro model runs model-a with the pro mode's fields, as its call.
-	pro := agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro"}
+	pro := agent.Variant{Provider: providerA, Model: "lab-a/model-a-pro"}
 	off, ok := agent.Lookup(cat, pro)
-	if got := agent.Variants(pro.Provider, pro.Model, off); !ok || len(got) != 1 || off.ProviderOptions.ID != "model-a" || off.ProviderOptions.Body["reasoning"] == nil {
+	if got := agent.Variants(pro.Provider, pro.Model, off); !ok || len(got) != 1 || off.ProviderOptions.ID != "lab-a/model-a" || off.ProviderOptions.Body["reasoning"] == nil {
 		t.Errorf("pro variants = %v, offering %+v", got, off)
 	}
 }

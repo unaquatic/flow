@@ -26,7 +26,7 @@ type Extension interface {
 // PartView is the widget of one content part an extension shows. It takes
 // the place of the part among the parts of its message. A view that shows in
 // a PartBox, as Framed tells, behaves in the transcript as a tool call does:
-// Ctrl+O and /settings show it as they show the calls, and it stacks right
+// Ctrl+O and /config show it as they show the calls, and it stacks right
 // under a row above it while it shows as a row. A part the views of no
 // extension show is shown as Markdown, or not at all when it is
 // message.Metadata.
@@ -48,12 +48,12 @@ type SegmentView interface {
 
 // StyledView is a view that follows the transcript's ViewStyle beyond what
 // its PartBox follows, such as whether debug shows. The bubble sets it once
-// the view is made, and whenever /settings changes it.
+// the view is made, and whenever /config changes it.
 type StyledView interface {
 	SetViewStyle(ViewStyle)
 }
 
-// ViewStyle is how the transcript shows its parts, as /settings sets it.
+// ViewStyle is how the transcript shows its parts, as /config sets it.
 type ViewStyle struct {
 	// ToolMarkers shows ToolMarker before the name of each tool call.
 	ToolMarkers bool

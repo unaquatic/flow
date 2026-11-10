@@ -96,38 +96,66 @@ const StatusNone = "none"
 // them. The labels are in th's TextMuted. A nil th uses the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
-	var lines []style.StyledText
-	add := func(label string, value style.TextChunk) {
-		lines = append(lines, style.NewStyledText(dim(fmt.Sprintf("%-*s", statusLabelWidth, label)), value))
-	}
 	orNone := func(value string) style.TextChunk {
 		if value == "" {
 			return dim(StatusNone)
 		}
 		return style.Plain(value)
 	}
-	add("Version", style.Plain(info.Version))
-	add("Session", style.Plain(info.Session))
+	rows := []LabeledRow{
+		{"Version", style.Plain(info.Version)},
+		{"Session", style.Plain(info.Session)},
+	}
 	if info.Title != "" {
-		add("Title", style.Plain(info.Title))
+		rows = append(rows, LabeledRow{"Title", style.Plain(info.Title)})
 	}
 	if !info.Updated.IsZero() {
-		add("Updated", style.Plain(info.Updated.Local().Format(time.DateTime)))
+		rows = append(rows, LabeledRow{"Updated", style.Plain(info.Updated.Local().Format(time.DateTime))})
 	}
-	add("Messages", style.Plain(strconv.Itoa(info.Messages)))
-	add("Provider", orNone(info.Provider))
-	add("Model", orNone(info.Model))
-	context := FormatTokens(info.Usage.Context)
-	if info.Usage.Window > 0 {
-		context += " / " + FormatTokens(info.Usage.Window) + " " + ContextPercent(info.Usage)
+	rows = append(rows,
+		LabeledRow{"Messages", style.Plain(strconv.Itoa(info.Messages))},
+		LabeledRow{"Provider", orNone(info.Provider)},
+		LabeledRow{"Model", orNone(info.Model)},
+		LabeledRow{"Context", ContextValue(info.Usage, th)},
+		LabeledRow{"Directory", style.Plain(info.Directory)},
+	)
+	return LabeledLines(rows, statusLabelWidth, th)
+}
+
+// LabeledRow is a row of a notice laid out as a column of labels and their
+// values, such as the session info.
+type LabeledRow struct {
+	// Label names the value.
+	Label string
+	// Value is what the row shows after the label.
+	Value style.TextChunk
+}
+
+// LabeledLines returns rows as lines, each its label padded to width cells
+// in th's TextMuted, then its value. A nil th uses the default theme.
+func LabeledLines(rows []LabeledRow, width int, th *style.Theme) []style.StyledText {
+	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
+	lines := make([]style.StyledText, len(rows))
+	for i, r := range rows {
+		lines[i] = style.NewStyledText(dim(PadWidth(r.Label, width)), r.Value)
 	}
-	chunk := style.Plain(context)
-	if fg, ok := ContextWarnFg(info.Usage, th); ok {
-		chunk = style.New().WithFg(fg).Func()(context)
-	}
-	add("Context", chunk)
-	add("Directory", style.Plain(info.Directory))
 	return lines
+}
+
+// ContextValue returns the context of u as the session info shows it: the
+// tokens of the latest request, the model's window and the share of it they
+// fill, such as "18K / 400K 5%", or the tokens alone when the window is not
+// known, in th's warning or danger color once they fill most of the window.
+// A nil th uses the default theme.
+func ContextValue(u SessionUsage, th *style.Theme) style.TextChunk {
+	context := FormatTokens(u.Context)
+	if u.Window > 0 {
+		context += " / " + FormatTokens(u.Window) + " " + ContextPercent(u)
+	}
+	if fg, ok := ContextWarnFg(u, th); ok {
+		return style.New().WithFg(fg).Func()(context)
+	}
+	return style.Plain(context)
 }
 
 // ShowInfo reports the running version and the active session in the

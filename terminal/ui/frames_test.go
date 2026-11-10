@@ -222,7 +222,7 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// A notice that names a model draws it in the primary color.
 		{name: "notice_keyword", w: 64, h: 4, add: func(ui *UI) {
-			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/provider-a/model-a:high", " as the default model"))
+			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/lab-a/model-a:high", " as the default model"))
 		}},
 		// The first start of a release an update installed tells of it
 		// under the session info, its version in the primary color.
@@ -281,6 +281,20 @@ func TestTranscriptFrames(t *testing.T) {
 			info.Provider, info.Model, info.Usage.Window = "", "", 0
 			ui.AddNotice(LogoNotice(nil, StatusLines(info, nil))...)
 		}},
+		// /usage shows the session's context, tokens, cost and worked time
+		// on the system surface, the context colored as /status colors it.
+		{name: "usage_notice", w: 48, h: 12, add: func(ui *UI) {
+			ui.AddNotice(Notice{Title: UsageTitle, Surface: NoticeSystem, Lines: UsageLines(UsageInfo{
+				Model:  "lab-a/model-a:high",
+				Usage:  SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000, Cost: 0.42, Context: 300_000, Window: 400_000},
+				Worked: 3*time.Minute + 12*time.Second,
+			}, nil)})
+		}},
+		// /help lists the commands and then the keys, names in the primary
+		// color.
+		{name: "help_notice", w: 72, h: 34, add: func(ui *UI) {
+			ui.AddNotice(Notice{Title: HelpTitle, Surface: NoticeSystem, Lines: HelpLines(SlashCommands)})
+		}},
 		// /new heads the emptied transcript with the new session's /status.
 		{name: "new_chat", h: 22, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines())...)
@@ -321,7 +335,7 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_usage", h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.SetCacheMode(CachePerMessage))
 			msg := agentText("a1", "Done.")
-			msg.Model = "provider-b/provider-b/model-d"
+			msg.Model = "provider-b/lab-b/model-d"
 			msg.Usage = message.Usage{InputTokens: 1200, OutputTokens: 300, CachedInputTokens: 1024, CacheCreationInputTokens: 176}
 			ui.AddMessage(msg)
 		}},
@@ -387,7 +401,7 @@ func TestTranscriptFrames(t *testing.T) {
 			todoTurn(ui)
 			clickTool(ui, "a1", 1)
 		}},
-		// Hiding the tool marker in /settings leaves the padding before each
+		// Hiding the tool marker in /config leaves the padding before each
 		// row blank, and the rows' text where it was.
 		{name: "agent_tool_rows_no_marker", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
@@ -399,7 +413,7 @@ func TestTranscriptFrames(t *testing.T) {
 			toolRowsTurn(ui)
 			ui.Apply(ui.service.SetToolColor(ToolNameWhite))
 		}},
-		// Expanded boxed, as /settings sets them, the calls show their
+		// Expanded boxed, as /config sets them, the calls show their
 		// details in a block on the success surface, between rows of
 		// padding.
 		{name: "agent_tool_expanded_boxed", h: 24, add: func(ui *UI) {
@@ -465,7 +479,7 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "fix the divide test"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check.\n\nThe tests pass now."))
 		}},
-		// The marker shape set in /settings marks the calls, the cache rows,
+		// The marker shape set in /config marks the calls, the cache rows,
 		// and the footer alike: here an unfilled circle.
 		{name: "agent_tool_rows_circle", h: 10, add: func(ui *UI) {
 			toolRowsTurn(ui)
@@ -680,7 +694,7 @@ func TestToolBoxHeaderFrames(t *testing.T) {
 }
 
 // TestUsageBoxFrames draws a usage box once shown, which it is not by
-// default, as /settings shows tool calls: collapsed to its header, a row,
+// default, as /config shows tool calls: collapsed to its header, a row,
 // with the marker when it is on, and expanded to every count the provider
 // reported, on the canvas, or in a block on the surface when boxed.
 func TestUsageBoxFrames(t *testing.T) {
@@ -824,7 +838,7 @@ func TestInputFrames(t *testing.T) {
 			ui.ShowSlashMenu(ui.service.SlashMenuItems("/st"))
 		}},
 		// In the bar input style, the default, the marker follows the shape
-		// /settings sets: in the primary color before the input, and in the
+		// /config sets: in the primary color before the input, and in the
 		// color of a panel's title before it.
 		{name: "input_bar_circle", h: 15, open: func(ui *UI) {
 			ui.Apply(ui.service.SetMarkerShape(MarkerCircle))
@@ -912,7 +926,7 @@ func TestSlashStatusFrames(t *testing.T) {
 		usage SessionUsage
 		// pinned pins the box and draws it with the slash menu closed.
 		pinned bool
-		// noMarker hides the tool marker, as /settings does.
+		// noMarker hides the tool marker, as /config does.
 		noMarker bool
 		// expanded expands tool calls, as Ctrl+O does.
 		expanded bool
@@ -938,7 +952,7 @@ func TestSlashStatusFrames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.SetInputText("hello")
-			ui.SetModelLabel("provider-a/provider-a/model-h:medium")
+			ui.SetModelLabel("provider-a/lab-a/model-h:medium")
 			ui.SetUsage(tt.usage)
 			ui.service.state.Messages = []ChatMessage{{ID: "a1", Role: message.RoleAgent, Worked: 3*time.Minute + 12*time.Second}}
 			if tt.noMarker {
@@ -1056,6 +1070,10 @@ func TestIndicatorFrames(t *testing.T) {
 		// tool call's row starts with its marker and name.
 		{name: "indicator_error", h: 11, add: replyStarted,
 			show: ErrorIndicator(app.ErrorOf(&agent.RequestError{Err: &url.Error{Op: "Post", URL: "https://api.example.com/v1/messages", Err: io.EOF}}))},
+		// A prompt sent with no model and no default model says so, and
+		// names the command that picks one.
+		{name: "indicator_no_model", h: 6, add: func(*UI) {},
+			show: ErrorIndicator(app.ErrorOf(app.ErrNoModelSet))},
 		// A provider's error names the provider and status, over the body it
 		// answered with, formatted and highlighted, in a box filled as a
 		// tool's is.
@@ -1159,7 +1177,7 @@ func TestWorkedFrames(t *testing.T) {
 		// A reply that read and wrote no cache shows no cache use.
 		{name: "worked_cache_miss", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Done.")
-			msg.Model = "provider-a/provider-a/model-b"
+			msg.Model = "provider-a/lab-a/model-b"
 			msg.Usage = message.Usage{InputTokens: 1200, OutputTokens: 300}
 			msg.Worked = 42 * time.Second
 			ui.AddMessage(msg)
@@ -1179,7 +1197,7 @@ func TestWorkedFrames(t *testing.T) {
 		{name: "worked_loaded", h: 20, add: func(ui *UI) {
 			ui.Apply(ui.service.SetCacheMode(CachePerMessage))
 			modelD := func(msg ChatMessage) ChatMessage {
-				msg.Model = "provider-b/provider-b/model-d:high"
+				msg.Model = "provider-b/lab-b/model-d:high"
 				return msg
 			}
 			first := modelD(agentParts("a1", bash))
@@ -1645,7 +1663,7 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_loading", h: 7, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{Title: "Models", Text: "Loading models..."})
 		}},
-		// While debug is off, /settings shows fullscreen and debug alone.
+		// While debug is off, /config shows fullscreen and debug alone.
 		{name: "banner_settings_menu", h: 7, open: func(ui *UI) {
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
@@ -1654,7 +1672,7 @@ func TestMenuFrames(t *testing.T) {
 			ui.Apply(ui.service.SetDebug(true))
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
-		// In the filled input style, /settings fills the box, its title
+		// In the filled input style, /config fills the box, its title
 		// unmarked.
 		{name: "banner_settings_filled", h: 7, open: func(ui *UI) {
 			ui.Apply(ui.service.SetInputStyle(InputFilled))
@@ -1671,10 +1689,10 @@ func TestMenuFrames(t *testing.T) {
 		// The model menu names each model by the catalog's name of its
 		// variant, such as "Model A Fast", and then, dim, in aligned
 		// columns, its variant ID and its provider, such as
-		// "provider-a/provider-a/model-a:fast   [provider-a]", with the terminal's
+		// "provider-a/lab-a/model-a:fast   [provider-a]", with the terminal's
 		// model selected.
 		{name: "banner_model_menu", h: 13, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:fast:high"))
+			ui.Apply(ui.service.SelectModel("provider-a/lab-a/model-a:fast:high"))
 			ui.service.OpenBanner(ModelBanner)
 			cat := ui.service.app.Models().Catalog()
 			ui.Apply(ui.service.ModelsListed([]app.ModelListing{
@@ -1685,14 +1703,14 @@ func TestMenuFrames(t *testing.T) {
 		// The model menu's next page: the levels the chosen model takes,
 		// with the default marked and the one it would run at selected.
 		{name: "banner_model_effort", h: 14, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:high"))
-			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast"}))
+			ui.Apply(ui.service.SelectModel("provider-a/lab-a/model-a:high"))
+			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: "fast"}))
 		}},
-		// The default is marked on the selected row too, as /effort shows it
+		// The default is marked on the selected row too, as the page shows it
 		// for a model that runs at its default.
 		{name: "banner_effort_default_selected", h: 14, open: func(ui *UI) {
-			ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a:medium"))
-			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "provider-a/model-a"}))
+			ui.Apply(ui.service.SelectModel("provider-a/lab-a/model-a:medium"))
+			ui.Apply(ui.service.ShowEffortMenu(agent.Variant{Provider: providerA, Model: "lab-a/model-a"}))
 		}},
 		// Under the fill selection style, → on the Selection setting fills
 		// the selected row in the primary color, a cell in from either edge,

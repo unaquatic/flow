@@ -1,0 +1,73 @@
+=== text ===
+|■ Help                                                                  |
+|  /resume      Resume a session from history                            |
+|  /new         Clear the chat and start over                            |
+|  /model       Switch the model and effort                              |
+|  /status      Show the version and session info                        |
+|  /usage       Show context, tokens and cost                            |
+|  /undo        Move the workspace back one turn                         |
+|  /redo        Move the workspace forward one turn                      |
+|  /continue    Continue from where the chat ends                        |
+|  /checkout    Check out a point in the session tree                    |
+|  /copy        Copy the last reply                                      |
+|  /export      Save the chat as Markdown                                |
+|  /config      Change the settings                                      |
+|  /login       Authenticate with a provider account                     |
+|  /help        List commands and keys                                   |
+|  /quit        Exit                                                     |
+|                                                                        |
+|  enter        Send the prompt, or queue it during a run                |
+|  shift+enter  Start a new line                                         |
+|  alt+enter    Send now, stopping the run                               |
+|  esc          Stop the run                                             |
+|  ctrl+c       Clear the input, or quit when pressed twice              |
+|  ctrl+o       Expand or collapse the tool calls                        |
+|  ctrl+u       Pin or unpin the usage box                               |
+|  shift+tab    Cycle the reasoning effort                               |
+|  pgup/pgdn    Scroll the transcript                                    |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== fg ===
+|A AAAA                                                                  |
+|  BBBBBBB      AAAAAA A AAAAAAA AAAA AAAAAAA                            |
+|  BBBB         AAAAA AAA AAAA AAA AAAAA AAAA                            |
+|  BBBBBB       AAAAAA AAA AAAAA AAA AAAAAA                              |
+|  BBBBBBB      AAAA AAA AAAAAAA AAA AAAAAAA AAAA                        |
+|  BBBBBB       AAAA AAAAAAAA AAAAAA AAA AAAA                            |
+|  BBBBB        AAAA AAA AAAAAAAAA AAAA AAA AAAA                         |
+|  BBBBB        AAAA AAA AAAAAAAAA AAAAAAA AAA AAAA                      |
+|  BBBBBBBBB    AAAAAAAA AAAA AAAAA AAA AAAA AAAA                        |
+|  BBBBBBBBB    AAAAA AAA A AAAAA AA AAA AAAAAAA AAAA                    |
+|  BBBBB        AAAA AAA AAAA AAAAA                                      |
+|  BBBBBBB      AAAA AAA AAAA AA AAAAAAAA                                |
+|  BBBBBBB      AAAAAA AAA AAAAAAAA                                      |
+|  BBBBBB       AAAAAAAAAAAA AAAA A AAAAAAAA AAAAAAA                     |
+|  BBBBB        AAAA AAAAAAAA AAA AAAA                                   |
+|  BBBBB        AAAA                                                     |
+|                                                                        |
+|  BBBBB        AAAA AAA AAAAAAA AA AAAAA AA AAAAAA A AAA                |
+|  BBBBBBBBBBB  AAAAA A AAA AAAA                                         |
+|  BBBBBBBBB    AAAA AAAA AAAAAAAA AAA AAA                               |
+|  BBB          AAAA AAA AAA                                             |
+|  BBBBBB       AAAAA AAA AAAAAA AA AAAA AAAA AAAAAAA AAAAA              |
+|  BBBBBB       AAAAAA AA AAAAAAAA AAA AAAA AAAAA                        |
+|  BBBBBB       AAA AA AAAAA AAA AAAAA AAA                               |
+|  BBBBBBBBB    AAAAA AAA AAAAAAAAA AAAAAA                               |
+|  BBBBBBBBB    AAAAAA AAA AAAAAAAAAA                                    |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== legend ===
+A #e6e6e6
+B #ff5f00

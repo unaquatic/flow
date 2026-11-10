@@ -352,7 +352,7 @@ func (cm *ChatMessageBox) ClearPinned(buf *buffer.Buffer, _ time.Duration) {
 // container, from its top down to the blank row that ends it, which is the
 // container's padding and so outside the bar, in the padding before its
 // prose. It is laid out apart from the bubble's rows, so it moves none of
-// them. Each of its rows shows Shape in Color, the marker shape /settings
+// them. Each of its rows shows Shape in Color, the marker shape /config
 // sets, and for a filled shape the column is filled with Color.
 type PromptRail struct {
 	*widget.Box

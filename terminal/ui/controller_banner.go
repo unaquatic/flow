@@ -11,7 +11,7 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// settingValueColumn is the column the /settings values start at, which
+// settingValueColumn is the column the /config values start at, which
 // keeps them well to the right of the setting names.
 const settingValueColumn = 24
 
@@ -237,7 +237,7 @@ func (s *Service) HandleBannerCustom() (bool, []UIEvent) {
 // the session tree when its search matches none.
 const NoMatchesText = "[no matches]"
 
-// The names of the /settings rows, capitalized as a menu's words are:
+// The names of the /config rows, capitalized as a menu's words are:
 // fullscreenSetting names the row that switches fullscreen and inline mode,
 // cacheUsageSetting the row that sets the CacheMode, expandedSetting the row
 // that sets the ExpandedStyle of expanded tool calls, toolMarkerSetting the row that shows or hides

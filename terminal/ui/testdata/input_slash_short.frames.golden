@@ -3,9 +3,9 @@
 |                                                            |
 |  /resume                   Resume a session from history   |
 |  /new                      Clear the chat and start over   |
-|  /model                    Switch the model                |
-|  /effort                   Change the reasoning effort     |
+|  /model                    Switch the model and effort     |
 |  /status                   Show the version and session i  |
+|  /usage                    Show context, tokens and cost   |
 |                                                            |
 |■ hello                                                     |
 |                                                            |
@@ -16,9 +16,9 @@
 |                                                            |
 |  CCCCCCC                   CCCCCC C CCCCCCC CCCC CCCCCCC   |
 |  AAAA                      BBBBB BBB BBBB BBB BBBBB BBBB   |
-|  AAAAAA                    BBBBBB BBB BBBBB                |
-|  AAAAAAA                   BBBBBB BBB BBBBBBBBB BBBBBB     |
+|  AAAAAA                    BBBBBB BBB BBBBB BBB BBBBBB     |
 |  AAAAAAA                   BBBB BBB BBBBBBB BBB BBBBBBB B  |
+|  AAAAAA                    BBBB BBBBBBBB BBBBBB BBB BBBB   |
 |                                                            |
 |A AAAAA                                                     |
 |                                                            |

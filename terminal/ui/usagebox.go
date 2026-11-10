@@ -10,7 +10,7 @@ import (
 )
 
 // UsageBox is the PartBox of the token counts of a reply's request, which
-// its usage part records: a box like a tool call's, shown as /settings and
+// its usage part records: a box like a tool call's, shown as /config and
 // Ctrl+O show tool calls, with ToolMarker as they have it, whose header sums
 // the counts up and whose details list them all. It is gone until shown: the counts already show as
 // the reply's cache use and in the Usage box.

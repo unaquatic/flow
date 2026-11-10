@@ -230,7 +230,7 @@ func TreePrefix(p TreePlacement) string {
 	return b.String()
 }
 
-// SessionTree is the /tree view of a session's history: every branch drawn
+// SessionTree is the /checkout view of a session's history: every branch drawn
 // as a tree, with one row selected. A filter and the words of a search narrow
 // the rows; a listed message is drawn under the nearest listed message it
 // descends from.

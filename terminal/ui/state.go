@@ -173,7 +173,7 @@ const (
 )
 
 // CacheMode is where replies show the cache use of their requests, as
-// CacheText gives it, which /settings sets.
+// CacheText gives it, which /config sets.
 type CacheMode int
 
 const (
@@ -187,7 +187,7 @@ const (
 	CachePerMessage
 )
 
-// CacheModes lists the cache modes in the order /settings offers them.
+// CacheModes lists the cache modes in the order /config offers them.
 var CacheModes = [...]CacheMode{CacheOff, CachePerTurn, CachePerMessage}
 
 // Next returns the mode step places after m in CacheModes, or before it for
@@ -198,14 +198,14 @@ func (m CacheMode) Next(step int) CacheMode {
 
 // Cycle returns the value step places after v in values, or before it for a
 // negative step, going round from the last to the first and back, as a
-// setting's value moves in /settings.
+// setting's value moves in /config.
 func Cycle[T comparable](values []T, v T, step int) T {
 	n := len(values)
 	i := slices.Index(values, v)
 	return values[((i+step)%n+n)%n]
 }
 
-// String returns the name /settings shows for m, such as "Per turn".
+// String returns the name /config shows for m, such as "Per turn".
 func (m CacheMode) String() string {
 	switch m {
 	case CachePerTurn:
@@ -218,7 +218,7 @@ func (m CacheMode) String() string {
 }
 
 // ExpandedStyle is how the transcript shows an expanded tool call, which
-// /settings sets. A collapsed call shows as its header alone, one row on the
+// /config sets. A collapsed call shows as its header alone, one row on the
 // canvas, in every style, and the rows of consecutive collapsed calls stack
 // with no blank row between them.
 type ExpandedStyle int
@@ -232,7 +232,7 @@ const (
 	ExpandedBoxed
 )
 
-// ExpandedStyles lists the expanded styles in the order /settings offers
+// ExpandedStyles lists the expanded styles in the order /config offers
 // them.
 var ExpandedStyles = [...]ExpandedStyle{ExpandedPlain, ExpandedBoxed}
 
@@ -241,7 +241,7 @@ func (s ExpandedStyle) Next(step int) ExpandedStyle {
 	return Cycle(ExpandedStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Plain" or "Boxed".
+// String returns the name /config shows for s: "Plain" or "Boxed".
 func (s ExpandedStyle) String() string {
 	if s == ExpandedBoxed {
 		return "Boxed"
@@ -250,7 +250,7 @@ func (s ExpandedStyle) String() string {
 }
 
 // ToolNameColor is the color of the marker and the name of each tool call,
-// which /settings sets.
+// which /config sets.
 type ToolNameColor int
 
 const (
@@ -262,7 +262,7 @@ const (
 	ToolNameWhite
 )
 
-// ToolNameColors lists the tool name colors in the order /settings offers
+// ToolNameColors lists the tool name colors in the order /config offers
 // them.
 var ToolNameColors = [...]ToolNameColor{ToolNameGray, ToolNameWhite}
 
@@ -271,7 +271,7 @@ func (c ToolNameColor) Next(step int) ToolNameColor {
 	return Cycle(ToolNameColors[:], c, step)
 }
 
-// String returns the name /settings shows for c: "Gray" or "White".
+// String returns the name /config shows for c: "Gray" or "White".
 func (c ToolNameColor) String() string {
 	if c == ToolNameWhite {
 		return "White"
@@ -280,7 +280,7 @@ func (c ToolNameColor) String() string {
 }
 
 // MarkerShape is the symbol of the marker before each tool call's name,
-// ToolMarker, which /settings sets.
+// ToolMarker, which /config sets.
 type MarkerShape int
 
 const (
@@ -302,7 +302,7 @@ const (
 	MarkerBlock
 )
 
-// MarkerShapes lists the marker shapes in the order /settings offers them.
+// MarkerShapes lists the marker shapes in the order /config offers them.
 var MarkerShapes = [...]MarkerShape{
 	MarkerSquare, MarkerSquareOutline, MarkerRoundedOutline, MarkerCircle,
 	MarkerCircleOutline, MarkerDiamond, MarkerDiamondOutline, MarkerBlock,
@@ -333,7 +333,7 @@ func (m MarkerShape) Glyph() string { return markerShapeInfo[m].glyph }
 // a symbol drawn in it.
 func (m MarkerShape) Filled() bool { return m == MarkerBlock }
 
-// String returns the name /settings shows for m, after its symbol, such as
+// String returns the name /config shows for m, after its symbol, such as
 // "■ Square", or "Block" for MarkerBlock.
 func (m MarkerShape) String() string {
 	if m.Filled() {
@@ -352,7 +352,7 @@ func (c ToolNameColor) Fg(t *style.Theme) style.Color {
 }
 
 // KeyHintsMode is where the panels in the input box name their keys, which
-// /settings sets.
+// /config sets.
 type KeyHintsMode int
 
 const (
@@ -368,7 +368,7 @@ const (
 	KeyHintsFooter
 )
 
-// KeyHintsModes lists the key hint modes in the order /settings offers them.
+// KeyHintsModes lists the key hint modes in the order /config offers them.
 var KeyHintsModes = [...]KeyHintsMode{KeyHintsTitle, KeyHintsSubtitle, KeyHintsFooter}
 
 // Next returns the mode step places after m in KeyHintsModes, going round.
@@ -376,7 +376,7 @@ func (m KeyHintsMode) Next(step int) KeyHintsMode {
 	return Cycle(KeyHintsModes[:], m, step)
 }
 
-// String returns the name /settings shows for m: "Title", "Subtitle", or
+// String returns the name /config shows for m: "Title", "Subtitle", or
 // "Footer".
 func (m KeyHintsMode) String() string {
 	switch m {
@@ -390,7 +390,7 @@ func (m KeyHintsMode) String() string {
 }
 
 // CountPlace is where a list whose rows do not all fit counts them, as
-// TitleCount gives the count, such as "[3/20]", which /settings sets. The
+// TitleCount gives the count, such as "[3/20]", which /config sets. The
 // slash menu counts no rows in either place.
 type CountPlace int
 
@@ -402,7 +402,7 @@ const (
 	CountInTitle
 )
 
-// CountPlaces lists the count places in the order /settings offers them.
+// CountPlaces lists the count places in the order /config offers them.
 var CountPlaces = [...]CountPlace{CountBelow, CountInTitle}
 
 // Next returns the place step places after p in CountPlaces, going round.
@@ -410,7 +410,7 @@ func (p CountPlace) Next(step int) CountPlace {
 	return Cycle(CountPlaces[:], p, step)
 }
 
-// String returns the name /settings shows for p: "Below" or "Title".
+// String returns the name /config shows for p: "Below" or "Title".
 func (p CountPlace) String() string {
 	if p == CountInTitle {
 		return "Title"
@@ -418,7 +418,7 @@ func (p CountPlace) String() string {
 	return "Below"
 }
 
-// PromptStyle is how the transcript marks a prompt, which /settings sets.
+// PromptStyle is how the transcript marks a prompt, which /config sets.
 type PromptStyle int
 
 const (
@@ -431,7 +431,7 @@ const (
 	PromptFilled
 )
 
-// PromptStyles lists the prompt styles in the order /settings offers them.
+// PromptStyles lists the prompt styles in the order /config offers them.
 var PromptStyles = [...]PromptStyle{PromptBar, PromptFilled}
 
 // Next returns the style step places after s in PromptStyles, going round.
@@ -439,7 +439,7 @@ func (s PromptStyle) Next(step int) PromptStyle {
 	return Cycle(PromptStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Bar" or "Filled".
+// String returns the name /config shows for s: "Bar" or "Filled".
 func (s PromptStyle) String() string {
 	if s == PromptFilled {
 		return "Filled"
@@ -448,7 +448,7 @@ func (s PromptStyle) String() string {
 }
 
 // InputStyle is how the input box, and the panels that open in it, such as
-// the slash menu and /settings, show, which /settings sets.
+// the slash menu and /config, show, which /config sets.
 type InputStyle int
 
 const (
@@ -461,7 +461,7 @@ const (
 	InputFilled
 )
 
-// InputStyles lists the input styles in the order /settings offers them.
+// InputStyles lists the input styles in the order /config offers them.
 var InputStyles = [...]InputStyle{InputBar, InputFilled}
 
 // Next returns the style step places after s in InputStyles, going round.
@@ -469,7 +469,7 @@ func (s InputStyle) Next(step int) InputStyle {
 	return Cycle(InputStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Bar" or "Filled".
+// String returns the name /config shows for s: "Bar" or "Filled".
 func (s InputStyle) String() string {
 	if s == InputBar {
 		return "Bar"
@@ -479,7 +479,7 @@ func (s InputStyle) String() string {
 
 // SelectionStyle is how the lists in the input box, the slash menu, the
 // session list, a banner's menu, and the session tree, mark their selected
-// row, which /settings sets.
+// row, which /config sets.
 type SelectionStyle int
 
 const (
@@ -495,7 +495,7 @@ const (
 	SelectionArrow
 )
 
-// SelectionStyles lists the selection styles in the order /settings offers
+// SelectionStyles lists the selection styles in the order /config offers
 // them.
 var SelectionStyles = [...]SelectionStyle{SelectionFullWidth, SelectionFill, SelectionArrow}
 
@@ -504,7 +504,7 @@ func (s SelectionStyle) Next(step int) SelectionStyle {
 	return Cycle(SelectionStyles[:], s, step)
 }
 
-// String returns the name /settings shows for s: "Full width", "Fill", or
+// String returns the name /config shows for s: "Full width", "Fill", or
 // "Arrow".
 func (s SelectionStyle) String() string {
 	switch s {
@@ -634,41 +634,41 @@ type UIState struct {
 	// ToolsExpanded reports whether tool calls and the changes of each step
 	// show their details, which Ctrl+O toggles. They start collapsed.
 	ToolsExpanded bool
-	// ExpandStyle is how expanded tool calls show, which /settings sets. It
+	// ExpandStyle is how expanded tool calls show, which /config sets. It
 	// is ExpandedPlain by default.
 	ExpandStyle ExpandedStyle
 	// HideToolMarkers reports that tool calls show no ToolMarker before
-	// their name, which /settings sets. They show it by default.
+	// their name, which /config sets. They show it by default.
 	HideToolMarkers bool
-	// MarkerShape is the symbol of each tool call's marker, which /settings
+	// MarkerShape is the symbol of each tool call's marker, which /config
 	// sets. It is MarkerSquare by default.
 	MarkerShape MarkerShape
 	// ToolColor is the color of each tool call's marker and name, which
-	// /settings sets. It is ToolNameGray by default.
+	// /config sets. It is ToolNameGray by default.
 	ToolColor ToolNameColor
-	// Debug shows what helps debug flow, which /settings sets, such as the
+	// Debug shows what helps debug flow, which /config sets, such as the
 	// snapshot each prompt and reply ends with, by its hash, once taken. It
 	// is off by default.
 	Debug bool
 	// CacheMode is where replies show the cache use of their requests, which
-	// /settings sets. It is CacheOff by default.
+	// /config sets. It is CacheOff by default.
 	CacheMode CacheMode
-	// KeyHints is where the panels name their keys, which /settings sets. It
+	// KeyHints is where the panels name their keys, which /config sets. It
 	// is KeyHintsTitle by default.
 	KeyHints KeyHintsMode
 	// UsagePinned reports that the Usage box shows above the input box while
 	// the slash menu is closed too, which Ctrl+U toggles.
 	UsagePinned bool
 	// Count is where a list whose rows do not all fit counts them, which
-	// /settings sets. It is CountBelow by default.
+	// /config sets. It is CountBelow by default.
 	Count CountPlace
-	// Selection is how the menus mark their selected row, which /settings
+	// Selection is how the menus mark their selected row, which /config
 	// sets. It is SelectionFullWidth by default.
 	Selection SelectionStyle
-	// PromptStyle is how the transcript marks a prompt, which /settings
+	// PromptStyle is how the transcript marks a prompt, which /config
 	// sets. It is PromptBar by default.
 	PromptStyle PromptStyle
-	// InputStyle is how the input box and its panels show, which /settings
+	// InputStyle is how the input box and its panels show, which /config
 	// sets. It is InputBar by default.
 	InputStyle InputStyle
 }

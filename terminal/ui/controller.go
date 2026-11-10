@@ -26,7 +26,7 @@ type Service struct {
 	// relaunch is the session of another folder that RelaunchIn recorded,
 	// for readers off the event loop, as RelaunchID reads it.
 	relaunch atomic.Pointer[message.SessionID]
-	// Settings saves the settings /settings sets, each time one changes, or
+	// Settings saves the settings /config sets, each time one changes, or
 	// is nil to save none.
 	Settings SettingsStore
 	// Commands are the slash commands, in the order the menu offers them,

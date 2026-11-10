@@ -93,7 +93,7 @@ type UI struct {
 	inputFills []func(style.Color)
 	// noticeMarkers head the notices of the transcript that show as
 	// PromptBar shows a prompt, as NewNoticeBarRow makes them, so that
-	// /settings restyles them.
+	// /config restyles them.
 	noticeMarkers []*widget.Text
 	// indicatorRow lays out indicatorMarker and indicatorLabel on a row
 	// inside indicatorBox.
@@ -263,7 +263,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	restore := a.CaptureStderr()
 	defer restore()
 
-	// Start with the settings /settings saved last.
+	// Start with the settings /config saved last.
 	conf, err := a.Config()
 	if err != nil {
 		return Result{}, err

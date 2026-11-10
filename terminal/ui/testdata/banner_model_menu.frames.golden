@@ -1,12 +1,12 @@
 === text ===
 |■ Models [↑/↓ move] [tab custom] [esc cancel]                           |
 |                                                                        |
-|  Model A        provider-a/model-a        [provider-a]                 |
-|  Model A Fast   provider-a/model-a:fast   [provider-a]                 |
-|  Model A Pro    provider-a/model-a-pro    [provider-a]                 |
-|  Model B        provider-a/model-b        [provider-a]                 |
-|  Model B Fast   provider-a/model-b:fast   [provider-a]                 |
-|  Model G        provider-b/model-g        [provider-b]                 |
+|  Model A        lab-a/model-a        [provider-a]                      |
+|  Model A Fast   lab-a/model-a:fast   [provider-a]                      |
+|  Model A Pro    lab-a/model-a-pro    [provider-a]                      |
+|  Model B        lab-a/model-b        [provider-a]                      |
+|  Model B Fast   lab-a/model-b:fast   [provider-a]                      |
+|  Model G        lab-b/model-g        [provider-b]                      |
 |                                                                        |
 |■                                                                       |
 |                                                                        |
@@ -15,12 +15,12 @@
 === fg ===
 |A AAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                           |
 |                                                                        |
-|  AAAAA A        BBBBBBBBBBBBBBBBBB        BBBBBBBBBBBB                 |
-|  CCCCC C CCCC   CCCCCCCCCCCCCCCCCCCCCCC   CCCCCCCCCCCC                 |
-|  AAAAA A AAA    BBBBBBBBBBBBBBBBBBBBBB    BBBBBBBBBBBB                 |
-|  AAAAA A        BBBBBBBBBBBBBBBBBB        BBBBBBBBBBBB                 |
-|  AAAAA A AAAA   BBBBBBBBBBBBBBBBBBBBBBB   BBBBBBBBBBBB                 |
-|  AAAAA A        BBBBBBBBBBBBBBBBBB        BBBBBBBBBBBB                 |
+|  AAAAA A        BBBBBBBBBBBBB        BBBBBBBBBBBB                      |
+|  CCCCC C CCCC   CCCCCCCCCCCCCCCCCC   CCCCCCCCCCCC                      |
+|  AAAAA A AAA    BBBBBBBBBBBBBBBBB    BBBBBBBBBBBB                      |
+|  AAAAA A        BBBBBBBBBBBBB        BBBBBBBBBBBB                      |
+|  AAAAA A AAAA   BBBBBBBBBBBBBBBBBB   BBBBBBBBBBBB                      |
+|  AAAAA A        BBBBBBBBBBBBB        BBBBBBBBBBBB                      |
 |                                                                        |
 |A                                                                       |
 |                                                                        |

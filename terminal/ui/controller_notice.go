@@ -283,8 +283,13 @@ const MaxErrorDetailBytes = 2 << 10
 // ErrorIndicator returns the indicator of e, the error a run or a login
 // ended with: for an error response, ErrorTitle of it, such as
 // "provider-a response error (400)", over the body it answered with, as
-// ErrorBody formats it; and for another error, its message alone.
+// ErrorBody formats it; for a run that has no model, the command that picks
+// one, which saves it as the default too; and for another error, its message
+// alone.
 func ErrorIndicator(e app.Error) EventIndicatorShow {
+	if e.Code == app.CodeNoModelSet {
+		return EventIndicatorShow{Text: "no model selected; choose one with " + CommandModel.String(), Error: true}
+	}
 	if e.Status == 0 || strings.TrimSpace(e.Body) == "" {
 		return EventIndicatorShow{Text: e.Message, Error: true}
 	}

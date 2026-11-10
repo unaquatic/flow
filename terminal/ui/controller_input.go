@@ -76,7 +76,7 @@ func (s *Service) QuitArmed(now time.Time) bool {
 	return !armed.IsZero() && now.Sub(armed) < QuitWindow
 }
 
-// CloseMenu closes the open banner, such as /settings, /model, /login, or
+// CloseMenu closes the open banner, such as /config, /model, /login, or
 // the session tree, or else the session list that /resume opens, as Esc
 // does, and returns the events that close it, or nil when neither is open.
 func (s *Service) CloseMenu() []UIEvent {

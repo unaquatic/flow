@@ -98,7 +98,7 @@ var (
 	HintCancel = KeyHint{Key: "esc", Action: "cancel"}
 	HintMove   = KeyHint{Key: "↑/↓", Action: "move"}
 	// HintChange names the arrows that change the value of a menu's
-	// selected row, as in /settings.
+	// selected row, as in /config.
 	HintChange = KeyHint{Key: "←/→", Action: "change"}
 	// HintCustom names the key that enters an entry a menu does not list,
 	// as a model typed in /model.

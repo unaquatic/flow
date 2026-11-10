@@ -352,6 +352,13 @@ type EventCacheModeSet struct {
 // opened.
 type EventInputHintChanged struct{}
 
+// EventClipboardCopy puts Text on the clipboard, through the terminal, and
+// reports how that went with Service.CompleteCopy.
+type EventClipboardCopy struct {
+	// Text is what to copy.
+	Text string
+}
+
 func (EventQuit) uiEvent()              {}
 func (EventQuitArmed) uiEvent()         {}
 func (EventInputClear) uiEvent()        {}
@@ -396,3 +403,4 @@ func (EventSelectionStyleSet) uiEvent() {}
 func (EventPromptStyleSet) uiEvent()    {}
 func (EventInputStyleSet) uiEvent()     {}
 func (EventInputHintChanged) uiEvent()  {}
+func (EventClipboardCopy) uiEvent()     {}
