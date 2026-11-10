@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/unaquatic/flow/internal/realpath"
 )
 
 // RacyWindow is how long after a file last changed the index must have read
@@ -76,7 +78,7 @@ func skipDirs(dir string, skip []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		rel, err := filepath.Rel(realPath(dir), realPath(abs))
+		rel, err := filepath.Rel(realpath.Of(dir), realpath.Of(abs))
 		if err != nil {
 			continue // on another volume, so outside the worktree
 		}
@@ -93,20 +95,6 @@ func (w *Worktree) Skipped(name string) bool {
 	return slices.ContainsFunc(w.skip, func(dir string) bool {
 		return name == dir || strings.HasPrefix(name, dir+"/")
 	})
-}
-
-// realPath returns the absolute path p with its symbolic links resolved. The
-// part of p that does not exist yet is kept as it is, below the resolved
-// part that does.
-func realPath(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil {
-		return r
-	}
-	parent := filepath.Dir(p)
-	if parent == p {
-		return p
-	}
-	return filepath.Join(realPath(parent), filepath.Base(p))
 }
 
 // Stage records the worktree in tx and returns the hash of its tree, which

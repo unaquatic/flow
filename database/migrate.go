@@ -38,7 +38,8 @@ var migrations = []string{
 	migrationV1,
 }
 
-// migrationV1 creates projects, which holds one row per worktree. The
+// migrationV1 creates projects, which holds one row per worktree, by its
+// absolute path with symbolic links resolved, as Project records it. The
 // sessions and file indexes of other packages belong to a project, so their
 // tables reference it.
 const migrationV1 = `
