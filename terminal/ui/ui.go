@@ -323,6 +323,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	// Service returns events; UI applies them to the widget tree.
 	ui.service = NewService(ctx, a, state)
 	ui.service.Commands = CommandsWith(opts.Extensions)
+	ui.service.Extensions = opts.Extensions
 	ui.service.Updated = opts.Updated
 
 	ui.BuildUI()

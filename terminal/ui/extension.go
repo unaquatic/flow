@@ -174,3 +174,18 @@ func (v ToolView) NameLabel(name string) string {
 	}
 	return ToolLabel(name)
 }
+
+// ToolCallLabel returns the name of call's tool as the header of its box
+// shows it among exts, a bubble's extensions: the label of the first of
+// them that describes the call, as a ToolFormatter, or else ToolLabel's,
+// such as "Bash" for bash.
+func ToolCallLabel(call message.ToolPart, exts []Extension) string {
+	for _, e := range exts {
+		if f, ok := e.(ToolFormatter); ok {
+			if view, ok := f.FormatTool(call); ok {
+				return view.NameLabel(call.Name)
+			}
+		}
+	}
+	return ToolLabel(call.Name)
+}

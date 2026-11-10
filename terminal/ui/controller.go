@@ -29,6 +29,10 @@ type Service struct {
 	// Settings saves the settings /config sets, each time one changes, or
 	// is nil to save none.
 	Settings SettingsStore
+	// Extensions are the UI's extensions, which the transcript's bubbles
+	// show what they add with, such as the labels of tool calls, which
+	// /export writes too.
+	Extensions []Extension
 	// Commands are the slash commands, in the order the menu offers them,
 	// as CommandsWith gives them for the UI's extensions, or nil for
 	// SlashCommands alone.

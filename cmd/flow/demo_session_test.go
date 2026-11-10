@@ -32,7 +32,7 @@ func TestSessionDemos(t *testing.T) {
 			"not-signed-in": q("error: " + errNoModels.Error() + "\n"),
 		}},
 		{command: "export", cases: exportDemos, want: map[string]string{
-			"markdown": q("# " + demoSessionTitle + "\n\n## User\n\nwhy does TestAdd fail?\n\n## Agent\n\nLet me read calc.go.\n\n### read\n\n" +
+			"markdown": q("# " + demoSessionTitle + "\n\n## User\n\nwhy does TestAdd fail?\n\n## Agent\n\nLet me read calc.go.\n\n### Read\n\n" +
 				"```json\n{\"path\":\"calc.go\"}\n```\n\n```\npackage calc\n\nfunc Add(a, b int) int { return a - b }\n```\n\n" + demoRunAnswer + "\n"),
 			"missing": q(`error: no stored session matches "` + demoMissingSession + `"` + "\n"),
 			"none":    q("error: " + errNoSessions.Error() + "\n"),

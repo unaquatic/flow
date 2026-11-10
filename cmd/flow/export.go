@@ -84,7 +84,8 @@ type SessionExport struct {
 
 // runExport writes the transcript of the session args names, of any folder,
 // or else of the project's latest session, in o's format, to o's output
-// file, saying so on w, or else to w.
+// file, saying so on w, or else to w. Markdown names each tool call as the
+// terminal UI does, with the widgets of a's extensions, as views gives them.
 func runExport(ctx context.Context, w io.Writer, a *app.App, o ExportOptions, args []string) error {
 	id, err := exportID(ctx, a, args)
 	if err != nil {
@@ -101,7 +102,7 @@ func runExport(ctx context.Context, w io.Writer, a *app.App, o ExportOptions, ar
 	if err != nil {
 		return err
 	}
-	data, err := exportData(o.Format, stored, msgs)
+	data, err := exportData(o.Format, stored, msgs, views(ctx, a))
 	if err != nil {
 		return err
 	}
@@ -134,9 +135,10 @@ func exportID(ctx context.Context, a *app.App, args []string) (message.SessionID
 }
 
 // exportData returns the transcript of sess, whose active branch msgs holds,
-// in format: Markdown, as ui.TranscriptMarkdown writes it, or the JSON of a
-// SessionExport.
-func exportData(format ExportFormat, sess *session.Session, msgs []app.Message) ([]byte, error) {
+// in format: Markdown, as ui.TranscriptMarkdown writes it among exts, the
+// terminal UI's extensions, which name tool calls as the terminal does, or
+// the JSON of a SessionExport.
+func exportData(format ExportFormat, sess *session.Session, msgs []app.Message, exts []ui.Extension) ([]byte, error) {
 	if format == ExportJSON {
 		data, err := json.MarshalIndent(SessionExport{Session: sess, Messages: msgs}, "", "  ")
 		return append(data, '\n'), err
@@ -145,5 +147,5 @@ func exportData(format ExportFormat, sess *session.Session, msgs []app.Message) 
 	for _, m := range msgs {
 		chat = append(chat, ui.ChatMessageOf(m.Content))
 	}
-	return []byte(ui.TranscriptMarkdown(sess.Title, chat)), nil
+	return []byte(ui.TranscriptMarkdown(sess.Title, chat, exts)), nil
 }

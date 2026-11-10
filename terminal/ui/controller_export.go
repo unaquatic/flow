@@ -67,9 +67,9 @@ func ExportName(id message.SessionID) string {
 }
 
 // HandleExport runs /export: it saves the chat as Markdown, as
-// TranscriptMarkdown writes it, under the session's title, to a file named
-// as ExportName names it in the working directory, replacing an earlier
-// export of the session, and says where.
+// TranscriptMarkdown writes it with the UI's extensions, under the
+// session's title, to a file named as ExportName names it in the working
+// directory, replacing an earlier export of the session, and says where.
 func (s *Service) HandleExport() []UIEvent {
 	id := s.SessionID()
 	if id == "" || s.MessageCount() == 0 {
@@ -80,7 +80,7 @@ func (s *Service) HandleExport() []UIEvent {
 		title = stored.Title
 	}
 	path := filepath.Join(s.app.WorkingDir(), ExportName(id))
-	if err := os.WriteFile(path, []byte(TranscriptMarkdown(title, s.state.Messages)), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(TranscriptMarkdown(title, s.state.Messages, s.Extensions)), 0o644); err != nil {
 		return s.ShowToast(fmt.Sprintf("Export failed: %v", err))
 	}
 	return s.ShowKeywordToast("Exported the chat to ", RelPathForToast(path), "")
@@ -88,10 +88,11 @@ func (s *Service) HandleExport() []UIEvent {
 
 // TranscriptMarkdown returns msgs as a Markdown document headed by title, or
 // UntitledName: a heading for each run of messages of one role, followed by
-// their text, and for each tool call its name, its input and its output or
-// error, fenced. Reasoning, notices, and parts that hold no text are left
-// out; an image or a file a prompt attaches is named in brackets.
-func TranscriptMarkdown(title string, msgs []ChatMessage) string {
+// their text, and for each tool call its name, as its box's header shows it
+// among exts, as ToolCallLabel gives it, such as "Bash", its input and its
+// output or error, fenced. Reasoning, notices, and parts that hold no text
+// are left out; an image or a file a prompt attaches is named in brackets.
+func TranscriptMarkdown(title string, msgs []ChatMessage, exts []Extension) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# %s\n", SessionTitle(title))
 	var role *message.Role
@@ -104,15 +105,15 @@ func TranscriptMarkdown(title string, msgs []ChatMessage) string {
 			fmt.Fprintf(&b, "\n## %s\n", Capitalize(m.Role.String()))
 		}
 		for _, p := range m.Parts {
-			writePartMarkdown(&b, p)
+			writePartMarkdown(&b, p, exts)
 		}
 	}
 	return b.String()
 }
 
-// writePartMarkdown writes p to b as TranscriptMarkdown shows it, after a
-// blank line, or nothing for a part it leaves out.
-func writePartMarkdown(b *strings.Builder, p message.ContentPart) {
+// writePartMarkdown writes p to b as TranscriptMarkdown shows it among exts,
+// after a blank line, or nothing for a part it leaves out.
+func writePartMarkdown(b *strings.Builder, p message.ContentPart, exts []Extension) {
 	switch p := p.(type) {
 	case message.TextPart:
 		if text := strings.TrimSpace(p.Text); text != "" {
@@ -123,7 +124,7 @@ func writePartMarkdown(b *strings.Builder, p message.ContentPart) {
 	case message.FilePart:
 		fmt.Fprintf(b, "\n[file %s]\n", cmp.Or(p.Filename, p.MediaType))
 	case message.ToolPart:
-		fmt.Fprintf(b, "\n### %s\n", p.Name)
+		fmt.Fprintf(b, "\n### %s\n", ToolCallLabel(p, exts))
 		if in := strings.TrimSpace(string(p.Input())); in != "" {
 			b.WriteString("\n" + Fence(in, "json"))
 		}

@@ -8,7 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/terminal/ui"
 )
 
 // TestExport checks that flow export writes the latest session of the
@@ -85,5 +88,40 @@ func TestExportFormat(t *testing.T) {
 	var f ExportFormat
 	if err := f.UnmarshalText([]byte("text")); err == nil {
 		t.Errorf("format text = %q, want an error", f)
+	}
+}
+
+// TestExportMatchesTheTerminal checks that flow export writes a session in
+// Markdown as the terminal's /export saves it, tool calls named alike, byte
+// for byte.
+func TestExportMatchesTheTerminal(t *testing.T) {
+	reply := func() (agent.StreamResponse, error) { return nil, errors.ErrUnsupported }
+	err := withRunDemoApp(t.Context(), reply, func(a *app.App) error {
+		if err := storeDemoSessions(t.Context(), a); err != nil {
+			return err
+		}
+		var cli strings.Builder
+		if err := runExport(t.Context(), &cli, a, ExportOptions{Format: ExportMarkdown}, []string{string(demoSession)}); err != nil {
+			return err
+		}
+
+		svc := ui.NewService(t.Context(), a, &ui.UIState{})
+		svc.Extensions = views(t.Context(), a)
+		svc.InitSession(t.Context(), demoSession)
+		svc.HandleExport()
+		saved, err := os.ReadFile(filepath.Join(a.WorkingDir(), ui.ExportName(demoSession)))
+		if err != nil {
+			return err
+		}
+		if cli.String() != string(saved) {
+			t.Errorf("flow export =\n%s\n/export saved\n%s", cli.String(), saved)
+		}
+		if !strings.Contains(cli.String(), "\n### Read\n") {
+			t.Errorf("flow export =\n%s\nwant the read call under Read", cli.String())
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
