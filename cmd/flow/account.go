@@ -19,7 +19,57 @@ var accountCmd = &cmdline.Command[cmdline.NoOptions]{
 	Run: withApp(func(ctx context.Context, w io.Writer, a *app.App, _ cmdline.NoOptions, _ []string) error {
 		return listAccounts(ctx, w, a)
 	}),
-	Commands: []cmdline.Node{accountUseCmd},
+	Commands: []cmdline.Node{accountCurrentCmd, accountUseCmd},
+}
+
+var accountCurrentCmd = &cmdline.Command[cmdline.NoOptions]{
+	Name:  "current",
+	Usage: "[provider]",
+	Short: "Show the active account of each provider, or of one",
+	Args: func(args []string) error {
+		if len(args) > 1 {
+			return fmt.Errorf("expects at most 1 argument, got %d", len(args))
+		}
+		return nil
+	},
+	Run: withApp(runAccountCurrent),
+}
+
+// runAccountCurrent writes to w the active account of the provider args
+// name, or of each provider of a that has one when args name none. It fails
+// when the named provider has no active account.
+func runAccountCurrent(ctx context.Context, w io.Writer, a *app.App, _ cmdline.NoOptions, args []string) error {
+	providers := a.Accounts().Providers()
+	if len(args) == 1 {
+		var t agent.ProviderID
+		if err := (providerValue{id: &t}).Set(args[0]); err != nil {
+			return err
+		}
+		providers = []agent.ProviderID{t}
+	}
+	slices.Sort(providers)
+	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	shown := 0
+	for _, t := range providers {
+		st, err := a.Accounts().Status(ctx, t)
+		if err != nil {
+			return err
+		}
+		i := slices.IndexFunc(st.Accounts, func(acct agent.AccountStatus) bool { return acct.ID == st.Active })
+		if i < 0 {
+			if len(args) == 1 {
+				return fmt.Errorf("%s has no active account; run %s login", t, product.Name)
+			}
+			continue
+		}
+		acct := st.Accounts[i]
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", t, acct.ID, acct.Kind, acct.Source)
+		shown++
+	}
+	if shown == 0 {
+		fmt.Fprintln(tw, "(no active accounts; run "+product.Name+" login)")
+	}
+	return tw.Flush()
 }
 
 var accountUseCmd = &cmdline.Command[cmdline.NoOptions]{

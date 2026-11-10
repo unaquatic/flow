@@ -14,6 +14,7 @@ import (
 	"github.com/unaquatic/flow/extension/protocol"
 	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/flow/internal/cmdline"
+	"github.com/unaquatic/flow/product"
 )
 
 // testProvider is the provider of the test app's catalog, and keyEnv the
@@ -22,6 +23,23 @@ const (
 	testProvider agent.ProviderID = "provider-a"
 	keyEnv                        = "PROVIDER_A_API_KEY"
 )
+
+// TestAccountCurrentNone checks that account current reports no active
+// account: a hint for every provider, and an error for one it names.
+func TestAccountCurrentNone(t *testing.T) {
+	a := newTestApp(t)
+	var out strings.Builder
+	if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := out.String(), "(no active accounts; run "+product.Name+" login)\n"; got != want {
+		t.Errorf("account current = %q, want %q", got, want)
+	}
+	err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, []string{"provider-a"})
+	if err == nil || !strings.Contains(err.Error(), "provider-a has no active account") {
+		t.Errorf("account current provider-a: err = %v, want no active account", err)
+	}
+}
 
 // newTestApp returns an app over a new data directory, with snapshots off,
 // no catalog server, a catalog of testProvider alone and no API key in the
@@ -48,7 +66,8 @@ func newTestApp(t *testing.T) *app.App {
 
 // TestAccountCommands checks what the account commands write: the account
 // list marks the active account, account use names the account it makes
-// active, by the provider's alias too, and logout the account it removes.
+// active, by the provider's alias too, account current shows the active
+// account alone, and logout the account it removes.
 func TestAccountCommands(t *testing.T) {
 	a := newTestApp(t)
 	id, err := a.Accounts().SetKey(t.Context(), testProvider, "", agent.APIKey("sk-test"))
@@ -70,6 +89,27 @@ func TestAccountCommands(t *testing.T) {
 	}
 	if got, want := out.String(), "Active provider-a account: "+string(id)+".\n"; got != want {
 		t.Errorf("account use = %q, want %q", got, want)
+	}
+
+	// A second account leaves the first active; current shows that one alone.
+	other, err := a.Accounts().SetKey(t.Context(), testProvider, "", agent.APIKey("sk-other"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Accounts().Use(t.Context(), testProvider, id); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{nil, {"provider-a"}} {
+		out.Reset()
+		if err := runAccountCurrent(t.Context(), &out, a, cmdline.NoOptions{}, args); err != nil {
+			t.Fatal(err)
+		}
+		if got := out.String(); !strings.HasPrefix(got, "provider-a  "+string(id)+"  ") || strings.Count(got, "\n") != 1 || strings.Contains(got, string(other)) {
+			t.Errorf("account current %q =\n%s\nwant the active account %s alone", args, got, id)
+		}
+	}
+	if _, err := a.Accounts().Logout(t.Context(), testProvider, other); err != nil {
+		t.Fatal(err)
 	}
 
 	out.Reset()
