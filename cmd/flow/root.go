@@ -222,6 +222,10 @@ func relaunchArgs(o rootOptions, id message.SessionID) []string {
 	return args
 }
 
+// stderr is where a command writes what is for people alone while it writes
+// JSON to standard output, such as the steps of a login. Tests replace it.
+var stderr io.Writer = os.Stderr
+
 // colorMode is the color mode of the terminal, as the terminal UI detects it,
 // in which the command line draws its oranges as near as it can unless
 // --color names another.

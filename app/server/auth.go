@@ -20,7 +20,7 @@ func (s *Server) handleAuthList(w http.ResponseWriter, r *http.Request) {
 			respondErr(w, err)
 			return
 		}
-		out = append(out, s.wireAuthStatus(st))
+		out = append(out, NewAuthStatus(s.app, st))
 	}
 	respondJSON(w, http.StatusOK, out)
 }
@@ -169,10 +169,11 @@ func pathAccountID(w http.ResponseWriter, r *http.Request) (agent.AccountID, boo
 	return id, true
 }
 
-// wireAuthStatus converts a provider's accounts to their wire form, with how
-// an account of it can be added.
-func (s *Server) wireAuthStatus(st agent.AuthStatus) AuthStatus {
-	accounts := s.app.Accounts()
+// NewAuthStatus returns the accounts of a provider of a, as st holds them,
+// in their wire form, with how an account of it can be added, as GET /auth
+// lists them.
+func NewAuthStatus(a *app.App, st agent.AuthStatus) AuthStatus {
+	accounts := a.Accounts()
 	out := AuthStatus{
 		Provider:     st.Provider,
 		Active:       st.Active,
@@ -195,7 +196,7 @@ func (s *Server) respondAuthResult(w http.ResponseWriter, st agent.AuthStatus, e
 		respondErr(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, s.wireAuthStatus(st))
+	respondJSON(w, http.StatusOK, NewAuthStatus(s.app, st))
 }
 
 // providerID returns the provider ID in the request's path.

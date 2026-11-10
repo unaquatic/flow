@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -22,6 +24,8 @@ type serveOptions struct {
 	hostname string
 	port     int
 	cors     []string
+	// format is how the address the server listens at is written.
+	format OutputFormat
 }
 
 var serveCmd = &cmdline.Command[serveOptions]{
@@ -38,6 +42,7 @@ var serveCmd = &cmdline.Command[serveOptions]{
 			o.cors = append(o.cors, origin)
 			return nil
 		})
+		formatFlag(fs, &o.format)
 	},
 	Env: []cmdline.EnvVar{
 		{Name: config.EnvServerPassword, Usage: "Password for HTTP basic authentication"},
@@ -69,20 +74,44 @@ func runServer(ctx context.Context, w io.Writer, a *app.App, o serveOptions, _ [
 
 // serve serves the HTTP API of a, as server.Serve does, on the listener that
 // listen opens at the address o names, until ctx is done, once it has
-// written to w the URL it listens at, as writeURLField lays it out, with the
-// port the listener picked when o names none. A request that names no model goes to
-// the default model in the config file, which PATCH /config sets. It warns
-// on w when the server is reachable from other machines with no password.
+// written to w the URL it listens at, with the port the listener picked
+// when o names none: in OutputText, as writeURLField lays it out; in
+// OutputJSON, as a ServeInfo on one line, which a script can read before
+// the server ends. A request that names no model goes to the default model
+// in the config file, which PATCH /config sets. It warns when the server is
+// reachable from other machines with no password: on w in OutputText, and
+// on stderr in OutputJSON.
 func serve(ctx context.Context, w io.Writer, a *app.App, o serveOptions, listen func(network, address string) (net.Listener, error)) error {
 	username, password := config.ServerCredentials()
 	opts := server.Options{Hostname: o.hostname, Port: o.port, CORS: o.cors, Username: username, Password: password}
 	if !opts.Loopback() && password == "" {
-		fmt.Fprintf(w, "warning: %s is not set, so anyone who reaches %s can run commands on this machine\n", config.EnvServerPassword, opts.Host())
+		warn := w
+		if o.format == OutputJSON {
+			warn = stderr
+		}
+		fmt.Fprintf(warn, "warning: %s is not set, so anyone who reaches %s can run commands on this machine\n", config.EnvServerPassword, opts.Host())
 	}
 	ln, err := listen("tcp", net.JoinHostPort(opts.Host(), strconv.Itoa(opts.Port)))
 	if err != nil {
 		return err
 	}
-	writeURLField(w, "Server listening on:", "http://"+ln.Addr().String())
+	url := "http://" + ln.Addr().String()
+	if o.format == OutputJSON {
+		data, err := json.Marshal(ServeInfo{URL: url})
+		if err != nil {
+			return errors.Join(err, ln.Close())
+		}
+		if _, err := w.Write(append(data, '\n')); err != nil {
+			return errors.Join(err, ln.Close())
+		}
+	} else {
+		writeURLField(w, "Server listening on:", url)
+	}
 	return server.Serve(ctx, a, opts, ln)
+}
+
+// ServeInfo is where flow serve listens, as it writes it in OutputJSON.
+type ServeInfo struct {
+	// URL is the server's base URL, with the port the listener picked.
+	URL string `json:"url"`
 }

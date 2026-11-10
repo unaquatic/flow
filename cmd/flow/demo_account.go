@@ -12,7 +12,6 @@ import (
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
-	"github.com/unaquatic/flow/internal/cmdline"
 	"github.com/unaquatic/flow/product"
 )
 
@@ -144,7 +143,9 @@ func (demoLoginFlow) Refresh(_ context.Context, t agent.OAuthToken) (agent.OAuth
 // accountDemos are the cases of flow account, each on a demo app of its own.
 var accountDemos = []demoCase{
 	{name: "list", desc: "Every provider's accounts, the active one marked", line: "account",
-		run: withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error { return listAccounts(ctx, w, a) })},
+		run: withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
+			return listAccounts(ctx, w, a, AccountOptions{Format: OutputText})
+		})},
 	{name: "current", desc: "The active account of each provider that has one", line: "account current",
 		run: accountDemo(runAccountCurrent)},
 	{name: "current-none", desc: "The active account of a provider that has none", line: "account current " + string(demoKeyProvider),
@@ -156,10 +157,10 @@ var accountDemos = []demoCase{
 }
 
 // accountDemo returns the run of a case of flow account that runs run on a
-// demo app with args.
-func accountDemo(run func(context.Context, io.Writer, *app.App, cmdline.NoOptions, []string) error, args ...string) func(context.Context, io.Writer, bool) error {
+// demo app with args, writing text.
+func accountDemo(run func(context.Context, io.Writer, *app.App, AccountOptions, []string) error, args ...string) func(context.Context, io.Writer, bool) error {
 	return withDemoApp(func(ctx context.Context, w io.Writer, a *app.App) error {
-		return run(ctx, w, a, cmdline.NoOptions{}, args)
+		return run(ctx, w, a, AccountOptions{Format: OutputText}, args)
 	})
 }
 
