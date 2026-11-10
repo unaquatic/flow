@@ -112,8 +112,9 @@ func HelpLines(cmds []SlashCommand) []style.StyledText {
 	return lines
 }
 
-// ShowHelp runs /help: it lists the slash commands and the keys in a notice
-// titled HelpTitle, as HelpLines lays them out.
+// ShowHelp runs /help: it lists the shown slash commands, as ShownCommands
+// gives them, and the keys in a notice titled HelpTitle, as HelpLines lays
+// them out.
 func (s *Service) ShowHelp() []UIEvent {
-	return s.AddNotice(Notice{Lines: HelpLines(s.CommandList()), Surface: NoticeSystem, Title: HelpTitle})
+	return s.AddNotice(Notice{Lines: HelpLines(s.ShownCommands()), Surface: NoticeSystem, Title: HelpTitle})
 }

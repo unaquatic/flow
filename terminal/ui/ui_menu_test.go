@@ -276,7 +276,7 @@ func TestSessionMenuTranscript(t *testing.T) {
 func TestSlashMenuHasNoGaps(t *testing.T) {
 	ui := newBuiltTestUI(t, true)
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	if got, want := ui.slashMenu.ItemCount(), len(ui.service.CommandList()); got != want {
+	if got, want := ui.slashMenu.ItemCount(), len(ui.service.ShownCommands()); got != want {
 		t.Fatalf("menu lists %d rows, want one for each of the %d commands", got, want)
 	}
 	selected := func() Command { return ui.slashMenu.SelectedItem().Value.(Command) }

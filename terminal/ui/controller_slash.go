@@ -54,6 +54,9 @@ type SlashCommand struct {
 	Aliases []Command
 	// Desc is the description shown beside the command.
 	Desc string
+	// Debug keeps the command out of the menu and /help unless debug is on
+	// in /config. Typed in full, it runs either way.
+	Debug bool
 	// Run performs the command. The input is cleared before it runs.
 	Run func(s *Service) []UIEvent
 }
@@ -152,17 +155,28 @@ func (s *Service) HandleSlashSelect(cmd Command) []UIEvent {
 	return slices.Concat(s.ClearInput(), s.HideSlashMenu(), s.HandleSubmit(cmd.String()))
 }
 
-// SlashMenuItems returns the commands matching query, the text typed after
-// the slash, best first as MatchSlashCommands ranks them. Each item's value
-// is its Command. An empty query lists every command, group after group,
-// with no blank row between them. A command found by an alias shows as it
-// always does: its description holds the alias. A query containing
-// whitespace matches nothing, since no command takes arguments.
+// ShownCommands returns the commands the menu and /help offer, in order:
+// CommandList, without the Debug commands unless debug is on.
+func (s *Service) ShownCommands() []SlashCommand {
+	cmds := s.CommandList()
+	if s.state.Debug {
+		return cmds
+	}
+	return slices.DeleteFunc(slices.Clone(cmds), func(c SlashCommand) bool { return c.Debug })
+}
+
+// SlashMenuItems returns the shown commands, as ShownCommands gives them,
+// that match query, the text typed after the slash, best first as
+// MatchSlashCommands ranks them. Each item's value is its Command. An empty
+// query lists every one, group after group, with no blank row between them.
+// A command found by an alias shows as it always does: its description
+// holds the alias. A query containing whitespace matches nothing, since no
+// command takes arguments.
 func (s *Service) SlashMenuItems(query string) []widget.SelectItem {
 	if strings.ContainsFunc(query, unicode.IsSpace) {
 		return nil
 	}
-	cmds := s.CommandList()
+	cmds := s.ShownCommands()
 	if query != "" {
 		cmds = MatchSlashCommands(cmds, query)
 	}

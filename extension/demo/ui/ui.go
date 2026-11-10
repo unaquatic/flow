@@ -36,9 +36,10 @@ func (*Extension) NewPartView(message.ContentPart, ui.ViewHost) ui.PartView { re
 // NewSegmentView returns nil: the extension shows nothing under a message.
 func (*Extension) NewSegmentView(ui.ChatMessage, ui.ViewHost) ui.SegmentView { return nil }
 
-// SlashCommands returns /demo, which runs as Run does.
+// SlashCommands returns /demo, which runs as Run does, and which the menu
+// offers only while debug is on.
 func (*Extension) SlashCommands() []ui.SlashCommand {
-	return []ui.SlashCommand{{Name: Command, Desc: "Run a demo", Run: Run}}
+	return []ui.SlashCommand{{Name: Command, Desc: "Run a demo", Debug: true, Run: Run}}
 }
 
 // FormatTool labels webfetch "Web Fetch", which its name does not read as
