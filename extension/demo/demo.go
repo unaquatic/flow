@@ -49,7 +49,7 @@ func Next(ctx context.Context, i int) (string, bool) {
 // messages carry: a placeholder, which no catalog lists.
 const (
 	Provider  agent.ProviderID = "provider-a"
-	ModelName                  = "provider-a/model-a"
+	ModelName                  = "lab-a/model-a"
 )
 
 // The pace of the demo's replies, as a provider streams them and its tools

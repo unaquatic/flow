@@ -100,7 +100,7 @@ const modelColumnGap = 3
 // from the input, selecting the active one, or reports that none were
 // returned. Each row reads in three aligned columns: the variant's name, and
 // then, dim, its ID and its provider, such as
-// "Model A Fast   provider-a/model-a:fast   [provider-a]". The search finds a
+// "Model A Fast   lab-a/model-a:fast   [provider-a]". The search finds a
 // row by its name, its ID, or its whole "provider/model" form. It does
 // nothing once the loading banner has closed. Choosing a model that takes
 // reasoning efforts shows them next, as ShowEffortMenu does; choosing one

@@ -32,11 +32,11 @@ func TestConfig(t *testing.T) {
 
 	var got Config
 	if status := doJSON(t, "GET", ts.URL+"/config", nil, &got); status != http.StatusOK ||
-		got != (Config{DefaultProvider: "provider-b", DefaultModel: "provider-b/model-y"}) {
-		t.Fatalf("GET /config = %d, %+v, want 200 and provider-b/model-y at provider-b", status, got)
+		got != (Config{DefaultProvider: "provider-b", DefaultModel: "lab-b/model-y"}) {
+		t.Fatalf("GET /config = %d, %+v, want 200 and lab-b/model-y at provider-b", status, got)
 	}
 
-	want := Config{DefaultProvider: "provider-a", DefaultModel: "provider-a/model-x"}
+	want := Config{DefaultProvider: "provider-a", DefaultModel: "lab-a/model-x"}
 	provider, model := want.DefaultProvider, want.DefaultModel
 	update := ConfigUpdate{DefaultProvider: &provider, DefaultModel: &model}
 	if status := doJSON(t, "PATCH", ts.URL+"/config", update, &got); status != http.StatusOK || got != want {
@@ -46,8 +46,8 @@ func TestConfig(t *testing.T) {
 		t.Errorf("GET /config after PATCH = %+v, want %+v", got, want)
 	}
 	saved, err := config.LoadDir(home)
-	if err != nil || saved.DefaultProvider != "provider-a" || saved.DefaultModel != "provider-a/model-x" || saved.LogLevel != config.LogDebug {
-		t.Errorf("config file = provider %q, model %q, log level %q, %v, want provider-a/model-x at provider-a and the kept log level",
+	if err != nil || saved.DefaultProvider != "provider-a" || saved.DefaultModel != "lab-a/model-x" || saved.LogLevel != config.LogDebug {
+		t.Errorf("config file = provider %q, model %q, log level %q, %v, want lab-a/model-x at provider-a and the kept log level",
 			saved.DefaultProvider, saved.DefaultModel, saved.LogLevel, err)
 	}
 	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{}, &got); status != http.StatusOK || got != want {
@@ -55,7 +55,7 @@ func TestConfig(t *testing.T) {
 	}
 
 	// A model alone runs at the provider the file sets.
-	other := "provider-a/model-z"
+	other := "lab-a/model-z"
 	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{DefaultModel: &other}, &got); status != http.StatusOK ||
 		got != (Config{DefaultProvider: "provider-a", DefaultModel: other}) {
 		t.Errorf("PATCH /config with a model alone = %d, %+v, want 200 and %s at provider-a", status, got, other)
@@ -80,7 +80,7 @@ func TestConfig(t *testing.T) {
 		{name: "empty provider", body: ConfigUpdate{DefaultProvider: &empty}, wantStatus: http.StatusBadRequest},
 		{name: "empty model", body: ConfigUpdate{DefaultModel: &noModel}, wantStatus: http.StatusBadRequest},
 		{name: "unknown provider", body: ConfigUpdate{DefaultProvider: &unknown}, wantStatus: http.StatusNotFound},
-		{name: "older model setting", body: map[string]string{"model": "provider-a/provider-a/model-x"}, wantStatus: http.StatusBadRequest},
+		{name: "older model setting", body: map[string]string{"model": "provider-a/lab-a/model-x"}, wantStatus: http.StatusBadRequest},
 		{name: "setting it cannot change", body: map[string]string{"log_level": "warn"}, wantStatus: http.StatusBadRequest},
 		{name: "not an object", body: "model", wantStatus: http.StatusBadRequest},
 	}
@@ -104,8 +104,8 @@ func TestRequestsUseTheConfigModel(t *testing.T) {
 	ts, _, bodies := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		io.WriteString(w, messagesReply)
 	})
-	model := "provider-b/provider-b/model-y"
-	provider, id := agent.ProviderID("provider-b"), "provider-b/model-y"
+	model := "provider-b/lab-b/model-y"
+	provider, id := agent.ProviderID("provider-b"), "lab-b/model-y"
 	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{DefaultProvider: &provider, DefaultModel: &id}, nil); status != http.StatusOK {
 		t.Fatalf("PATCH /config: status %d", status)
 	}

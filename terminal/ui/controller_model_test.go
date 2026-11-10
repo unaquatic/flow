@@ -33,7 +33,7 @@ func bannerNames(show EventBannerShow) []string {
 
 // bannerRows returns the banner's items as their rows read, with the space
 // between their columns collapsed to one: the name, the hint and then the
-// description, such as "Model C provider-a/model-c [provider-a]" in the
+// description, such as "Model C lab-a/model-c [provider-a]" in the
 // model menu.
 func bannerRows(show EventBannerShow) []string {
 	var rows []string
@@ -58,7 +58,7 @@ func TestModelMenuListsAll(t *testing.T) {
 	s, _ := newTestService(t)
 	show := listModels(t, s)
 
-	want := []string{"Model C provider-a/model-c [provider-a]", "model model [provider-a]", "model-a4-mini model-a4-mini [provider-a]", "model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}
+	want := []string{"Model C lab-a/model-c [provider-a]", "model model [provider-a]", "model-a4-mini model-a4-mini [provider-a]", "model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
@@ -78,9 +78,9 @@ func TestModelMenuSearch(t *testing.T) {
 		wantText    string
 	}{
 		{name: "later word", query: "small", want: []string{"model-small-4-6 model-small-4-6 [provider-b]", "model-3-7-small model-3-7-small [provider-b]"}},
-		{name: "case ignored", query: "MC", want: []string{"Model C provider-a/model-c [provider-a]"}},
+		{name: "case ignored", query: "MC", want: []string{"Model C lab-a/model-c [provider-a]"}},
 		{name: "typo ties keep listing order", query: "smlal", want: []string{"model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}},
-		{name: "cleared", query: " ", want: []string{"Model C provider-a/model-c [provider-a]", "model model [provider-a]", "model-a4-mini model-a4-mini [provider-a]", "model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}, wantIdx: 1},
+		{name: "cleared", query: " ", want: []string{"Model C lab-a/model-c [provider-a]", "model model [provider-a]", "model-a4-mini model-a4-mini [provider-a]", "model-3-7-small model-3-7-small [provider-b]", "model-small-4-6 model-small-4-6 [provider-b]"}, wantIdx: 1},
 		{name: "no match", query: "zzz", wantText: NoMatchesText},
 	}
 	for _, tt := range tests {
@@ -113,14 +113,14 @@ func TestModelMenuRows(t *testing.T) {
 		listing(s.app.Models().Catalog(), providerA, "model-b"),
 		listing(s.app.Models().Catalog(), providerB, "model-g"),
 	}))
-	want := []string{"Model B provider-a/model-b [provider-a]", "Model B Fast provider-a/model-b:fast [provider-a]", "Model G provider-b/model-g [provider-b]"}
+	want := []string{"Model B lab-a/model-b [provider-a]", "Model B Fast lab-a/model-b:fast [provider-a]", "Model G lab-b/model-g [provider-b]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
 	for query, want := range map[string]string{
-		"b:fast":                             "Model B Fast provider-a/model-b:fast [provider-a]",
-		"provider-a/provider-a/model-b:fast": "Model B Fast provider-a/model-b:fast [provider-a]",
-		"provider-b/":                        "Model G provider-b/model-g [provider-b]",
+		"b:fast":                        "Model B Fast lab-a/model-b:fast [provider-a]",
+		"provider-a/lab-a/model-b:fast": "Model B Fast lab-a/model-b:fast [provider-a]",
+		"provider-b/":                   "Model G lab-b/model-g [provider-b]",
 	} {
 		show := bannerShown(t, s.HandleBannerSearch(query))
 		if got := bannerRows(show); len(got) == 0 || got[0] != want {
@@ -139,22 +139,22 @@ func TestModelMenuCustomModel(t *testing.T) {
 	if show := listModels(t, s); !slices.Contains(show.Hints(), HintCustom) {
 		t.Errorf("model menu keys %v lack %v", show.Hints(), HintCustom)
 	}
-	bannerShown(t, s.HandleBannerSearch("provider-b/provider-b/model-y"))
+	bannerShown(t, s.HandleBannerSearch("provider-b/lab-b/model-y"))
 
 	custom, out := s.HandleBannerCustom()
 	if !custom || s.state.Banner != NoBanner || s.state.Prompt == nil {
 		t.Fatalf("custom = %v, banner %v, prompt %v; want the menu closed and a question open", custom, s.state.Banner, s.state.Prompt)
 	}
-	if !slices.Contains(out, UIEvent(EventInputSet{Text: "provider-b/provider-b/model-y"})) {
+	if !slices.Contains(out, UIEvent(EventInputSet{Text: "provider-b/lab-b/model-y"})) {
 		t.Errorf("events %v do not keep the search in the input", out)
 	}
 	if got := s.InputHint(time.Now()); got != CustomModelPlaceholder {
 		t.Errorf("input hint = %q, want %q", got, CustomModelPlaceholder)
 	}
 
-	s.HandleSubmit("provider-b/provider-b/model-y")
-	if s.state.Model != "provider-b/provider-b/model-y" || s.state.Prompt != nil {
-		t.Errorf("after the answer: model %q, prompt %v; want provider-b/provider-b/model-y and none", s.state.Model, s.state.Prompt)
+	s.HandleSubmit("provider-b/lab-b/model-y")
+	if s.state.Model != "provider-b/lab-b/model-y" || s.state.Prompt != nil {
+		t.Errorf("after the answer: model %q, prompt %v; want provider-b/lab-b/model-y and none", s.state.Model, s.state.Prompt)
 	}
 	if got := s.InputHint(time.Now()); got != "" {
 		t.Errorf("input hint after the answer = %q, want none", got)
@@ -184,15 +184,15 @@ func TestModelMenuSearchAfterClose(t *testing.T) {
 // app's default model, saying so in one notice.
 func TestSelectModelSavesTheDefault(t *testing.T) {
 	q := newQueueTest(t)
-	out := q.s.SelectModel("provider-b/provider-b/model-y")
+	out := q.s.SelectModel("provider-b/lab-b/model-y")
 
-	if q.s.state.Model != "provider-b/provider-b/model-y" || q.s.state.ModelLabel != "provider-b/provider-b/model-y" {
-		t.Errorf("terminal model, label = %q, %q, want provider-b/provider-b/model-y", q.s.state.Model, q.s.state.ModelLabel)
+	if q.s.state.Model != "provider-b/lab-b/model-y" || q.s.state.ModelLabel != "provider-b/lab-b/model-y" {
+		t.Errorf("terminal model, label = %q, %q, want provider-b/lab-b/model-y", q.s.state.Model, q.s.state.ModelLabel)
 	}
-	if got, err := q.a.Models().Default(); got != "provider-b/provider-b/model-y" || err != nil {
-		t.Errorf("app default model = %q, %v, want provider-b/provider-b/model-y saved", got, err)
+	if got, err := q.a.Models().Default(); got != "provider-b/lab-b/model-y" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-b/lab-b/model-y saved", got, err)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-b/provider-b/model-y as the default model"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-b/lab-b/model-y as the default model"}) {
 		t.Errorf("notices = %q, want the model switched to and saved", got)
 	}
 
@@ -200,8 +200,8 @@ func TestSelectModelSavesTheDefault(t *testing.T) {
 		t.Fatalf("SendPrompt: %v", err)
 	}
 	started := q.until(app.TypeMessageStarted).(app.EventMessageStarted)
-	if m := started.Message; agent.ParseVariantAt(m.Provider, m.Model, q.a.Models().Catalog()).String() != "provider-b/provider-b/model-y" {
-		t.Errorf("prompt sent to %s at %s, want provider-b/provider-b/model-y", m.Model, m.Provider)
+	if m := started.Message; agent.ParseVariantAt(m.Provider, m.Model, q.a.Models().Catalog()).String() != "provider-b/lab-b/model-y" {
+		t.Errorf("prompt sent to %s at %s, want provider-b/lab-b/model-y", m.Model, m.Provider)
 	}
 	q.until(app.TypeAgentEnded)
 }
@@ -226,14 +226,14 @@ func TestModelMenuChooseSavesTheDefault(t *testing.T) {
 	levels := bannerShown(t, s.HandleBannerSelect(slices.Index(bannerNames(show), "Model C")))
 	noSaveKey(levels)
 	out := s.HandleBannerSelect(slices.Index(bannerNames(levels), "High"))
-	if got, err := s.app.Models().Default(); got != "provider-a/provider-a/model-c:high" || err != nil {
-		t.Errorf("app default model = %q, %v, want provider-a/provider-a/model-c:high", got, err)
+	if got, err := s.app.Models().Default(); got != "provider-a/lab-a/model-c:high" || err != nil {
+		t.Errorf("app default model = %q, %v, want provider-a/lab-a/model-c:high", got, err)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/provider-a/model-c:high as the default model"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/lab-a/model-c:high as the default model"}) {
 		t.Errorf("notices = %q, want the model switched to and saved", got)
 	}
-	if s.state.Banner != NoBanner || s.state.Model != "provider-a/provider-a/model-c:high" {
-		t.Errorf("banner %v, model %q, want the menu closed and provider-a/provider-a/model-c:high", s.state.Banner, s.state.Model)
+	if s.state.Banner != NoBanner || s.state.Model != "provider-a/lab-a/model-c:high" {
+		t.Errorf("banner %v, model %q, want the menu closed and provider-a/lab-a/model-c:high", s.state.Banner, s.state.Model)
 	}
 }
 

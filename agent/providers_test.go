@@ -136,15 +136,15 @@ func TestWithProvider(t *testing.T) {
 // model's output limit from the catalog, and that a set limit or a model the
 // catalog does not list leaves it as it is.
 func TestStreamMaxTokens(t *testing.T) {
-	doc := `{"provider-b":{"id":"provider-b","format":"messages","models":{"model-x":{"id":"model-x","limit":{"context":200000,"output":64000}}}}}`
+	doc := `{"provider-b":{"id":"provider-b","format":"messages","models":{"lab-b/model-x":{"id":"lab-b/model-x","limit":{"context":200000,"output":64000}}}}}`
 	tests := []struct {
 		name  string
 		model string
 		set   int
 		want  int
 	}{
-		{name: "from the catalog", model: "provider-b/model-x", want: 64000},
-		{name: "set by the caller", model: "provider-b/model-x", set: 100, want: 100},
+		{name: "from the catalog", model: "lab-b/model-x", want: 64000},
+		{name: "set by the caller", model: "lab-b/model-x", set: 100, want: 100},
 		{name: "model not in the catalog", model: "model-new", want: 0},
 	}
 	for _, tt := range tests {
@@ -244,18 +244,18 @@ func TestStreamVariant(t *testing.T) {
 	}{
 		{
 			name:      "level",
-			variant:   agent.Variant{Provider: providerB, Model: "provider-b/model-i", Effort: "xhigh"},
+			variant:   agent.Variant{Provider: providerB, Model: "lab-b/model-i", Effort: "xhigh"},
 			wantLevel: "xhigh",
 		},
 		{
 			name:        "fast tier",
-			variant:     agent.Variant{Provider: providerB, Model: "provider-b/model-i", Option: "fast"},
+			variant:     agent.Variant{Provider: providerB, Model: "lab-b/model-i", Option: "fast"},
 			wantBody:    map[string]any{"speed": "fast"},
 			wantHeaders: map[string]string{"provider-beta": "fast-mode-2026-02-01"},
 		},
 		{
 			name:        "caller's reasoning and body win",
-			variant:     agent.Variant{Provider: providerB, Model: "provider-b/model-i", Option: "fast", Effort: "max"},
+			variant:     agent.Variant{Provider: providerB, Model: "lab-b/model-i", Option: "fast", Effort: "max"},
 			req:         agent.Request{Reasoning: &agent.Reasoning{Effort: "low"}, Body: map[string]any{"speed": "slow"}},
 			wantLevel:   "low",
 			wantBody:    map[string]any{"speed": "slow"},
@@ -263,7 +263,7 @@ func TestStreamVariant(t *testing.T) {
 		},
 		{
 			name:    "variant the catalog lacks",
-			variant: agent.Variant{Provider: providerB, Model: "provider-b/model-j", Option: "fast"},
+			variant: agent.Variant{Provider: providerB, Model: "lab-b/model-j", Option: "fast"},
 			wantErr: agent.ErrVariantNotFound,
 		},
 		{
@@ -321,14 +321,14 @@ func TestStreamDropsOthersReasoning(t *testing.T) {
 		}
 	}
 	history := []agent.Message{
-		reasoned(providerA, "provider-a/model-a", "from provider-a"),
-		reasoned(providerB, "provider-b/model-j", "from another provider-b model"),
-		reasoned(providerB, "provider-b/model-i", "own"),
+		reasoned(providerA, "lab-a/model-a", "from provider-a"),
+		reasoned(providerB, "lab-b/model-j", "from another provider-b model"),
+		reasoned(providerB, "lab-b/model-i", "own"),
 		reasoned("", "", "unknown"),
 	}
 	var got []agent.Request
 	ps := newProviders(t, variantDoc, nil, requestRecorder{got: &got})
-	v := agent.Variant{Provider: providerB, Model: "provider-b/model-i", Option: "fast"}
+	v := agent.Variant{Provider: providerB, Model: "lab-b/model-i", Option: "fast"}
 	if _, err := ps.Stream(t.Context(), v, agent.Request{Messages: history}); err != nil {
 		t.Fatal(err)
 	}
@@ -352,14 +352,14 @@ func TestServiceDefaultReasoningEffort(t *testing.T) {
 	var got []agent.Request
 	efforts := `"reasoning":true,"reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]`
 	cat := protocoltest.FromAPI(t, `{"provider-b":{"id":"provider-b","format":"messages","models":{
-  "model-i":{"id":"model-i",`+efforts+`},
-  "model-k":{"id":"model-k",`+efforts+`}}}}`)
+  "lab-b/model-i":{"id":"lab-b/model-i",`+efforts+`},
+  "lab-b/model-k":{"id":"lab-b/model-k",`+efforts+`}}}}`)
 	// An api.json names no default effort; the catalog's rules give one to
 	// the models whose labs document it.
-	cat.Providers[providerB].Models["provider-b/model-i"].Reasoning.DefaultEffort = "high"
+	cat.Providers[providerB].Models["lab-b/model-i"].Reasoning.DefaultEffort = "high"
 	ps := providersOf(t, cat, nil, requestRecorder{got: &got})
 	for model, want := range map[string]agent.ReasoningEffort{
-		"provider-b/model-i": "high", "provider-b/model-k": "medium",
+		"lab-b/model-i": "high", "lab-b/model-k": "medium",
 	} {
 		if d := ps.DefaultReasoningEffort(agent.Variant{Provider: providerB, Model: model}); d != want {
 			t.Errorf("default of %s = %q, want %q", model, d, want)
@@ -367,7 +367,7 @@ func TestServiceDefaultReasoningEffort(t *testing.T) {
 	}
 
 	ps = newProviders(t, variantDoc, nil)
-	for _, v := range []agent.Variant{{Provider: "router", Model: "provider-a/model-a"}, {Provider: "nope", Model: "x"}} {
+	for _, v := range []agent.Variant{{Provider: "router", Model: "lab-a/model-a"}, {Provider: "nope", Model: "x"}} {
 		if d := ps.DefaultReasoningEffort(v); d != agent.FallbackEffort {
 			t.Errorf("default of %s = %q, want medium", v, d)
 		}
@@ -379,16 +379,16 @@ func TestServiceDefaultReasoningEffort(t *testing.T) {
 // of them at a base URL that names an environment variable, and one it
 // speaks whose base URL names one.
 const gatewayDoc = `{
-"provider-b":{"id":"provider-b","format":"messages","models":{"model-x":{"id":"model-x","limit":{"context":200000,"output":64000}}}},
+"provider-b":{"id":"provider-b","format":"messages","models":{"lab-b/model-x":{"id":"lab-b/model-x","limit":{"context":200000,"output":64000}}}},
 "gw":{"id":"gw","format":"chat","api":"BASE","models":{
   "lab/m":{"id":"lab/m","limit":{"context":100000,"output":8000},"cost":{"input":1,"output":2},
     "experimental":{"modes":{"fast":{"cost":{"input":2,"output":4},"provider":{"body":{"service_tier":"priority"}}}}}},
   "lab/m-fast":{"id":"lab/m-fast","limit":{"context":100000,"output":8000}}}},
-"provider-c":{"id":"provider-c","npm":"unknown-package","models":{"model-c":{"id":"model-c","limit":{"context":1,"output":1}}}},
+"provider-c":{"id":"provider-c","npm":"unknown-package","models":{"lab-c/model-c":{"id":"lab-c/model-c","limit":{"context":1,"output":1}}}},
 "provider-d":{"id":"provider-d","npm":"other-package","api":"https://${PROVIDER_D_HOST}/v2","env":["PROVIDER_D_HOST"],
-  "models":{"m":{"id":"m","limit":{"context":1,"output":1}}}},
+  "models":{"lab-d/m":{"id":"lab-d/m","limit":{"context":1,"output":1}}}},
 "provider-e":{"id":"provider-e","format":"chat","api":"https://${PROVIDER_E_RESOURCE}.example/v1","env":["PROVIDER_E_RESOURCE","PROVIDER_E_API_KEY"],
-  "models":{"model-e":{"id":"model-e","limit":{"context":1,"output":1}}}}
+  "models":{"lab-e/model-e":{"id":"lab-e/model-e","limit":{"context":1,"output":1}}}}
 }`
 
 // TestServiceProviders checks that the providers of the catalog whose
@@ -418,7 +418,7 @@ func TestServiceProviders(t *testing.T) {
 	}
 	// gw's models are gw/lab/m with its fast tier by request fields, and
 	// gw/lab/m-fast, a model of its own in this catalog.
-	if want := []string{"gw/gw/lab/m", "gw/gw/lab/m:fast", "gw/gw/lab/m-fast"}; !slices.Equal(ids, want) {
+	if want := []string{"gw/lab/m", "gw/lab/m:fast", "gw/lab/m-fast"}; !slices.Equal(ids, want) {
 		t.Errorf("gw variants = %q, want %q", ids, want)
 	}
 	if _, err := ps.ListModels(t.Context(), "provider-c"); !errors.Is(err, agent.ErrProviderNotRegistered) {
@@ -446,7 +446,7 @@ func TestStreamEndpoint(t *testing.T) {
 	ps := newProviders(t, strings.ReplaceAll(gatewayDoc, "BASE", api.URL+"/v1"),
 		func(agent.ProviderID) (agent.APIKey, error) { return "sk-gw", nil })
 
-	v := agent.ParseVariant("gw/gw/lab/m:fast", ps.Catalog())
+	v := agent.ParseVariant("gw/lab/m:fast", ps.Catalog())
 	stream, err := ps.Stream(t.Context(), v, agent.Request{Messages: []agent.Message{agent.NewTextMessage(message.RoleUser, "hi")}})
 	if err != nil {
 		t.Fatal(err)
@@ -471,15 +471,15 @@ func TestStreamUnsupported(t *testing.T) {
 	ps := newProviders(t, strings.ReplaceAll(gatewayDoc, "BASE", "https://gw.invalid/v1"), nil)
 	cat := ps.Catalog()
 	// The catalog leaves out providers whose format it does not know.
-	if _, err := ps.Stream(t.Context(), agent.ParseVariant("provider-c/model-c", cat), agent.Request{}); !errors.Is(err, agent.ErrProviderNotRegistered) {
+	if _, err := ps.Stream(t.Context(), agent.ParseVariant("provider-c/lab-c/model-c", cat), agent.Request{}); !errors.Is(err, agent.ErrProviderNotRegistered) {
 		t.Errorf("provider-c error = %v, want ErrProviderNotRegistered", err)
 	}
 	t.Setenv("PROVIDER_D_HOST", "")
-	if _, err := ps.Stream(t.Context(), agent.ParseVariant("provider-d/m", cat), agent.Request{}); !errors.Is(err, agent.ErrProviderNotRegistered) {
+	if _, err := ps.Stream(t.Context(), agent.ParseVariant("provider-d/lab-d/m", cat), agent.Request{}); !errors.Is(err, agent.ErrProviderNotRegistered) {
 		t.Errorf("provider-d error = %v, want ErrProviderNotRegistered", err)
 	}
 	t.Setenv("PROVIDER_E_RESOURCE", "")
-	if _, err := ps.Stream(t.Context(), agent.ParseVariant("provider-e/model-e", cat), agent.Request{}); !errors.Is(err, agent.ErrMissingVariable) ||
+	if _, err := ps.Stream(t.Context(), agent.ParseVariant("provider-e/lab-e/model-e", cat), agent.Request{}); !errors.Is(err, agent.ErrMissingVariable) ||
 		!strings.Contains(err.Error(), "PROVIDER_E_RESOURCE") {
 		t.Errorf("provider-e error = %v, want ErrMissingVariable naming PROVIDER_E_RESOURCE", err)
 	}
@@ -510,10 +510,10 @@ func TestListModelsCallable(t *testing.T) {
 	for _, l := range listed {
 		models = append(models, l.Model)
 	}
-	if want := []string{"mx/lab/chat", "mx/lab/messages"}; !slices.Equal(models, want) {
+	if want := []string{"lab/chat", "lab/messages"}; !slices.Equal(models, want) {
 		t.Errorf("listed %v, want %v: not lab/odd, whose format the catalog does not know", models, want)
 	}
-	if _, ok := agent.Lookup(ps.Catalog(), agent.ParseVariant("mx/mx/lab/odd", ps.Catalog())); ok {
+	if _, ok := agent.Lookup(ps.Catalog(), agent.ParseVariant("mx/lab/odd", ps.Catalog())); ok {
 		t.Error("the catalog lists lab/odd, whose format it does not know")
 	}
 }
@@ -545,7 +545,7 @@ func TestStreamBaseURL(t *testing.T) {
 			Auth:     accounts.For,
 			Settings: func(agent.ProviderID) agent.Settings { return agent.Settings{BaseURL: tt.base} },
 		})
-		for _, model := range []string{"mx/mx/lab/chat", "mx/mx/lab/messages"} {
+		for _, model := range []string{"mx/lab/chat", "mx/lab/messages"} {
 			stream, err := ps.Stream(t.Context(), agent.ParseVariant(model, ps.Catalog()), agent.Request{Messages: []agent.Message{agent.NewUserMessage("hi")}})
 			if err != nil {
 				t.Fatal(err)

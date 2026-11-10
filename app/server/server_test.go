@@ -53,7 +53,7 @@ func newTestServerWith(t *testing.T, setup func(*config.Config)) (*httptest.Serv
 	t.Setenv(keyEnvA, "")
 	t.Setenv(keyEnvB, "")
 	cfg := &config.Config{
-		DefaultModel:    "provider-b/model-y",
+		DefaultModel:    "lab-b/model-y",
 		DefaultProvider: "provider-b",
 		HomeDir:         t.TempDir(),
 		Extensions:      map[string]json.RawMessage{snapshot.Name: json.RawMessage(`{"enabled":false}`)},

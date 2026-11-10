@@ -102,7 +102,7 @@ func TestBannerMenuAfterEmptyModels(t *testing.T) {
 func TestBannerSearchesFromTheInput(t *testing.T) {
 	ui := newBannerTestUI(t)
 	ui.renderer.FocusRenderable(ui.input)
-	items := []MenuItem{{Name: "provider-a/provider-a/model-a"}, {Name: "provider-b/provider-b/model-b"}}
+	items := []MenuItem{{Name: "provider-a/lab-a/model-a"}, {Name: "provider-b/lab-b/model-b"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	if !ui.inputContentRow.Visible() || !ui.input.Focused() {
 		t.Fatal("input is not on screen and focused for the search")
@@ -119,9 +119,9 @@ func TestBannerSearchesFromTheInput(t *testing.T) {
 		t.Error("banner passed the down arrow to the input")
 	}
 
-	ui.input.InsertText("pa")
+	ui.input.InsertText("ma")
 	if got := ui.bannerMenu.ItemCount(); got != 1 {
-		t.Errorf("menu shows %d rows for \"pa\", want 1", got)
+		t.Errorf("menu shows %d rows for \"ma\", want 1", got)
 	}
 	// Emptying the input reports no change, so clearing it widens the menu.
 	ui.Apply(ui.service.ClearInput())
@@ -183,7 +183,7 @@ func TestBannerArrowsChangeSetting(t *testing.T) {
 		t.Errorf("shift+right changed the mode to %s or was kept from the input", ui.service.state.CacheMode)
 	}
 
-	items := []MenuItem{{Name: "provider-a/provider-a/model-a"}}
+	items := []MenuItem{{Name: "provider-a/lab-a/model-a"}}
 	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
 	left := &input.KeyEvent{Name: input.KeyLeft}
 	ui.HandleBannerKey(left)

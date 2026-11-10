@@ -338,19 +338,19 @@ func TestCtrlCClosesSlashMenu(t *testing.T) {
 // goes.
 func TestSlashStatusRow(t *testing.T) {
 	ui := newInputTestUI(t)
-	ui.SetModelLabel("provider-a/provider-a/model-h:medium")
+	ui.SetModelLabel("provider-a/lab-a/model-h:medium")
 	ui.service.state.Messages = []ChatMessage{
 		{ID: "u1", Role: message.RoleUser},
 		{ID: "a1", Role: message.RoleAgent, Worked: 3 * time.Minute},
 	}
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	want := "provider-a/model-h medium context 0K in 0K out 0K cache 0K $0.00 worked 3m 00s"
+	want := "lab-a/model-h medium context 0K in 0K out 0K cache 0K $0.00 worked 3m 00s"
 	if got := ui.slashStatus.PlainText(); got != want {
 		t.Errorf("opened: status = %q\nwant             %q", got, want)
 	}
 
 	ui.SetUsage(SessionUsage{Input: 1_200, Output: 300, CacheRead: 4_000, Cost: 0.051, Context: 5_500, Window: 100_000})
-	want = "provider-a/model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 00s"
+	want = "lab-a/model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 00s"
 	if got := ui.slashStatus.PlainText(); got != want {
 		t.Errorf("usage changed: status = %q\nwant                    %q", got, want)
 	}
@@ -359,7 +359,7 @@ func TestSlashStatusRow(t *testing.T) {
 		ui.service.StartTurn(time.Now())
 		time.Sleep(12 * time.Second)
 		ui.Tick()
-		want := "provider-a/model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 12s"
+		want := "lab-a/model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 12s"
 		if got := ui.slashStatus.PlainText(); got != want {
 			t.Errorf("turn under way: status = %q\nwant                     %q", got, want)
 		}

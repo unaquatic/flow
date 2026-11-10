@@ -103,8 +103,8 @@ func TestModelsFindRefreshesOnlyWhenNothingMatches(t *testing.T) {
 		wantErr  error
 		wantHits int32
 	}{
-		{name: "in the cached catalog", pattern: "model-old", want: "provider-a/provider-a/model-old"},
-		{name: "newer than the cached catalog", pattern: "model-new", want: "provider-a/provider-a/model-new", wantHits: 1},
+		{name: "in the cached catalog", pattern: "model-old", want: "provider-a/lab-a/model-old"},
+		{name: "newer than the cached catalog", pattern: "model-new", want: "provider-a/lab-a/model-new", wantHits: 1},
 		{name: "nowhere", pattern: "zzzz", wantErr: ErrNoModel, wantHits: 1},
 	}
 	for _, tt := range tests {
@@ -126,11 +126,11 @@ func TestModelsFindRefreshesOnlyWhenNothingMatches(t *testing.T) {
 }
 
 // providerDoc returns a catalog document, as a catalog server serves it,
-// listing the models named for provider-a.
+// listing the models named for provider-a, each of lab-a.
 func providerDoc(t *testing.T, models ...string) []byte {
 	ms := map[string]any{}
 	for _, m := range models {
-		ms[m] = map[string]any{"id": m}
+		ms["lab-a/"+m] = map[string]any{"id": "lab-a/" + m}
 	}
 	b, _ := json.Marshal(map[string]any{string(providerA): map[string]any{"id": providerA, "format": "responses", "models": ms}})
 	return catalogDoc(t, string(b))
@@ -205,8 +205,8 @@ func TestModelsListRefreshesInBackground(t *testing.T) {
 
 	for range 2 {
 		models, err := a.Models().List(t.Context(), providerA)
-		if err != nil || !slices.Equal(listedIDs(models), []string{"provider-a/model-old"}) {
-			t.Fatalf("ListModels while downloading = %v, %v, want [provider-a/model-old]", listedIDs(models), err)
+		if err != nil || !slices.Equal(listedIDs(models), []string{"lab-a/model-old"}) {
+			t.Fatalf("ListModels while downloading = %v, %v, want [lab-a/model-old]", listedIDs(models), err)
 		}
 	}
 	close(release)
@@ -220,7 +220,7 @@ func TestModelsListRefreshesInBackground(t *testing.T) {
 	}
 
 	models, err := a.Models().List(t.Context(), providerA)
-	if want := []string{"provider-a/model-new", "provider-a/model-old"}; err != nil || !slices.Equal(listedIDs(models), want) {
+	if want := []string{"lab-a/model-new", "lab-a/model-old"}; err != nil || !slices.Equal(listedIDs(models), want) {
 		t.Errorf("ListModels after the download = %v, %v, want %v", listedIDs(models), err, want)
 	}
 	if n := hits.Load(); n != 1 {
@@ -266,7 +266,7 @@ func TestModelsDefaultReadsTheConfigFile(t *testing.T) {
 	home := t.TempDir()
 	a := &App{config: config.NewService(home)}
 	tests := []struct{ file, want string }{
-		{`{"default_model":"provider-a/model-x","default_provider":"provider-a"}`, "provider-a/provider-a/model-x"},
+		{`{"default_model":"lab-a/model-x","default_provider":"provider-a"}`, "provider-a/lab-a/model-x"},
 		{`{"default_model":"lab-a/model-z:high","default_provider":"provider-b"}`, "provider-b/lab-a/model-z:high"},
 		{`{"model":"provider-b/model-y"}`, "provider-b/provider-b/model-y"},
 		{`{"model":"model-x"}`, "model-x"},
@@ -360,8 +360,8 @@ func TestModelsFindDownloadsOnce(t *testing.T) {
 	defer src.Close()
 	a := newCatalogApp(t, staleCatalog(t), src.URL)
 
-	if got, err := a.Models().Find(t.Context(), "", "model-new"); got != "provider-a/provider-a/model-new" || err != nil {
-		t.Fatalf("Models.Find = %q, %v, want provider-a/provider-a/model-new", got, err)
+	if got, err := a.Models().Find(t.Context(), "", "model-new"); got != "provider-a/lab-a/model-new" || err != nil {
+		t.Fatalf("Models.Find = %q, %v, want provider-a/lab-a/model-new", got, err)
 	}
 	time.Sleep(100 * time.Millisecond) // time for a stray background download
 	if n := hits.Load(); n != 1 {
@@ -398,11 +398,11 @@ func TestModelsRefreshPublishesEveryRefresh(t *testing.T) {
 // modes and effort levels, its pro mode a model of its own, of a model whose ID ends in a mode's name, and of
 // a model-c whose effort list ends in xxxhigh, a level flow does not know.
 const variantDoc = `{"provider-a":{"id":"provider-a","format":"responses","models":{
-  "model-a":{"id":"model-a","release_date":"2026-08-01","reasoning":true,
+  "lab-a/model-a":{"id":"lab-a/model-a","release_date":"2026-08-01","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["none","low","medium","high","xhigh"]}],
     "experimental":{"modes":{"fast":{},"pro":{"provider":{"body":{"reasoning":{"mode":"pro"}}}}}}},
-  "model-b-pro":{"id":"model-b-pro","release_date":"2026-04-01"},
-  "model-c":{"id":"model-c","release_date":"2026-12-01","reasoning":true,
+  "lab-a/model-b-pro":{"id":"lab-a/model-b-pro","release_date":"2026-04-01"},
+  "lab-a/model-c":{"id":"lab-a/model-c","release_date":"2026-12-01","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max","xxxhigh"]}]}
 }}}`
 
@@ -419,11 +419,11 @@ func TestModelsFindVariants(t *testing.T) {
 		want    string
 		variant agent.Variant
 	}{
-		{"model-a", "provider-a/provider-a/model-a", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "medium"}},
-		{"model-a:fast", "provider-a/provider-a/model-a:fast", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "medium"}},
-		{"a-pro:xhigh", "provider-a/provider-a/model-a-pro:xhigh", agent.Variant{Provider: providerA, Model: "provider-a/model-a-pro", Effort: "xhigh"}},
-		{"model-a:none", "provider-a/provider-a/model-a:none", agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "none"}},
-		{"model-b-pro", "provider-a/provider-a/model-b-pro", agent.Variant{Provider: providerA, Model: "provider-a/model-b-pro"}},
+		{"model-a", "provider-a/lab-a/model-a", agent.Variant{Provider: providerA, Model: "lab-a/model-a", Effort: "medium"}},
+		{"model-a:fast", "provider-a/lab-a/model-a:fast", agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: "fast", Effort: "medium"}},
+		{"a-pro:xhigh", "provider-a/lab-a/model-a-pro:xhigh", agent.Variant{Provider: providerA, Model: "lab-a/model-a-pro", Effort: "xhigh"}},
+		{"model-a:none", "provider-a/lab-a/model-a:none", agent.Variant{Provider: providerA, Model: "lab-a/model-a", Effort: "none"}},
+		{"model-b-pro", "provider-a/lab-a/model-b-pro", agent.Variant{Provider: providerA, Model: "lab-a/model-b-pro"}},
 	}
 	for _, tt := range tests {
 		got, err := a.Models().Find(t.Context(), "", tt.pattern)
@@ -436,7 +436,7 @@ func TestModelsFindVariants(t *testing.T) {
 		}
 	}
 	want := []agent.ReasoningEffort{"none", "low", "medium", "high", "xhigh"}
-	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/provider-a/model-a:fast")); !slices.Equal(got, want) {
+	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/lab-a/model-a:fast")); !slices.Equal(got, want) {
 		t.Errorf("Models.Efforts = %v, want %v", got, want)
 	}
 	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/model-unknown")); got != nil {
@@ -453,10 +453,10 @@ func TestUnknownEffort(t *testing.T) {
 	a := newCatalogApp(t, dir, "")
 
 	got, err := a.Models().Find(t.Context(), "", "model-c:XXXHIGH")
-	if got != "provider-a/provider-a/model-c:xxxhigh" || err != nil {
-		t.Fatalf("Models.Find = %q, %v, want provider-a/provider-a/model-c:xxxhigh", got, err)
+	if got != "provider-a/lab-a/model-c:xxxhigh" || err != nil {
+		t.Fatalf("Models.Find = %q, %v, want provider-a/lab-a/model-c:xxxhigh", got, err)
 	}
-	want := agent.Variant{Provider: providerA, Model: "provider-a/model-c", Effort: "xxxhigh"}
+	want := agent.Variant{Provider: providerA, Model: "lab-a/model-c", Effort: "xxxhigh"}
 	if v, err := a.Models().Resolve(got); v != want || err != nil {
 		t.Errorf("Models.Resolve = %+v, %v, want %+v", v, err, want)
 	}
@@ -466,10 +466,10 @@ func TestUnknownEffort(t *testing.T) {
 	}
 	// model-a does not list xxxhigh: the pattern does not name a level of
 	// it, and the variant runs at the provider's default.
-	if got, err := a.Models().Find(t.Context(), "", "model-a:xxxhigh"); err == nil && got == "provider-a/model-a:xxxhigh" {
+	if got, err := a.Models().Find(t.Context(), "", "model-a:xxxhigh"); err == nil && got == "provider-a/lab-a/model-a:xxxhigh" {
 		t.Errorf("Models.Find(model-a:xxxhigh) = %q, want no level kept", got)
 	}
-	if v := a.Models().FitEffort(agent.Variant{Provider: providerA, Model: "provider-a/model-a", Effort: "xxxhigh"}); v.Effort != "medium" {
+	if v := a.Models().FitEffort(agent.Variant{Provider: providerA, Model: "lab-a/model-a", Effort: "xxxhigh"}); v.Effort != "medium" {
 		t.Errorf("model-a at xxxhigh runs at %q, want medium", v.Effort)
 	}
 }
@@ -484,13 +484,13 @@ func TestModelsSelect(t *testing.T) {
 	gatewaytest.WriteEntry(t, dir, gatewaytest.Entry{Fetched: time.Now(), Data: catalogDoc(t, variantDoc)})
 	a := newCatalogApp(t, dir, "")
 	home := t.TempDir()
-	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"default_provider":"provider-a","default_model":"provider-a/model-a:fast:low"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(`{"default_provider":"provider-a","default_model":"lab-a/model-a:fast:low"}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	a.config = config.NewService(home)
 
 	modelA := func(option string, effort agent.ReasoningEffort) agent.Variant {
-		return agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: option, Effort: effort}
+		return agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: option, Effort: effort}
 	}
 	tests := []struct {
 		name     string
@@ -506,9 +506,9 @@ func TestModelsSelect(t *testing.T) {
 		{name: "default model", want: modelA("fast", "low")},
 		{name: "effort over the default's", effort: "high", want: modelA("fast", "high")},
 		{name: "effort the model does not list", pattern: "model-a", effort: "max",
-			wantErr: `provider-a/model-a has no reasoning effort "max"; the catalog lists ["none" "low" "medium" "high" "xhigh"]`},
+			wantErr: `lab-a/model-a has no reasoning effort "max"; the catalog lists ["none" "low" "medium" "high" "xhigh"]`},
 		{name: "model without efforts", pattern: "model-b-pro", effort: "high",
-			wantErr: `provider-a/model-b-pro has no reasoning effort "high"; the catalog lists []`},
+			wantErr: `lab-a/model-b-pro has no reasoning effort "high"; the catalog lists []`},
 		{name: "no model", pattern: "zzzz", wantErr: ErrNoModel.Error()},
 	}
 	for _, tt := range tests {
@@ -536,14 +536,14 @@ func TestModelsFitEffortTakesTheDefault(t *testing.T) {
 	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})},
 		agenttest.Provider{ID: providerA, Gateway: &agenttest.Gateway{}})
 
-	if d := a.Models().DefaultEffort(agent.Variant{Provider: providerA, Model: "provider-a/model-a"}); d != "medium" {
+	if d := a.Models().DefaultEffort(agent.Variant{Provider: providerA, Model: "lab-a/model-a"}); d != "medium" {
 		t.Errorf("Models.DefaultEffort = %q, want medium", d)
 	}
-	if v, _ := a.Models().Resolve("provider-a/provider-a/model-a"); v.Effort != "medium" {
+	if v, _ := a.Models().Resolve("provider-a/lab-a/model-a"); v.Effort != "medium" {
 		t.Errorf("model-a runs at %q, want medium", v.Effort)
 	}
 	// A chosen level wins over the default.
-	if v, _ := a.Models().Resolve("provider-a/provider-a/model-a:low"); v.Effort != "low" {
+	if v, _ := a.Models().Resolve("provider-a/lab-a/model-a:low"); v.Effort != "low" {
 		t.Errorf("model-a:low runs at %q, want low", v.Effort)
 	}
 	// A model must name its provider: flow defaults to none.
@@ -557,23 +557,23 @@ func TestModelsFitEffortTakesTheDefault(t *testing.T) {
 // as model-e, which the catalog gives none.
 func TestDefaultEffortPerModel(t *testing.T) {
 	const doc = `{"provider-b":{"id":"provider-b","format":"messages","models":{
-  "model-d":{"id":"model-d","reasoning":true,
+  "lab-b/model-d":{"id":"lab-b/model-d","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]},
-  "model-e":{"id":"model-e","reasoning":true,
+  "lab-b/model-e":{"id":"lab-b/model-e","reasoning":true,
     "reasoning_options":[{"type":"effort","values":["low","medium","high","xhigh","max"]}]}
 }}}`
 	cat := protocoltest.FromAPI(t, doc)
 	// An api.json names no default effort; the catalog's rules give one to
 	// the models whose labs document it.
-	cat.Providers[providerB].Models["provider-b/model-d"].Reasoning.DefaultEffort = "high"
+	cat.Providers[providerB].Models["lab-b/model-d"].Reasoning.DefaultEffort = "high"
 	dir := t.TempDir()
 	gatewaytest.WriteCache(t, dir, cat)
 	a := newCatalogApp(t, dir, "")
 	a.providers = agent.NewProviders(agent.ProviderOptions{Catalog: catalog.NewStore(gateway.StoreOptions{Dir: dir})}, messages.New(messages.Init{Name: string(providerB)}))
 
 	for model, want := range map[string]agent.ReasoningEffort{
-		"provider-b/provider-b/model-e": "medium",
-		"provider-b/provider-b/model-d": "high",
+		"provider-b/lab-b/model-e": "medium",
+		"provider-b/lab-b/model-d": "high",
 	} {
 		if v, err := a.Models().Resolve(model); v.Effort != want || err != nil {
 			t.Errorf("Models.Resolve(%s) runs at %q, %v, want %q", model, v.Effort, err, want)

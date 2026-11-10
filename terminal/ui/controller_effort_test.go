@@ -65,11 +65,11 @@ func TestModelMenuEffortPage(t *testing.T) {
 	}
 
 	out := s.HandleBannerSelect(3)
-	if s.state.Model != "provider-a/provider-a/model-a:fast:high" || s.state.Banner != NoBanner {
-		t.Errorf("after choosing high: model %q, banner %v, want provider-a/provider-a/model-a:fast:high and the menu closed", s.state.Model, s.state.Banner)
+	if s.state.Model != "provider-a/lab-a/model-a:fast:high" || s.state.Banner != NoBanner {
+		t.Errorf("after choosing high: model %q, banner %v, want provider-a/lab-a/model-a:fast:high and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/provider-a/model-a:fast:high as the default model"}) {
-		t.Errorf("notices = %q, want Switched to provider-a/provider-a/model-a:fast:high", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/lab-a/model-a:fast:high as the default model"}) {
+		t.Errorf("notices = %q, want Switched to provider-a/lab-a/model-a:fast:high", got)
 	}
 
 	// The next model's page selects the chosen level, as near as it takes it.
@@ -84,7 +84,7 @@ func TestModelMenuEffortPage(t *testing.T) {
 // levels switches to it at once.
 func TestModelMenuWithoutEfforts(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("provider-a/provider-a/model-a:high")
+	s.SelectModel("provider-a/lab-a/model-a:high")
 	openModelMenu(t, s)
 
 	out := s.HandleBannerSelect(4)
@@ -102,7 +102,7 @@ func TestModelMenuWithoutEfforts(t *testing.T) {
 // and says so.
 func TestEffortMenu(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("provider-a/provider-a/model-a:fast:xhigh")
+	s.SelectModel("provider-a/lab-a/model-a:fast:xhigh")
 
 	page := bannerShown(t, s.ShowEffortMenu(s.Variant()))
 	if page.Title != "Reasoning effort" {
@@ -117,11 +117,11 @@ func TestEffortMenu(t *testing.T) {
 	}
 
 	out := s.HandleBannerSelect(1)
-	if s.state.Model != "provider-a/provider-a/model-a:fast:low" || s.state.Banner != NoBanner {
-		t.Errorf("after choosing low: model %q, banner %v, want provider-a/provider-a/model-a:fast:low and the menu closed", s.state.Model, s.state.Banner)
+	if s.state.Model != "provider-a/lab-a/model-a:fast:low" || s.state.Banner != NoBanner {
+		t.Errorf("after choosing low: model %q, banner %v, want provider-a/lab-a/model-a:fast:low and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/provider-a/model-a:fast:low as the default model"}) {
-		t.Errorf("notices = %q, want Switched to provider-a/provider-a/model-a:fast:low", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/lab-a/model-a:fast:low as the default model"}) {
+		t.Errorf("notices = %q, want Switched to provider-a/lab-a/model-a:fast:low", got)
 	}
 }
 
@@ -169,9 +169,9 @@ func TestCycleWithoutEfforts(t *testing.T) {
 // without a notice.
 func TestCycleEffort(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("provider-a/provider-a/model-a:fast")
-	if s.state.Model != "provider-a/provider-a/model-a:fast:medium" {
-		t.Fatalf("model = %q, want provider-a/provider-a/model-a:fast:medium, the default level", s.state.Model)
+	s.SelectModel("provider-a/lab-a/model-a:fast")
+	if s.state.Model != "provider-a/lab-a/model-a:fast:medium" {
+		t.Fatalf("model = %q, want provider-a/lab-a/model-a:fast:medium, the default level", s.state.Model)
 	}
 
 	var got []string
@@ -186,9 +186,9 @@ func TestCycleEffort(t *testing.T) {
 		got = append(got, s.state.Model)
 	}
 	want := []string{
-		"provider-a/provider-a/model-a:fast:high", "provider-a/provider-a/model-a:fast:xhigh", "provider-a/provider-a/model-a:fast:max",
-		"provider-a/provider-a/model-a:fast:none", "provider-a/provider-a/model-a:fast:low", "provider-a/provider-a/model-a:fast:medium",
-		"provider-a/provider-a/model-a:fast:high", "provider-a/provider-a/model-a:fast:xhigh",
+		"provider-a/lab-a/model-a:fast:high", "provider-a/lab-a/model-a:fast:xhigh", "provider-a/lab-a/model-a:fast:max",
+		"provider-a/lab-a/model-a:fast:none", "provider-a/lab-a/model-a:fast:low", "provider-a/lab-a/model-a:fast:medium",
+		"provider-a/lab-a/model-a:fast:high", "provider-a/lab-a/model-a:fast:xhigh",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("cycle = %q\nwant    %q", got, want)
@@ -201,13 +201,13 @@ func TestCycleEffort(t *testing.T) {
 func TestSelectModelKeepsEffort(t *testing.T) {
 	s, _ := newTestService(t)
 	steps := []struct{ selected, want string }{
-		{"provider-a/provider-a/model-a:max", "provider-a/provider-a/model-a:max"},
-		{"provider-a/provider-a/model-c", "provider-a/provider-a/model-c:medium"},
-		{"provider-a/provider-a/model-a-pro", "provider-a/provider-a/model-a-pro:max"},
+		{"provider-a/lab-a/model-a:max", "provider-a/lab-a/model-a:max"},
+		{"provider-a/lab-a/model-c", "provider-a/lab-a/model-c:medium"},
+		{"provider-a/lab-a/model-a-pro", "provider-a/lab-a/model-a-pro:max"},
 		{"provider-a/model", "provider-a/model"},
-		{"provider-a/provider-a/model-a", "provider-a/provider-a/model-a:max"},
-		{"provider-a/provider-a/model-c:low", "provider-a/provider-a/model-c:low"},
-		{"provider-a/provider-a/model-a", "provider-a/provider-a/model-a:low"},
+		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:max"},
+		{"provider-a/lab-a/model-c:low", "provider-a/lab-a/model-c:low"},
+		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:low"},
 	}
 	for _, step := range steps {
 		out := s.SelectModel(step.selected)
@@ -225,14 +225,14 @@ func TestSelectModelKeepsEffort(t *testing.T) {
 // its level.
 func TestModelMenuListsModes(t *testing.T) {
 	s, _ := newTestService(t)
-	s.SelectModel("provider-a/provider-a/model-a:fast:high")
+	s.SelectModel("provider-a/lab-a/model-a:fast:high")
 	show := openModelMenu(t, s)
-	want := []string{"Model C provider-a/model-c [provider-a]", "Model A provider-a/model-a [provider-a]", "Model A Fast provider-a/model-a:fast [provider-a]", "Model A Pro provider-a/model-a-pro [provider-a]", "model model [provider-a]"}
+	want := []string{"Model C lab-a/model-c [provider-a]", "Model A lab-a/model-a [provider-a]", "Model A Fast lab-a/model-a:fast [provider-a]", "Model A Pro lab-a/model-a-pro [provider-a]", "model model [provider-a]"}
 	if got := bannerRows(show); !slices.Equal(got, want) {
 		t.Errorf("menu lists %q, want %q", got, want)
 	}
 	if show.SelectedIdx != 2 {
-		t.Errorf("menu selects %d, want provider-a/provider-a/model-a:fast at 2", show.SelectedIdx)
+		t.Errorf("menu selects %d, want provider-a/lab-a/model-a:fast at 2", show.SelectedIdx)
 	}
 }
 
@@ -256,11 +256,11 @@ func storeVariantMessage(t *testing.T, a *app.App, id message.SessionID, v agent
 // model variant it last ran, unless the command line chose the terminal's
 // model for the first session.
 func TestResumeRestoresModel(t *testing.T) {
-	ran := agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}
+	ran := agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: "fast", Effort: "high"}
 	t.Run("resume", func(t *testing.T) {
 		s, a := newTestService(t)
 		id := message.NewSessionID()
-		storeVariantMessage(t, a, id, agent.Variant{Provider: providerA, Model: "provider-a/model-c"})
+		storeVariantMessage(t, a, id, agent.Variant{Provider: providerA, Model: "lab-a/model-c"})
 		storeVariantMessage(t, a, id, ran)
 		s.NewSession()
 		s.HandleSessionSelect(id)
@@ -295,7 +295,7 @@ func TestResumeRestoresModel(t *testing.T) {
 // so does a session whose transcript names no model. Choosing a model in
 // the menu while in such a session makes it the default for new sessions.
 func TestSessionSwitchKeepsTheDefault(t *testing.T) {
-	ran := agent.Variant{Provider: providerA, Model: "provider-a/model-a", Option: "fast", Effort: "high"}
+	ran := agent.Variant{Provider: providerA, Model: "lab-a/model-a", Option: "fast", Effort: "high"}
 	s, a := newTestService(t)
 	start := s.state.Model
 	id := message.NewSessionID()
@@ -322,9 +322,9 @@ func TestSessionSwitchKeepsTheDefault(t *testing.T) {
 	}
 
 	s.HandleSessionSelect(id)
-	s.SelectModel("provider-a/provider-a/model-c:low")
+	s.SelectModel("provider-a/lab-a/model-c:low")
 	s.ClearMessages()
-	if want := "provider-a/provider-a/model-c:low"; s.state.Model != want {
+	if want := "provider-a/lab-a/model-c:low"; s.state.Model != want {
 		t.Errorf("new session after choosing a model = %q, want %q", s.state.Model, want)
 	}
 }
@@ -334,16 +334,16 @@ func TestSessionSwitchKeepsTheDefault(t *testing.T) {
 // named a mode before.
 func TestSessionUsagePricesModes(t *testing.T) {
 	s, a := newTestService(t)
-	base, okBase := a.Models().Catalog().Resolve("provider-a", "provider-a/model-a")
-	fast, okFast := a.Models().Catalog().Resolve("provider-a", "provider-a/model-a:fast")
+	base, okBase := a.Models().Catalog().Resolve("provider-a", "lab-a/model-a")
+	fast, okFast := a.Models().Catalog().Resolve("provider-a", "lab-a/model-a:fast")
 	if !okBase || !okFast || base.Price == nil || fast.Price == nil || fast.Price.Input == base.Price.Input {
-		t.Fatal("the catalog lists no fast price for provider-a/provider-a/model-a")
+		t.Fatal("the catalog lists no fast price for provider-a/lab-a/model-a")
 	}
 	u := message.Usage{InputTokens: 10_000, OutputTokens: 1_000, TotalTokens: 11_000}
 	s.state.Messages = []ChatMessage{
-		{ID: "a1", Role: message.RoleAgent, Provider: providerA, Model: "provider-a/model-a", Usage: u},
-		{ID: "a2", Role: message.RoleAgent, Provider: providerA, Model: "provider-a/model-a:fast:high", Usage: u},
-		{ID: "a3", Role: message.RoleAgent, Provider: providerA, Model: "provider-a/model-a:fast:high", Usage: u},
+		{ID: "a1", Role: message.RoleAgent, Provider: providerA, Model: "lab-a/model-a", Usage: u},
+		{ID: "a2", Role: message.RoleAgent, Provider: providerA, Model: "lab-a/model-a:fast:high", Usage: u},
+		{ID: "a3", Role: message.RoleAgent, Provider: providerA, Model: "lab-a/model-a:fast:high", Usage: u},
 	}
 	got := s.SessionUsage().Cost
 	want := base.Price.At(10_000).Charge(10_000, 0, 0, 1_000) + 2*fast.Price.At(10_000).Charge(10_000, 0, 0, 1_000)
@@ -357,22 +357,22 @@ func TestSessionUsagePricesModes(t *testing.T) {
 // to the input.
 func TestShiftTabCyclesEffort(t *testing.T) {
 	ui := newInputTestUI(t)
-	ui.Apply(ui.service.SelectModel("provider-a/provider-a/model-a"))
+	ui.Apply(ui.service.SelectModel("provider-a/lab-a/model-a"))
 
 	tab := &input.KeyEvent{Name: input.KeyTab}
 	ui.HandleKey(tab)
-	if tab.DefaultPrevented() || ui.service.state.Model != "provider-a/provider-a/model-a:medium" {
+	if tab.DefaultPrevented() || ui.service.state.Model != "provider-a/lab-a/model-a:medium" {
 		t.Errorf("Tab: prevented %v, model %q, want the key passed on and the model as it was", tab.DefaultPrevented(), ui.service.state.Model)
 	}
 
 	shiftTab := &input.KeyEvent{Name: input.KeyTab, Mods: input.ModShift}
 	ui.HandleKey(shiftTab)
-	if !shiftTab.DefaultPrevented() || ui.service.state.Model != "provider-a/provider-a/model-a:high" {
-		t.Errorf("Shift+Tab: prevented %v, model %q, want the key kept and provider-a/provider-a/model-a:high", shiftTab.DefaultPrevented(), ui.service.state.Model)
+	if !shiftTab.DefaultPrevented() || ui.service.state.Model != "provider-a/lab-a/model-a:high" {
+		t.Errorf("Shift+Tab: prevented %v, model %q, want the key kept and provider-a/lab-a/model-a:high", shiftTab.DefaultPrevented(), ui.service.state.Model)
 	}
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	if got := ui.slashStatus.PlainText(); !strings.HasPrefix(got, "provider-a/model-a high context ") {
-		t.Errorf("status row = %q, want it to name provider-a/model-a high first", got)
+	if got := ui.slashStatus.PlainText(); !strings.HasPrefix(got, "lab-a/model-a high context ") {
+		t.Errorf("status row = %q, want it to name lab-a/model-a high first", got)
 	}
 }
 
@@ -383,15 +383,15 @@ func TestShiftTabCyclesEffort(t *testing.T) {
 func TestStartsAtDefaultEffort(t *testing.T) {
 	_, a := newTestService(t)
 	tests := []struct{ start, want string }{
-		{"provider-a/provider-a/model-a", "provider-a/provider-a/model-a:medium"},
-		{"provider-a/provider-a/model-a:xhigh", "provider-a/provider-a/model-a:xhigh"},
+		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:medium"},
+		{"provider-a/lab-a/model-a:xhigh", "provider-a/lab-a/model-a:xhigh"},
 		// model-c-pro lists high alone, not the default.
-		{"provider-a/provider-a/model-c-pro", "provider-a/provider-a/model-c-pro"},
+		{"provider-a/lab-a/model-c-pro", "provider-a/lab-a/model-c-pro"},
 		// A model that takes no levels names none.
 		{"provider-a/model", "provider-a/model"},
 		// The catalog gives model-f high; model-e lists no levels.
-		{"provider-b/provider-b/model-f", "provider-b/provider-b/model-f:high"},
-		{"provider-b/provider-b/model-e", "provider-b/provider-b/model-e"},
+		{"provider-b/lab-b/model-f", "provider-b/lab-b/model-f:high"},
+		{"provider-b/lab-b/model-e", "provider-b/lab-b/model-e"},
 	}
 	for _, tt := range tests {
 		state := &UIState{Model: tt.start}

@@ -10,7 +10,7 @@ import (
 // set reads as StatusNone.
 func TestUsageLines(t *testing.T) {
 	info := UsageInfo{
-		Model:  "provider-a/model-a:high",
+		Model:  "lab-a/model-a:high",
 		Usage:  SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000, Cost: 0.42, Context: 20_000, Window: 400_000},
 		Worked: 3*time.Minute + 12*time.Second,
 	}
