@@ -14,9 +14,9 @@ var textFg = DefaultTheme().TextBase
 // TextMuted.
 var mutedFg = DefaultTheme().TextMuted
 
-// DefaultTheme returns a new default palette for the chat UI: Darcula Solid.
+// DefaultTheme returns a new default palette for the chat UI: Dark Flow.
 func DefaultTheme() *style.Theme {
-	return style.DarculaSolid()
+	return style.DarkFlow()
 }
 
 // themeOrDefault returns t, or a new default theme when t is nil.

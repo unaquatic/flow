@@ -1,7 +1,7 @@
 github.com/unaquatic/catalog v0.1.3 h1:orlfbZ2Jk9S0+x7H7V0YjbweRtwHSA+uDDn4lqPdDC0=
 github.com/unaquatic/catalog v0.1.3/go.mod h1:/b52cEC58PKl9nvZMAszBWnhsMoeY0xpJBnDdvqyf0g=
-github.com/unaquatic/fluid v0.2.1 h1:ibc0jbfP2R0bZaWLc/79dvFCk8Se67zoMO/fGZ1XRxQ=
-github.com/unaquatic/fluid v0.2.1/go.mod h1:8XuuIPI5eGk8yZeQ/CRh6BEtPsFauZ+bWwiB5M8P35s=
+github.com/unaquatic/fluid v0.3.0 h1:ftPDKhGIlsOliEEU9K6/4xrxfxpFQg6XTiUPK2/RnrI=
+github.com/unaquatic/fluid v0.3.0/go.mod h1:8XuuIPI5eGk8yZeQ/CRh6BEtPsFauZ+bWwiB5M8P35s=
 github.com/unaquatic/sqlite v0.1.0 h1:Sw2ssowCwjU65x3L9orfHQTFnE0XpPWWov7hpT7vN2A=
 github.com/unaquatic/sqlite v0.1.0/go.mod h1:/8fxbHlgrdlpDsm95jkwmhc7JrGpkbkqNHW54/tj9FE=
 golang.org/x/sys v0.49.0 h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=
