@@ -3,8 +3,8 @@
 |                                                            |
 |■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
-|→ /resume                   Resume a previous session from  |
-|  /new                      Clear the chat and start a new  |
+|→ /resume                   Resume a session from history   |
+|  /new                      Clear the chat and start over   |
 |  /model                    Switch the model                |
 |  /effort                   Change the reasoning effort     |
 |  /status                   Show the version and session i  |
@@ -23,8 +23,8 @@
 |                                                            |
 |B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
 |                                                            |
-|C CCCCCCC                   CCCCCC C CCCCCCCC CCCCCCC CCCC  |
-|  BBBB                      AAAAA AAA AAAA AAA AAAAA A AAA  |
+|C CCCCCCC                   CCCCCC C CCCCCCC CCCC CCCCCCC   |
+|  BBBB                      AAAAA AAA AAAA AAA AAAAA AAAA   |
 |  BBBBBB                    AAAAAA AAA AAAAA                |
 |  BBBBBBB                   AAAAAA AAA AAAAAAAAA AAAAAA     |
 |  BBBBBBB                   AAAA AAA AAAAAAA AAA AAAAAAA A  |

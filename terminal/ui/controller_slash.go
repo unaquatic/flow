@@ -75,9 +75,9 @@ func (c SlashCommand) Names() iter.Seq[Command] {
 var SlashCommandGroups = [][]SlashCommand{
 	{
 		{Name: CommandResume, Aliases: []Command{"session", "history"},
-			Desc: "Resume a previous session from history", Run: (*Service).HandleSessionList},
+			Desc: "Resume a session from history", Run: (*Service).HandleSessionList},
 		{Name: CommandNew, Aliases: []Command{"clear"},
-			Desc: "Clear the chat and start a new conversation", Run: (*Service).ClearMessages},
+			Desc: "Clear the chat and start over", Run: (*Service).ClearMessages},
 		{Name: CommandModel, Desc: "Switch the model", Run: (*Service).ShowModelMenu},
 		{Name: CommandEffort, Desc: "Change the reasoning effort", Run: (*Service).HandleEffort},
 		{Name: CommandStatus, Aliases: []Command{"info"},
@@ -86,12 +86,12 @@ var SlashCommandGroups = [][]SlashCommand{
 	{
 		{Name: CommandUndo, Desc: "Move the workspace back one turn", Run: (*Service).HandleUndo},
 		{Name: CommandRedo, Desc: "Move the workspace forward one turn", Run: (*Service).HandleRedo},
-		{Name: CommandContinue, Desc: "Pick the work up from where the chat ends", Run: (*Service).HandleContinue},
+		{Name: CommandContinue, Desc: "Continue from where the chat ends", Run: (*Service).HandleContinue},
 		{Name: CommandTree, Desc: "Jump to any point in the session tree", Run: (*Service).ShowTree},
 	},
 	{
 		{Name: CommandSettings, Aliases: []Command{"config"},
-			Desc: "Change settings in the config", Run: (*Service).ShowSettingsMenu},
+			Desc: "Change the config", Run: (*Service).ShowSettingsMenu},
 		{Name: CommandLogin, Aliases: []Command{"auth"},
 			Desc: "Authenticate with a provider account", Run: (*Service).ShowLoginMenu},
 		{Name: CommandQuit, Aliases: []Command{"exit"}, Desc: "Exit", Run: (*Service).Quit},

@@ -55,7 +55,7 @@ func EnvVars() []EnvVar {
 		{Name: EnvSnapshotDelay, Usage: "Slow each snapshot by a duration, such as 2s, to preview indexing"},
 		{Name: EnvDisableTerminalTitle, Usage: "Stop changing the terminal title"},
 		{Name: EnvWidthProbe, Usage: "Measure character widths at startup"},
-		{Name: EnvServerPassword, Usage: "Password that flow serve asks every request for"},
+		{Name: EnvServerPassword, Usage: "Password for HTTP basic authentication"},
 		{Name: EnvServerUsername, Usage: "User name that goes with the server password (default flow)"},
 		{Name: EnvDisableAutoUpdate, Usage: "Stop checking for and installing updates in the background"},
 	}

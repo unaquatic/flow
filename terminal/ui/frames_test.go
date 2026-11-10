@@ -1623,7 +1623,7 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_login_progress", h: 8, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{
 				Title: "Login with Provider A",
-				Text:  "Logging in to Provider A account 01a0e1b4 [browser]...",
+				Text:  "Logging in [browser]...",
 			})
 		}},
 		{name: "banner_login_menu", h: 9, open: func(ui *UI) {

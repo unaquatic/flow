@@ -130,7 +130,7 @@ func TestEffortCommand(t *testing.T) {
 func TestEffortCommandWithoutEfforts(t *testing.T) {
 	s, _ := newTestService(t)
 	out := s.HandleSubmit("/effort")
-	if got := toasts(out); !slices.Equal(got, []string{"Selected model provider-a/model has no reasoning efforts."}) {
+	if got := toasts(out); !slices.Equal(got, []string{"provider-a/model has no reasoning efforts"}) {
 		t.Errorf("notices = %q, want that provider-a/model has no reasoning efforts", got)
 	}
 	if s.state.Banner != NoBanner || s.state.Model != "provider-a/model" {
@@ -169,7 +169,7 @@ func TestModelNoticesMarkTheModel(t *testing.T) {
 func TestCycleWithoutEfforts(t *testing.T) {
 	s, _ := newTestService(t)
 	out := s.CycleEffort()
-	if got := toasts(out); !slices.Equal(got, []string{"Selected model provider-a/model has no reasoning efforts."}) {
+	if got := toasts(out); !slices.Equal(got, []string{"provider-a/model has no reasoning efforts"}) {
 		t.Errorf("notices = %q, want that provider-a/model has no reasoning efforts", got)
 	}
 	if s.state.Model != "provider-a/model" {

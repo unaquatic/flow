@@ -3,7 +3,7 @@
 |                                                            |
 |■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
-|  /resume                   Resume a previous session from  |
+|  /resume                   Resume a session from history   |
 |                                                            |
 |■ hello                                                     |
 |                                                            |
@@ -18,7 +18,7 @@
 |                                                            |
 |B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
 |                                                            |
-|  CCCCCCC                   CCCCCC C CCCCCCCC CCCCCCC CCCC  |
+|  CCCCCCC                   CCCCCC C CCCCCCC CCCC CCCCCCC   |
 |                                                            |
 |B BBBBB                                                     |
 |                                                            |

@@ -30,7 +30,7 @@ var serveCmd = &cmdline.Command[serveOptions]{
 	Flags: func(fs *flag.FlagSet, o *serveOptions) {
 		fs.StringVar(&o.hostname, "hostname", server.DefaultHost, "Host name or IP `address` to listen on")
 		fs.IntVar(&o.port, "port", 4096, "Port to listen on, or 0 for a free one")
-		fs.Func("cors", "Let browser pages of this `origin`, such as https://app.example, call the API (repeatable)", func(s string) error {
+		fs.Func("cors", "Allow API calls from this browser `origin` (repeatable)", func(s string) error {
 			origin, err := parseOrigin(s)
 			if err != nil {
 				return err
@@ -40,7 +40,7 @@ var serveCmd = &cmdline.Command[serveOptions]{
 		})
 	},
 	Env: []cmdline.EnvVar{
-		{Name: config.EnvServerPassword, Usage: "Password to ask every request for, by HTTP basic authentication"},
+		{Name: config.EnvServerPassword, Usage: "Password for HTTP basic authentication"},
 		{Name: config.EnvServerUsername, Usage: "User name that goes with the password (default flow)"},
 	},
 	Run: func(ctx context.Context, o serveOptions, args []string) error {

@@ -26,7 +26,7 @@ var accountCmd = &cmdline.Command[cmdline.NoOptions]{
 var accountCurrentCmd = &cmdline.Command[cmdline.NoOptions]{
 	Name:  "current",
 	Usage: "[provider]",
-	Short: "Show the active account of each provider, or of one",
+	Short: "Show the active accounts",
 	Args: func(args []string) error {
 		if len(args) > 1 {
 			return fmt.Errorf("expects at most 1 argument, got %d", len(args))
@@ -111,7 +111,7 @@ func writeAccountRow(tw io.Writer, t agent.ProviderID, acct agent.AccountStatus,
 var accountUseCmd = &cmdline.Command[cmdline.NoOptions]{
 	Name:  "use",
 	Usage: "<provider> <account-id>",
-	Short: "Make an account the active one of its provider",
+	Short: "Switch the active account",
 	Args:  cmdline.ExactArgs(2),
 	Run:   withApp(runAccountUse),
 }

@@ -78,7 +78,7 @@ func TestErrorItems(t *testing.T) {
 			Text: `request failed: Post "` + demo.APIURL + `": EOF`, Error: true,
 		})},
 		{name: "Login failed", check: indicator(ui.EventIndicatorShow{
-			Text:  "login to provider-a account demo failed: token endpoint error (401)",
+			Text:  "login to provider-a failed: token endpoint error (401)",
 			Error: true, Detail: indented(demo.TokenErrorBody), JSON: true,
 		})},
 		{name: "Message error", check: func(t *testing.T, events []ui.UIEvent) {

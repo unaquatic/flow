@@ -149,7 +149,7 @@ func (s *Service) HandleContinue() []UIEvent {
 	case errors.Is(err, app.ErrNothingToContinue):
 		return s.ShowToast("Nothing to continue")
 	case err != nil:
-		return s.ShowToast(fmt.Sprintf("continue failed: %v", err))
+		return s.ShowToast(fmt.Sprintf("Continue failed: %v", err))
 	}
 	return slices.Concat(s.ResetError(), s.ShowIndicator(""))
 }

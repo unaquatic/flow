@@ -3,7 +3,7 @@
 |                                                            |
 |■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
-|  /new                      Clear the chat and start a new  |
+|  /new                      Clear the chat and start over   |
 |  /model                    Switch the model                |
 |  /effort                   Change the reasoning effort     |
 |  /status                   Show the version and session i  |
@@ -23,7 +23,7 @@
 |                                                            |
 |B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
 |                                                            |
-|  BBBB                      AAAAA AAA AAAA AAA AAAAA A AAA  |
+|  BBBB                      AAAAA AAA AAAA AAA AAAAA AAAA   |
 |  BBBBBB                    AAAAAA AAA AAAAA                |
 |  BBBBBBB                   AAAAAA AAA AAAAAAAAA AAAAAA     |
 |  BBBBBBB                   AAAA AAA AAAAAAA AAA AAAAAAA A  |

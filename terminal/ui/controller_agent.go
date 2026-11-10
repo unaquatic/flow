@@ -205,7 +205,7 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 		}
 
 	case app.EventLoginSucceeded:
-		out = s.SettleLogin(fmt.Sprintf("logged in to %s account %s.", s.ProviderName(e.Provider), e.Account))
+		out = s.SettleLogin("Logged in successfully")
 
 	case app.EventLoginFailed:
 		if p := s.state.Login; p != nil && p.Provider == e.Provider && p.Account == e.Account && e.Retry {
@@ -214,7 +214,7 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 			break
 		}
 		if e.Error.Message == context.Canceled.Error() {
-			out = s.SettleLogin(fmt.Sprintf("login to %s account %s cancelled.", s.ProviderName(e.Provider), e.Account))
+			out = s.SettleLogin(fmt.Sprintf("Login to %s cancelled", s.ProviderName(e.Provider)))
 		} else {
 			out = s.FailLogin(e)
 		}
