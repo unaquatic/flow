@@ -1,5 +1,5 @@
 === text ===
-|■ Usage model context 0K in 0K out 0K cache 0K $0.00 work…  |
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K Cache 0K $0.…  |
 |                                                            |
 |■ Commands                                                  |
 |  esc cancel  ↑/↓ move  tab complete                        |
@@ -16,7 +16,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A AAAAA BBBBB AAAAAAA BB AA BB AAA BB AAAAA BB BBBBB AAAAB  |
+|A AAAAA BBBBBBB BBBBBBB AAAAAAA BB A BB A BB AAAAA BB BBBB  |
 |                                                            |
 |B BBBBBBBB                                                  |
 |  AAA AAAAAA  AAA AAAA  AAA AAAAAAAA                        |

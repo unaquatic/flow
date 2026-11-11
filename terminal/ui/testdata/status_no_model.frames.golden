@@ -1,17 +1,15 @@
 === text ===
 |■ Status                                |
-|  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Provider  none                        |
-|  Model     none                        |
+|  Account   None                        |
+|  Model     None                        |
 |  Context   0K                          |
 |  Directory /work/project               |
 |                                        |
 === fg ===
 |A AAAAAA                                |
-|  BBBBBBB   AAAA AAAAAA                 |
 |  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
-|  BBBBBBBB  BBBB                        |
+|  BBBBBBB   BBBB                        |
 |  BBBBB     BBBB                        |
 |  BBBBBBB   AA                          |
 |  BBBBBBBBB AAAAAAAAAAAAA               |

@@ -1,5 +1,5 @@
 === text ===
-|■ Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
 |                                                            |
 |                                                            |
 |  Commands [↑/↓ move] [esc cancel]                          |
@@ -15,7 +15,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A AAAAA BBBBB AAAAAAA BB AA BB AAA BB AAAAA B AAAAAAA AAAA  |
+|A AAAAA BBBBBBB BBBBBBB AAAAAAA BB A BB A BBB AAAAAAA AAAA  |
 |                                                            |
 |                                                            |
 |  BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |

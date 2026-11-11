@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/unaquatic/catalog/gateway"
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/extension/protocol/protocoltest"
 	"github.com/unaquatic/fluid/style"
 )
 
@@ -117,6 +119,33 @@ func TestModelName(t *testing.T) {
 	}
 }
 
+// TestDisplayName checks that a model reads as its lab's name, its variant's
+// name and its effort's name, without its lab twice, and that a model the
+// catalog does not list reads as its lab, by name or as unknown, the model
+// as unknown, and the name of its effort.
+func TestDisplayName(t *testing.T) {
+	cat := protocoltest.FromAPI(t, testCatalog)
+	for model, want := range map[string]string{
+		"provider-a/lab-a/model-a":             "Lab A Model A",
+		"provider-a/lab-a/model-a:fast":        "Lab A Model A Fast",
+		"provider-a/lab-a/model-a:fast:xhigh":  "Lab A Model A Fast Extra High",
+		"provider-b/lab-b/model-f:medium":      "Lab B Model F Medium",
+		"provider-a/lab-a/model-h:medium":      "Lab A Unknown [model-h] Medium",
+		"provider-z/lab-z/model-z:high":        "Unknown [lab-z] Unknown [model-z] High",
+		"provider-a/model-x":                   "Unknown [model-x]",
+		"provider-a/ft:model-a:acme:a1b2":      "Unknown [ft:model-a:acme:a1b2]",
+		"provider-a/ft:model-a:acme:a1b2:high": "Unknown [ft:model-a:acme:a1b2] High",
+	} {
+		if got := DisplayName(cat, agent.ParseVariant(model, cat)); got != want {
+			t.Errorf("DisplayName(%q) = %q, want %q", model, got, want)
+		}
+	}
+	cat.Labs["lab-a"] = gateway.Lab{ID: "lab-a", Name: "Model"}
+	if got, want := DisplayName(cat, agent.ParseVariant("provider-a/lab-a/model-a", cat)), "Model A"; got != want {
+		t.Errorf("DisplayName of a model named after its lab = %q, want %q", got, want)
+	}
+}
+
 // TestCacheText checks that each reply shows how much of its prompt it read
 // from cache and how much it wrote to cache, each also when it is none, so
 // that a reply that did neither shows 0K for both, and that a reply that
@@ -219,15 +248,17 @@ func TestStatusLine(t *testing.T) {
 	}{
 		{
 			name:  "session under way",
-			model: "provider-a/lab-a/model-h:medium",
+			model: "Lab A Model H Medium",
 			usage: SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000,
 				Cost: 0.4249, Context: 64_000, Window: 922_000},
 			worked: 3*time.Minute + 12*time.Second,
-			want:   "lab-a/model-h medium context 64K 7% in 120K out 8.4K cache 310K $0.42 worked 3m 12s",
+			want:   "Lab A Model H Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K $0.42 Worked 3m 12s",
 		},
 		// Before any request every count and the cost show as none.
-		{name: "new session", model: "provider-b/lab-b/model-d", usage: SessionUsage{Window: 200_000},
-			want: "lab-b/model-d context 0K 0% in 0K out 0K cache 0K $0.00 worked 0s"},
+		{name: "new session", model: "Lab B Model D", usage: SessionUsage{Window: 200_000},
+			want: "Lab B Model D Context 0K 0% ↓ 0K ↑ 0K Cache 0K $0.00 Worked 0s"},
+		// With no model set, the model reads as StatusNone.
+		{name: "no model", want: "None Context 0K ↓ 0K ↑ 0K Cache 0K $0.00 Worked 0s"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

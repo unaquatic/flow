@@ -262,7 +262,7 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 }
 
 // TestShowInfoIsSystemNotice checks that /status draws a system notice alone,
-// with no logo, that starts with the version.
+// with no logo, that starts with the session.
 func TestShowInfoIsSystemNotice(t *testing.T) {
 	s, _ := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -276,8 +276,8 @@ func TestShowInfoIsSystemNotice(t *testing.T) {
 	if !ok || toast.Surface != NoticeSystem {
 		t.Fatalf("event is %+v, want a system notice", events[0])
 	}
-	if len(toast.Lines) == 0 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Version") {
-		t.Errorf("notice lines = %+v, want them to start with the version", toast.Lines)
+	if len(toast.Lines) == 0 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Session") {
+		t.Errorf("notice lines = %+v, want them to start with the session", toast.Lines)
 	}
 }
 

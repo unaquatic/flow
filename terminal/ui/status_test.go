@@ -29,15 +29,19 @@ func TestStatusLinesContext(t *testing.T) {
 }
 
 // TestStatusNoModel checks that a terminal started with no model holds none,
-// not "/", and that /status reads its provider and model as StatusNone,
-// while a model that names no provider reads as none for the provider alone.
+// not "/", and that /status reads its account and model as StatusNone,
+// while a model that names no provider reads as none for the account alone,
+// and a provider, lab or model the catalog does not list reads as unknown.
 func TestStatusNoModel(t *testing.T) {
 	for _, tt := range []struct {
-		start, model    string
-		provider, value string
+		start, model   string
+		account, value string
 	}{
-		{start: "", model: "", provider: "Provider  none", value: "Model     none"},
-		{start: "model-x", model: "/model-x", provider: "Provider  none", value: "Model     model-x"},
+		{start: "", model: "", account: "Account   None", value: "Model     None"},
+		{start: "model-x", model: "/model-x", account: "Account   None", value: "Model     Unknown [model-x]"},
+		// A provider and lab the catalog does not list read as unknown.
+		{start: "provider-z/lab-z/model-z", model: "provider-z/lab-z/model-z",
+			account: "Account   Unknown [provider-z]", value: "Model     Unknown [lab-z] Unknown [model-z]"},
 	} {
 		_, a := newTestService(t)
 		state := &UIState{Model: tt.start}
@@ -54,8 +58,8 @@ func TestStatusNoModel(t *testing.T) {
 		row := func(text string) int {
 			return slices.IndexFunc(notice.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
 		}
-		if p, m := row(tt.provider), row(tt.value); p < 0 || m != p+1 {
-			t.Errorf("start %q: /status lines = %q, want %q and then %q", tt.start, plainLines(notice.Lines), tt.provider, tt.value)
+		if p, m := row(tt.account), row(tt.value); p < 0 || m != p+1 {
+			t.Errorf("start %q: /status lines = %q, want %q and then %q", tt.start, plainLines(notice.Lines), tt.account, tt.value)
 		}
 	}
 }

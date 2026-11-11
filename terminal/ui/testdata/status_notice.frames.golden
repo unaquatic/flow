@@ -1,18 +1,16 @@
 === text ===
 |■ Status                                |
-|  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Provider  provider-a                  |
-|  Model     lab-a/model-a               |
+|  Account   Provider A OAuth            |
+|  Model     Lab A Model A Fast High     |
 |  Context   20K / 400K 5%               |
 |  Directory /work/project               |
 |                                        |
 === fg ===
 |A AAAAAA                                |
-|  BBBBBBB   AAAA AAAAAA                 |
 |  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
-|  BBBBBBBB  AAAAAAAAAA                  |
-|  BBBBB     AAAAAAAAAAAAA               |
+|  BBBBBBB   AAAAAAAA A AAAAA            |
+|  BBBBB     AAA A AAAAA A AAAA AAAA     |
 |  BBBBBBB   AAA A AAAA AA               |
 |  BBBBBBBBB AAAAAAAAAAAAA               |
 |                                        |

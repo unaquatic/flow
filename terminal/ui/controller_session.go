@@ -17,7 +17,6 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
@@ -35,19 +34,16 @@ const StatusTitle = "Status"
 // StatusInfo holds the facts the session info shows, as StatusLines lays
 // them out.
 type StatusInfo struct {
-	// Version names the running product and its version.
-	Version string
 	// Session identifies the active session.
 	Session string
 	// Title is the session's title, or empty when it has none.
 	Title string
-	// Updated is when the session was last stored, or zero before it is.
-	Updated time.Time
-	// Provider is the ID of the provider of the terminal's model, such as
-	// "provider-a", or is empty when the model names none.
-	Provider string
-	// Model is the terminal's model variant without its provider, in
-	// "model:option:effort" form, such as "lab-a/model-a:fast:high".
+	// Account names the provider of the terminal's model and the kind of
+	// its active account, as AccountName names them, such as "Provider A
+	// OAuth", or is empty when the model names no provider.
+	Account string
+	// Model is the terminal's model variant as DisplayName names it, such
+	// as "Lab A Model A Fast High", or empty when no model is set.
 	Model string
 	// Usage is the session's token use, whose context and window the
 	// Context row shows.
@@ -59,15 +55,25 @@ type StatusInfo struct {
 // statusLabelWidth is the width of the session info's label column.
 const statusLabelWidth = 10
 
-// StatusNone stands in the session info for a provider or model that is
+// StatusNone stands in the session info for an account or model that is
 // not set.
-const StatusNone = "none"
+const StatusNone = "None"
+
+// StatusUnknown names, in the session info and the Usage box, a provider,
+// lab or model the catalog does not list, before its ID in brackets, as
+// Unknown writes it.
+const StatusUnknown = "Unknown"
+
+// Unknown returns id as the session info names a provider, lab or model the
+// catalog does not list, such as "Unknown [provider-z]".
+func Unknown(id string) string {
+	return StatusUnknown + " " + Tag(id)
+}
 
 // StatusLines returns the rows of the session info, each a dim label and its
-// value: the version, the session's ID, its title when it has one, its last
-// update once it is stored, the model's provider, the
-// model without its provider, the context, and the working directory. A
-// provider or model that is not set reads as StatusNone, dim as the labels
+// value: the session's ID, its title when it has one, the model's provider
+// and account, the model, the context, and the working directory. An
+// account or model that is not set reads as StatusNone, dim as the labels
 // are. The context reads as the tokens of the latest request, the model's
 // window and the share of it they fill, such as "18K / 400K 5%", or the
 // tokens alone when the window is not known, in th's warning or danger color
@@ -81,18 +87,12 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		}
 		return style.Plain(value)
 	}
-	rows := []LabeledRow{
-		{"Version", style.Plain(info.Version)},
-		{"Session", style.Plain(info.Session)},
-	}
+	rows := []LabeledRow{{"Session", style.Plain(info.Session)}}
 	if info.Title != "" {
 		rows = append(rows, LabeledRow{"Title", style.Plain(info.Title)})
 	}
-	if !info.Updated.IsZero() {
-		rows = append(rows, LabeledRow{"Updated", style.Plain(info.Updated.Local().Format(time.DateTime))})
-	}
 	rows = append(rows,
-		LabeledRow{"Provider", orNone(info.Provider)},
+		LabeledRow{"Account", orNone(info.Account)},
 		LabeledRow{"Model", orNone(info.Model)},
 		LabeledRow{"Context", ContextValue(info.Usage, th)},
 		LabeledRow{"Directory", style.Plain(info.Directory)},
@@ -137,8 +137,8 @@ func ContextValue(u SessionUsage, th *style.Theme) style.TextChunk {
 }
 
 // ShowInfo runs /status, and heads the transcript as a session starts: it
-// reports the running version and the active session in the transcript, as
-// StatusLines lays them out and StatusNotice shows them.
+// reports the active session in the transcript, as StatusLines lays it out
+// and StatusNotice shows it.
 func (s *Service) ShowInfo() []UIEvent {
 	if s.state.Session == nil {
 		return s.ShowToast("No active session")
@@ -149,18 +149,17 @@ func (s *Service) ShowInfo() []UIEvent {
 		return s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
 	}
 
-	provider, model := agent.ParseModel(s.state.Model)
 	info := StatusInfo{
-		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
-		Provider:  string(provider),
-		Model:     model,
+		Model:     s.ModelDisplayName(s.state.Model),
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
 	}
+	if provider, _ := agent.ParseModel(s.state.Model); provider != "" {
+		info.Account = s.AccountName(provider)
+	}
 	if stored != nil {
 		info.Title = stored.Title
-		info.Updated = stored.UpdatedAt
 	}
 	return s.AddNotice(StatusNotice(StatusLines(info, nil)))
 }

@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 
 	"github.com/unaquatic/flow/agent"
 )
@@ -40,6 +42,39 @@ func (s *Service) ShowAccountMenu(pt agent.ProviderID) []UIEvent {
 		Title: fmt.Sprintf("%s accounts", s.ProviderName(pt)),
 		Items: func() []MenuItem { return items },
 	})
+}
+
+// CredentialName returns the name of credential kind k that the session
+// info shows, such as "OAuth" or "API Key", or k itself for a kind it does
+// not know.
+func CredentialName(k agent.CredentialKind) string {
+	switch k {
+	case agent.CredentialOAuth:
+		return "OAuth"
+	case agent.CredentialAPIKey:
+		return "API Key"
+	}
+	return string(k)
+}
+
+// AccountName returns the catalog's name of pt, or Unknown of its ID when
+// the catalog does not list it, and then the kind of its active account as
+// CredentialName names it, such as "Provider A OAuth", or the provider's
+// name alone when it has no active account or its accounts cannot be read.
+func (s *Service) AccountName(pt agent.ProviderID) string {
+	name := Unknown(string(pt))
+	if p, ok := s.app.Models().Catalog().Providers[pt]; ok {
+		name = cmp.Or(p.Name, string(pt))
+	}
+	st, err := s.app.Accounts().Status(s.ctx, pt)
+	if err != nil {
+		return name
+	}
+	i := slices.IndexFunc(st.Accounts, func(a agent.AccountStatus) bool { return a.ID == st.Active })
+	if i < 0 {
+		return name
+	}
+	return name + " " + CredentialName(st.Accounts[i].Kind)
 }
 
 // UseAccount makes account id the active account of pt.

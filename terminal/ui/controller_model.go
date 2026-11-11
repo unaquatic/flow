@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"cmp"
 	"slices"
 	"strings"
 
@@ -90,6 +91,52 @@ func VariantName(off gateway.Offering, v agent.Variant) string {
 		return v.ID()
 	}
 	return name
+}
+
+// DisplayName returns the name of v that the session info and the Usage box
+// show: the catalog's name of its model's lab, its name as VariantName gives
+// it, and the catalog's name of its reasoning effort, such as "Lab A Model A
+// Fast High". The lab is left out when the name starts with it already. A
+// variant the catalog does not list reads as its lab, by the catalog's name
+// or as Unknown writes its ID, and then its model as Unknown writes its ID,
+// such as "Lab A Unknown [model-h]" and "Unknown [lab-z] Unknown [model-z]",
+// or as Unknown of its ID alone when it names no lab, such as "Unknown
+// [model-x]", and then the name of the effort its ID ends in.
+func DisplayName(cat *gateway.Catalog, v agent.Variant) string {
+	var words []string
+	effort := v.Effort
+	if off, ok := agent.Lookup(cat, v); ok {
+		name := VariantName(off, v)
+		lab := cat.Labs[cmp.Or(off.Lab, gateway.ModelID(v.Model).Lab())].Name
+		if lab != "" && !strings.HasPrefix(name, lab+" ") {
+			words = append(words, lab)
+		}
+		words = append(words, name)
+	} else {
+		id := v.ID()
+		if effort == "" {
+			id, effort = SplitEffort(id)
+		}
+		if lab, model, ok := strings.Cut(id, "/"); ok {
+			words = append(words, cmp.Or(cat.Labs[gateway.ProviderID(lab)].Name, Unknown(lab)))
+			id = model
+		}
+		words = append(words, Unknown(id))
+	}
+	if effort != "" {
+		words = append(words, cmp.Or(cat.Efforts[gateway.Effort(effort)].Name, string(effort)))
+	}
+	return strings.Join(words, " ")
+}
+
+// ModelDisplayName returns model, a variant in
+// "provider/model:option:effort" form, as DisplayName names it from the
+// catalog, or "" when model is empty.
+func (s *Service) ModelDisplayName(model string) string {
+	if model == "" {
+		return ""
+	}
+	return DisplayName(s.app.Models().Catalog(), s.app.Models().ParseVariant(model))
 }
 
 // modelColumnGap is the space between the model menu's columns: its

@@ -1,5 +1,5 @@
 === text ===
-|■ Usage model context 0K in 0K out 0K cache … [ctrl+u pin]  |
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
 |                                                            |
 |■ also update the README [queued] [alt+enter send now]      |
 |                                                            |
@@ -19,7 +19,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A AAAAA BBBBB AAAAAAA BB AA BB AAA BB AAAAA B AAAAAAA AAAA  |
+|A AAAAA BBBBBBB BBBBBBB AAAAAAA BB A BB A BBB AAAAAAA AAAA  |
 |                                                            |
 |B BBBB BBBBBB BBB BBBBBB AAAAAAAA AAAAAAAAAA AAAA AAAA      |
 |                                                            |
