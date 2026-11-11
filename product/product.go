@@ -2,7 +2,16 @@
 // package of this module, so every package can use it.
 package product
 
-import "runtime/debug"
+import (
+	"runtime"
+	"runtime/debug"
+)
+
+// Platform returns the system and CPU the binary runs on, as Go names them,
+// such as darwin/arm64.
+func Platform() string {
+	return runtime.GOOS + "/" + runtime.GOARCH
+}
 
 const (
 	// Name is the application's name, which is also the name of its command.

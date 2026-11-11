@@ -333,8 +333,8 @@ func writeFieldLine(w io.Writer, label, value string) {
 	fmt.Fprintf(w, "%s\n%s%s\n", label, strings.Repeat(" ", ui.ResumeIndent), value)
 }
 
-// printVersion writes the name and version of the application to w, such
-// as "flow v1.2.3".
+// printVersion writes the name and version of the application to w, and the
+// platform it runs on, such as "flow v1.2.3 darwin/arm64".
 func printVersion(w io.Writer) {
-	fmt.Fprintf(w, "%s %s\n", product.Name, product.Version())
+	fmt.Fprintf(w, "%s %s %s\n", product.Name, product.Version(), product.Platform())
 }

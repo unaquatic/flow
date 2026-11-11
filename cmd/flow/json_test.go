@@ -119,14 +119,14 @@ func TestLoginKeyJSON(t *testing.T) {
 	}
 }
 
-// TestVersionJSON checks that flow version writes its name and version in
-// OutputJSON.
+// TestVersionJSON checks that flow version writes its name, its version and
+// the platform it runs on in OutputJSON.
 func TestVersionJSON(t *testing.T) {
 	var out strings.Builder
 	if err := writeVersionJSON(&out); err != nil {
 		t.Fatal(err)
 	}
-	if got := decodeJSON[VersionInfo](t, out.String()); got != (VersionInfo{Name: product.Name, Version: product.Version()}) {
+	if got := decodeJSON[VersionInfo](t, out.String()); got != (VersionInfo{Name: product.Name, Version: product.Version(), Platform: product.Platform()}) {
 		t.Errorf("version = %+v", got)
 	}
 }
