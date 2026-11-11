@@ -522,6 +522,139 @@ func TestEventStream(t *testing.T) {
 	}
 }
 
+// stalledWriter is the response of an event stream client that has stopped
+// reading: each Write waits until Release is closed. Started is closed once
+// the response starts.
+type stalledWriter struct {
+	header  http.Header
+	Started chan struct{}
+	Release chan struct{}
+}
+
+func newStalledWriter() *stalledWriter {
+	return &stalledWriter{header: http.Header{}, Started: make(chan struct{}), Release: make(chan struct{})}
+}
+
+func (w *stalledWriter) Header() http.Header { return w.header }
+
+func (w *stalledWriter) WriteHeader(int) { close(w.Started) }
+
+func (w *stalledWriter) Write(p []byte) (int, error) {
+	<-w.Release
+	return len(p), nil
+}
+
+func (w *stalledWriter) Flush() {}
+
+// TestEventStreamStalledClient checks that a GET /event client that stops
+// reading holds up none of the app's events, as it once held up every run:
+// the app publishes on while the client is stalled, far past the events a
+// subscriber may lag, and the client's stream ends once its write returns.
+func TestEventStreamStalledClient(t *testing.T) {
+	ts, a := newTestServerApp(t)
+	sess := createSession(t, ts)
+	msgURL := fmt.Sprintf("%s/session/%s/message", ts.URL, sess.ID)
+	if status := doJSON(t, "POST", msgURL, SendRequest{Text: "hi"}, nil); status != http.StatusAccepted {
+		t.Fatalf("send: status %d", status)
+	}
+	waitForMessages(t, ts, msgURL)
+
+	w := newStalledWriter()
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/event", nil)
+	handled := make(chan struct{})
+	go func() {
+		defer close(handled)
+		New(a, Options{}).handleEvents(w, req)
+	}()
+	<-w.Started // subscribed
+
+	// Each title publishes session.updated, which the stalled client takes
+	// none of.
+	const titles = 600
+	published := make(chan error, 1)
+	go func() {
+		for i := range titles {
+			if _, err := a.Session(sess.ID).SetTitle(fmt.Sprintf("title %d", i)); err != nil {
+				published <- err
+				return
+			}
+		}
+		published <- nil
+	}()
+	select {
+	case err := <-published:
+		if err != nil {
+			t.Fatalf("set title: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		close(w.Release)
+		t.Fatal("publishing app events is held up by a stalled event stream client")
+	}
+
+	close(w.Release)
+	select {
+	case <-handled:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the stalled client's event stream did not end")
+	}
+}
+
+// deadlineWriter is a response that records the write deadlines set on it,
+// and fails each write with Err.
+type deadlineWriter struct {
+	httptest.ResponseRecorder
+	Deadlines []time.Time
+	Err       error
+}
+
+func (w *deadlineWriter) SetWriteDeadline(t time.Time) error {
+	w.Deadlines = append(w.Deadlines, t)
+	return nil
+}
+
+func (w *deadlineWriter) Write(p []byte) (int, error) {
+	if w.Err != nil {
+		return 0, w.Err
+	}
+	return w.ResponseRecorder.Write(p)
+}
+
+func (w *deadlineWriter) WriteString(s string) (int, error) { return w.Write([]byte(s)) }
+
+// TestEventStreamWriteTimeout checks that each write of a streamed response
+// is given Options.WriteTimeout, and that a write the client does not take
+// in time fails, which ends the stream.
+func TestEventStreamWriteTimeout(t *testing.T) {
+	const timeout = 3 * time.Second
+	s := New(nil, Options{WriteTimeout: timeout})
+	w := &deadlineWriter{ResponseRecorder: *httptest.NewRecorder()}
+	stream := s.StartStream(w)
+
+	before := time.Now()
+	if err := stream.Comment("keepalive"); err != nil {
+		t.Fatalf("comment: %v", err)
+	}
+	if err := stream.Send("x.test", map[string]int{"n": 1}); err != nil {
+		t.Fatalf("send: %v", err)
+	}
+	if len(w.Deadlines) != 2 {
+		t.Fatalf("set %d write deadlines, want one per write, 2", len(w.Deadlines))
+	}
+	for _, d := range w.Deadlines {
+		if d.Before(before.Add(timeout)) || d.After(time.Now().Add(timeout)) {
+			t.Errorf("write deadline %v, want %v after the write", d, timeout)
+		}
+	}
+	if got := w.Body.String(); !strings.Contains(got, ": keepalive\n") || !strings.Contains(got, "event: x.test\n") {
+		t.Errorf("stream = %q, want the comment and the event", got)
+	}
+
+	w.Err = os.ErrDeadlineExceeded
+	if err := stream.Comment("keepalive"); !errors.Is(err, os.ErrDeadlineExceeded) {
+		t.Errorf("write past the deadline: err = %v, want %v", err, os.ErrDeadlineExceeded)
+	}
+}
+
 // readSSEEvent reads one event and data pair from an SSE stream.
 // openEvents subscribes to the event stream at url, for ten seconds at most,
 // and returns the stream to read.

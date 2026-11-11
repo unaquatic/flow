@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/internal/sse"
 )
 
 // handleModelList answers with the catalog models of each signed-in
@@ -75,10 +73,10 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 // streamGenerate answers req with server-sent events: a delta for each chunk
 // of text or reasoning as it arrives, then the whole reply, or the failure
 // that ended it. A request that cannot start is answered with its error
-// status instead.
+// status instead. A client that takes no write within
+// Options.WriteTimeout ends the request.
 func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model string, req agent.Request) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
+	if _, ok := w.(http.Flusher); !ok {
 		respondErr(w, errStreamingUnsupported)
 		return
 	}
@@ -87,17 +85,18 @@ func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model st
 		respondErr(w, err)
 		return
 	}
-	sse.Start(w)
-	flusher.Flush()
+	out := s.StartStream(w)
+	if err := out.Flush(); err != nil {
+		return
+	}
 
 	// Send each delta on, and collect the parts for the whole reply.
 	forwarded := agent.StreamResponse(func(yield func(agent.StreamPart, error) bool) {
 		for part, err := range stream {
 			if err == nil {
-				if writeDelta(w, part) != nil {
+				if sendDelta(out, part) != nil {
 					return
 				}
-				flusher.Flush()
 			}
 			if !yield(part, err) {
 				return
@@ -106,20 +105,19 @@ func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model st
 	})
 	resp, err := forwarded.Collect()
 	if err != nil {
-		writeEvent(w, EventGenerateFailed, GenerateFailed{Error: app.ErrorOf(err)})
+		out.Send(EventGenerateFailed, GenerateFailed{Error: app.ErrorOf(err)})
 	} else {
-		writeEvent(w, EventGenerateEnded, generateResponse(name, resp))
+		out.Send(EventGenerateEnded, generateResponse(name, resp))
 	}
-	flusher.Flush()
 }
 
-// writeDelta writes part as a delta event, if it is text or reasoning.
-func writeDelta(w io.Writer, part agent.StreamPart) error {
+// sendDelta sends part on out as a delta event, if it is text or reasoning.
+func sendDelta(out *EventStream, part agent.StreamPart) error {
 	switch p := part.(type) {
 	case agent.TextDelta:
-		return writeEvent(w, EventGenerateTextDelta, GenerateDelta{Block: p.Block, Text: p.Text})
+		return out.Send(EventGenerateTextDelta, GenerateDelta{Block: p.Block, Text: p.Text})
 	case agent.ReasoningDelta:
-		return writeEvent(w, EventGenerateReasoningDelta, GenerateDelta{Block: p.Block, Text: p.Text})
+		return out.Send(EventGenerateReasoningDelta, GenerateDelta{Block: p.Block, Text: p.Text})
 	}
 	return nil
 }

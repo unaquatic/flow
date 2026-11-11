@@ -242,9 +242,21 @@ func (a *App) WorkingDir() string { return a.workingDir }
 // The slice is a copy.
 func (a *App) Extensions() []extension.Extension { return slices.Clone(a.extensions) }
 
-// Subscribe returns app events published until ctx is done.
+// Subscribe returns every app event published until ctx is done. The app
+// waits for a subscriber that lags behind, so one that stops reading stalls
+// every run: it suits a reader of the same process, such as the terminal
+// UI.
 func (a *App) Subscribe(ctx context.Context) <-chan Event {
 	return a.broker.Subscribe(ctx)
+}
+
+// SubscribeDroppable returns the app events published until ctx is done or
+// the subscriber falls too far behind, and a channel closed when either
+// happens. The app never waits for the subscriber: one that lags behind is
+// dropped, and has to read again the state it follows, so that a reader
+// that stalls, such as a network client of the HTTP API, stalls no run.
+func (a *App) SubscribeDroppable(ctx context.Context) (events <-chan Event, ended <-chan struct{}) {
+	return a.broker.SubscribeDroppable(ctx)
 }
 
 // Close stops the operations in progress, waits for them and the app's other
