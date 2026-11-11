@@ -138,17 +138,8 @@ type Provider struct {
 	Disabled bool `json:"disabled,omitempty"`
 }
 
-// Agent holds model tuning and agent behavior parameters.
+// Agent holds agent behavior parameters.
 type Agent struct {
-	// Temperature controls sampling randomness.
-	Temperature *float64 `json:"temperature,omitempty"`
-
-	// TopP controls nucleus sampling probability mass.
-	TopP *float64 `json:"top_p,omitempty"`
-
-	// MaxSteps is the maximum number of agentic iterations per run.
-	MaxSteps int `json:"max_steps,omitempty"`
-
 	// RetryMaxAttempts includes the initial provider attempt.
 	RetryMaxAttempts int `json:"retry_max_attempts,omitempty"`
 
@@ -337,7 +328,6 @@ func Defaults(dir string) *Config {
 		ShowBorder: true,
 		AutoUpdate: true,
 		Agent: Agent{
-			MaxSteps:         50,
 			RetryMaxAttempts: 5,
 			RetryDelay:       Duration{3 * time.Second},
 		},
@@ -442,15 +432,6 @@ func mergeFromFile(cfg *Config, f File) error {
 	}
 
 	if _, ok := raw["agent"]; ok {
-		if overlay.Agent.Temperature != nil {
-			cfg.Agent.Temperature = overlay.Agent.Temperature
-		}
-		if overlay.Agent.TopP != nil {
-			cfg.Agent.TopP = overlay.Agent.TopP
-		}
-		if overlay.Agent.MaxSteps > 0 {
-			cfg.Agent.MaxSteps = overlay.Agent.MaxSteps
-		}
 		if overlay.Agent.RetryMaxAttempts > 0 {
 			cfg.Agent.RetryMaxAttempts = overlay.Agent.RetryMaxAttempts
 		}

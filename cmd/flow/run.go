@@ -54,8 +54,8 @@ type RunOptions struct {
 	// session, in place of the configuration's agent.system_prompt, or
 	// empty to keep it.
 	SystemPrompt string
-	// MaxSteps limits the model responses of the run, or is zero for the
-	// default limit.
+	// MaxSteps limits the model responses of the run, or is zero for no
+	// limit.
 	MaxSteps int
 	// Tools names the built-in tools the run offers the model, or patterns
 	// of them, in place of the default ones, as tools.Selection's Only
@@ -186,7 +186,7 @@ func printFlags(fs *flag.FlagSet, o *RunOptions) {
 	fs.StringVar(&o.Name, "n", "", nameUsage)
 	fs.BoolVar(&o.NoContextFiles, "no-context-files", false, "Leave the AGENTS.md files out of the system prompt of a printed run")
 	fs.StringVar(&o.SystemPrompt, "system-prompt", "", "System prompt `text` of a printed run, in place of the configuration's agent.system_prompt")
-	fs.Var(positiveValue{n: &o.MaxSteps}, "max-steps", fmt.Sprintf("Most model responses a printed run makes, `n` (default %d)", app.DefaultMaxSteps))
+	fs.Var(positiveValue{n: &o.MaxSteps}, "max-steps", "Most model responses a printed run makes, `n` (default no limit)")
 	fs.Var(listValue{list: &o.Tools}, "tools",
 		"Built-in tools a printed run offers, in place of the default ones: comma-separated `names` or patterns, such as read,grep, or \"\" for none")
 	fs.Var(listValue{list: &o.ExcludeTools}, "exclude-tools", "Tools a printed run leaves out: comma-separated `names` or patterns, such as bash,write")

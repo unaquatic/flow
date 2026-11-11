@@ -101,8 +101,8 @@ type Options struct {
 	// each new session, in place of the configuration's
 	// agent.system_prompt.
 	SystemPrompt string
-	// MaxSteps limits the model responses of each run. Zero keeps the
-	// default limit.
+	// MaxSteps, when positive, limits the model responses of each run. Zero
+	// sets no limit.
 	MaxSteps int
 }
 
