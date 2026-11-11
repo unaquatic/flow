@@ -4,6 +4,7 @@ import (
 	"iter"
 	"maps"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -352,26 +353,30 @@ func (ui *UI) NewNoticeBarRow(id string, n Notice, lines []style.StyledText) *wi
 // names, and the selected row of a menu.
 var productFg = style.ColorFromHex(product.PrimaryColor)
 
-// logoInitialFg is the orange of the "f" of the logo, product.LogoInitialColor,
-// as --version and the README logos draw it. It is productFg.
-var logoInitialFg = style.ColorFromHex(product.LogoInitialColor)
+// iconFg is the color of the "f" of the product icon, product.IconColor, and
+// iconBg the color of the square behind it, product.IconBgColor: productFg.
+var (
+	iconFg = style.ColorFromHex(product.IconColor)
+	iconBg = style.ColorFromHex(product.IconBgColor)
+)
 
-// LogoLines yields the lines of the product logo, the "f" in logoInitialFg
-// and the rest in textFg.
-func LogoLines() iter.Seq[style.StyledText] { return LogoLinesIn(logoInitialFg) }
-
-// LogoLinesIn yields the lines of the product logo, the "f" in c and the rest
-// in textFg.
-func LogoLinesIn(c style.Color) iter.Seq[style.StyledText] {
-	initial := style.New().WithFg(c).Func()
-	rest := style.New().WithFg(textFg).Func()
+// IconLines yields the lines of the product icon, product.Icon, its "f" in
+// iconFg on a square of iconBg.
+func IconLines() iter.Seq[style.StyledText] {
+	icon := style.New().WithFg(iconFg).WithBg(iconBg).Func()
 	return func(yield func(style.StyledText) bool) {
-		for f, r := range product.LogoParts() {
-			if !yield(style.NewStyledText(initial(f), rest(r))) {
+		for line := range strings.SplitSeq(product.Icon, "\n") {
+			if !yield(style.NewStyledText(icon(line))) {
 				return
 			}
 		}
 	}
+}
+
+// IconNotice returns the notice that shows the product icon, IconLines, on
+// the canvas, as the transcript starts with it at startup.
+func IconNotice() Notice {
+	return Notice{Lines: slices.Collect(IconLines()), Surface: NoticeCanvas}
 }
 
 // ResumeIndent is the number of columns the resume command is indented by,
@@ -409,15 +414,16 @@ func ResumeCommand(id message.SessionID, fg style.Color) style.StyledText {
 
 // NewResumeNotice returns the notice that tells how to resume session id, on
 // the canvas rather than in a box, from the left edge of the terminal, with a
-// blank row under it: the product logo, then after a blank row ResumeIntro,
-// and right under it ResumeCommand, indented by ResumeIndent, both in the
-// theme's text color. terminal.ResumeText is the notice as text to print.
+// blank row under it: the product icon, IconLines, then after a blank row
+// ResumeIntro, and right under it ResumeCommand, indented by ResumeIndent,
+// both in the theme's text color. terminal.ResumeText is the notice as text
+// to print.
 func NewResumeNotice(id message.SessionID, theme *style.Theme) *widget.Box {
 	theme = themeOrDefault(theme)
 	fg := theme.ResolveTextBase()
 	logo := widget.NewBox(
 		widget.BoxWithLayout(layout.WithMarginBottom(layout.Points(1))),
-		widget.Children(widget.NewStyledText(JoinStyledLines(slices.Collect(LogoLines())))),
+		widget.Children(widget.NewStyledText(JoinStyledLines(slices.Collect(IconLines())))),
 	)
 	intro := widget.NewStyledText(ResumeIntro(fg))
 	command := widget.NewStyledText(ResumeCommand(id, fg), widget.TextWithWrapMode(textbuf.WrapWord))

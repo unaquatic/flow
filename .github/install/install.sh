@@ -97,30 +97,32 @@ if [ -t 1 ] && [ "${TERM:-}" != dumb ]; then
 	tty=true
 	[ -n "${NO_COLOR:-}" ] || color=true
 fi
-bold= unbold= orange= grey= reset=
+# icon draws flow's icon: its "f" near-black on a square of the orange.
+bold= unbold= orange= icon= reset=
 if [ "$color" = true ]; then
 	bold=$(printf '\033[1m') unbold=$(printf '\033[22m') reset=$(printf '\033[0m')
 	case ${COLORTERM:-} in
-		truecolor | 24bit) orange=$(printf '\033[38;2;255;95;0m') grey=$(printf '\033[38;2;230;230;230m') ;;
-		*) orange=$(printf '\033[38;5;202m') grey=$(printf '\033[38;5;254m') ;;
+		truecolor | 24bit) orange=$(printf '\033[38;2;255;95;0m') icon=$(printf '\033[38;2;17;17;17m\033[48;2;255;95;0m') ;;
+		*) orange=$(printf '\033[38;5;202m') icon=$(printf '\033[38;5;233m\033[48;5;202m') ;;
 	esac
 fi
 
-# banner prints flow's logo, its "f" orange and the rest grey, as flow draws
-# it, and the installer's title.
+# banner prints flow's icon, its "f" dark on an orange square, as flow draws
+# it at startup (product.Icon), and the installer's title. Every line of the
+# icon is 16 columns wide, as its spaces draw the square.
 banner() {
 	printf '\n'
-	while IFS='|' read -r f rest; do
-		printf '%s%s%s%s%s%s\n' "$orange" "$f" "$reset" "$grey" "$rest" "$reset"
+	while IFS= read -r line; do
+		printf '%s%s%s\n' "$icon" "$line" "$reset"
 	done <<'EOF'
-    ▄▄▄| ▄▄▄
-   ██▀▀| ▀██
- ▄▄██▄▄|  ██   ▄▄▄▄▄▄  ▄▄    ▄▄
- ▀▀██▀▀|  ██  ██▀▀▀▀██ ██    ██
-   ██  |  ██  ██    ██ ██    ██
-   ██  |  ██  ██    ██ ██ ▄▄ ██
-▄▄ ██  | ▄██▄ ██▄▄▄▄██ ████████
-▀███▀  | ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀
+        ▄▄▄     
+       ██▀▀     
+     ▄▄██▄▄     
+     ▀▀██▀▀     
+       ██       
+       ██       
+    ██▄██       
+     ▀▀▀        
 EOF
 	printf '\n%sFlow Installer%s\n\n' "$bold" "$unbold"
 }

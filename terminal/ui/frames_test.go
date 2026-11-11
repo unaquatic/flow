@@ -286,6 +286,11 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "help_notice", w: 72, h: 34, add: func(ui *UI) {
 			ui.AddNotice(Notice{Title: HelpTitle, Surface: NoticeSystem, Lines: HelpLines(SlashCommands)})
 		}},
+		// Startup heads the transcript with the product icon, a dark ƒ on
+		// an orange square, and the session's /status under it.
+		{name: "startup", h: 18, add: func(ui *UI) {
+			ui.AddNotice(IconNotice(), StatusNotice(statusLines()))
+		}},
 		// /new heads the emptied transcript with the new session's /status.
 		{name: "new_chat", h: 13, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines()))

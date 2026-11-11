@@ -522,10 +522,12 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The session info heads the transcript, above the messages it follows
-	// in. It shows once the session and its model are set, so that it reads
-	// them. The update that started this release shows under it.
+	// The product icon and the session info under it head the transcript,
+	// above the messages they follow in. The info shows once the session
+	// and its model are set, so that it reads them. The update that started
+	// this release shows under it.
 	loaded := len(s.state.Messages)
+	s.AddNotice(IconNotice())
 	s.ShowInfo()
 	if s.Updated != "" {
 		s.ShowUpdated(s.Updated)

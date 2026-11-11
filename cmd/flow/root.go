@@ -226,12 +226,12 @@ var stderr io.Writer = os.Stderr
 // --color names another.
 var colorMode = fluidterm.DetectColorMode()
 
-// banner is terminal.LogoBanner as plain text, which help shows where colors
+// banner is terminal.IconBanner as plain text, which help shows where colors
 // are not shown.
-var banner = terminal.LogoBanner().PlainText()
+var banner = terminal.IconBanner().PlainText()
 
-// colorBanner is terminal.LogoBanner in colorMode, which help shows.
-var colorBanner = terminal.ANSI(terminal.LogoBanner(), colorMode)
+// colorBanner is terminal.IconBanner in colorMode, which help shows.
+var colorBanner = terminal.ANSI(terminal.IconBanner(), colorMode)
 
 // highlight returns s, a value the user may copy, such as an account ID, a
 // URL or a code, in product.PrimaryColor as terminal.ANSI draws it in

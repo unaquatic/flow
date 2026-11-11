@@ -13,7 +13,7 @@ const (
 	// as FLOW_HOME_DIR.
 	ID = "flow"
 
-	// PrimaryColor is the application's orange. It draws the "f" of Logo, the
+	// PrimaryColor is the application's orange. It draws the square of Icon, the
 	// selected row of a menu, and the application's name where a notice or
 	// the command line names it.
 	PrimaryColor = "#ff5f00"

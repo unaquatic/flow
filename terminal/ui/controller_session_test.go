@@ -15,6 +15,7 @@ import (
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
+	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
@@ -193,16 +194,16 @@ func TestActiveSessionIDOffLoop(t *testing.T) {
 
 // TestInitSessionNoticeFirst checks that a session opened at startup loads its
 // transcript in one event, which the UI builds the last rows of, with the
-// /status notice above its messages and no logo, and adds nothing to it
-// after.
+// product icon and then the /status notice above its messages, and adds
+// nothing to it after.
 func TestInitSessionNoticeFirst(t *testing.T) {
 	tests := []struct {
 		name     string
 		messages int
 		want     []string
 	}{
-		{name: "new session", want: []string{"notice"}},
-		{name: "stored session", messages: 2, want: []string{"notice", "message", "message"}},
+		{name: "new session", want: []string{"logo", "notice"}},
+		{name: "stored session", messages: 2, want: []string{"logo", "notice", "message", "message"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,8 +242,12 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 			if !slices.Equal(got, tt.want) {
 				t.Fatalf("loaded transcript = %q, want %q", got, tt.want)
 			}
-			// The /status notice reads the session opened.
-			status := loads[0].Messages[0].Notice
+			// The icon draws product.Icon, and the /status notice reads the
+			// session opened.
+			if got := JoinStyledLines(loads[0].Messages[0].Notice.Lines).PlainText(); got != product.Icon {
+				t.Errorf("icon notice =\n%s\nwant\n%s", got, product.Icon)
+			}
+			status := loads[0].Messages[1].Notice
 			if want := fmt.Sprintf("%-10s%s", "Session", s.SessionID()); !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
 				t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
 			}

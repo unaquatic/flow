@@ -52,7 +52,7 @@ func backgroundChoices(t *style.Theme) []ColorChoice {
 		{t.InfoSurface, style.ANSIBrightBlack, 235},
 
 		// Selections and fills.
-		{productFg, style.ANSIWhite, 202},             // the bar of a selected row, selected input text
+		{productFg, style.ANSIWhite, 202},             // the bar of a selected row, selected input text, the square of the icon
 		{t.SelectionBg, style.ANSIBlue, 24},           // SelectionBg, BorderFocus
 		{t.SelectionInactiveBg, style.ANSIBlack, 236}, // SelectionInactiveBg
 		{t.DiffAddSurface, style.ANSIGreen, 239},      // DiffAddSurface
@@ -64,9 +64,10 @@ func backgroundChoices(t *style.Theme) []ColorChoice {
 func textChoices(t *style.Theme) []ColorChoice {
 	return []ColorChoice{
 		// Text.
-		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, code attributes, objects, numbers, types, constants, and properties, the logo after its "f", paths in the diff toast
+		{t.TextBase, style.ANSIBrightWhite, 254},       // TextBase, TextStrong, SelectionFg, CodeFg, markdown text, code attributes, objects, numbers, types, constants, and properties, paths in the diff toast
 		{style.ColorWhite, style.ANSIBrightWhite, 231}, // OnAccent, OnInteractive and the other On roles
 		{boxBg, style.ANSIBlack, 235},                  // text on the bar of a selected row, selected input text
+		{iconFg, style.ANSIBlack, 233},                 // the "f" of the icon, on its square of productFg
 
 		// Dim text, which cards hold too.
 		{t.TextMuted, style.ANSIWhite, 245}, // TextMuted, Interactive, Info, comments, quotes, H5, tool rows and reasoning, the labels of /status and the diff toast, panel counts, menu descriptions, hints, the banner's text, the indicator
@@ -80,7 +81,7 @@ func textChoices(t *style.Theme) []ColorChoice {
 		// Oranges.
 		{t.Accent, style.ANSIYellow, 202},       // Accent, TextLink, Warning, H1, H3, H4, H6, links, bold, bullets, keywords
 		{t.AccentStrong, style.ANSIYellow, 172}, // AccentStrong, H2
-		{productFg, style.ANSIWhite, 202},       // the product name, the logo's "f", selected rows
+		{productFg, style.ANSIWhite, 202},       // the product name, selected rows
 
 		// Reds.
 		{t.Danger, style.ANSIBrightRed, 203},  // Danger, DiffRemoveFg, code errors

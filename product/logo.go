@@ -21,8 +21,33 @@ const Logo = "" +
 	"▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████\n" +
 	"▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀"
 
-// LogoInitialColor is the color that draws the "f" of Logo in the terminal
-// UI, on the command line and in the README logos: PrimaryColor.
+// Icon is the application's icon drawn in half-block characters: an "ƒ" on a
+// square, 16 columns wide and 8 rows tall, which hold 16 by 16 square pixels.
+// It is the 16 by 16 icon of flow's landing page, cmd/landing in aquatic next
+// to this repository, pixel for pixel, and the installer,
+// .github/install/install.sh, prints a copy of it: change all three. Its top
+// and bottom pixel rows are blank. Every line is 16 columns wide, as its
+// spaces draw the square, and it ends without a newline. The terminal draws
+// it in IconColor on IconBgColor.
+const Icon = "" +
+	"        ▄▄▄     \n" +
+	"       ██▀▀     \n" +
+	"     ▄▄██▄▄     \n" +
+	"     ▀▀██▀▀     \n" +
+	"       ██       \n" +
+	"       ██       \n" +
+	"    ██▄██       \n" +
+	"     ▀▀▀        "
+
+// IconColor is the color of the "f" of Icon, and IconBgColor the color of the
+// square behind it, PrimaryColor, as the landing page's icon draws them.
+const (
+	IconColor   = "#111111"
+	IconBgColor = PrimaryColor
+)
+
+// LogoInitialColor is the color that draws the "f" of Logo in the README
+// logos: PrimaryColor. The terminal draws Icon in place of Logo.
 const LogoInitialColor = PrimaryColor
 
 // logoInitialWidth is the number of columns the "f" of Logo spans. The column
