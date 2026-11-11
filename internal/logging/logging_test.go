@@ -27,11 +27,15 @@ func lines(t *testing.T, name string) []string {
 // session is unsafe as a file name.
 func TestInit_CopiesSessionRecords(t *testing.T) {
 	prev := slog.Default()
-	t.Cleanup(func() { slog.SetDefault(prev) })
 	dir := filepath.Join(t.TempDir(), "logs")
-	if err := Init(filepath.Join(dir, "app.log"), slog.LevelInfo); err != nil {
+	f, err := Init(filepath.Join(dir, "app.log"), slog.LevelInfo)
+	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		slog.SetDefault(prev)
+		f.Close()
+	})
 
 	slog.Info("plain")
 	slog.Info("own", "session", "ses_a")

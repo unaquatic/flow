@@ -596,6 +596,9 @@ func TestStage_SkipsUnreadableFiles(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root reads files regardless of permissions")
 	}
+	if onWindows {
+		t.Skip("Windows reads a file of mode 0, which it only makes read-only")
+	}
 	dir, w, s := openTestWorktree(t)
 	writeFile(t, dir, "ok.txt", "ok")
 	secret := writeFile(t, dir, "secret.txt", "s")

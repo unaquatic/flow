@@ -18,8 +18,10 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: Check
+  # Lint checks what reads the same on every system once, on Linux, vetting
+  # the Windows build too.
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -37,7 +39,27 @@ jobs:
           [ -z "$unformatted" ] || { echo "gofmt needed:" >&2; echo "$unformatted" >&2; exit 1; }
 
       - name: Vet
-        run: go vet ./...
+        run: |
+          go vet ./...
+          GOOS=windows go vet ./...
+
+  # Test runs the tests on each system flow ships for.
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Test
         run: go test ./...

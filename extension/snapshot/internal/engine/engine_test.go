@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -17,6 +18,11 @@ import (
 	"github.com/unaquatic/flow/database"
 	"github.com/unaquatic/flow/product"
 )
+
+// onWindows is set where files have no executable bit, names may not hold
+// tabs, quotes or backslashes, and a file of mode 0 can still be read, so
+// tests leave out what they cannot set up there.
+const onWindows = runtime.GOOS == "windows"
 
 // requireGit skips a test when Git is unavailable. Only the tests that
 // compare results with Git's need it.

@@ -1,0 +1,3 @@
+# Check files out as they are committed, with LF line endings, on Windows
+# too: tests compare golden files and embedded files byte for byte.
+* -text

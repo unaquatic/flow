@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -169,6 +170,7 @@ func write(t *testing.T, dir, data string) {
 func TestDataDir(t *testing.T) {
 	home, wd := t.TempDir(), t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // the home directory on Windows
 	t.Chdir(wd)
 	wd, _ = os.Getwd() // the working directory as the system resolves it
 
@@ -199,6 +201,9 @@ func TestDataDir(t *testing.T) {
 // permissions of the config file, which can hold API keys, and creates a
 // new one private to its user.
 func TestServiceSaveDefaultModelKeepsPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows has no Unix permission bits")
+	}
 	dir := t.TempDir()
 	s := NewService(dir)
 	path := filepath.Join(dir, FileName)

@@ -2,6 +2,7 @@ package update
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
@@ -19,10 +20,26 @@ import (
 	"testing"
 )
 
-// tarGz returns a gzipped tar that holds content as the file called name.
-func tarGz(t *testing.T, name, content string) []byte {
+// releaseArchive returns a release asset of the platform, as ReleaseAsset
+// names it, that holds content as the file called name: a zip on Windows,
+// and a gzipped tar elsewhere.
+func releaseArchive(t *testing.T, name, content string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
+	if strings.HasSuffix(ReleaseAsset(), ".zip") {
+		zw := zip.NewWriter(&buf)
+		f, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+		if err := zw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
+	}
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
 	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
@@ -43,10 +60,10 @@ func tarGz(t *testing.T, name, content string) []byte {
 // digest names.
 func releases(t *testing.T, tamper bool) *httptest.Server {
 	t.Helper()
-	asset := tarGz(t, ExecutableName(), "github")
+	asset := releaseArchive(t, ExecutableName(), "github")
 	sum := sha256.Sum256(asset)
 	if tamper {
-		asset = tarGz(t, ExecutableName(), "tampered")
+		asset = releaseArchive(t, ExecutableName(), "tampered")
 	}
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +101,8 @@ func standalone(t *testing.T, srv *httptest.Server) *Updater {
 }
 
 // binary returns what the flow of u holds, and fails the test when its
-// folder holds anything else than it and MarkerName, as a download left.
+// folder holds anything else than it and MarkerName, as a download left, but
+// for the binary that Replace renames aside on Windows.
 func binary(t *testing.T, u *Updater) string {
 	t.Helper()
 	entries, err := os.ReadDir(filepath.Dir(u.Executable))
@@ -93,6 +111,11 @@ func binary(t *testing.T, u *Updater) string {
 	}
 	var names []string
 	for _, e := range entries {
+		// Windows cannot remove a running binary, so Replace leaves the one
+		// it replaced as .old, which the next Replace removes.
+		if runtime.GOOS == "windows" && e.Name() == ExecutableName()+".old" {
+			continue
+		}
 		names = append(names, e.Name())
 	}
 	if want := []string{MarkerName, ExecutableName()}; !slices.Equal(names, want) {
@@ -239,7 +262,7 @@ func TestAutoStandalone(t *testing.T) {
 // it, wrong with tamper set.
 func mirror(t *testing.T, tamper bool) *httptest.Server {
 	t.Helper()
-	asset := tarGz(t, ExecutableName(), "mirror")
+	asset := releaseArchive(t, ExecutableName(), "mirror")
 	sum := sha256.Sum256(asset)
 	if tamper {
 		sum = sha256.Sum256([]byte("other"))

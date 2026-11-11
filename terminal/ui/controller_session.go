@@ -344,8 +344,9 @@ func SessionDir(dir string) string {
 }
 
 // TildeDir returns dir with its leading home, the home folder, written as ~:
-// "~" for home itself and "~/" before a folder inside it. Any other dir,
-// such as one that only shares home's prefix, is returned as it is.
+// "~" for home itself and "~/" before a folder inside it, "~\" on Windows.
+// Any other dir, such as one that only shares home's prefix, is returned as
+// it is.
 func TildeDir(dir, home string) string {
 	if home == "" || home == string(filepath.Separator) {
 		return dir

@@ -1,6 +1,7 @@
-//go:build !darwin
+//go:build !darwin && !windows
 
 package builtin
 
-// fallbackShells are tried in order when $SHELL is not a usable POSIX shell.
-var fallbackShells = []string{"bash"}
+// fallbackShells returns the shells tried in order when $SHELL is not a
+// usable POSIX shell.
+func fallbackShells() []string { return []string{"bash"} }

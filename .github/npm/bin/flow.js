@@ -16,8 +16,10 @@ function fail(message) {
   process.exit(1);
 }
 
-// The package holds a binary for every platform, next to this file.
-const bin = path.join(__dirname, `flow-${process.platform}-${process.arch}`);
+// The package holds a binary for every platform, next to this file, with .exe
+// on Windows.
+const windows = process.platform === "win32";
+const bin = path.join(__dirname, `flow-${process.platform}-${process.arch}${windows ? ".exe" : ""}`);
 if (!existsSync(bin)) {
   fail(`unsupported platform: ${process.platform}/${process.arch}`);
 }
@@ -42,10 +44,16 @@ const child = spawn(bin, process.argv.slice(2), {
 });
 child.on("error", (err) => fail(`launch failed: ${err.message}`));
 
-// Pass stop signals on to flow.
+// Pass stop signals on to flow. On Windows the console sends Ctrl-C to flow
+// as well, and child.kill would end flow at once, without its cleanup, so the
+// launcher only stays alive until flow exits.
 const signals = ["SIGINT", "SIGTERM", "SIGHUP"];
 for (const signal of signals) {
-  process.on(signal, () => child.kill(signal));
+  process.on(signal, () => {
+    if (!windows) {
+      child.kill(signal);
+    }
+  });
 }
 
 // Exit the way flow exited.

@@ -81,14 +81,18 @@ jobs:
             echo "$TAG is mirrored already"
           else
             assets=$RUNNER_TEMP/assets
-            gh release download "$TAG" --repo "$REPO" --pattern 'flow-*.tar.gz' --dir "$assets"
+            gh release download "$TAG" --repo "$REPO" --pattern 'flow-*.tar.gz' --pattern 'flow-*.zip' --dir "$assets"
             for asset in "$assets"/*; do
               gh release verify-asset "$TAG" "$asset" --repo "$REPO"
             done
-            (cd "$assets" && sha256sum flow-*.tar.gz > "$RUNNER_TEMP/SHA256SUMS")
-            for asset in "$assets"/flow-*.tar.gz; do
+            (cd "$assets" && sha256sum flow-* > "$RUNNER_TEMP/SHA256SUMS")
+            for asset in "$assets"/flow-*; do
+              case $asset in
+                *.zip) type=application/zip ;;
+                *) type=application/gzip ;;
+              esac
               wrangler r2 object put "$bucket/flow/$TAG/$(basename "$asset")" --remote --file "$asset" \
-                --content-type application/gzip --cache-control "$immutable"
+                --content-type "$type" --cache-control "$immutable"
             done
             wrangler r2 object put "$bucket/flow/$TAG/SHA256SUMS" --remote --file "$RUNNER_TEMP/SHA256SUMS" \
               --content-type 'text/plain; charset=utf-8' --cache-control "$immutable"

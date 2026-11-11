@@ -3,7 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -18,18 +18,27 @@ const MaxBashTimeout = time.Hour
 
 // Bash runs a shell command with DefaultShell, or with another installed
 // POSIX shell that the call names. The shells are found when Bash is
-// called.
+// called. Where none is installed, as on Windows without Git for Windows,
+// a call fails with ErrNoShell.
 func Bash() agent.Tool {
 	shells := FindShells()
+	description := fmt.Sprintf("Run a shell command and return its combined stdout and stderr. Output is truncated to the last %d lines or %dKB (whichever is hit first). If truncated, the full output is saved to a temp file.", MaxLines, MaxBytes/1024)
+	if runtime.GOOS == "windows" {
+		description += " Commands run in Git Bash on Windows: use POSIX syntax, and forward slashes in Windows paths, such as C:/Users/name."
+	}
+	shellDescription := "Optional shell to run the command with."
+	if shells.Default != "" {
+		shellDescription += fmt.Sprintf(" Defaults to %s.", ShellName(shells.Default))
+	}
 	return agent.Tool{
 		Name:        "bash",
-		Description: fmt.Sprintf("Run a shell command and return its combined stdout and stderr. Output is truncated to the last %d lines or %dKB (whichever is hit first). If truncated, the full output is saved to a temp file.", MaxLines, MaxBytes/1024),
+		Description: description,
 		Schema: agent.InputSchema{
 			Type: "object",
 			Properties: map[string]agent.PropertySchema{
 				"command":     {Type: "string", Description: "Shell command to execute."},
 				"description": {Type: "string", Description: "Clear, concise description of what the command does in 5-10 words, shown to the user. Examples: \"Lists files in current directory\", \"Runs the calculator tests\"."},
-				"shell":       {Type: "string", Description: fmt.Sprintf("Optional shell to run the command with. Defaults to %s.", filepath.Base(shells.Default)), Enum: shells.Names()},
+				"shell":       {Type: "string", Description: shellDescription, Enum: shells.Names()},
 				"timeout_ms":  {Type: "integer", Description: fmt.Sprintf("Optional per-command timeout in milliseconds. Defaults to %d, capped at %d.", DefaultBashTimeout.Milliseconds(), MaxBashTimeout.Milliseconds())},
 			},
 			Required: []string{"command", "description"},

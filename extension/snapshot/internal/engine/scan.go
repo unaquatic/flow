@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -218,14 +219,15 @@ func ModeOf(m fs.FileMode) (Mode, bool) {
 }
 
 // openContent opens what a blob records for name, a file directly in r: its
-// content, or the target of a symbolic link.
+// content, or the target of a symbolic link, slash-separated, as Git records
+// it on Windows too.
 func openContent(r *os.Root, name string, mode Mode) (io.ReadCloser, error) {
 	if mode == ModeSymlink {
 		target, err := r.Readlink(name)
 		if err != nil {
 			return nil, err
 		}
-		return io.NopCloser(strings.NewReader(target)), nil
+		return io.NopCloser(strings.NewReader(filepath.ToSlash(target))), nil
 	}
 	f, err := r.Open(name)
 	if err != nil {

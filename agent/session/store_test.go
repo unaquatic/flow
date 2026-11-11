@@ -106,8 +106,10 @@ func TestListSessions_ScopesToProject(t *testing.T) {
 // worktree by ID alone.
 func TestListAllSessions_ListsEveryProject(t *testing.T) {
 	db := openTestDB(t)
-	a := newProjectStore(t, db, "/work/a")
-	b := newProjectStore(t, db, "/work/b")
+	// A project's worktree is absolute, which on Windows gives it a drive.
+	dirA, dirB := absPath(t, "/work/a"), absPath(t, "/work/b")
+	a := newProjectStore(t, db, dirA)
+	b := newProjectStore(t, db, dirB)
 	ctx := t.Context()
 	appendAt(t, a, "ses_a", "", "msg_1")
 	appendAt(t, b, "ses_b", "", "msg_1")
@@ -130,18 +132,18 @@ func TestListAllSessions_ListsEveryProject(t *testing.T) {
 	for _, s := range all {
 		got = append(got, row{s.ID, s.Worktree})
 	}
-	if want := []row{{"ses_b", "/work/b"}, {"ses_a", "/work/a"}}; !slices.Equal(got, want) {
+	if want := []row{{"ses_b", dirB}, {"ses_a", dirA}}; !slices.Equal(got, want) {
 		t.Errorf("all sessions = %v, want %v", got, want)
 	}
 
 	own, err := a.ListSessions(ctx)
-	if err != nil || len(own) != 1 || own[0].Worktree != "/work/a" {
-		t.Errorf("project a's sessions = %+v, %v; want ses_a in /work/a", own, err)
+	if err != nil || len(own) != 1 || own[0].Worktree != dirA {
+		t.Errorf("project a's sessions = %+v, %v; want ses_a in %s", own, err, dirA)
 	}
-	if sess, err := a.Session(ctx, "ses_b"); err != nil || sess.Worktree != "/work/b" {
-		t.Errorf("another project's session = %+v, %v; want it in /work/b", sess, err)
+	if sess, err := a.Session(ctx, "ses_b"); err != nil || sess.Worktree != dirB {
+		t.Errorf("another project's session = %+v, %v; want it in %s", sess, err, dirB)
 	}
-	for id, want := range map[message.SessionID]string{"ses_a": "/work/a", "ses_b": "/work/b"} {
+	for id, want := range map[message.SessionID]string{"ses_a": dirA, "ses_b": dirB} {
 		if dir, ok, err := WorktreeOf(ctx, db, id); err != nil || !ok || dir != want {
 			t.Errorf("WorktreeOf(%s) = %q, %v, %v; want %q", id, dir, ok, err, want)
 		}

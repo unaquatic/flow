@@ -106,8 +106,9 @@ func TestStatusLinesSession(t *testing.T) {
 func TestStatusLinesHomeDirectory(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // the home directory on Windows
 	row := StatusLines(StatusInfo{Directory: filepath.Join(home, "code", "flow"), Branch: "main"}, nil)[4]
-	if got, want := row.PlainText(), "Directory ~/code/flow [main]"; got != want {
+	if got, want := row.PlainText(), "Directory "+filepath.FromSlash("~/code/flow")+" [main]"; got != want {
 		t.Errorf("Directory row = %q, want %q", got, want)
 	}
 }

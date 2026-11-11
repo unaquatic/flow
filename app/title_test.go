@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
@@ -24,6 +25,8 @@ type titler struct {
 	title string
 	err   error
 	wait  chan struct{}
+	// asking, when set, receives each ask as it starts.
+	asking chan struct{}
 
 	mu        sync.Mutex
 	asks      []extension.Titling
@@ -36,6 +39,9 @@ func (t *titler) Title(ctx context.Context, tt extension.Titling) (string, error
 	t.mu.Lock()
 	t.asks = append(t.asks, tt)
 	t.mu.Unlock()
+	if t.asking != nil {
+		t.asking <- struct{}{}
+	}
 	if t.wait != nil {
 		select {
 		case <-t.wait:
@@ -161,13 +167,20 @@ func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 // titling an earlier prompt to the session started, whose title is not set.
 func TestTitling_LaterPromptSupersedes(t *testing.T) {
 	a, _ := newActorTestApp(t, "hello")
-	slow := &titler{name: "slow", title: "from the hook", wait: make(chan struct{})}
+	slow := &titler{name: "slow", title: "from the hook", wait: make(chan struct{}), asking: make(chan struct{}, 2)}
 	a.extensions = append(a.extensions, slow)
 	events := a.Subscribe(t.Context())
 
 	const id = "ses_supersede"
 	send(t, a, id, SendInput{Text: "first"})
 	collectUntilIdle(t, events)
+	// The first titling reads the session before it asks the hook; a prompt
+	// sent before then would end it unasked.
+	select {
+	case <-slow.asking:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the first titling never asked the hook")
+	}
 	send(t, a, id, SendInput{Text: "second"})
 	collectUntilIdle(t, events)
 	close(slow.wait)

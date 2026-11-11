@@ -50,10 +50,7 @@ func loadExcludes(dir string) (ignore.Matcher, error) {
 // directory is common, or else Git's default. It returns "" when no file can
 // be located.
 func globalExcludeFile(dir, common string) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		home = "" // only the environment and the repository can name a file
-	}
+	home := gitHome()
 	name := ""
 	for _, file := range configFiles(home, common) {
 		data, err := os.ReadFile(file)
@@ -71,6 +68,18 @@ func globalExcludeFile(dir, common string) (string, error) {
 		return xdgGitFile(home, "ignore"), nil
 	}
 	return expandPath(name, home, dir), nil
+}
+
+// gitHome returns the home directory Git reads the user's configuration
+// from: $HOME, which Git for Windows prefers to the profile directory as
+// well, or else the user's home directory, or "" when neither is known, so
+// that only the environment and the repository can name a file.
+func gitHome() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	home, _ := os.UserHomeDir()
+	return home
 }
 
 // configFiles returns the Git configuration files that can set

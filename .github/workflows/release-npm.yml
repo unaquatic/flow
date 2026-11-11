@@ -53,7 +53,7 @@ jobs:
             echo "$TAG is no version vX.Y.Z" >&2
             exit 1
           fi
-          gh release download "$TAG" --repo "$REPO" --pattern 'flow-*.tar.gz' --dir "$RUNNER_TEMP/assets"
+          gh release download "$TAG" --repo "$REPO" --pattern 'flow-*.tar.gz' --pattern 'flow-*.zip' --dir "$RUNNER_TEMP/assets"
           for asset in "$RUNNER_TEMP"/assets/*; do
             gh release verify-asset "$TAG" "$asset" --repo "$REPO"
           done
