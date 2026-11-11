@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -133,6 +134,20 @@ func TestClassify(t *testing.T) {
 		{
 			name:      "network error",
 			err:       &RequestError{Err: errors.New("dial tcp: connection refused")},
+			retryable: true,
+			message:   "network error",
+		},
+		{
+			name: "request cancelled",
+			err:  &RequestError{Err: &url.Error{Op: "Post", URL: "https://api.example", Err: context.Canceled}},
+		},
+		{
+			name: "response cut off by cancel",
+			err:  &ResponseParseError{Err: fmt.Errorf("read event stream: %w", context.Canceled)},
+		},
+		{
+			name:      "request timed out",
+			err:       &RequestError{Err: &url.Error{Op: "Post", URL: "https://api.example", Err: context.DeadlineExceeded}},
 			retryable: true,
 			message:   "network error",
 		},

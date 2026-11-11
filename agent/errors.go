@@ -45,6 +45,9 @@ type RequestError struct {
 // Error returns the request failure text.
 func (e *RequestError) Error() string { return "request failed: " + e.Err.Error() }
 
+// Unwrap returns Err, so that errors.Is sees a cancelled context through it.
+func (e *RequestError) Unwrap() error { return e.Err }
+
 // ResponseParseError reports a failure while reading or decoding a response.
 type ResponseParseError struct {
 	// Err is the underlying response failure.
@@ -53,6 +56,9 @@ type ResponseParseError struct {
 
 // Error returns the response parsing failure text.
 func (e *ResponseParseError) Error() string { return "failed to parse response: " + e.Err.Error() }
+
+// Unwrap returns Err, so that errors.Is sees a cancelled context through it.
+func (e *ResponseParseError) Unwrap() error { return e.Err }
 
 // ResponseError describes an unsuccessful provider response.
 type ResponseError struct {
