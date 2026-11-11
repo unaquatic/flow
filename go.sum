@@ -1,7 +1,7 @@
-github.com/unaquatic/catalog v0.4.1 h1:plb5BdqvmL0YOQHpvbCQp4+NwaD3auH0/nN3+C+YYJ8=
-github.com/unaquatic/catalog v0.4.1/go.mod h1:/b52cEC58PKl9nvZMAszBWnhsMoeY0xpJBnDdvqyf0g=
-github.com/unaquatic/fluid v0.3.0 h1:ftPDKhGIlsOliEEU9K6/4xrxfxpFQg6XTiUPK2/RnrI=
-github.com/unaquatic/fluid v0.3.0/go.mod h1:8XuuIPI5eGk8yZeQ/CRh6BEtPsFauZ+bWwiB5M8P35s=
+github.com/unaquatic/catalog v0.4.2 h1:PInW91wqm+cMrc3CY13RmWlZEVVA8GUep9ci/HBp2lE=
+github.com/unaquatic/catalog v0.4.2/go.mod h1:/b52cEC58PKl9nvZMAszBWnhsMoeY0xpJBnDdvqyf0g=
+github.com/unaquatic/fluid v0.3.1 h1:jCoYW4NJWJziFqw75NJGhYugl9ZMIFPTuNwMLn5pTwI=
+github.com/unaquatic/fluid v0.3.1/go.mod h1:8XuuIPI5eGk8yZeQ/CRh6BEtPsFauZ+bWwiB5M8P35s=
 github.com/unaquatic/sqlite v0.1.0 h1:Sw2ssowCwjU65x3L9orfHQTFnE0XpPWWov7hpT7vN2A=
 github.com/unaquatic/sqlite v0.1.0/go.mod h1:/8fxbHlgrdlpDsm95jkwmhc7JrGpkbkqNHW54/tj9FE=
 golang.org/x/mod v0.42.0 h1:ICeL3t2L30ljSPHHxDnR4fqVcBt/zR2zJAb9juavmQg=

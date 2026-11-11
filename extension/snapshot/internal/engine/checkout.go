@@ -208,13 +208,14 @@ func (w *Worktree) clear(name string) error {
 	return err
 }
 
-// writeFile creates name holding data, as a symbolic link to data when mode
-// is ModeSymlink. As in Git, the process umask applies to the permissions.
+// writeFile creates name holding data, as a symbolic link to data, a
+// slash-separated target, when mode is ModeSymlink. As in Git, the process
+// umask applies to the permissions.
 func (w *Worktree) writeFile(name string, mode Mode, data []byte) error {
 	osName := filepath.FromSlash(name)
 	switch mode {
 	case ModeSymlink:
-		return w.root.Symlink(string(data), osName)
+		return w.root.Symlink(filepath.FromSlash(string(data)), osName)
 	case ModeExec:
 		return w.root.WriteFile(osName, data, 0o777)
 	}

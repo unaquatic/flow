@@ -255,7 +255,9 @@ func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 		Writable: func(string) bool { return d.install != demoReadOnly },
 	}
 	if d.install == demoUnmanaged {
-		u.Executable = filepath.Join("/usr/local/bin", product.Name)
+		// A canned path, written as the demo's other paths are on every
+		// system.
+		u.Executable = "/usr/local/bin/" + product.Name
 	}
 	install := demoInstall
 	if slow {
@@ -333,7 +335,12 @@ func demoAsset() ([]byte, error) {
 		if _, err := f.Write(binary); err != nil {
 			return nil, err
 		}
-		return buf.Bytes(), zw.Close()
+		// Close writes the zip's directory, which buf must hold before it
+		// is returned.
+		if err := zw.Close(); err != nil {
+			return nil, err
+		}
+		return buf.Bytes(), nil
 	}
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)

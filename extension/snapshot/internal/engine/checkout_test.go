@@ -178,7 +178,7 @@ func TestWorktreeCheckout_RestoresModes(t *testing.T) {
 	writeFile(t, dir, "link", "now a regular file")
 	checkout(t, w, s, h)
 
-	if info, err := os.Stat(script); err != nil || info.Mode()&0o100 == 0 {
+	if info, err := os.Stat(script); !onWindows && (err != nil || info.Mode()&0o100 == 0) {
 		t.Errorf("run.sh lost its executable bit: %v, %v", info, err)
 	}
 	if target, err := os.Readlink(filepath.Join(dir, "link")); err != nil || target != "plain.txt" {

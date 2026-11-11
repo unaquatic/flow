@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"regexp/syntax"
@@ -60,7 +61,7 @@ func Grep() agent.Tool {
 			if v, ok := args["include"].(string); ok {
 				include = v
 			}
-			if _, err := filepath.Match(include, ""); err != nil {
+			if _, err := path.Match(include, ""); err != nil {
 				return agent.ToolOutput{}, fmt.Errorf("invalid include: %w", err)
 			}
 			limit := defaultGrepLimit

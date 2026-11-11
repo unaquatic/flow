@@ -376,7 +376,7 @@ func TestSessionRowNamesShowFolders(t *testing.T) {
 	})
 	deep := TruncateWidthLeft(long, sessionDirMax)
 	want := []string{
-		"Home  " + PadWidth("~/code/flow", sessionDirMax) + "  2026-09-27 14:03:11  s1",
+		"Home  " + PadWidth(filepath.FromSlash("~/code/flow"), sessionDirMax) + "  2026-09-27 14:03:11  s1",
 		"Deep  " + deep + "  2026-09-27 14:03:11  s2",
 		"New   " + strings.Repeat(" ", sessionDirMax) + "  2026-09-27 14:03:11  s3",
 	}
@@ -390,9 +390,9 @@ func TestSessionRowNamesShowFolders(t *testing.T) {
 
 // TestTildeDir checks that the home folder, and a folder inside it, are
 // written with ~, and that no other folder is, even one that shares the
-// home folder's prefix.
+// home folder's prefix. Paths use the system's separator.
 func TestTildeDir(t *testing.T) {
-	const home = "/home/user-a"
+	home := filepath.FromSlash("/home/user-a")
 	tests := map[string]string{
 		"/home/user-a":           "~",
 		"/home/user-a/code/flow": "~/code/flow",
@@ -401,11 +401,13 @@ func TestTildeDir(t *testing.T) {
 		"":                       "",
 	}
 	for dir, want := range tests {
+		dir, want = filepath.FromSlash(dir), filepath.FromSlash(want)
 		if got := TildeDir(dir, home); got != want {
 			t.Errorf("TildeDir(%q) = %q, want %q", dir, got, want)
 		}
 	}
-	if got := TildeDir("/work/project", ""); got != "/work/project" {
+	project := filepath.FromSlash("/work/project")
+	if got := TildeDir(project, ""); got != project {
 		t.Errorf("TildeDir without a home = %q, want the folder as it is", got)
 	}
 }

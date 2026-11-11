@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -273,6 +274,9 @@ func Glob() agent.Tool {
 			if err != nil {
 				return agent.ToolOutput{}, err
 			}
+			// Patterns and paths are matched slash-separated, as on Unix,
+			// so that a Windows pattern may use either separator.
+			pattern = filepath.ToSlash(pattern)
 			if err := checkGlob(pattern); err != nil {
 				return agent.ToolOutput{}, err
 			}
@@ -308,7 +312,7 @@ func Glob() agent.Tool {
 				if err != nil {
 					return err
 				}
-				if !matchGlob(pattern, rel) {
+				if !matchGlob(pattern, filepath.ToSlash(rel)) {
 					return nil
 				}
 				info, err := d.Info()
@@ -374,22 +378,25 @@ func checkGlob(pattern string) error {
 		if seg == "**" {
 			continue
 		}
-		if _, err := filepath.Match(seg, ""); err != nil {
+		if _, err := path.Match(seg, ""); err != nil {
 			return fmt.Errorf("invalid pattern: %w", err)
 		}
 	}
 	return nil
 }
 
-// matchName reports whether name matches the pattern p. The callers check p
-// beforehand, so filepath.Match has no syntax error to report.
+// matchName reports whether name matches the pattern p as path.Match does,
+// whose '*' stops at '/' on every system, unlike filepath.Match's on
+// Windows. The callers check p beforehand, so path.Match has no syntax error
+// to report.
 func matchName(p, name string) bool {
-	ok, err := filepath.Match(p, name)
+	ok, err := path.Match(p, name)
 	return err == nil && ok
 }
 
-// matchGlob applies filepath.Match with support for ** path components. The
-// pattern must have passed checkGlob.
+// matchGlob applies path.Match to the slash-separated name, with support for
+// ** path components. The pattern must be slash-separated too, and have
+// passed checkGlob.
 func matchGlob(pattern, name string) bool {
 	if !strings.Contains(pattern, "**") {
 		return matchName(pattern, name)

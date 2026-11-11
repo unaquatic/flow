@@ -9,6 +9,12 @@ import (
 	"syscall"
 )
 
+// lastResortShell is the shell used when no other is found.
+const lastResortShell = "/bin/sh"
+
+// usableShell reports true: every POSIX shell found runs commands.
+func usableShell(string) bool { return true }
+
 // killProcessGroupOnCancel starts c in a new process group and makes
 // cancellation kill the whole group, so processes started by the shell do not
 // outlive it.

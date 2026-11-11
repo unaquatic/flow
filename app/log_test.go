@@ -14,9 +14,12 @@ import (
 // its reply, and its end to the session's log.
 func TestSend_WritesTheSessionLog(t *testing.T) {
 	prev := slog.Default()
-	t.Cleanup(func() { slog.SetDefault(prev) })
 	dir := t.TempDir()
-	InitLogging(dir, config.LogInfo)
+	closeLog := InitLogging(dir, config.LogInfo)
+	t.Cleanup(func() {
+		slog.SetDefault(prev)
+		closeLog()
+	})
 
 	a, _ := newActorTestApp(t, "hello there")
 	events := a.Subscribe(t.Context())

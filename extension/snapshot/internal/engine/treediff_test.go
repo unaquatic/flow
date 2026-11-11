@@ -86,6 +86,10 @@ func TestStoreChanges_ListsChangedFilesInPathOrder(t *testing.T) {
 		{"swap", 0, ModeFile},
 		{"swap/inner", ModeFile, 0},
 	}
+	if onWindows {
+		// chmod sets no executable bit to change mode.sh's mode.
+		want = slices.DeleteFunc(want, func(s summary) bool { return s.path == "mode.sh" })
+	}
 	if !slices.Equal(got, want) {
 		t.Errorf("changes =\n%v\nwant\n%v", got, want)
 	}
@@ -159,6 +163,10 @@ func TestStoreFileDiffs_ReportsModeAndLinkChanges(t *testing.T) {
 		{Path: "link", Status: Modified, Additions: 1, Deletions: 1},
 		{Path: "run.sh", Status: Modified},
 	}
+	if onWindows {
+		// chmod sets no executable bit to change run.sh's mode.
+		want = slices.DeleteFunc(want, func(d FileDiff) bool { return d.Path == "run.sh" })
+	}
 	if !slices.Equal(diffs, want) {
 		t.Errorf("diffs =\n%+v\nwant\n%+v", diffs, want)
 	}
@@ -229,21 +237,28 @@ func TestStorePatch_MatchesGitDiff(t *testing.T) {
 	}
 
 	numbers := "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n"
-	for name, content := range map[string]string{
-		"edit.txt":         numbers,
-		"deleted.txt":      "gone\n",
-		"empty-deleted":    "",
-		"mode.sh":          "#!/bin/sh\n",
-		"mode-edit.sh":     "a\n",
-		"bin.dat":          "\x00one",
-		"typechange":       "x\n",
-		"space name.txt":   "s1\n",
-		"tab\tname.txt":    "t1\n",
-		`quote"back\slash`: "q1\n",
-		"ünïcode.txt":      "u1\n",
-		"noeol.txt":        "a",
-		"swap/inner.txt":   "i\n",
-	} {
+	// Git quotes these names in a patch, but Windows cannot name a file so.
+	quoted := map[string]string{"tab\tname.txt": "t", `quote"back\slash`: "q"}
+	if onWindows {
+		clear(quoted)
+	}
+	files := map[string]string{
+		"edit.txt":       numbers,
+		"deleted.txt":    "gone\n",
+		"empty-deleted":  "",
+		"mode.sh":        "#!/bin/sh\n",
+		"mode-edit.sh":   "a\n",
+		"bin.dat":        "\x00one",
+		"typechange":     "x\n",
+		"space name.txt": "s1\n",
+		"ünïcode.txt":    "u1\n",
+		"noeol.txt":      "a",
+		"swap/inner.txt": "i\n",
+	}
+	for name, prefix := range quoted {
+		files[name] = prefix + "1\n"
+	}
+	for name, content := range files {
 		writeFile(t, dir, name, content)
 	}
 	symlink(t, dir, "t1", "link")
@@ -262,8 +277,9 @@ func TestStorePatch_MatchesGitDiff(t *testing.T) {
 	symlink(t, dir, "t2", "link")
 	symlink(t, dir, "x", "typechange")
 	writeFile(t, dir, "space name.txt", "s2\n")
-	writeFile(t, dir, "tab\tname.txt", "t2\n")
-	writeFile(t, dir, `quote"back\slash`, "q2\n")
+	for name, prefix := range quoted {
+		writeFile(t, dir, name, prefix+"2\n")
+	}
 	writeFile(t, dir, "ünïcode.txt", "u2\n")
 	writeFile(t, dir, "noeol.txt", "a\n")
 	remove(t, dir, "swap")

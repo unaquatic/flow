@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -32,10 +33,14 @@ func OpenFile(name string) (*os.File, error) {
 // beside the file. Standard error is left as it is; see [CaptureStderr]. It
 // fails, and leaves the default logger as it is, when the file cannot be
 // opened.
-func Init(name string, level slog.Level) error {
+//
+// It returns the open file, which a process that logs until it exits leaves
+// open. Closing it once the default logger no longer writes to it, as at the
+// end of a test, lets Windows remove it.
+func Init(name string, level slog.Level) (io.Closer, error) {
 	f, err := OpenFile(name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Every line carries the process ID, since processes share the log file,
@@ -50,7 +55,7 @@ func Init(name string, level slog.Level) error {
 		Dir:     filepath.Dir(name),
 		Options: opts,
 	}).With("pid", os.Getpid()))
-	return nil
+	return f, nil
 }
 
 // SessionHandler is a slog.Handler that passes each record to Handler and

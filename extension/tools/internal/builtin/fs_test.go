@@ -1,8 +1,11 @@
 package builtin
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -22,6 +25,17 @@ func writeFile(t *testing.T, path, content string, mode os.FileMode) {
 	if err := os.WriteFile(path, []byte(content), mode); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// fileMode returns the permission bits of path, which on Windows only tell
+// whether it is read-only, or fails the test.
+func fileMode(t *testing.T, path string) os.FileMode {
+	t.Helper()
+	st, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st.Mode().Perm()
 }
 
 // readFile returns the contents of path, or fails the test.
@@ -74,6 +88,49 @@ func TestRead(t *testing.T) {
 	}
 }
 
+// TestGlob checks that '*' matches within one folder and '**' across them,
+// with patterns and results slash-separated on Unix and either on Windows,
+// whose results use its own separator.
+func TestGlob(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.MkdirAll(filepath.Join("sub", "deep"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a.go", "sub/b.go", "sub/deep/c.go", "sub/d.txt"} {
+		writeFile(t, filepath.FromSlash(name), "", 0o644)
+	}
+	tests := map[string][]string{
+		"*.go":       {"a.go"},
+		"sub/*.go":   {"sub/b.go"},
+		"**/*.go":    {"a.go", "sub/b.go", "sub/deep/c.go"},
+		"sub/**":     {"sub/b.go", "sub/d.txt", "sub/deep/c.go"},
+		"**/deep/*":  {"sub/deep/c.go"},
+		"nothing/**": nil,
+	}
+	if filepath.Separator == '\\' {
+		tests[`sub\*.go`] = []string{"sub/b.go"}
+	}
+	for pattern, want := range tests {
+		got, err := run(t, Glob(), map[string]any{"pattern": pattern})
+		if err != nil {
+			t.Errorf("glob %q: %v", pattern, err)
+			continue
+		}
+		var paths []string
+		if got != "[no matches]" {
+			paths = strings.Split(got, "\n")
+		}
+		slices.Sort(paths)
+		for i, p := range want {
+			want[i] = filepath.FromSlash(p)
+		}
+		slices.Sort(want)
+		if !slices.Equal(paths, want) {
+			t.Errorf("glob %q = %q; want %q", pattern, paths, want)
+		}
+	}
+}
+
 // TestWrite checks that write creates a file and the directories above it,
 // replaces a file that exists, keeping its mode, and fails for a directory
 // and for missing arguments.
@@ -88,14 +145,15 @@ func TestWrite(t *testing.T) {
 	}
 
 	writeFile(t, "run.sh", "echo old\n", 0o755)
+	mode := fileMode(t, "run.sh")
 	if _, err := run(t, Write(), map[string]any{"path": "run.sh", "content": "echo new\n"}); err != nil {
 		t.Fatal(err)
 	}
 	if body := readFile(t, "run.sh"); body != "echo new\n" {
 		t.Errorf("replaced file = %q, want the new content", body)
 	}
-	if st, err := os.Stat("run.sh"); err != nil || st.Mode().Perm() != 0o755 {
-		t.Errorf("replaced file's mode = %v, %v; want 0755 kept", st.Mode().Perm(), err)
+	if got := fileMode(t, "run.sh"); got != mode {
+		t.Errorf("replaced file's mode = %v; want %v kept", got, mode)
 	}
 
 	for name, args := range map[string]map[string]any{
@@ -117,6 +175,7 @@ func TestEdit(t *testing.T) {
 	t.Chdir(t.TempDir())
 	const body = "func Add(a, b int) int { return a + b }\nfunc Sub(a, b int) int { return a - b }\n"
 	writeFile(t, "calc.go", body, 0o600)
+	mode := fileMode(t, "calc.go")
 
 	got, err := run(t, Edit(), map[string]any{"path": "calc.go", "old_string": "a + b", "new_string": "b + a"})
 	if err != nil || got != "edited" {
@@ -126,8 +185,8 @@ func TestEdit(t *testing.T) {
 	if got := readFile(t, "calc.go"); got != want {
 		t.Errorf("file = %q, want %q", got, want)
 	}
-	if st, err := os.Stat("calc.go"); err != nil || st.Mode().Perm() != 0o600 {
-		t.Errorf("edited file's mode = %v, %v; want 0600 kept", st.Mode().Perm(), err)
+	if got := fileMode(t, "calc.go"); got != mode {
+		t.Errorf("edited file's mode = %v; want %v kept", got, mode)
 	}
 
 	if err := os.Mkdir("pkg", 0o755); err != nil {
@@ -143,12 +202,15 @@ func TestEdit(t *testing.T) {
 		{name: "empty", args: map[string]any{"path": "calc.go", "old_string": "", "new_string": "x"}, want: "empty"},
 		{name: "unchanged", args: map[string]any{"path": "calc.go", "old_string": "Sub", "new_string": "Sub"}, want: "equals"},
 		{name: "directory", args: map[string]any{"path": "pkg", "old_string": "a", "new_string": "b"}, want: "is a directory"},
-		{name: "missing file", args: map[string]any{"path": "nope.go", "old_string": "a", "new_string": "b"}, want: "no such file"},
 	} {
 		got, err := run(t, Edit(), tt.args)
 		if err == nil || !strings.Contains(err.Error(), tt.want) {
 			t.Errorf("%s: edit = %q, %v; want an error saying %q", tt.name, got, err, tt.want)
 		}
+	}
+	// Each system words a missing file its own way.
+	if got, err := run(t, Edit(), map[string]any{"path": "nope.go", "old_string": "a", "new_string": "b"}); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("missing file: edit = %q, %v; want fs.ErrNotExist", got, err)
 	}
 	if got := readFile(t, "calc.go"); got != want {
 		t.Errorf("file after failed edits = %q, want it unchanged: %q", got, want)

@@ -308,6 +308,11 @@ func TestAuto(t *testing.T) {
 			if tt.unmanaged {
 				u.Executable = filepath.Join(t.TempDir(), "flow")
 			}
+			if runtime.GOOS == "windows" {
+				// Auto does nothing on Windows, where a running flow cannot
+				// be replaced.
+				tt.want, tt.ok = Result{}, false
+			}
 			got, ok := u.Auto(t.Context())
 			if got != tt.want || ok != tt.ok {
 				t.Errorf("Auto = %+v, %v; want %+v, %v", got, ok, tt.want, tt.ok)

@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/unaquatic/flow/agent"
@@ -18,28 +20,44 @@ import (
 // output open after the shell exits or is killed.
 const bashWaitDelay = time.Second
 
-// posixShells lists, by file name, the shells that accept POSIX sh syntax and
+// posixShells lists, by ShellName, the shells that accept POSIX sh syntax and
 // the -c flag.
 var posixShells = []string{"bash", "dash", "ksh", "sh", "zsh"}
 
+// ErrNoShell reports that no POSIX shell is installed, as on Windows without
+// Git for Windows.
+var ErrNoShell = errors.New("no POSIX shell found: install Git for Windows (https://git-scm.com/download/win), which brings Git Bash, or put bash.exe on PATH")
+
+// ShellName returns the name of the shell at path: its file name, lowercased
+// and without .exe on Windows, where file names ignore case.
+func ShellName(path string) string {
+	name := filepath.Base(path)
+	if runtime.GOOS == "windows" {
+		name = strings.TrimSuffix(strings.ToLower(name), ".exe")
+	}
+	return name
+}
+
 // DefaultShell returns the shell that the bash tool runs commands with: $SHELL
 // when it names an executable POSIX shell, and otherwise the first executable
-// of fallbackShells (/bin/zsh on macOS, then bash from PATH), or /bin/sh.
+// of fallbackShells (/bin/zsh on macOS, then bash from PATH; Git Bash on
+// Windows), or else /bin/sh, or "" on Windows, which has no shell of its own.
 func DefaultShell() string {
-	for _, c := range slices.Concat([]string{os.Getenv("SHELL")}, fallbackShells) {
-		if !slices.Contains(posixShells, filepath.Base(c)) {
+	for _, c := range slices.Concat([]string{os.Getenv("SHELL")}, fallbackShells()) {
+		if !slices.Contains(posixShells, ShellName(c)) {
 			continue
 		}
-		if path, err := exec.LookPath(c); err == nil {
+		if path, err := exec.LookPath(c); err == nil && usableShell(path) {
 			return path
 		}
 	}
-	return "/bin/sh"
+	return lastResortShell
 }
 
 // Shells holds the installed POSIX shells that commands can run with.
 type Shells struct {
-	// Default is the path of the shell used when a command names none.
+	// Default is the path of the shell used when a command names none, or ""
+	// when none is installed.
 	Default string
 	byName  map[string]string
 }
@@ -51,11 +69,13 @@ func FindShells() Shells {
 	def := DefaultShell()
 	byName := make(map[string]string, len(posixShells))
 	for _, name := range posixShells {
-		if path, err := exec.LookPath(name); err == nil {
+		if path, err := exec.LookPath(name); err == nil && usableShell(path) {
 			byName[name] = path
 		}
 	}
-	byName[filepath.Base(def)] = def
+	if def != "" {
+		byName[ShellName(def)] = def
+	}
 	return Shells{Default: def, byName: byName}
 }
 
@@ -64,9 +84,13 @@ func (s Shells) Names() []string {
 	return slices.Sorted(maps.Keys(s.byName))
 }
 
-// Path returns the path of the named shell. An empty name selects Default.
+// Path returns the path of the named shell. An empty name selects Default,
+// and fails with ErrNoShell when there is none.
 func (s Shells) Path(name string) (string, error) {
 	if name == "" {
+		if s.Default == "" {
+			return "", ErrNoShell
+		}
 		return s.Default, nil
 	}
 	if path, ok := s.byName[name]; ok {

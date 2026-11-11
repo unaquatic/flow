@@ -16,12 +16,16 @@ func logFile(dir string) string {
 
 // InitLogging writes structured logs to the application log in data
 // directory dir, at level logLevel and above, as [logging.Init] does.
-// Standard error is left to the terminal; see [App.CaptureStderr].
-func InitLogging(dir string, logLevel config.LogLevel) {
-	if err := logging.Init(logFile(dir), logLevel.Level()); err != nil {
-		return
+// Standard error is left to the terminal; see [App.CaptureStderr]. It
+// returns a func that closes the log, which a process that logs until it
+// exits need not call, and which does nothing when the log was not opened.
+func InitLogging(dir string, logLevel config.LogLevel) (closeLog func()) {
+	f, err := logging.Init(logFile(dir), logLevel.Level())
+	if err != nil {
+		return func() {}
 	}
 	slog.Info("start")
+	return func() { f.Close() }
 }
 
 // CaptureStderr sends standard error to the application log until restore is

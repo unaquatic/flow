@@ -27,6 +27,16 @@ func openTestDB(t *testing.T) *sql.DB {
 
 // newProjectStore opens a store working on behalf of the project whose
 // worktree is dir, as the app opens it.
+// absPath returns dir made absolute, as a project records its worktree.
+func absPath(t *testing.T, dir string) string {
+	t.Helper()
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return abs
+}
+
 func newProjectStore(t *testing.T, db *sql.DB, dir string) *Store {
 	t.Helper()
 	project, err := database.Project(t.Context(), db, dir)

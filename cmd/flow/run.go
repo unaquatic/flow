@@ -286,7 +286,9 @@ func attachFiles(paths []string) ([]message.ContentPart, error) {
 				Filename:  filepath.Base(path),
 			})
 		case utf8.Valid(data) && !bytes.ContainsRune(data, 0):
-			text := fmt.Sprintf("<file path=%q>\n%s\n</file>", abs, strings.TrimSuffix(string(data), "\n"))
+			// The path is written as it is, not Go-quoted, which would double
+			// the backslashes of a Windows path.
+			text := fmt.Sprintf("<file path=\"%s\">\n%s\n</file>", strings.ReplaceAll(abs, `"`, "&quot;"), strings.TrimSuffix(string(data), "\n"))
 			parts = append(parts, message.TextPart{ID: message.NewPartID(), Text: text})
 		default:
 			return nil, fmt.Errorf("--file %s: unsupported file type: %s; attach an image, a PDF or a text file", path, mediaType)
