@@ -1,40 +1,12 @@
 package ui
 
 import (
-	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/unaquatic/fluid/style"
 )
-
-// TestShowStatusOmitsLogo checks that /status shows the session info alone,
-// while a new session opens under the standard product logo.
-func TestShowStatusOmitsLogo(t *testing.T) {
-	s, _ := newTestService(t)
-	s.InitSession(t.Context(), "")
-
-	events := s.ShowStatus()
-	if len(events) != 1 {
-		t.Fatalf("ShowStatus returned %d events, want the notice alone", len(events))
-	}
-	if notice, ok := toastOf(events[0]); !ok || notice.Surface != NoticeSystem {
-		t.Errorf("event is %+v, want the session info notice", events[0])
-	}
-
-	events = s.ShowInfo()
-	if len(events) != 2 {
-		t.Fatalf("ShowInfo returned %d events, want the logo and the notice", len(events))
-	}
-	logo, ok := canvasOf(events[0])
-	if !ok {
-		t.Fatalf("first event is %+v, want the logo on the canvas", events[0])
-	}
-	if want := slices.Collect(LogoLines()); !reflect.DeepEqual(logo.Lines, want) {
-		t.Errorf("logo = %+v, want standard logo %+v", logo.Lines, want)
-	}
-}
 
 // TestStatusLinesContext checks that the session info's Context row reads
 // the latest request's tokens, the window and the share of it they fill, or
@@ -74,9 +46,9 @@ func TestStatusNoModel(t *testing.T) {
 			t.Errorf("start %q: model, label = %q, %q, want %q", tt.start, state.Model, state.ModelLabel, tt.model)
 		}
 		s.InitSession(t.Context(), "")
-		events := s.ShowStatus()
+		events := s.ShowInfo()
 		if len(events) != 1 {
-			t.Fatalf("start %q: ShowStatus returned %d events, want the notice alone", tt.start, len(events))
+			t.Fatalf("start %q: ShowInfo returned %d events, want the notice alone", tt.start, len(events))
 		}
 		notice, _ := toastOf(events[0])
 		row := func(text string) int {

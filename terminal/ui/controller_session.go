@@ -24,31 +24,14 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// StatusNotice returns the notices that show lines as the session info does:
-// LogoNotice under the product logo.
-func StatusNotice(lines []style.StyledText) []Notice {
-	return LogoNotice(slices.Collect(LogoLines()), lines)
+// StatusNotice returns the notice that shows lines as the session info does:
+// on the system surface, titled StatusTitle.
+func StatusNotice(lines []style.StyledText) Notice {
+	return Notice{Lines: lines, Surface: NoticeSystem, Title: StatusTitle}
 }
 
 // StatusTitle heads the session info while prompts show in PromptBar.
 const StatusTitle = "Status"
-
-// LogoNotice returns the notices that show logo on the canvas, from the
-// transcript's left edge, and under it lines on the system surface, titled
-// StatusTitle. An empty logo leaves the canvas notice out.
-func LogoNotice(logo, lines []style.StyledText) []Notice {
-	info := Notice{Lines: lines, Surface: NoticeSystem, Title: StatusTitle}
-	if len(logo) == 0 {
-		return []Notice{info}
-	}
-	return []Notice{{Lines: logo, Surface: NoticeCanvas}, info}
-}
-
-// ShowStatus runs /status, showing the session info as ShowInfoUnder does,
-// without the product logo, which only a new session opens under.
-func (s *Service) ShowStatus() []UIEvent {
-	return s.ShowInfoUnder(nil)
-}
 
 // StatusInfo holds the facts the session info shows, as StatusLines lays
 // them out.
@@ -158,17 +141,10 @@ func ContextValue(u SessionUsage, th *style.Theme) style.TextChunk {
 	return style.Plain(context)
 }
 
-// ShowInfo reports the running version and the active session in the
-// transcript, as StatusNotice shows them under the product logo, as a new
-// session starts.
+// ShowInfo runs /status, and heads the transcript as a session starts: it
+// reports the running version and the active session in the transcript, as
+// StatusLines lays them out and StatusNotice shows them.
 func (s *Service) ShowInfo() []UIEvent {
-	return s.ShowInfoUnder(slices.Collect(LogoLines()))
-}
-
-// ShowInfoUnder reports the running version and the active session in the
-// transcript, as StatusLines lays them out, under logo as LogoNotice shows
-// it, or alone when logo is empty.
-func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 	if s.state.Session == nil {
 		return s.ShowToast("No active session")
 	}
@@ -194,7 +170,7 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		info.Title = stored.Title
 		info.Updated = stored.UpdatedAt
 	}
-	return s.AddNotice(LogoNotice(logo, StatusLines(info, nil))...)
+	return s.AddNotice(StatusNotice(StatusLines(info, nil)))
 }
 
 // HandleSessionList displays the stored sessions of every folder, one row
@@ -533,9 +509,9 @@ func ChatMessageOf(m message.Content) ChatMessage {
 }
 
 // InitSession opens the initial session, the stored session id or a new one
-// when id is empty, and returns the load of its transcript, the product logo
-// and the session info /status shows, as ShowInfo shows them, followed by
-// its messages, and its terminal title. A stored session takes the model
+// when id is empty, and returns the load of its transcript, the session info
+// /status shows, as ShowInfo shows it, followed by its messages, and its
+// terminal title. A stored session takes the model
 // variant its messages last ran, unless state.KeepModel keeps the
 // terminal's. A stored session that fails to load leaves the new session
 // active, and says so under the session info.
@@ -555,10 +531,9 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The logo and the session info head the transcript, above the messages
-	// they follow in. They show once the session and its model are set, so
-	// that the info reads them. The update that started this release
-	// shows under them.
+	// The session info heads the transcript, above the messages it follows
+	// in. It shows once the session and its model are set, so that it reads
+	// them. The update that started this release shows under it.
 	loaded := len(s.state.Messages)
 	s.ShowInfo()
 	if s.Updated != "" {

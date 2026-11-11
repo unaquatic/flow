@@ -15,7 +15,6 @@ import (
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
-	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
@@ -194,7 +193,7 @@ func TestActiveSessionIDOffLoop(t *testing.T) {
 
 // TestInitSessionNoticeFirst checks that a session opened at startup loads its
 // transcript in one event, which the UI builds the last rows of, with the
-// logo and the /status notice above its messages, and adds nothing to it
+// /status notice above its messages and no logo, and adds nothing to it
 // after.
 func TestInitSessionNoticeFirst(t *testing.T) {
 	tests := []struct {
@@ -202,8 +201,8 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 		messages int
 		want     []string
 	}{
-		{name: "new session", want: []string{"logo", "notice"}},
-		{name: "stored session", messages: 2, want: []string{"logo", "notice", "message", "message"}},
+		{name: "new session", want: []string{"notice"}},
+		{name: "stored session", messages: 2, want: []string{"notice", "message", "message"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -243,7 +242,7 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 				t.Fatalf("loaded transcript = %q, want %q", got, tt.want)
 			}
 			// The /status notice reads the session opened, and its messages.
-			status := loads[0].Messages[1].Notice
+			status := loads[0].Messages[0].Notice
 			for _, want := range []string{
 				fmt.Sprintf("%-10s%s", "Session", s.SessionID()),
 				fmt.Sprintf("%-10s%d", "Messages", tt.messages),
@@ -267,31 +266,20 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 	}
 }
 
-// TestShowInfoIsSystemNotice checks that /status draws the logo on the
-// canvas, and under it a system notice that starts with the version.
+// TestShowInfoIsSystemNotice checks that /status draws a system notice alone,
+// with no logo, that starts with the version.
 func TestShowInfoIsSystemNotice(t *testing.T) {
 	s, _ := newTestService(t)
 	s.InitSession(t.Context(), "")
 
 	events := s.ShowInfo()
 
-	if len(events) != 2 {
-		t.Fatalf("ShowInfo returned %d events, want the logo and the notice", len(events))
+	if len(events) != 1 {
+		t.Fatalf("ShowInfo returned %d events, want the notice alone", len(events))
 	}
-	logo, ok := canvasOf(events[0])
-	if !ok {
-		t.Fatalf("first event is %+v, want the logo on the canvas", events[0])
-	}
-	var rows []string
-	for _, line := range logo.Lines {
-		rows = append(rows, line.PlainText())
-	}
-	if want := strings.Split(product.Logo, "\n"); !slices.Equal(rows, want) {
-		t.Errorf("canvas rows = %q, want the logo %q", rows, want)
-	}
-	toast, ok := toastOf(events[1])
+	toast, ok := toastOf(events[0])
 	if !ok || toast.Surface != NoticeSystem {
-		t.Fatalf("second event is %+v, want a system notice", events[1])
+		t.Fatalf("event is %+v, want a system notice", events[0])
 	}
 	if len(toast.Lines) == 0 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Version") {
 		t.Errorf("notice lines = %+v, want them to start with the version", toast.Lines)

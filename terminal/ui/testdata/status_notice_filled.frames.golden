@@ -1,13 +1,4 @@
 === text ===
-|    ▄▄▄ ▄▄▄                             |
-|   ██▀▀ ▀██                             |
-| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄          |
-| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██          |
-|   ██    ██  ██    ██ ██    ██          |
-|   ██    ██  ██    ██ ██ ▄▄ ██          |
-|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████          |
-|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀           |
-|                                        |
 |                                        |
 |  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
@@ -18,34 +9,16 @@
 |  Directory /work/project               |
 |                                        |
 === fg ===
-|    AAA BBB                             |
-|   AAAA BBB                             |
-| AAAAAA  BB   BBBBBB  BB    BB          |
-| AAAAAA  BB  BBBBBBBB BB    BB          |
-|   AA    BB  BB    BB BB    BB          |
-|   AA    BB  BB    BB BB BB BB          |
-|AA AA   BBBB BBBBBBBB BBBBBBBB          |
-|AAAAA   BBBB  BBBBBB   BB  BB           |
 |                                        |
-|                                        |
-|  CCCCCCC   BBBB BBBBBB                 |
-|  CCCCCCC   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|  CCCCCCCC  B                           |
-|  CCCCCCCC  BBBBBBBB B                  |
-|  CCCCC     BBBBBBBBBBBBB               |
-|  CCCCCCC   BBB B BBBB BB               |
-|  CCCCCCCCC BBBBBBBBBBBBB               |
+|  AAAAAAA   BBBB BBBBBB                 |
+|  AAAAAAA   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
+|  AAAAAAAA  B                           |
+|  AAAAAAAA  BBBBBBBB B                  |
+|  AAAAA     BBBBBBBBBBBBB               |
+|  AAAAAAA   BBB B BBBB BB               |
+|  AAAAAAAAA BBBBBBBBBBBBB               |
 |                                        |
 === bg ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -56,7 +29,6 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 === legend ===
-A #ff5f00
+A #8a8a8a
 B #e6e6e6
-C #8a8a8a
 ░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -1,13 +1,4 @@
 === text ===
-|    ▄▄▄ ▄▄▄                             |
-|   ██▀▀ ▀██                             |
-| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄          |
-| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██          |
-|   ██    ██  ██    ██ ██    ██          |
-|   ██    ██  ██    ██ ██ ▄▄ ██          |
-|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████          |
-|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀           |
-|                                        |
 |■ Status                                |
 |  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
@@ -20,27 +11,18 @@
 |■ Updated to v1.2.3                     |
 |                                        |
 === fg ===
-|    AAA BBB                             |
-|   AAAA BBB                             |
-| AAAAAA  BB   BBBBBB  BB    BB          |
-| AAAAAA  BB  BBBBBBBB BB    BB          |
-|   AA    BB  BB    BB BB    BB          |
-|   AA    BB  BB    BB BB BB BB          |
-|AA AA   BBBB BBBBBBBB BBBBBBBB          |
-|AAAAA   BBBB  BBBBBB   BB  BB           |
+|A AAAAAA                                |
+|  BBBBBBB   AAAA AAAAAA                 |
+|  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
+|  BBBBBBBB  A                           |
+|  BBBBBBBB  AAAAAAAA A                  |
+|  BBBBB     AAAAAAAAAAAAA               |
+|  BBBBBBB   AAA A AAAA AA               |
+|  BBBBBBBBB AAAAAAAAAAAAA               |
 |                                        |
-|B BBBBBB                                |
-|  CCCCCCC   BBBB BBBBBB                 |
-|  CCCCCCC   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|  CCCCCCCC  B                           |
-|  CCCCCCCC  BBBBBBBB B                  |
-|  CCCCC     BBBBBBBBBBBBB               |
-|  CCCCCCC   BBB B BBBB BB               |
-|  CCCCCCCCC BBBBBBBBBBBBB               |
-|                                        |
-|B BBBBBBB BB AAAAAA                     |
+|A AAAAAAA AA CCCCCC                     |
 |                                        |
 === legend ===
-A #ff5f00
-B #e6e6e6
-C #8a8a8a
+A #e6e6e6
+B #8a8a8a
+C #ff5f00

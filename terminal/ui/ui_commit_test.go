@@ -247,7 +247,7 @@ func TestShowInfoCountsMessagesAlone(t *testing.T) {
 	s.InitSession(t.Context(), "")
 	s.ShowToast("a notice")
 
-	status, ok := toastOf(s.ShowInfo()[1])
+	status, ok := toastOf(s.ShowInfo()[0])
 	want := fmt.Sprintf("%-10s%d", "Messages", 0)
 	if !ok || !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
 		t.Errorf("/status shows %+v, want %q", status.Lines, want)

@@ -226,8 +226,8 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// The first start of a release an update installed tells of it
 		// under the session info, its version in the primary color.
-		{name: "status_notice_updated", h: 20, add: func(ui *UI) {
-			ui.AddNotice(StatusNotice(statusLines())...)
+		{name: "status_notice_updated", h: 11, add: func(ui *UI) {
+			ui.AddNotice(StatusNotice(statusLines()))
 			ui.Apply(ui.service.ShowUpdated("v1.2.3"))
 		}},
 		{name: "notice_pair", h: 8, add: func(ui *UI) {
@@ -255,31 +255,25 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "notice_multiline", h: 7, add: func(ui *UI) {
 			ui.AddNotice(Notice{Lines: statusLines()})
 		}},
-		// Startup heads the transcript with /status, a system notice under
-		// the logo, which sits on the canvas from the left edge, a blank row
-		// above the notice.
-		{name: "status_notice", h: 18, add: func(ui *UI) {
-			ui.AddNotice(StatusNotice(statusLines())...)
-		}},
-		// /status shows the session info alone, without the logo a new
-		// session opens under.
-		{name: "status_command", h: 9, add: func(ui *UI) {
-			ui.AddNotice(LogoNotice(nil, statusLines())...)
+		// Startup and /status show the session info, a system notice, with
+		// no logo above it.
+		{name: "status_notice", h: 9, add: func(ui *UI) {
+			ui.AddNotice(StatusNotice(statusLines()))
 		}},
 		// A context that fills most of the window shows in the warning
 		// color, and past 90% in the danger color, as the status row's does.
 		{name: "status_context_warn", h: 9, add: func(ui *UI) {
-			ui.AddNotice(LogoNotice(nil, StatusLines(statusInfo(300_000), nil))...)
+			ui.AddNotice(StatusNotice(StatusLines(statusInfo(300_000), nil)))
 		}},
 		{name: "status_context_danger", h: 9, add: func(ui *UI) {
-			ui.AddNotice(LogoNotice(nil, StatusLines(statusInfo(380_000), nil))...)
+			ui.AddNotice(StatusNotice(StatusLines(statusInfo(380_000), nil)))
 		}},
 		// With no model set, the provider and the model read as StatusNone,
 		// dim as the labels are.
 		{name: "status_no_model", h: 9, add: func(ui *UI) {
 			info := statusInfo(0)
 			info.Provider, info.Model, info.Usage.Window = "", "", 0
-			ui.AddNotice(LogoNotice(nil, StatusLines(info, nil))...)
+			ui.AddNotice(StatusNotice(StatusLines(info, nil)))
 		}},
 		// /usage shows the session's context, tokens, cost and worked time
 		// on the system surface, the context colored as /status colors it.
@@ -296,8 +290,8 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddNotice(Notice{Title: HelpTitle, Surface: NoticeSystem, Lines: HelpLines(SlashCommands)})
 		}},
 		// /new heads the emptied transcript with the new session's /status.
-		{name: "new_chat", h: 22, add: func(ui *UI) {
-			ui.AddNotice(StatusNotice(statusLines())...)
+		{name: "new_chat", h: 13, add: func(ui *UI) {
+			ui.AddNotice(StatusNotice(statusLines()))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 		}},
 		{name: "notice_diff_summary", h: 11, add: func(ui *UI) {
@@ -460,11 +454,11 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
 		}},
-		// With the prompt style filled, the session info under the logo fills
-		// a box, unmarked.
-		{name: "status_notice_filled", h: 18, add: func(ui *UI) {
+		// With the prompt style filled, the session info fills a box,
+		// unmarked.
+		{name: "status_notice_filled", h: 9, add: func(ui *UI) {
 			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
-			ui.AddNotice(StatusNotice(statusLines())...)
+			ui.AddNotice(StatusNotice(statusLines()))
 		}},
 		// A marker shape and a tool name color set later reach a notice
 		// already shown.
