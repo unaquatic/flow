@@ -169,6 +169,30 @@ func TestModelMenuCustomModel(t *testing.T) {
 	}
 }
 
+// TestCustomModelRejected checks that a model typed in that names no
+// provider, or whose ID is not lab/model or model, as it has an empty part,
+// a part more or a space, leaves the model as it is: a
+// notice says so, and the question opens again with it in the input.
+func TestCustomModelRejected(t *testing.T) {
+	for _, model := range []string{"//-da-d-s-sd", "model-x", "provider-a/", "provider-a/lab-a//model-x", "provider-a/lab-a/model-x/extra", "provider-a/model x"} {
+		t.Run(model, func(t *testing.T) {
+			s, _ := newTestService(t)
+			before := s.state.Model
+			s.AskCustomModel("")
+			out := s.HandleSubmit(model)
+			if s.state.Model != before {
+				t.Errorf("model = %q, want %q kept", s.state.Model, before)
+			}
+			if s.state.Prompt == nil || !slices.Contains(out, UIEvent(EventInputSet{Text: model})) {
+				t.Errorf("prompt %v, events %v; want the question open again with %q in the input", s.state.Prompt, out, model)
+			}
+			if last := s.state.Messages[len(s.state.Messages)-1].Notice; last == nil || last.Text != "Invalid model: "+model {
+				t.Errorf("notice = %+v, want %q", last, "Invalid model: "+model)
+			}
+		})
+	}
+}
+
 func TestModelMenuSearchAfterClose(t *testing.T) {
 	s, _ := newTestService(t)
 	listModels(t, s)

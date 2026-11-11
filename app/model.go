@@ -66,14 +66,20 @@ func (m Models) DefaultModel() (DefaultModel, error) {
 // Default returns the default model, as DefaultModel reads it, as a variant
 // in the form Resolve reads, its provider and then its model. It is empty
 // when the file sets no model, and the model alone when it sets no
-// provider, which Resolve refuses. A caller that picks its own model, as
-// the terminal does, passes it with each request instead.
+// provider, which Resolve refuses. A model agent.ValidModelID refuses, as
+// one saved before flow checked it, fails with ErrModelFormat. A caller
+// that picks its own model, as the terminal does, passes it with each
+// request instead.
 func (m Models) Default() (string, error) {
 	d, err := m.DefaultModel()
 	if err != nil || d.Model == "" || d.Provider == "" {
 		return d.Model, err
 	}
-	return agent.FormatModel(d.Provider, d.Model), nil
+	model := agent.FormatModel(d.Provider, d.Model)
+	if !agent.ValidModelID(d.Model) {
+		return "", fmt.Errorf("default model: %w: %s; use provider/model", ErrModelFormat, model)
+	}
+	return model, nil
 }
 
 // SaveDefaultModel saves d as the default provider and model of the config
@@ -109,9 +115,10 @@ func (m Models) UpdateDefaultModel(change func(*DefaultModel)) error {
 
 // defaultVariant returns d as a variant, its model as agent.ParseVariantAt
 // reads it at its provider. It fails with ErrModelFormat when d lacks its
-// provider or its model, and when its provider is not registered.
+// provider or its model, or when agent.ValidModelID refuses its model, and
+// when its provider is not registered.
 func (m Models) defaultVariant(d DefaultModel) (agent.Variant, error) {
-	if d.Provider == "" || d.Model == "" {
+	if d.Provider == "" || !agent.ValidModelID(d.Model) {
 		return agent.Variant{}, fmt.Errorf("default model: %w: %s/%s; use provider/model", ErrModelFormat, d.Provider, d.Model)
 	}
 	if err := m.app.registered(d.Provider); err != nil {
@@ -137,8 +144,9 @@ func (m Models) SaveDefault(model string) error {
 // cannot be read. ParseVariant reads it, and FitEffort fits its
 // effort to the model, or sets the default effort when it names none, so the
 // effort it reports is the one the model runs at. A model that names no
-// provider fails with ErrModelFormat, and an empty model when the config
-// file sets no default with ErrNoModelSet.
+// provider, or a model agent.ValidModelID refuses, fails with
+// ErrModelFormat, and an empty model when the config file sets no default
+// with ErrNoModelSet.
 func (m Models) Resolve(model string) (agent.Variant, error) {
 	if model == "" {
 		var err error
@@ -149,11 +157,10 @@ func (m Models) Resolve(model string) (agent.Variant, error) {
 			return agent.Variant{}, ErrNoModelSet
 		}
 	}
-	v := m.ParseVariant(model)
-	if v.Provider == "" {
+	if t, id := agent.ParseModel(model); t == "" || !agent.ValidModelID(id) {
 		return agent.Variant{}, fmt.Errorf("%w: %s; use provider/model", ErrModelFormat, model)
 	}
-	return m.FitEffort(v), nil
+	return m.FitEffort(m.ParseVariant(model)), nil
 }
 
 // Select returns the model variant that pattern names among the models

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -70,32 +71,55 @@ func Unknown(id string) string {
 	return StatusUnknown + " " + Tag(id)
 }
 
+// tagPattern matches a bracketed ID, such as the "[model-x]" Unknown writes.
+var tagPattern = regexp.MustCompile(`\[[^\]]*\]`)
+
+// TagChunks returns name, as DisplayName or AccountName writes it, in text,
+// and each bracketed ID in it, such as "[model-x]", in dim.
+func TagChunks(name string, text, dim func(string) style.TextChunk) []style.TextChunk {
+	var chunks []style.TextChunk
+	last := 0
+	for _, m := range tagPattern.FindAllStringIndex(name, -1) {
+		if m[0] > last {
+			chunks = append(chunks, text(name[last:m[0]]))
+		}
+		chunks = append(chunks, dim(name[m[0]:m[1]]))
+		last = m[1]
+	}
+	if last < len(name) {
+		chunks = append(chunks, text(name[last:]))
+	}
+	return chunks
+}
+
 // StatusLines returns the rows of the session info, each a dim label and its
 // value: the session's ID, its title when it has one, the model's provider
 // and account, the model, the context, and the working directory. An
 // account or model that is not set reads as StatusNone, dim as the labels
-// are. The context reads as the tokens of the latest request, the model's
-// window and the share of it they fill, such as "18K / 400K 5%", or the
+// are, as is the bracketed ID of one the catalog does not list, as
+// TagChunks dims it. The context reads as the tokens of the latest request,
+// the model's window and the share of it they fill, such as "18K / 400K 5%",
+// or the
 // tokens alone when the window is not known, in th's warning or danger color
 // once they fill most of the window, as the slash menu's status row colors
 // them. The labels are in th's TextMuted. A nil th uses the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
-	orNone := func(value string) style.TextChunk {
+	orNone := func(value string) []style.TextChunk {
 		if value == "" {
-			return dim(StatusNone)
+			return []style.TextChunk{dim(StatusNone)}
 		}
-		return style.Plain(value)
+		return TagChunks(value, style.Plain, dim)
 	}
-	rows := []LabeledRow{{"Session", style.Plain(info.Session)}}
+	rows := []LabeledRow{{"Session", []style.TextChunk{style.Plain(info.Session)}}}
 	if info.Title != "" {
-		rows = append(rows, LabeledRow{"Title", style.Plain(info.Title)})
+		rows = append(rows, LabeledRow{"Title", []style.TextChunk{style.Plain(info.Title)}})
 	}
 	rows = append(rows,
 		LabeledRow{"Account", orNone(info.Account)},
 		LabeledRow{"Model", orNone(info.Model)},
-		LabeledRow{"Context", ContextValue(info.Usage, th)},
-		LabeledRow{"Directory", style.Plain(info.Directory)},
+		LabeledRow{"Context", []style.TextChunk{ContextValue(info.Usage, th)}},
+		LabeledRow{"Directory", []style.TextChunk{style.Plain(info.Directory)}},
 	)
 	return LabeledLines(rows, statusLabelWidth, th)
 }
@@ -106,7 +130,7 @@ type LabeledRow struct {
 	// Label names the value.
 	Label string
 	// Value is what the row shows after the label.
-	Value style.TextChunk
+	Value []style.TextChunk
 }
 
 // LabeledLines returns rows as lines, each its label padded to width cells
@@ -115,7 +139,7 @@ func LabeledLines(rows []LabeledRow, width int, th *style.Theme) []style.StyledT
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
 	lines := make([]style.StyledText, len(rows))
 	for i, r := range rows {
-		lines[i] = style.NewStyledText(dim(PadWidth(r.Label, width)), r.Value)
+		lines[i] = style.NewStyledText(append([]style.TextChunk{dim(PadWidth(r.Label, width))}, r.Value...)...)
 	}
 	return lines
 }

@@ -216,7 +216,9 @@ const CustomModelPlaceholder = "[provider]/[model]"
 // query, the menu's search, so that a model searched for and not found need
 // not be typed again. Enter switches to the model and saves it as the
 // default model, as SelectModel does; an empty answer leaves the model as
-// it is.
+// it is. A model that names no provider, or whose ID agent.ValidModelID
+// refuses, such as //-da-d-s-sd, is refused with a notice, and the question
+// opens again with it in the input.
 func (s *Service) AskCustomModel(query string) []UIEvent {
 	events := slices.Concat(s.CancelBanner(), s.Ask("", &TextPrompt{
 		Hint:        PromptHintStyled("use model"),
@@ -224,6 +226,9 @@ func (s *Service) AskCustomModel(query string) []UIEvent {
 		Submit: func(model string) []UIEvent {
 			if model == "" {
 				return nil
+			}
+			if provider, id := agent.ParseModel(model); provider == "" || !agent.ValidModelID(id) {
+				return slices.Concat(s.ShowToast("Invalid model: "+model), s.AskCustomModel(model))
 			}
 			return s.SelectModel(model)
 		},

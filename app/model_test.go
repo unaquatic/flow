@@ -290,6 +290,38 @@ func TestModelsDefaultReadsTheConfigFile(t *testing.T) {
 	}
 }
 
+// TestModelsRefuseMalformedModels checks that a model whose ID has an empty
+// part between its slashes fails with ErrModelFormat: saved as the default,
+// which leaves the config file as it was, read back as the default, saved
+// before flow checked it, and resolved.
+func TestModelsRefuseMalformedModels(t *testing.T) {
+	home := t.TempDir()
+	a := &App{config: config.NewService(home)}
+	const saved = `{"default_model":"///-6-luna:medium","default_provider":"provider-a"}`
+	file := filepath.Join(home, config.FileName)
+	if err := os.WriteFile(file, []byte(saved), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, err := a.Models().Default(); got != "" || !errors.Is(err, ErrModelFormat) {
+		t.Errorf("Models.Default of a malformed saved model = %q, %v, want ErrModelFormat", got, err)
+	}
+	if _, err := a.Models().Resolve(""); !errors.Is(err, ErrModelFormat) {
+		t.Errorf("Models.Resolve of a malformed default = %v, want ErrModelFormat", err)
+	}
+	for _, model := range []string{"provider-a////-6-luna", "provider-a/lab-a//model-x", "provider-a/model x"} {
+		if _, err := a.Models().Resolve(model); !errors.Is(err, ErrModelFormat) {
+			t.Errorf("Models.Resolve(%q) = %v, want ErrModelFormat", model, err)
+		}
+		if err := a.Models().SaveDefault(model); !errors.Is(err, ErrModelFormat) {
+			t.Errorf("Models.SaveDefault(%q) = %v, want ErrModelFormat", model, err)
+		}
+	}
+	if got, err := os.ReadFile(file); err != nil || string(got) != saved {
+		t.Errorf("config file after refused saves = %s, %v, want it as it was", got, err)
+	}
+}
+
 // TestModelsNoModelSet checks that a request naming no model, when the
 // config file sets no default model, fails with ErrNoModelSet rather than
 // ErrModelFormat, as it names no malformed model.

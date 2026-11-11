@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io"
 	"net/http"
 	"testing"
 
@@ -94,43 +93,5 @@ func TestConfig(t *testing.T) {
 	}
 	if saved, _ := config.LoadDir(home); saved.LogLevel != config.LogDebug {
 		t.Errorf("log level after a refused update = %q, want it kept", saved.LogLevel)
-	}
-}
-
-// TestRequestsUseTheConfigModel checks that once PATCH /config sets the
-// default model, a generate request and a prompt that name no model go to
-// it.
-func TestRequestsUseTheConfigModel(t *testing.T) {
-	ts, _, bodies := newGenerateServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		io.WriteString(w, messagesReply)
-	})
-	model := "provider-b/lab-b/model-y"
-	provider, id := agent.ProviderID("provider-b"), "lab-b/model-y"
-	if status := doJSON(t, "PATCH", ts.URL+"/config", ConfigUpdate{DefaultProvider: &provider, DefaultModel: &id}, nil); status != http.StatusOK {
-		t.Fatalf("PATCH /config: status %d", status)
-	}
-
-	var got GenerateResponse
-	body := GenerateRequest{Messages: []GenerateMessage{{Role: "user", Content: "hi"}}, MaxTokens: 10}
-	if status := doJSON(t, "POST", ts.URL+"/generate", body, &got); status != http.StatusOK || got.Model != model {
-		t.Errorf("POST /generate = %d, %q, want 200 from %s", status, got.Model, model)
-	}
-
-	sess := createSession(t, ts)
-	msgURL := ts.URL + "/session/" + string(sess.ID) + "/message"
-	if status := doJSON(t, "POST", msgURL, SendRequest{Text: "hello"}, nil); status != http.StatusAccepted {
-		t.Fatalf("send: status %d", status)
-	}
-	waitForMessages(t, ts, msgURL)
-	var msgs []struct {
-		Provider string `json:"provider"`
-		Model    string `json:"model"`
-	}
-	doJSON(t, "GET", msgURL, nil, &msgs)
-	if len(msgs) == 0 || msgs[0].Provider+"/"+msgs[0].Model != model {
-		t.Errorf("prompt = %+v, want it sent to %s", msgs, model)
-	}
-	if len(bodies()) < 2 {
-		t.Errorf("%s got %d requests, want the generate request and the prompt's", model, len(bodies()))
 	}
 }

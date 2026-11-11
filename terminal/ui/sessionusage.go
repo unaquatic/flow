@@ -180,8 +180,9 @@ const (
 
 // StatusLine returns the status line the slash menu shows above the input
 // box, such as "Lab A Model A Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K
-// $0.42 Worked 3m 12s": the model by name, as DisplayName names it, or a dim
-// StatusNone when name is empty, the
+// $0.42 Worked 3m 12s": the model by name, as DisplayName names it, its
+// bracketed IDs dim as TagChunks dims them, or a dim StatusNone when name is
+// empty, the
 // context as ContextChunk gives it, the session's prompt tokens processed
 // anew, its output tokens, and its prompt tokens read from a cache, which u
 // totals, what they cost at API prices, and worked, how long the session's
@@ -190,13 +191,11 @@ const (
 func StatusLine(name string, u SessionUsage, worked time.Duration, th *style.Theme) style.StyledText {
 	text := style.New().WithFg(titleFg).Func()
 	dim := style.New().WithFg(mutedFg).Func()
-	model := text(name)
+	model := TagChunks(name, text, dim)
 	if name == "" {
-		model = dim(StatusNone)
+		model = []style.TextChunk{dim(StatusNone)}
 	}
-	chunks := []style.TextChunk{
-		model, style.Plain(statusGap), dim("Context "), ContextChunk(u, titleFg, th),
-	}
+	chunks := append(model, style.Plain(statusGap), dim("Context "), ContextChunk(u, titleFg, th))
 	for _, f := range []struct{ label, value string }{
 		{statusInputLabel, FormatTokens(u.Input)},
 		{statusOutputLabel, FormatTokens(u.Output)},
