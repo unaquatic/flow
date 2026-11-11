@@ -11,17 +11,17 @@ import (
 )
 
 // TestStatusLinesDimTags checks that the session info's Account and Model
-// rows show the bracketed IDs of a provider, lab or model the catalog does
+// rows show the bracketed IDs of a provider or model the catalog does
 // not list in the labels' dim color, and the rest of the name in the text's.
 func TestStatusLinesDimTags(t *testing.T) {
 	dim := DefaultTheme().TextMuted
-	lines := StatusLines(StatusInfo{Account: "Unknown [provider-z]", Model: "Unknown [lab-z] Unknown [model-z] Medium"}, nil)
+	lines := StatusLines(StatusInfo{Account: "Unknown [provider-z]", Model: "Unknown [model-z] Medium"}, nil)
 	for _, tt := range []struct {
 		row  int
 		want []string
 	}{
 		{3, []string{"Unknown ", "[provider-z]"}},
-		{2, []string{"Unknown ", "[lab-z]", " Unknown ", "[model-z]", " Medium"}},
+		{2, []string{"Unknown ", "[model-z]", " Medium"}},
 	} {
 		chunks := lines[tt.row].Chunks[1:]
 		var got []string
@@ -164,9 +164,10 @@ func TestStatusNoModel(t *testing.T) {
 	}{
 		{start: "", model: "", account: "Account   None", value: "Model     None"},
 		{start: "model-x", model: "/model-x", account: "Account   None", value: "Model     Unknown [model-x]"},
-		// A provider and lab the catalog does not list read as unknown.
+		// A provider the catalog does not list reads as unknown, and a
+		// model as unknown after its lab.
 		{start: "provider-z/lab-z/model-z", model: "provider-z/lab-z/model-z",
-			account: "Account   Unknown [provider-z]", value: "Model     Unknown [lab-z] Unknown [model-z]"},
+			account: "Account   Unknown [provider-z]", value: "Model     Unknown [model-z]"},
 	} {
 		_, a := newTestService(t)
 		state := &UIState{Model: tt.start}

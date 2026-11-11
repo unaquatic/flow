@@ -162,10 +162,8 @@ func (s *Providers) Providers() []ProviderID {
 // Listing is a model a provider offers, as ListModels lists it.
 type Listing struct {
 	// Model is the catalog's model ID, or the provider's own ID of a model
-	// the catalog lists only at the provider.
+	// the catalog does not know.
 	Model string `json:"model"`
-	// Unlisted reports a model the catalog lists only at the provider.
-	Unlisted bool `json:"unlisted,omitempty"`
 	gateway.Offering
 }
 
@@ -175,27 +173,19 @@ func (l Listing) Variants(t ProviderID) []Variant {
 }
 
 // ListModels returns the models the catalog lists for provider t that flow
-// can call: those of the catalog's models it offers, in model ID order, and
-// then the unlisted ones, in ID order. It leaves out the offerings and
-// variants whose endpoint of their own takes a request format or
-// authentication flow does not speak, as Callable finds them.
+// can call, in model ID order. It leaves out the offerings and variants
+// whose endpoint of their own takes a request format or authentication
+// flow does not speak, as Callable finds them.
 func (s *Providers) ListModels(_ context.Context, t ProviderID) ([]Listing, error) {
 	if _, ok := s.Get(t); !ok {
 		return nil, fmt.Errorf("%w: %s", ErrProviderNotRegistered, t)
 	}
 	p := s.Catalog().Providers[t]
-	out := make([]Listing, 0, len(p.Models)+len(p.Unlisted))
-	add := func(l Listing) {
-		if off, ok := s.Callable(t, l.Offering); ok {
-			l.Offering = off
-			out = append(out, l)
-		}
-	}
+	out := make([]Listing, 0, len(p.Models))
 	for _, id := range slices.Sorted(maps.Keys(p.Models)) {
-		add(Listing{Model: string(id), Offering: p.Models[id]})
-	}
-	for _, id := range slices.Sorted(maps.Keys(p.Unlisted)) {
-		add(Listing{Model: id, Unlisted: true, Offering: p.Unlisted[id]})
+		if off, ok := s.Callable(t, p.Models[id]); ok {
+			out = append(out, Listing{Model: string(id), Offering: off})
+		}
 	}
 	return out, nil
 }

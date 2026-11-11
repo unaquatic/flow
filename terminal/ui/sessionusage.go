@@ -179,7 +179,7 @@ const (
 )
 
 // StatusLine returns the status line the slash menu shows above the input
-// box, such as "Lab A Model A Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K
+// box, such as "Model A Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K
 // $0.42 Worked 3m 12s": the model by name, as DisplayName names it, its
 // bracketed IDs dim as TagChunks dims them, or a dim StatusNone when name is
 // empty, the

@@ -119,7 +119,8 @@ func offeringOf(t *testing.T, a *app.App, model string) gateway.Offering {
 
 // listing returns the listing of provider t's models ids in cat, each named
 // by the catalog's model ID, of the lab testCatalog ties t's models to, or,
-// when the catalog does not list it, as an unlisted model of no variants.
+// when the catalog does not list it, by its own ID, as a model of no
+// variants.
 func listing(cat *gateway.Catalog, t agent.ProviderID, ids ...string) app.ModelListing {
 	l := app.ModelListing{Provider: t}
 	for _, id := range ids {
@@ -128,7 +129,7 @@ func listing(cat *gateway.Catalog, t agent.ProviderID, ids ...string) app.ModelL
 			l.Models = append(l.Models, agent.Listing{Model: model, Offering: off})
 			continue
 		}
-		l.Models = append(l.Models, agent.Listing{Model: id, Unlisted: true, Offering: gateway.Offering{Name: id,
+		l.Models = append(l.Models, agent.Listing{Model: id, Offering: gateway.Offering{Name: id,
 			ProviderOptions: gateway.ProviderOptions{ID: id}}})
 	}
 	return l

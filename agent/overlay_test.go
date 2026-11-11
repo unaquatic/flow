@@ -45,7 +45,7 @@ func TestOverlayProvider(t *testing.T) {
 	overlay := catalog.NewOverlay(dir)
 	doc := `{"providers": {"local": {
 		"endpoint": {"format": "` + string(gateway.FormatOpenAIChat) + `", "api": "` + api.URL + `/v1", "auth": {"scheme": "bearer"}, "env": ["LOCAL_KEY"]},
-		"unlisted": {"Model-X:Large": {
+		"models": {"Model-X:Large": {
 			"limit": {"context": 131072, "output": 16384},
 			"provider_options": {"headers": {"X-Team": "infra"}}
 		}}
@@ -77,12 +77,12 @@ func TestOverlayProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed) != 1 || listed[0].Model != "model-x:large" || !listed[0].Unlisted {
-		t.Fatalf("ListModels(local) = %+v, want model-x:large, unlisted", listed)
+	if len(listed) != 1 || listed[0].Model != "local/model-x:large" {
+		t.Fatalf("ListModels(local) = %+v, want local/model-x:large", listed)
 	}
 
-	v := agent.ParseVariant("local/Model-X:Large", ps.Catalog())
-	if v.Provider != "local" {
+	v := agent.ParseVariant("local/local/Model-X:Large", ps.Catalog())
+	if v.Provider != "local" || v.Model != "local/model-x:large" {
 		t.Fatalf("ParseVariant = %+v", v)
 	}
 	stream, err := ps.Stream(t.Context(), v, agent.Request{})

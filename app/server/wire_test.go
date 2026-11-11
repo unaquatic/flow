@@ -46,7 +46,7 @@ func testListing() app.ModelListing {
 	levels := []gateway.Effort{"low", "medium", "high"}
 	return app.NewModelListing("provider-a", []agent.Listing{
 		{Model: "model-x"},
-		{Model: "model-y", Unlisted: true},
+		{Model: "model-y"},
 		{Model: "model-r", Offering: gateway.Offering{Reasoning: &gateway.Reasoning{Efforts: levels}}},
 		{Model: "model-s", Offering: gateway.Offering{Reasoning: &gateway.Reasoning{Efforts: levels, DefaultEffort: "high"}}},
 	})

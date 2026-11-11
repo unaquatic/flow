@@ -371,8 +371,8 @@ func TestShiftTabCyclesEffort(t *testing.T) {
 		t.Errorf("Shift+Tab: prevented %v, model %q, want the key kept and provider-a/lab-a/model-a:high", shiftTab.DefaultPrevented(), ui.service.state.Model)
 	}
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	if got := ui.slashStatus.PlainText(); !strings.HasPrefix(got, "Lab A Model A High Context ") {
-		t.Errorf("status row = %q, want it to name Lab A Model A High first", got)
+	if got := ui.slashStatus.PlainText(); !strings.HasPrefix(got, "Model A High Context ") {
+		t.Errorf("status row = %q, want it to name Model A High first", got)
 	}
 }
 

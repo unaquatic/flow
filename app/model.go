@@ -455,8 +455,7 @@ func (m Models) Listing(t agent.ProviderID, id string) (agent.Listing, error) {
 	if !ok {
 		return agent.Listing{}, fmt.Errorf("%w: %s", agent.ErrModelNotFound, agent.FormatModel(t, id))
 	}
-	_, listed := m.Catalog().Providers[t].Models[gateway.ModelID(v.Model)]
-	return agent.Listing{Model: v.Model, Unlisted: !listed, Offering: off}, nil
+	return agent.Listing{Model: v.Model, Offering: off}, nil
 }
 
 // StartListings lists models from authenticated providers from a new

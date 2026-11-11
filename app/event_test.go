@@ -45,7 +45,7 @@ func testEvents() []eventCase {
 	at := session.Position{Index: 2, Of: 3}
 	failed := NewError(CodeUnknown, "boom")
 	change := PartChange{EventBase: base, MessageID: "msg_1", Part: parts[1]}
-	listing := NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y", Unlisted: true}})
+	listing := NewModelListing("provider-a", []agent.Listing{{Model: "model-x"}, {Model: "model-y"}})
 	return []eventCase{
 		{EventMessageStarted{EventBase: base, Message: Message{ID: "msg_1", Role: message.RoleAgent, Provider: "test", Model: "lab-a/model"}}, TypeMessageStarted},
 		{EventPartStarted{change}, TypePartStarted},

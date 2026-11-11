@@ -1,5 +1,5 @@
 === text ===
-|■ Usage Lab A Model A Medium Context 64K 7% … [ctrl+u pin]  |
+|■ Usage Model A Medium Context 64K 7% ↓ 120K… [ctrl+u pin]  |
 |                                                            |
 |■ Commands [↑/↓ move] [esc cancel]                          |
 |                                                            |
@@ -15,7 +15,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|A AAAAA BBB B BBBBB B BBBBBB AAAAAAA BBB BB B AAAAAAA AAAA  |
+|A AAAAA BBBBB B BBBBBB AAAAAAA BBB BB A BBBBB AAAAAAA AAAA  |
 |                                                            |
 |B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
 |                                                            |

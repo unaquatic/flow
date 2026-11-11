@@ -16,8 +16,8 @@ type Variant struct {
 	// Provider identifies the provider, by its catalog ID.
 	Provider ProviderID
 	// Model is the catalog's model ID, lab included, such as
-	// "lab-a/model-a", or, for a model the catalog leaves unlisted or does
-	// not know, the provider's own ID of it.
+	// "lab-a/model-a", or, for a model the catalog does not know, the
+	// provider's own ID of it.
 	Model string
 	// Option is what the catalog's variant ID adds to the model ID, such as
 	// "fast" of "lab-a/model-a:fast", or empty for the default variant.
@@ -90,24 +90,17 @@ func ParseVariantAt(t ProviderID, s string, cat *gateway.Catalog) Variant {
 // findVariant returns the variant of provider t whose ID is id, and reports
 // whether cat lists one.
 func findVariant(cat *gateway.Catalog, t ProviderID, id string) (Variant, bool) {
-	model, _, option, ok := cat.Lookup(t, id)
+	model, option, ok := cat.Lookup(t, id)
 	if !ok {
 		return Variant{}, false
 	}
-	return Variant{Provider: t, Model: model, Option: option}, true
+	return Variant{Provider: t, Model: string(model), Option: option}, true
 }
 
-// Lookup returns the offering of v's model at its provider in cat, listed or
-// unlisted, and reports whether cat lists it.
+// Lookup returns the offering of v's model at its provider in cat, and
+// reports whether cat lists it.
 func Lookup(cat *gateway.Catalog, v Variant) (gateway.Offering, bool) {
-	p, ok := cat.Providers[v.Provider]
-	if !ok {
-		return gateway.Offering{}, false
-	}
-	if o, ok := p.Models[gateway.ModelID(v.Model)]; ok {
-		return o, true
-	}
-	o, ok := p.Unlisted[v.Model]
+	o, ok := cat.Providers[v.Provider].Models[gateway.ModelID(v.Model)]
 	return o, ok
 }
 

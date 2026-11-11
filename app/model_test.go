@@ -472,7 +472,7 @@ func TestModelsFindVariants(t *testing.T) {
 		t.Errorf("Models.Efforts = %v, want %v", got, want)
 	}
 	if got := a.Models().Efforts(a.Models().ParseVariant("provider-a/model-unknown")); got != nil {
-		t.Errorf("Models.Efforts of an unlisted model = %v, want none", got)
+		t.Errorf("Models.Efforts of a model the catalog does not know = %v, want none", got)
 	}
 }
 
