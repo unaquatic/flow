@@ -131,6 +131,40 @@ func TestLatest(t *testing.T) {
 	}
 }
 
+// TestLatestCheck checks that the latest release comes from Check first,
+// and from the registry when Check does not answer.
+func TestLatestCheck(t *testing.T) {
+	check := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/latest" {
+			http.NotFound(w, r)
+			return
+		}
+		fmt.Fprint(w, `{"tag": "v0.3.0"}`)
+	}))
+	t.Cleanup(check.Close)
+	srv, _ := registry(t, "0.2.0")
+	u := &Updater{Registry: srv.URL, Check: check.URL, Current: "v0.1.0"}
+	if got, err := u.Latest(t.Context()); err != nil || got != "v0.3.0" {
+		t.Errorf("Latest = %q, %v; want v0.3.0 from Check", got, err)
+	}
+	u.Check = check.URL + "/missing"
+	if got, err := u.Latest(t.Context()); err != nil || got != "v0.2.0" {
+		t.Errorf("Latest with Check not answering = %q, %v; want v0.2.0 from the registry", got, err)
+	}
+}
+
+// TestNewChecksTheMirror checks that the Updater of the running flow checks
+// for updates at DefaultMirror.
+func TestNewChecksTheMirror(t *testing.T) {
+	u, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Check != DefaultMirror {
+		t.Errorf("Check = %q, want %q", u.Check, DefaultMirror)
+	}
+}
+
 // TestNewMethod checks that an Updater takes the package manager that
 // config.EnvManagedBy names, when it is one flow updates with.
 func TestNewMethod(t *testing.T) {
