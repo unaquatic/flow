@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -44,8 +43,6 @@ type StatusInfo struct {
 	Title string
 	// Updated is when the session was last stored, or zero before it is.
 	Updated time.Time
-	// Messages counts the transcript's messages.
-	Messages int
 	// Provider is the ID of the provider of the terminal's model, such as
 	// "provider-a", or is empty when the model names none.
 	Provider string
@@ -68,7 +65,7 @@ const StatusNone = "none"
 
 // StatusLines returns the rows of the session info, each a dim label and its
 // value: the version, the session's ID, its title when it has one, its last
-// update once it is stored, its message count, the model's provider, the
+// update once it is stored, the model's provider, the
 // model without its provider, the context, and the working directory. A
 // provider or model that is not set reads as StatusNone, dim as the labels
 // are. The context reads as the tokens of the latest request, the model's
@@ -95,7 +92,6 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		rows = append(rows, LabeledRow{"Updated", style.Plain(info.Updated.Local().Format(time.DateTime))})
 	}
 	rows = append(rows,
-		LabeledRow{"Messages", style.Plain(strconv.Itoa(info.Messages))},
 		LabeledRow{"Provider", orNone(info.Provider)},
 		LabeledRow{"Model", orNone(info.Model)},
 		LabeledRow{"Context", ContextValue(info.Usage, th)},
@@ -157,7 +153,6 @@ func (s *Service) ShowInfo() []UIEvent {
 	info := StatusInfo{
 		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
-		Messages:  s.MessageCount(),
 		Provider:  string(provider),
 		Model:     model,
 		Usage:     s.SessionUsage(),

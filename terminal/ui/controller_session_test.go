@@ -241,15 +241,10 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 			if !slices.Equal(got, tt.want) {
 				t.Fatalf("loaded transcript = %q, want %q", got, tt.want)
 			}
-			// The /status notice reads the session opened, and its messages.
+			// The /status notice reads the session opened.
 			status := loads[0].Messages[0].Notice
-			for _, want := range []string{
-				fmt.Sprintf("%-10s%s", "Session", s.SessionID()),
-				fmt.Sprintf("%-10s%d", "Messages", tt.messages),
-			} {
-				if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
-					t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
-				}
+			if want := fmt.Sprintf("%-10s%s", "Session", s.SessionID()); !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
+				t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
 			}
 			// A transcript built again from the state shows them in order too.
 			messages := false

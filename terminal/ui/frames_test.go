@@ -203,7 +203,6 @@ func statusInfo(context int) StatusInfo {
 	return StatusInfo{
 		Version:   product.Name + " v0.1.0",
 		Session:   "01a0e33d-4571-7ed4-b06b-4229c726c313",
-		Messages:  4,
 		Provider:  "provider-a",
 		Model:     "lab-a/model-a",
 		Usage:     SessionUsage{Context: context, Window: 400_000},
@@ -226,7 +225,7 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// The first start of a release an update installed tells of it
 		// under the session info, its version in the primary color.
-		{name: "status_notice_updated", h: 11, add: func(ui *UI) {
+		{name: "status_notice_updated", h: 10, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines()))
 			ui.Apply(ui.service.ShowUpdated("v1.2.3"))
 		}},
@@ -252,25 +251,25 @@ func TestTranscriptFrames(t *testing.T) {
 					}},
 				}})
 		}},
-		{name: "notice_multiline", h: 7, add: func(ui *UI) {
+		{name: "notice_multiline", h: 6, add: func(ui *UI) {
 			ui.AddNotice(Notice{Lines: statusLines()})
 		}},
 		// Startup and /status show the session info, a system notice, with
 		// no logo above it.
-		{name: "status_notice", h: 9, add: func(ui *UI) {
+		{name: "status_notice", h: 8, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(statusLines()))
 		}},
 		// A context that fills most of the window shows in the warning
 		// color, and past 90% in the danger color, as the status row's does.
-		{name: "status_context_warn", h: 9, add: func(ui *UI) {
+		{name: "status_context_warn", h: 8, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(StatusLines(statusInfo(300_000), nil)))
 		}},
-		{name: "status_context_danger", h: 9, add: func(ui *UI) {
+		{name: "status_context_danger", h: 8, add: func(ui *UI) {
 			ui.AddNotice(StatusNotice(StatusLines(statusInfo(380_000), nil)))
 		}},
 		// With no model set, the provider and the model read as StatusNone,
 		// dim as the labels are.
-		{name: "status_no_model", h: 9, add: func(ui *UI) {
+		{name: "status_no_model", h: 8, add: func(ui *UI) {
 			info := statusInfo(0)
 			info.Provider, info.Model, info.Usage.Window = "", "", 0
 			ui.AddNotice(StatusNotice(StatusLines(info, nil)))
@@ -456,7 +455,7 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// With the prompt style filled, the session info fills a box,
 		// unmarked.
-		{name: "status_notice_filled", h: 9, add: func(ui *UI) {
+		{name: "status_notice_filled", h: 8, add: func(ui *UI) {
 			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
 			ui.AddNotice(StatusNotice(statusLines()))
 		}},
