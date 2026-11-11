@@ -1,17 +1,17 @@
 === text ===
 |                                        |
-|  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Account   Provider A OAuth            |
-|  Model     Lab A Model A Fast High     |
+|  Session   Fix the login [4229c726c31  |
 |  Context   20K / 400K 5%               |
+|  Model     Lab A Model A Fast High     |
+|  Account   Provider A OAuth            |
 |  Directory /work/project [main]        |
 |                                        |
 === fg ===
 |                                        |
-|  AAAAAAA   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|  AAAAAAA   BBBBBBBB B BBBBB            |
-|  AAAAA     BBB B BBBBB B BBBB BBBB     |
+|  AAAAAAA   BBB BBB BBBBB AAAAAAAAAAAA  |
 |  AAAAAAA   BBB B BBBB BB               |
+|  AAAAA     BBB B BBBBB B BBBB BBBB     |
+|  AAAAAAA   BBBBBBBB B BBBBB            |
 |  AAAAAAAAA BBBBBBBBBBBBB AAAAAA        |
 |                                        |
 === bg ===

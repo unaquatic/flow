@@ -424,9 +424,9 @@ func TestAccountMenu(t *testing.T) {
 }
 
 // TestModelLabel checks that the label under the input shows the model
-// alone, whatever account is active, and that /status shows the provider,
-// by its catalog name, with the kind of its active account, and then the
-// model.
+// alone, whatever account is active, and that /status shows the model, and
+// then the provider, by its catalog name, with the kind of its active
+// account.
 func TestModelLabel(t *testing.T) {
 	s, a := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -440,8 +440,8 @@ func TestModelLabel(t *testing.T) {
 	row := func(text string) int {
 		return slices.IndexFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
 	}
-	if p, m := row("Account   Provider A API Key"), row("Model     Unknown [model]"); p < 0 || m != p+1 {
-		t.Errorf("/status lines = %+v, want the account row and then the model", status.Lines)
+	if m, p := row("Model     Unknown [model]"), row("Account   Provider A API Key"); m < 0 || p != m+1 {
+		t.Errorf("/status lines = %+v, want the model row and then the account", status.Lines)
 	}
 
 	out := s.ApplyAgentEvent(app.EventAccountsChanged{Provider: providerA, Active: id})

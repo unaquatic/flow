@@ -56,6 +56,13 @@ type StatusInfo struct {
 	Branch string
 }
 
+// ShortSessionID returns the last part of id, after its last dash, such as
+// "4229c726c313" of "01a0e33d-4571-7ed4-b06b-4229c726c313", or id whole
+// when it has no dash.
+func ShortSessionID(id string) string {
+	return id[strings.LastIndexByte(id, '-')+1:]
+}
+
 // GitBranch returns the branch checked out in the git work tree that holds
 // dir, such as "main", read from its HEAD file, the first 7 characters of
 // the commit when HEAD names none, or "" when dir is in no work tree.
@@ -126,17 +133,19 @@ func TagChunks(name string, text, dim func(string) style.TextChunk) []style.Text
 }
 
 // StatusLines returns the rows of the session info, each a dim label and its
-// value: the session's ID, its title when it has one, the model's provider
-// and account, the model, the context, and the working directory, with its
-// git branch after it, dim and bracketed, such as "/work/project [main]". An
+// value: the session's title, as SessionTitle names it, with its ID after
+// it, as ShortSessionID cuts it, dim and bracketed, such as "Fix the login
+// [4229c726c313]", the context, the model, the model's provider and
+// account, and the working directory, as SessionDir writes it, with its git
+// branch after it, dim and bracketed, such as "~/work/project [main]". An
 // account or model that is not set reads as StatusNone, dim as the labels
 // are, as is the bracketed ID of one the catalog does not list, as
 // TagChunks dims it. The context reads as the tokens of the latest request,
-// the model's window and the share of it they fill, such as "18K / 400K 5%",
-// or the tokens alone when the window is not known, in th's warning or danger
-// color once they fill most of the window, as the slash menu's status row
-// colors them. The labels are in th's TextMuted. A nil th uses the default
-// theme.
+// the model's window and the share of it they fill, such as "18K / 400K
+// 5%", or the tokens alone when the window is not known, in th's warning or
+// danger color once they fill most of the window, as the slash menu's
+// status row colors them. The labels are in th's TextMuted. A nil th uses
+// the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
 	orNone := func(value string) []style.TextChunk {
@@ -145,21 +154,17 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		}
 		return TagChunks(value, style.Plain, dim)
 	}
-	directory := []style.TextChunk{style.Plain(info.Directory)}
+	directory := []style.TextChunk{style.Plain(SessionDir(info.Directory))}
 	if info.Branch != "" {
 		directory = append(directory, style.Plain(" "), dim(Tag(info.Branch)))
 	}
-	rows := []LabeledRow{{"Session", []style.TextChunk{style.Plain(info.Session)}}}
-	if info.Title != "" {
-		rows = append(rows, LabeledRow{"Title", []style.TextChunk{style.Plain(info.Title)}})
-	}
-	rows = append(rows,
-		LabeledRow{"Account", orNone(info.Account)},
-		LabeledRow{"Model", orNone(info.Model)},
-		LabeledRow{"Context", []style.TextChunk{ContextValue(info.Usage, th)}},
-		LabeledRow{"Directory", directory},
-	)
-	return LabeledLines(rows, statusLabelWidth, th)
+	return LabeledLines([]LabeledRow{
+		{"Session", []style.TextChunk{style.Plain(SessionTitle(info.Title) + " "), dim(Tag(ShortSessionID(info.Session)))}},
+		{"Context", []style.TextChunk{ContextValue(info.Usage, th)}},
+		{"Model", orNone(info.Model)},
+		{"Account", orNone(info.Account)},
+		{"Directory", directory},
+	}, statusLabelWidth, th)
 }
 
 // LabeledRow is a row of a notice laid out as a column of labels and their

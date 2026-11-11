@@ -81,7 +81,7 @@ func TestDemos(t *testing.T) {
 		want map[string]string
 	}{
 		{command: "version", cases: versionDemos, want: map[string]string{
-			"version": regexp.QuoteMeta("flow " + product.Version() + " " + product.Platform() + "\n"),
+			"version": regexp.QuoteMeta("flow " + product.Version() + " [" + product.Platform() + "]\n"),
 			"json":    regexp.QuoteMeta("{\n  \"name\": \"flow\",\n  \"version\": \"" + product.Version() + "\",\n  \"platform\": \"" + product.Platform() + "\"\n}\n"),
 		}},
 		{command: "login", cases: loginDemos, want: map[string]string{

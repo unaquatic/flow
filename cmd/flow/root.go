@@ -334,7 +334,7 @@ func writeFieldLine(w io.Writer, label, value string) {
 }
 
 // printVersion writes the name and version of the application to w, and the
-// platform it runs on, such as "flow v1.2.3 darwin/arm64".
+// platform it runs on in brackets, such as "flow v1.2.3 [darwin/arm64]".
 func printVersion(w io.Writer) {
-	fmt.Fprintf(w, "%s %s %s\n", product.Name, product.Version(), product.Platform())
+	fmt.Fprintf(w, "%s %s [%s]\n", product.Name, product.Version(), product.Platform())
 }

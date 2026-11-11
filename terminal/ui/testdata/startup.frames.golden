@@ -9,10 +9,10 @@
 |     ▀▀▀                                |
 |                                        |
 |■ Status                                |
-|  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Account   Provider A OAuth            |
-|  Model     Lab A Model A Fast High     |
+|  Session   Fix the login [4229c726c31  |
 |  Context   20K / 400K 5%               |
+|  Model     Lab A Model A Fast High     |
+|  Account   Provider A OAuth            |
 |  Directory /work/project [main]        |
 |                                        |
 |                                        |
@@ -28,10 +28,10 @@
 |     AAA                                |
 |                                        |
 |B BBBBBB                                |
-|  CCCCCCC   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|  CCCCCCC   BBBBBBBB B BBBBB            |
-|  CCCCC     BBB B BBBBB B BBBB BBBB     |
+|  CCCCCCC   BBB BBB BBBBB CCCCCCCCCCCC  |
 |  CCCCCCC   BBB B BBBB BB               |
+|  CCCCC     BBB B BBBBB B BBBB BBBB     |
+|  CCCCCCC   BBBBBBBB B BBBBB            |
 |  CCCCCCCCC BBBBBBBBBBBBB CCCCCC        |
 |                                        |
 |                                        |

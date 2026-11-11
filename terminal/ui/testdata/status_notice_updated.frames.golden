@@ -1,19 +1,19 @@
 === text ===
 |■ Status                                |
-|  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Account   Provider A OAuth            |
-|  Model     Lab A Model A Fast High     |
+|  Session   Fix the login [4229c726c31  |
 |  Context   20K / 400K 5%               |
+|  Model     Lab A Model A Fast High     |
+|  Account   Provider A OAuth            |
 |  Directory /work/project [main]        |
 |                                        |
 |■ Updated to v1.2.3                     |
 |                                        |
 === fg ===
 |A AAAAAA                                |
-|  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
-|  BBBBBBB   AAAAAAAA A AAAAA            |
-|  BBBBB     AAA A AAAAA A AAAA AAAA     |
+|  BBBBBBB   AAA AAA AAAAA BBBBBBBBBBBB  |
 |  BBBBBBB   AAA A AAAA AA               |
+|  BBBBB     AAA A AAAAA A AAAA AAAA     |
+|  BBBBBBB   AAAAAAAA A AAAAA            |
 |  BBBBBBBBB AAAAAAAAAAAAA BBBBBB        |
 |                                        |
 |A AAAAAAA AA CCCCCC                     |

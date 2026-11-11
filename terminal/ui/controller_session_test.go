@@ -248,7 +248,7 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 				t.Errorf("icon notice =\n%s\nwant\n%s", got, product.Icon)
 			}
 			status := loads[0].Messages[1].Notice
-			if want := fmt.Sprintf("%-10s%s", "Session", s.SessionID()); !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
+			if want := fmt.Sprintf("%-10s%s [%s]", "Session", UntitledName, ShortSessionID(string(s.SessionID()))); !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
 				t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
 			}
 			// A transcript built again from the state shows them in order too.
@@ -267,7 +267,7 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 }
 
 // TestShowInfoIsSystemNotice checks that /status draws a system notice alone,
-// with no logo, that starts with the session.
+// with no logo, that starts with the session and ends with the directory.
 func TestShowInfoIsSystemNotice(t *testing.T) {
 	s, _ := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -281,8 +281,9 @@ func TestShowInfoIsSystemNotice(t *testing.T) {
 	if !ok || toast.Surface != NoticeSystem {
 		t.Fatalf("event is %+v, want a system notice", events[0])
 	}
-	if len(toast.Lines) == 0 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Session") {
-		t.Errorf("notice lines = %+v, want them to start with the session", toast.Lines)
+	n := len(toast.Lines)
+	if n < 2 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Session") || !strings.HasPrefix(toast.Lines[n-1].PlainText(), "Directory") {
+		t.Errorf("notice lines = %+v, want the session first and the directory last", toast.Lines)
 	}
 }
 
@@ -315,7 +316,7 @@ func TestClearMessagesShowsStatusFirst(t *testing.T) {
 	if len(toasts) == 0 || toasts[0].Surface != NoticeSystem {
 		t.Fatalf("notices = %+v, want the /status notice first", toasts)
 	}
-	session := fmt.Sprintf("%-10s%s", "Session", s.SessionID())
+	session := fmt.Sprintf("%-10s%s [%s]", "Session", UntitledName, ShortSessionID(string(s.SessionID())))
 	if !slices.ContainsFunc(toasts[0].Lines, func(l style.StyledText) bool { return l.PlainText() == session }) {
 		t.Errorf("first notice = %+v, want the /status of session %s", toasts[0], s.SessionID())
 	}

@@ -20,7 +20,7 @@ func TestStatusLinesDimTags(t *testing.T) {
 		row  int
 		want []string
 	}{
-		{1, []string{"Unknown ", "[provider-z]"}},
+		{3, []string{"Unknown ", "[provider-z]"}},
 		{2, []string{"Unknown ", "[lab-z]", " Unknown ", "[model-z]", " Medium"}},
 	} {
 		chunks := lines[tt.row].Chunks[1:]
@@ -76,6 +76,42 @@ func TestGitBranch(t *testing.T) {
 	}
 }
 
+// TestStatusLinesSession checks that the session info's Session row shows
+// the session's title, or UntitledName without one, and then the last part
+// of its ID, dim and bracketed.
+func TestStatusLinesSession(t *testing.T) {
+	const id = "01a0e33d-4571-7ed4-b06b-4229c726c313"
+	for _, tt := range []struct{ title, want string }{
+		{"Fix the login", "Session   Fix the login [4229c726c313]"},
+		{"", "Session   " + UntitledName + " [4229c726c313]"},
+	} {
+		row := StatusLines(StatusInfo{Session: id, Title: tt.title}, nil)[0]
+		if got := row.PlainText(); got != tt.want {
+			t.Errorf("Session row = %q, want %q", got, tt.want)
+		}
+		if last := row.Chunks[len(row.Chunks)-1]; last.Text != "[4229c726c313]" || last.Fg != DefaultTheme().TextMuted {
+			t.Errorf("ID chunk = %+v, want [4229c726c313] dim", last)
+		}
+	}
+	if got := ShortSessionID("no-dash-here-x"); got != "x" {
+		t.Errorf("ShortSessionID = %q, want the part after the last dash", got)
+	}
+	if got := ShortSessionID("s1"); got != "s1" {
+		t.Errorf("ShortSessionID of an ID without a dash = %q, want it whole", got)
+	}
+}
+
+// TestStatusLinesHomeDirectory checks that the session info's Directory row
+// writes the home folder as ~, as the session list does.
+func TestStatusLinesHomeDirectory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	row := StatusLines(StatusInfo{Directory: filepath.Join(home, "code", "flow"), Branch: "main"}, nil)[4]
+	if got, want := row.PlainText(), "Directory ~/code/flow [main]"; got != want {
+		t.Errorf("Directory row = %q, want %q", got, want)
+	}
+}
+
 // TestStatusLinesBranch checks that the session info's Directory row shows
 // the git branch after the directory, dim and bracketed, and the directory
 // alone without one.
@@ -87,8 +123,7 @@ func TestStatusLinesBranch(t *testing.T) {
 		{"main", "Directory /work/project [main]"},
 		{"", "Directory /work/project"},
 	} {
-		lines := StatusLines(StatusInfo{Directory: "/work/project", Branch: tt.branch}, nil)
-		row := lines[len(lines)-1]
+		row := StatusLines(StatusInfo{Directory: "/work/project", Branch: tt.branch}, nil)[4]
 		if got := row.PlainText(); got != tt.want {
 			t.Errorf("Directory row = %q, want %q", got, tt.want)
 		}
@@ -148,8 +183,8 @@ func TestStatusNoModel(t *testing.T) {
 		row := func(text string) int {
 			return slices.IndexFunc(notice.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
 		}
-		if p, m := row(tt.account), row(tt.value); p < 0 || m != p+1 {
-			t.Errorf("start %q: /status lines = %q, want %q and then %q", tt.start, plainLines(notice.Lines), tt.account, tt.value)
+		if m, p := row(tt.value), row(tt.account); m < 0 || p != m+1 {
+			t.Errorf("start %q: /status lines = %q, want %q and then %q", tt.start, plainLines(notice.Lines), tt.value, tt.account)
 		}
 	}
 }

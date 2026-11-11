@@ -19,7 +19,7 @@ import (
 func TestPrintVersion(t *testing.T) {
 	var out strings.Builder
 	printVersion(&out)
-	if got, want := out.String(), product.Name+" "+product.Version()+" "+product.Platform()+"\n"; got != want {
+	if got, want := out.String(), product.Name+" "+product.Version()+" ["+product.Platform()+"]\n"; got != want {
 		t.Errorf("version = %q, want %q", got, want)
 	}
 }

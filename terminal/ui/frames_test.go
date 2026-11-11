@@ -201,6 +201,7 @@ func statusLines() []style.StyledText {
 func statusInfo(context int) StatusInfo {
 	return StatusInfo{
 		Session:   "01a0e33d-4571-7ed4-b06b-4229c726c313",
+		Title:     "Fix the login",
 		Account:   "Provider A OAuth",
 		Model:     "Lab A Model A Fast High",
 		Usage:     SessionUsage{Context: context, Window: 400_000},
@@ -250,7 +251,7 @@ func TestTranscriptFrames(t *testing.T) {
 					}},
 				}})
 		}},
-		{name: "notice_multiline", h: 5, add: func(ui *UI) {
+		{name: "notice_multiline", h: 6, add: func(ui *UI) {
 			ui.AddNotice(Notice{Lines: statusLines()})
 		}},
 		// Startup and /status show the session info, a system notice, with
