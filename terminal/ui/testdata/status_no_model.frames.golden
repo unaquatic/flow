@@ -4,7 +4,7 @@
 |  Account   None                        |
 |  Model     None                        |
 |  Context   0K                          |
-|  Directory /work/project               |
+|  Directory /work/project [main]        |
 |                                        |
 === fg ===
 |A AAAAAA                                |
@@ -12,7 +12,7 @@
 |  BBBBBBB   BBBB                        |
 |  BBBBB     BBBB                        |
 |  BBBBBBB   AA                          |
-|  BBBBBBBBB AAAAAAAAAAAAA               |
+|  BBBBBBBBB AAAAAAAAAAAAA BBBBBB        |
 |                                        |
 === legend ===
 A #e6e6e6

@@ -3,13 +3,13 @@
 |  Account   Provider A OAuth            |
 |  Model     Lab A Model A Fast High     |
 |  Context   20K / 400K 5%               |
-|  Directory /work/project               |
+|  Directory /work/project [main]        |
 === fg ===
 |A BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
 |  BBBBBBB   AAAAAAAA A AAAAA            |
 |  BBBBB     AAA A AAAAA A AAAA AAAA     |
 |  BBBBBBB   AAA A AAAA AA               |
-|  BBBBBBBBB AAAAAAAAAAAAA               |
+|  BBBBBBBBB AAAAAAAAAAAAA BBBBBB        |
 === legend ===
 A #e6e6e6
 B #8a8a8a

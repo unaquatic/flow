@@ -51,6 +51,39 @@ type StatusInfo struct {
 	Usage SessionUsage
 	// Directory is the working directory.
 	Directory string
+	// Branch is the git branch checked out in Directory, as GitBranch
+	// reads it, or empty when it is in no git work tree.
+	Branch string
+}
+
+// GitBranch returns the branch checked out in the git work tree that holds
+// dir, such as "main", read from its HEAD file, the first 7 characters of
+// the commit when HEAD names none, or "" when dir is in no work tree.
+func GitBranch(dir string) string {
+	for d := dir; ; d = filepath.Dir(d) {
+		gitDir := filepath.Join(d, ".git")
+		// A linked work tree's .git is a file that names its git directory.
+		if b, err := os.ReadFile(gitDir); err == nil {
+			path, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir: ")
+			if !ok {
+				return ""
+			}
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(d, path)
+			}
+			gitDir = path
+		}
+		if head, err := os.ReadFile(filepath.Join(gitDir, "HEAD")); err == nil {
+			ref := strings.TrimSpace(string(head))
+			if branch, ok := strings.CutPrefix(ref, "ref: refs/heads/"); ok {
+				return branch
+			}
+			return ref[:min(7, len(ref))]
+		}
+		if filepath.Dir(d) == d {
+			return ""
+		}
+	}
 }
 
 // statusLabelWidth is the width of the session info's label column.
@@ -94,15 +127,16 @@ func TagChunks(name string, text, dim func(string) style.TextChunk) []style.Text
 
 // StatusLines returns the rows of the session info, each a dim label and its
 // value: the session's ID, its title when it has one, the model's provider
-// and account, the model, the context, and the working directory. An
+// and account, the model, the context, and the working directory, with its
+// git branch after it, dim and bracketed, such as "/work/project [main]". An
 // account or model that is not set reads as StatusNone, dim as the labels
 // are, as is the bracketed ID of one the catalog does not list, as
 // TagChunks dims it. The context reads as the tokens of the latest request,
 // the model's window and the share of it they fill, such as "18K / 400K 5%",
-// or the
-// tokens alone when the window is not known, in th's warning or danger color
-// once they fill most of the window, as the slash menu's status row colors
-// them. The labels are in th's TextMuted. A nil th uses the default theme.
+// or the tokens alone when the window is not known, in th's warning or danger
+// color once they fill most of the window, as the slash menu's status row
+// colors them. The labels are in th's TextMuted. A nil th uses the default
+// theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
 	orNone := func(value string) []style.TextChunk {
@@ -110,6 +144,10 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 			return []style.TextChunk{dim(StatusNone)}
 		}
 		return TagChunks(value, style.Plain, dim)
+	}
+	directory := []style.TextChunk{style.Plain(info.Directory)}
+	if info.Branch != "" {
+		directory = append(directory, style.Plain(" "), dim(Tag(info.Branch)))
 	}
 	rows := []LabeledRow{{"Session", []style.TextChunk{style.Plain(info.Session)}}}
 	if info.Title != "" {
@@ -119,7 +157,7 @@ func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 		LabeledRow{"Account", orNone(info.Account)},
 		LabeledRow{"Model", orNone(info.Model)},
 		LabeledRow{"Context", []style.TextChunk{ContextValue(info.Usage, th)}},
-		LabeledRow{"Directory", []style.TextChunk{style.Plain(info.Directory)}},
+		LabeledRow{"Directory", directory},
 	)
 	return LabeledLines(rows, statusLabelWidth, th)
 }
@@ -178,6 +216,7 @@ func (s *Service) ShowInfo() []UIEvent {
 		Model:     s.ModelDisplayName(s.state.Model),
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
+		Branch:    GitBranch(s.app.WorkingDir()),
 	}
 	if provider, _ := agent.ParseModel(s.state.Model); provider != "" {
 		info.Account = s.AccountName(provider)

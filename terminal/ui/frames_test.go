@@ -205,6 +205,7 @@ func statusInfo(context int) StatusInfo {
 		Model:     "Lab A Model A Fast High",
 		Usage:     SessionUsage{Context: context, Window: 400_000},
 		Directory: "/work/project",
+		Branch:    "main",
 	}
 }
 

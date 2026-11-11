@@ -13,7 +13,7 @@
 |  Account   Provider A OAuth            |
 |  Model     Lab A Model A Fast High     |
 |  Context   20K / 400K 5%               |
-|  Directory /work/project               |
+|  Directory /work/project [main]        |
 |                                        |
 |                                        |
 |                                        |
@@ -32,7 +32,7 @@
 |  CCCCCCC   BBBBBBBB B BBBBB            |
 |  CCCCC     BBB B BBBBB B BBBB BBBB     |
 |  CCCCCCC   BBB B BBBB BB               |
-|  CCCCCCCCC BBBBBBBBBBBBB               |
+|  CCCCCCCCC BBBBBBBBBBBBB CCCCCC        |
 |                                        |
 |                                        |
 |                                        |

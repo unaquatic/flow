@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -31,6 +33,67 @@ func TestStatusLinesDimTags(t *testing.T) {
 		}
 		if !slices.Equal(got, tt.want) {
 			t.Errorf("row %d chunks = %q, want %q", tt.row, got, tt.want)
+		}
+	}
+}
+
+// TestGitBranch checks that the branch is read from the HEAD of the work
+// tree that holds the directory, from a folder within it too, as the short
+// commit when HEAD is detached, through the .git file of a linked work tree,
+// and is empty outside any work tree.
+func TestGitBranch(t *testing.T) {
+	write := func(path, text string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo := t.TempDir()
+	write(filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/feature/x\n")
+	sub := filepath.Join(repo, "a", "b")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	detached := t.TempDir()
+	write(filepath.Join(detached, ".git", "HEAD"), "0123456789abcdef0123456789abcdef01234567\n")
+	linked := t.TempDir()
+	write(filepath.Join(repo, ".git", "worktrees", "w", "HEAD"), "ref: refs/heads/main\n")
+	write(filepath.Join(linked, ".git"), "gitdir: "+filepath.Join(repo, ".git", "worktrees", "w")+"\n")
+
+	for _, tt := range []struct{ dir, want string }{
+		{repo, "feature/x"},
+		{sub, "feature/x"},
+		{detached, "0123456"},
+		{linked, "main"},
+		{t.TempDir(), ""},
+	} {
+		if got := GitBranch(tt.dir); got != tt.want {
+			t.Errorf("GitBranch(%s) = %q, want %q", tt.dir, got, tt.want)
+		}
+	}
+}
+
+// TestStatusLinesBranch checks that the session info's Directory row shows
+// the git branch after the directory, dim and bracketed, and the directory
+// alone without one.
+func TestStatusLinesBranch(t *testing.T) {
+	dim := DefaultTheme().TextMuted
+	for _, tt := range []struct {
+		branch, want string
+	}{
+		{"main", "Directory /work/project [main]"},
+		{"", "Directory /work/project"},
+	} {
+		lines := StatusLines(StatusInfo{Directory: "/work/project", Branch: tt.branch}, nil)
+		row := lines[len(lines)-1]
+		if got := row.PlainText(); got != tt.want {
+			t.Errorf("Directory row = %q, want %q", got, tt.want)
+		}
+		if last := row.Chunks[len(row.Chunks)-1]; tt.branch != "" && (last.Text != "[main]" || last.Fg != dim) {
+			t.Errorf("branch chunk = %+v, want [main] dim", last)
 		}
 	}
 }
