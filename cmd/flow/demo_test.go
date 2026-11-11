@@ -103,7 +103,7 @@ func TestDemos(t *testing.T) {
 			"current":      regexp.QuoteMeta("Current account:\n  provider-a  " + a + "  oauth  store\n"),
 			"current-none": regexp.QuoteMeta("error: no active account: provider-b\n"),
 			"use":          regexp.QuoteMeta("Switched to:\n  provider-a  " + k + "  api_key  store\n"),
-			"use-invalid":  regexp.QuoteMeta(`error: invalid account id "123"` + "\n"),
+			"use-invalid":  regexp.QuoteMeta(`error: invalid account ID "123"` + "\n"),
 			"list-json": regexp.QuoteMeta("[\n  {\n    \"provider\": \"provider-a\",\n    \"active\": \"" + a + "\",\n    \"accounts\": [\n" +
 				"      {\n        \"id\": \"" + a + "\",\n        \"kind\": \"oauth\",\n        \"source\": \"store\"\n      },\n" +
 				"      {\n        \"id\": \"" + k + "\",\n        \"kind\": \"api_key\",\n        \"source\": \"store\"\n      }\n    ],\n" +

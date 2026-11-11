@@ -13,7 +13,7 @@ var (
 	ErrEmptyKey = errors.New("empty API key")
 
 	// ErrInvalidAccountID reports an account ID that is not a UUID.
-	ErrInvalidAccountID = errors.New("invalid account id")
+	ErrInvalidAccountID = errors.New("invalid account ID")
 
 	// ErrUnknownAccount reports an account that the provider does not have.
 	ErrUnknownAccount = errors.New("unknown account")

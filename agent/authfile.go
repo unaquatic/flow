@@ -98,7 +98,7 @@ func (e *AuthEntry) UnmarshalJSON(data []byte) error {
 	out := AuthEntry{Active: ej.Active, Accounts: make(map[AccountID]Credential, len(ej.Accounts))}
 	for i, r := range ej.Accounts {
 		if r.ID == "" {
-			return fmt.Errorf("account %d has no id", i)
+			return fmt.Errorf("account %d has no ID", i)
 		}
 		if _, ok := out.Accounts[r.ID]; ok {
 			return fmt.Errorf("account %s appears twice", r.ID)

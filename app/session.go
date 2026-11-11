@@ -23,7 +23,7 @@ var (
 	// ErrInvalidSessionID reports a session ID that holds characters other
 	// than ASCII letters, digits, '-' and '_'. Such an ID cannot name the
 	// session's lock file, so the session cannot be changed.
-	ErrInvalidSessionID = errors.New("invalid session id")
+	ErrInvalidSessionID = errors.New("invalid session ID")
 )
 
 // sessionLockWait is how long lockSession waits for a busy session lock. It
