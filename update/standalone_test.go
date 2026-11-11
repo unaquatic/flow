@@ -296,7 +296,7 @@ func TestReplaceMirror(t *testing.T) {
 
 	u = standalone(t, down(t))
 	u.Mirror = mirror(t, true).URL
-	if err := u.Replace(t.Context(), "v1.2.3"); err == nil || !strings.Contains(err.Error(), "and the mirror: digest mismatch") {
+	if err := u.Replace(t.Context(), "v1.2.3"); err == nil || !strings.Contains(err.Error(), "; mirror: digest mismatch") {
 		t.Errorf("Replace with GitHub down and a tampered mirror = %v, want both failures", err)
 	}
 	if got := binary(t, u); got != "old" {
@@ -313,7 +313,7 @@ func TestLatestMirror(t *testing.T) {
 		t.Errorf("Latest with GitHub down = %q, %v; want v1.2.3 from the mirror", got, err)
 	}
 	u.Mirror = down(t).URL
-	if _, err := u.Latest(t.Context()); err == nil || !strings.Contains(err.Error(), "and the mirror:") {
+	if _, err := u.Latest(t.Context()); err == nil || !strings.Contains(err.Error(), "; mirror:") {
 		t.Errorf("Latest with both down = %v, want both failures", err)
 	}
 }

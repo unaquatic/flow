@@ -61,7 +61,7 @@ var serveCmd = &cmdline.Command[serveOptions]{
 func parseOrigin(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.User != nil {
-		return "", fmt.Errorf("%q is not an origin such as https://app.example", s)
+		return "", fmt.Errorf("invalid origin: %s; use an origin such as https://app.example", s)
 	}
 	return u.Scheme + "://" + u.Host, nil
 }

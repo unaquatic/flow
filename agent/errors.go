@@ -17,23 +17,23 @@ var (
 	ErrNotAuthenticated = errors.New("not authenticated")
 
 	// ErrProviderNotRegistered indicates that a provider is not registered.
-	ErrProviderNotRegistered = errors.New("provider not registered")
+	ErrProviderNotRegistered = errors.New("unknown provider")
 
 	// ErrVariantNotFound indicates that the catalog lists no such variant of a
 	// model at its provider.
-	ErrVariantNotFound = errors.New("model variant not found")
+	ErrVariantNotFound = errors.New("unknown model variant")
 
 	// ErrModelNotFound indicates that the catalog lists no such model at a
 	// provider.
-	ErrModelNotFound = errors.New("model not found in catalog")
+	ErrModelNotFound = errors.New("unknown model")
 
 	// ErrFormatNotSupported indicates that a provider's endpoint takes a
 	// request format, or an authentication, that flow does not speak.
-	ErrFormatNotSupported = errors.New("request format not supported")
+	ErrFormatNotSupported = errors.New("unsupported format")
 
 	// ErrMissingVariable indicates that a base URL names an environment
 	// variable that is not set, such as a cloud resource's name.
-	ErrMissingVariable = errors.New("environment variable not set")
+	ErrMissingVariable = errors.New("missing environment variable")
 )
 
 // RequestError reports a failure while building or sending a request.
@@ -43,7 +43,7 @@ type RequestError struct {
 }
 
 // Error returns the request failure text.
-func (e *RequestError) Error() string { return "request failed: " + e.Err.Error() }
+func (e *RequestError) Error() string { return "send request: " + e.Err.Error() }
 
 // Unwrap returns Err, so that errors.Is sees a cancelled context through it.
 func (e *RequestError) Unwrap() error { return e.Err }
@@ -54,8 +54,8 @@ type ResponseParseError struct {
 	Err error
 }
 
-// Error returns the response parsing failure text.
-func (e *ResponseParseError) Error() string { return "failed to parse response: " + e.Err.Error() }
+// Error returns the response failure text.
+func (e *ResponseParseError) Error() string { return "read response: " + e.Err.Error() }
 
 // Unwrap returns Err, so that errors.Is sees a cancelled context through it.
 func (e *ResponseParseError) Unwrap() error { return e.Err }

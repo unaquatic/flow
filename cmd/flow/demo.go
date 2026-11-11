@@ -102,7 +102,7 @@ func demoArgs(cases []demoCase, args []string) error {
 	case len(args) > 1:
 		return fmt.Errorf("takes at most one case, got %d", len(args))
 	case len(args) == 1 && !slices.Contains(names, args[0]):
-		return fmt.Errorf("no case %q, want one of %s", args[0], strings.Join(names, ", "))
+		return fmt.Errorf("unknown case: %s; use one of %s", args[0], strings.Join(names, ", "))
 	}
 	return nil
 }

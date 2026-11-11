@@ -305,7 +305,7 @@ func DataDir() (string, error) {
 		return "", err
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("creating data directory: %w", err)
+		return "", fmt.Errorf("create data directory: %w", err)
 	}
 	return dir, nil
 }
@@ -315,7 +315,7 @@ func DataDir() (string, error) {
 func dataDirPath(name string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil && (name == "" || strings.HasPrefix(name, "~")) {
-		return "", fmt.Errorf("determining home directory: %w", err)
+		return "", fmt.Errorf("find home directory: %w", err)
 	}
 	switch {
 	case name == "":
@@ -352,7 +352,7 @@ func LoadDir(dir string) (*Config, error) {
 	cfg := Defaults(dir)
 
 	if err := mergeFromFile(cfg, File{Dir: dir, Name: FileName}); err != nil {
-		return nil, fmt.Errorf("loading global config: %w", err)
+		return nil, fmt.Errorf("load global config: %w", err)
 	}
 
 	applyEnvOverrides(cfg)
@@ -392,7 +392,7 @@ func mergeFromFile(cfg *Config, f File) error {
 	// Read an older file as its upgrade to Version, which a write saves.
 	if err := upgrade(raw); err != nil {
 		path, _ := f.Path()
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return fmt.Errorf("parse %s: %w", path, err)
 	}
 	// Decode the overlay from the keys of the one read, so that both see
 	// the same file even when a write replaces it meanwhile.
@@ -403,18 +403,18 @@ func mergeFromFile(cfg *Config, f File) error {
 	var overlay Config
 	if err := json.Unmarshal(data, &overlay); err != nil {
 		path, _ := f.Path()
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return fmt.Errorf("parse %s: %w", path, err)
 	}
 
 	cfg.Version = overlay.Version
 	if cfg.DefaultProvider, cfg.DefaultModel, err = defaultModelOf(raw); err != nil {
 		path, _ := f.Path()
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return fmt.Errorf("parse %s: %w", path, err)
 	}
 	if _, ok := raw["log_level"]; ok {
 		if !overlay.LogLevel.Valid() {
 			path, _ := f.Path()
-			return fmt.Errorf("parsing %s: log_level %q is none of %q, %q, %q and %q",
+			return fmt.Errorf("parse %s: unknown log_level: %s; use %s, %s, %s or %s",
 				path, overlay.LogLevel, LogDebug, LogInfo, LogWarn, LogError)
 		}
 		cfg.LogLevel = overlay.LogLevel

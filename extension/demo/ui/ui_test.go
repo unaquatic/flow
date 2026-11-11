@@ -75,7 +75,7 @@ func TestErrorItems(t *testing.T) {
 			Text: "provider-a response error: Overloaded", Error: true,
 		})},
 		{name: "Request failed", check: indicator(ui.EventIndicatorShow{
-			Text: `request failed: Post "` + demo.APIURL + `": EOF`, Error: true,
+			Text: `send request: Post "` + demo.APIURL + `": EOF`, Error: true,
 		})},
 		{name: "Login failed", check: indicator(ui.EventIndicatorShow{
 			Text:  "login to provider-a failed: token endpoint error (401)",

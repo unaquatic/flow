@@ -94,7 +94,7 @@ func TestExport(t *testing.T) {
 	}
 
 	err = runExport(t.Context(), new(strings.Builder), a, ExportOptions{Format: ExportMarkdown}, []string{"ses_missing"})
-	if err == nil || err.Error() != `no stored session matches "ses_missing"` {
+	if err == nil || err.Error() != "no session: ses_missing" {
 		t.Errorf("export of a missing session: err = %v", err)
 	}
 }

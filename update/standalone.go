@@ -136,10 +136,10 @@ func (u *Updater) release(ctx context.Context, tag string) (githubRelease, error
 	var r githubRelease
 	err := u.getJSON(ctx, endpoint, &r)
 	if se, ok := errors.AsType[*StatusError](err); ok && se.Code == http.StatusNotFound {
-		return r, fmt.Errorf("release not found: %s", tag)
+		return r, fmt.Errorf("no release: %s", tag)
 	}
 	if err != nil {
-		return r, unavailable{fmt.Errorf("download failed: %w", err)}
+		return r, unavailable{fmt.Errorf("download: %w", err)}
 	}
 	return r, nil
 }
@@ -151,16 +151,16 @@ func (u *Updater) latestRelease(ctx context.Context) (string, error) {
 	if isUnavailable(err) {
 		tag, mirrorErr := u.mirrorText(ctx, "latest")
 		if mirrorErr != nil {
-			return "", fmt.Errorf("check failed: %w, and the mirror: %w", err, mirrorErr)
+			return "", fmt.Errorf("check for updates: %w; mirror: %w", err, mirrorErr)
 		}
 		r.Tag, err = strings.TrimSpace(tag), nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("check failed: %w", err)
+		return "", fmt.Errorf("check for updates: %w", err)
 	}
 	v := Canonical(r.Tag)
 	if v == "" {
-		return "", fmt.Errorf("check failed: invalid version: %q", r.Tag)
+		return "", fmt.Errorf("check for updates: invalid version: %s", r.Tag)
 	}
 	return v, nil
 }
@@ -183,7 +183,7 @@ func (u *Updater) Replace(ctx context.Context, version string) error {
 		return err
 	}
 	if mirrorErr := u.replaceFromMirror(ctx, version); mirrorErr != nil {
-		return fmt.Errorf("%w, and the mirror: %w", err, mirrorErr)
+		return fmt.Errorf("%w; mirror: %w", err, mirrorErr)
 	}
 	return nil
 }
@@ -259,12 +259,12 @@ func (u *Updater) mirrorText(ctx context.Context, name string) (string, error) {
 	defer cancel()
 	resp, err := u.get(ctx, u.mirrorURL(name))
 	if err != nil {
-		return "", fmt.Errorf("download failed: %w", err)
+		return "", fmt.Errorf("download: %w", err)
 	}
 	defer resp.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return "", fmt.Errorf("download failed: %s: %w", u.mirrorURL(name), err)
+		return "", fmt.Errorf("download %s: %w", u.mirrorURL(name), err)
 	}
 	return string(data), nil
 }
@@ -276,7 +276,7 @@ func (u *Updater) mirrorText(ctx context.Context, name string) (string, error) {
 func (u *Updater) download(ctx context.Context, rawURL string, h hash.Hash, want []byte) (*os.File, error) {
 	resp, err := u.get(ctx, rawURL)
 	if err != nil {
-		return nil, unavailable{fmt.Errorf("download failed: %w", err)}
+		return nil, unavailable{fmt.Errorf("download: %w", err)}
 	}
 	defer resp.Body.Close()
 	f, err := os.CreateTemp("", "flow-download-*")
@@ -290,7 +290,7 @@ func (u *Updater) download(ctx context.Context, rawURL string, h hash.Hash, want
 	}
 	if _, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(body, maxBinarySize)); err != nil {
 		removeTemp(f)
-		return nil, unavailable{fmt.Errorf("download failed: %s: %w", rawURL, err)}
+		return nil, unavailable{fmt.Errorf("download %s: %w", rawURL, err)}
 	}
 	if got := h.Sum(nil); !bytes.Equal(got, want) {
 		removeTemp(f)

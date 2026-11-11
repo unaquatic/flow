@@ -83,7 +83,7 @@ func TestRunUpdate(t *testing.T) {
 
 	t.Run("build from source", func(t *testing.T) {
 		err := runUpdate(t.Context(), new(bytes.Buffer), testUpdater(t, "v0.1.0", false), updateOptions{}, (*exec.Cmd).Run)
-		if !errors.Is(err, update.ErrUnmanaged) || !strings.HasSuffix(err.Error(), ", run "+update.InstallCommand) {
+		if !errors.Is(err, update.ErrUnmanaged) || !strings.HasSuffix(err.Error(), "; run "+update.InstallCommand) {
 			t.Errorf("runUpdate = %v, want ErrUnmanaged naming the install script", err)
 		}
 	})
@@ -118,7 +118,7 @@ func TestRunUpdate(t *testing.T) {
 		}
 		var w bytes.Buffer
 		err := runUpdate(t.Context(), &w, testUpdater(t, "v0.1.0", true), updateOptions{}, (*exec.Cmd).Run)
-		if err == nil || !strings.HasPrefix(err.Error(), "flow update: install failed: npm install -g @unaquatic/flow@0.2.0") {
+		if err == nil || !strings.HasPrefix(err.Error(), "flow update: install npm install -g @unaquatic/flow@0.2.0") {
 			t.Errorf("runUpdate = %v, want the install failed", err)
 		}
 		want := "Updating 0.1.0 → 0.2.0\n  npm install -g @unaquatic/flow@0.2.0\n\nnpm ERR! code EACCES\n"

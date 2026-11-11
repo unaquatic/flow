@@ -31,7 +31,7 @@ func TestSessionDemos(t *testing.T) {
 		{command: "session-delete", cases: sessionDeleteDemos, want: map[string]string{
 			"delete":         `Deleted:\n  ` + q(demoSessionTitle) + `  \S+  ` + updated + `  ` + titled + "\n",
 			"delete-json":    `(?s)\[\n  \{\n    "id": "` + titled + `",\n    "title": "` + q(demoSessionTitle) + `",\n.*"worktree": "[^"]+"\n  \}\n\]\n`,
-			"delete-missing": q(`error: no stored session matches "` + demoMissingSession + `"` + "\n"),
+			"delete-missing": q("error: no session: " + demoMissingSession + "\n"),
 		}},
 		{command: "models", cases: modelsDemos, want: map[string]string{
 			"list":          q("provider-a  lab-a/model-a  low, medium, high\nprovider-a  lab-a/model-b\n"),
@@ -44,7 +44,7 @@ func TestSessionDemos(t *testing.T) {
 				`\{"type":"message",[^\n]*"role":"user"[^\n]*\}\n` +
 				`\{"type":"message",[^\n]*"name":"read"[^\n]*\}\n` +
 				`\{"type":"message",[^\n]*"text":"` + q(strings.ReplaceAll(demoRunAnswer, "\n", `\n`)) + `"[^\n]*\}\n`,
-			"missing": q(`error: no stored session matches "` + demoMissingSession + `"` + "\n"),
+			"missing": q("error: no session: " + demoMissingSession + "\n"),
 			"none":    q("error: " + errNoSessions.Error() + "\n"),
 		}},
 	} {

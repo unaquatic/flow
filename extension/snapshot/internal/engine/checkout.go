@@ -92,7 +92,7 @@ func (w *Worktree) writeFiles(ctx context.Context, tx *Tx, changes []Change) err
 		}
 		f := IndexEntry{Path: c.Path, Mode: c.New.Mode, Hash: c.New.Hash, Checked: checked}
 		if err := w.checkoutFile(ctx, tx, f); err != nil {
-			return fmt.Errorf("snapshot: checkout %s: %w", c.Path, err)
+			return fmt.Errorf("snapshot: write %s: %w", c.Path, err)
 		}
 	}
 	return nil

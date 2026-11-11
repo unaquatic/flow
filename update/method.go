@@ -105,7 +105,7 @@ type NotWritableError struct {
 }
 
 func (e *NotWritableError) Error() string {
-	return fmt.Sprintf("not writable: %s, run %s", e.Dir, e.Install)
+	return fmt.Sprintf("not writable: %s; run %s", e.Dir, e.Install)
 }
 
 // Plan returns the Install that updates the running flow to version: from

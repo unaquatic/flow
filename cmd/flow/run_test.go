@@ -288,8 +288,8 @@ func TestCheckTools(t *testing.T) {
 		o    RunOptions
 		want string
 	}{
-		{RunOptions{Tools: []string{"read", "model-x"}}, `--tools: unknown tool "model-x"`},
-		{RunOptions{ExcludeTools: []string{"model-x"}}, `--exclude-tools: unknown tool "model-x"`},
+		{RunOptions{Tools: []string{"read", "model-x"}}, "--tools: unknown tool: model-x"},
+		{RunOptions{ExcludeTools: []string{"model-x"}}, "--exclude-tools: unknown tool: model-x"},
 	} {
 		if err := checkTools(tt.o); err == nil || !strings.HasPrefix(err.Error(), tt.want) {
 			t.Errorf("%+v: err = %v, want it to start %q", tt.o, err, tt.want)

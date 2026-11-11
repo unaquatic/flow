@@ -168,7 +168,7 @@ func read(path string) (keys map[string]json.RawMessage, data []byte, mode fs.Fi
 	}
 	if len(data) > 0 {
 		if err := json.Unmarshal(data, &keys); err != nil {
-			return nil, nil, 0, fmt.Errorf("parsing %s: %w", path, err)
+			return nil, nil, 0, fmt.Errorf("parse %s: %w", path, err)
 		}
 	}
 	return keys, data, info.Mode().Perm(), nil

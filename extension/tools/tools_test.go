@@ -74,7 +74,7 @@ func TestSelection(t *testing.T) {
 func TestSelectionUnknown(t *testing.T) {
 	for _, sel := range []Selection{{Only: []string{"read", "model-x"}}, {Exclude: []string{"model-x"}}} {
 		_, err := sel.Tools()
-		if err == nil || !strings.Contains(err.Error(), `unknown tool "model-x"`) || !strings.Contains(err.Error(), "bash, edit") {
+		if err == nil || !strings.Contains(err.Error(), "unknown tool: model-x") || !strings.Contains(err.Error(), "bash, edit") {
 			t.Errorf("%+v: err = %v, want it to name the unknown tool and the built-in ones", sel, err)
 		}
 	}

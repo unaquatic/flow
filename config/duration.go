@@ -22,7 +22,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &s); err == nil {
 		parsed, err := time.ParseDuration(s)
 		if err != nil {
-			return fmt.Errorf("invalid duration %q: %w", s, err)
+			return fmt.Errorf("invalid duration: %s: %w", s, err)
 		}
 		d.Duration = parsed
 		return nil
@@ -30,7 +30,7 @@ func (d *Duration) UnmarshalJSON(b []byte) error {
 
 	var n float64
 	if err := json.Unmarshal(b, &n); err != nil {
-		return fmt.Errorf("duration must be a string (\"3s\") or number (seconds)")
+		return fmt.Errorf("invalid duration: %s; use a string such as \"3s\" or a number of seconds", b)
 	}
 	d.Duration = time.Duration(n * float64(time.Second))
 	return nil

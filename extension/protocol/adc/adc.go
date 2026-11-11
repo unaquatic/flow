@@ -188,7 +188,7 @@ func (c *Credentials) mint(ctx context.Context, f File, now time.Time) (string, 
 		form.Set("client_secret", f.ClientSecret)
 		form.Set("refresh_token", f.RefreshToken)
 	default:
-		return "", 0, fmt.Errorf("credentials of type %q are not supported; use a service account key or %q", f.Type, LoginCommand)
+		return "", 0, fmt.Errorf("unsupported credential type: %s; use a service account key or run %s", f.Type, LoginCommand)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cmp.Or(f.TokenURI, DefaultTokenURL), strings.NewReader(form.Encode()))
 	if err != nil {

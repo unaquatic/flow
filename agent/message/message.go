@@ -35,14 +35,14 @@ var roleFromString = map[string]Role{
 }
 
 // ErrUnknownRole reports a role name that names no [Role].
-var ErrUnknownRole = errors.New("unknown message role")
+var ErrUnknownRole = errors.New("unknown role")
 
 // ParseRole returns the role named by s, which is the form String writes. An
 // unrecognized name fails with [ErrUnknownRole].
 func ParseRole(s string) (Role, error) {
 	r, ok := roleFromString[s]
 	if !ok {
-		return 0, fmt.Errorf("%w %q", ErrUnknownRole, s)
+		return 0, fmt.Errorf("%w: %s", ErrUnknownRole, s)
 	}
 	return r, nil
 }

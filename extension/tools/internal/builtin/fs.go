@@ -430,7 +430,7 @@ func matchSegments(pat, name []string) bool {
 func stringArg(args map[string]any, key string) (string, error) {
 	v, ok := args[key]
 	if !ok {
-		return "", fmt.Errorf("missing %s", key)
+		return "", fmt.Errorf("missing argument: %s", key)
 	}
 	s, ok := v.(string)
 	if !ok {

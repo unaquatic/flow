@@ -91,7 +91,7 @@ func TestSessionDelete(t *testing.T) {
 	first, second := sessions[0].ID, sessions[1].ID
 
 	err = runSessionDelete(t.Context(), new(strings.Builder), a, SessionDeleteOptions{Format: OutputText}, []string{string(first), "ses_missing"})
-	if err == nil || err.Error() != `no stored session matches "ses_missing"` {
+	if err == nil || err.Error() != "no session: ses_missing" {
 		t.Errorf("delete with a missing session: err = %v", err)
 	}
 	if left, _ := a.Sessions().ListSessions(t.Context()); len(left) != 2 {

@@ -93,7 +93,7 @@ func runUpdate(ctx context.Context, w io.Writer, u *update.Updater, o updateOpti
 
 	inst, err := u.Plan(ctx, latest)
 	if errors.Is(err, update.ErrUnmanaged) {
-		return fail(fmt.Errorf("%w, run %s", err, update.InstallCommand))
+		return fail(fmt.Errorf("%w; run %s", err, update.InstallCommand))
 	}
 	if err != nil {
 		return fail(err)
@@ -128,7 +128,7 @@ func runUpdate(ctx context.Context, w io.Writer, u *update.Updater, o updateOpti
 		status.Clear()
 		if err != nil {
 			fmt.Fprintf(w, "\n%s", out.String())
-			return fail(fmt.Errorf("install failed: %s: %w", inst, err))
+			return fail(fmt.Errorf("install %s: %w", inst, err))
 		}
 	}
 	fmt.Fprintf(w, "\n%s\n", introLine("Installed successfully", color))

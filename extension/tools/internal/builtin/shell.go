@@ -72,7 +72,7 @@ func (s Shells) Path(name string) (string, error) {
 	if path, ok := s.byName[name]; ok {
 		return path, nil
 	}
-	return "", fmt.Errorf("shell %s not installed", name)
+	return "", fmt.Errorf("shell not installed: %s", name)
 }
 
 // runShell runs command via shell -c and returns its combined output. When

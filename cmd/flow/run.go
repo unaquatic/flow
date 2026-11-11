@@ -127,7 +127,7 @@ func (f OutputFormat) MarshalText() ([]byte, error) {
 func (f *OutputFormat) UnmarshalText(text []byte) error {
 	name := OutputFormat(strings.ToLower(strings.TrimSpace(string(text))))
 	if name != OutputText && name != OutputJSON {
-		return fmt.Errorf("unknown format %q; use text or json", text)
+		return fmt.Errorf("unknown format: %s; use text or json", text)
 	}
 	*f = name
 	return nil
@@ -289,7 +289,7 @@ func attachFiles(paths []string) ([]message.ContentPart, error) {
 			text := fmt.Sprintf("<file path=%q>\n%s\n</file>", abs, strings.TrimSuffix(string(data), "\n"))
 			parts = append(parts, message.TextPart{ID: message.NewPartID(), Text: text})
 		default:
-			return nil, fmt.Errorf("--file %s: cannot attach a file of type %s; attach an image, a PDF or a text file", path, mediaType)
+			return nil, fmt.Errorf("--file %s: unsupported file type: %s; attach an image, a PDF or a text file", path, mediaType)
 		}
 	}
 	return parts, nil

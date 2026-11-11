@@ -320,7 +320,7 @@ func TestModelsFindReportsFailedRefresh(t *testing.T) {
 	a := newCatalogApp(t, dir, src.URL)
 
 	_, err := a.Models().Find(t.Context(), "", "model-new")
-	if !errors.Is(err, ErrNoModel) || !strings.Contains(err.Error(), "could not be refreshed") {
+	if !errors.Is(err, ErrNoModel) || !strings.Contains(err.Error(), "refresh the model catalog") {
 		t.Errorf("Models.Find = %v, want ErrNoModel and the failed refresh", err)
 	}
 }
@@ -506,9 +506,9 @@ func TestModelsSelect(t *testing.T) {
 		{name: "default model", want: modelA("fast", "low")},
 		{name: "effort over the default's", effort: "high", want: modelA("fast", "high")},
 		{name: "effort the model does not list", pattern: "model-a", effort: "max",
-			wantErr: `lab-a/model-a has no reasoning effort "max"; the catalog lists ["none" "low" "medium" "high" "xhigh"]`},
+			wantErr: "lab-a/model-a: unknown reasoning effort: max; use one of [none low medium high xhigh]"},
 		{name: "model without efforts", pattern: "model-b-pro", effort: "high",
-			wantErr: `lab-a/model-b-pro has no reasoning effort "high"; the catalog lists []`},
+			wantErr: "lab-a/model-b-pro: unknown reasoning effort: high; use one of []"},
 		{name: "no model", pattern: "zzzz", wantErr: ErrNoModel.Error()},
 	}
 	for _, tt := range tests {

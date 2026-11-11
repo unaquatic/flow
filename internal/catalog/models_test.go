@@ -183,7 +183,7 @@ func TestMergeErrors(t *testing.T) {
 		{"unknown top-level key", `{"provider": {}}`, `unknown field "provider"`},
 		{"provider not an object", `{"providers": {"x": 1}}`, "providers.x: not an object"},
 		{"new provider without endpoint", `{"providers": {"x": {"unlisted": {}}}}`, "providers.x.endpoint.format"},
-		{"unknown format", `{"providers": {"x": {"endpoint": {"format": "soap", "api": "http://h"}}}}`, `providers.x.endpoint.format: "soap"`},
+		{"unknown format", `{"providers": {"x": {"endpoint": {"format": "soap", "api": "http://h"}}}}`, "providers.x.endpoint.format: unknown format: soap"},
 		{"no base URL", chat(`{"providers": {"x": {"endpoint": {"format": "CHAT"}}}}`), "providers.x.endpoint.api: not set"},
 		{"unknown provider key", `{"providers": {"gw": {"base_url": "http://h"}}}`, `providers.gw: json: unknown field "base_url"`},
 		{"unknown offering key", `{"providers": {"gw": {"unlisted": {"m": {"context_window": 1}}}}}`, `providers.gw.unlisted.m: json: unknown field "context_window"`},

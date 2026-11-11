@@ -126,7 +126,7 @@ func (a *App) sessionLockPath(id message.SessionID) (string, error) {
 		return !('a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || '0' <= r && r <= '9' || r == '-' || r == '_')
 	}
 	if id == "" || strings.ContainsFunc(string(id), unsafe) {
-		return "", fmt.Errorf("%w %q", ErrInvalidSessionID, id)
+		return "", fmt.Errorf("%w: %s", ErrInvalidSessionID, id)
 	}
 	return filepath.Join(a.lockDir, string(id)+".lock"), nil
 }

@@ -88,7 +88,7 @@ type Updater struct {
 func New(dir string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("locating the running flow: %w", err)
+		return nil, fmt.Errorf("locate the running flow: %w", err)
 	}
 	if real, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = real
@@ -146,13 +146,13 @@ func (u *Updater) Latest(ctx context.Context) (string, error) {
 	}
 	if err := u.getJSON(ctx, endpoint, &body); err != nil {
 		if se, ok := errors.AsType[*StatusError](err); ok && se.Code == http.StatusNotFound {
-			return "", fmt.Errorf("check failed: not published: %s", PackageName)
+			return "", fmt.Errorf("check for updates: not published: %s", PackageName)
 		}
-		return "", fmt.Errorf("check failed: %w", err)
+		return "", fmt.Errorf("check for updates: %w", err)
 	}
 	v := Canonical(body.Version)
 	if v == "" {
-		return "", fmt.Errorf("check failed: invalid version: %q", body.Version)
+		return "", fmt.Errorf("check for updates: invalid version: %s", body.Version)
 	}
 	return v, nil
 }

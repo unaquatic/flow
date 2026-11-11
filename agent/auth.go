@@ -13,7 +13,7 @@ var (
 	ErrEmptyKey = errors.New("empty API key")
 
 	// ErrInvalidAccountID reports an account ID that is not a UUID.
-	ErrInvalidAccountID = errors.New("invalid account ID")
+	ErrInvalidAccountID = errors.New("invalid account")
 
 	// ErrUnknownAccount reports an account that the provider does not have.
 	ErrUnknownAccount = errors.New("unknown account")
@@ -23,7 +23,7 @@ var (
 	ErrReadOnlyAccount = errors.New("the config account is set in the configuration or environment")
 
 	// ErrNoAuthCode reports an OAuth redirect without an authorization code.
-	ErrNoAuthCode = errors.New("no authorization code provided")
+	ErrNoAuthCode = errors.New("no authorization code")
 
 	// ErrInvalidLoginCode reports malformed input that the user can correct
 	// without restarting the pending login.
@@ -31,7 +31,7 @@ var (
 
 	// ErrDeviceCodeExpired reports a device login that was not approved in
 	// time.
-	ErrDeviceCodeExpired = errors.New("device code expired")
+	ErrDeviceCodeExpired = errors.New("expired device code")
 
 	// ErrTokenEndpoint reports a failed OAuth token request.
 	ErrTokenEndpoint = errors.New("token endpoint error")
@@ -98,7 +98,7 @@ func ParseLoginMethod(s string) (LoginMethod, error) {
 	case LoginBrowser, LoginDevice:
 		return m, nil
 	}
-	return "", fmt.Errorf("unknown login method %q", s)
+	return "", fmt.Errorf("unknown login method: %s", s)
 }
 
 // UnmarshalText sets m to the LoginMethod named by text.
@@ -158,7 +158,7 @@ func NewAccountID() AccountID {
 func ParseAccountID(s string) (AccountID, error) {
 	u, err := uuid.Parse(s)
 	if err != nil {
-		return "", fmt.Errorf("%w %q", ErrInvalidAccountID, s)
+		return "", fmt.Errorf("%w: %s", ErrInvalidAccountID, s)
 	}
 	return AccountID(u.String()), nil
 }

@@ -181,7 +181,7 @@ func (l Listing) Variants(t ProviderID) []Variant {
 // authentication flow does not speak, as Callable finds them.
 func (s *Providers) ListModels(_ context.Context, t ProviderID) ([]Listing, error) {
 	if _, ok := s.Get(t); !ok {
-		return nil, fmt.Errorf("%w: %q", ErrProviderNotRegistered, t)
+		return nil, fmt.Errorf("%w: %s", ErrProviderNotRegistered, t)
 	}
 	p := s.Catalog().Providers[t]
 	out := make([]Listing, 0, len(p.Models)+len(p.Unlisted))
@@ -310,7 +310,7 @@ func (s *Providers) Stream(ctx context.Context, v Variant, req Request) (StreamR
 	prov, ok := cat.Providers[v.Provider]
 	if !ok || s.settings(v.Provider).Disabled {
 		slog.Error("provider not registered", "provider", v.Provider)
-		return nil, fmt.Errorf("%w: %q", ErrProviderNotRegistered, v.Provider)
+		return nil, fmt.Errorf("%w: %s", ErrProviderNotRegistered, v.Provider)
 	}
 	ep, send := prov.Endpoint, v.Model
 	switch {

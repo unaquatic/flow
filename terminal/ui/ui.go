@@ -298,7 +298,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 
 	r, err := terminal.NewRenderer(cfg)
 	if err != nil {
-		return Result{}, fmt.Errorf("creating renderer: %w", err)
+		return Result{}, fmt.Errorf("create renderer: %w", err)
 	}
 	if opts.ColorMode != nil {
 		r.SetColorMode(*opts.ColorMode)
@@ -344,7 +344,7 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	})
 
 	if err := r.Auto(); err != nil {
-		return Result{}, fmt.Errorf("starting renderer: %w", err)
+		return Result{}, fmt.Errorf("start renderer: %w", err)
 	}
 
 	// Width measurements become available after renderer setup.

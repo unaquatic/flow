@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -36,7 +35,7 @@ var logoutCmd = &cmdline.Command[logoutOptions]{
 			return errProviderRequired
 		}
 		if o.account == "" {
-			return errors.New("--account is required; list account IDs with " + product.Name + " account")
+			return fmt.Errorf("--account is required; list account IDs with %s account", product.Name)
 		}
 		return withApp(runLogout)(ctx, o, args)
 	},

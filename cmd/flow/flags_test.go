@@ -94,8 +94,8 @@ func TestColorFlags(t *testing.T) {
 		{name: "256", args: []string{"--color", "256"}, want: "256", wantMode: style.Color256},
 		{name: "16", args: []string{"-color", " 16 "}, want: "16", wantMode: style.Color16},
 		{name: "last value wins", args: []string{"--color", "16", "--color", "256"}, want: "256", wantMode: style.Color256},
-		{name: "unknown", args: []string{"--color", "never"}, wantErr: `unknown color mode "never"; use auto, truecolor, 256 or 16`},
-		{name: "empty", args: []string{"--color="}, wantErr: `unknown color mode ""`},
+		{name: "unknown", args: []string{"--color", "never"}, wantErr: "unknown color mode: never; use auto, truecolor, 256 or 16"},
+		{name: "empty", args: []string{"--color="}, wantErr: "unknown color mode: ; use"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -156,7 +156,7 @@ func TestLoginFlags(t *testing.T) {
 			want: loginOptions{method: keyMethod, format: OutputJSON}},
 		{name: "account", args: []string{"-account", strings.ToUpper(id)},
 			want: loginOptions{method: loginMethod(agent.LoginBrowser), account: id, format: OutputText}},
-		{name: "unknown method", args: []string{"-method", "fax"}, wantErr: `unknown login method "fax"`},
+		{name: "unknown method", args: []string{"-method", "fax"}, wantErr: "unknown login method: fax"},
 		{name: "empty provider", args: []string{"-provider", ""}, wantErr: "empty provider"},
 		{name: "bad account", args: []string{"-a", "nope"}, wantErr: "nope"},
 	}
