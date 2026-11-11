@@ -106,11 +106,11 @@ func (c *OAuthCallback) handle(w http.ResponseWriter, r *http.Request, state str
 	switch {
 	case q.Get("state") != state:
 		writeCallbackPage(w, http.StatusBadRequest, "Session expired or invalid. Please try logging in again.")
-		c.deliver(callbackResult{err: errors.New("OAuth redirect with unexpected state")})
+		c.deliver(callbackResult{err: errors.New("unexpected OAuth state")})
 	case q.Get("error") != "":
 		msg := q.Get("error") + ": " + q.Get("error_description")
 		writeCallbackPage(w, http.StatusForbidden, msg)
-		c.deliver(callbackResult{err: errors.New("OAuth error: " + msg)})
+		c.deliver(callbackResult{err: fmt.Errorf("OAuth error: %s", msg)})
 	case q.Get("code") == "":
 		writeCallbackPage(w, http.StatusBadRequest, "Missing authorization code.")
 		c.deliver(callbackResult{err: ErrNoAuthCode})

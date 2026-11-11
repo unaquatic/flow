@@ -44,13 +44,6 @@ func toastOf(ev UIEvent) (Notice, bool) {
 	return n, ok && n.Surface != NoticeCanvas
 }
 
-// canvasOf returns the notice ev adds on the canvas, as the logo is, and
-// reports whether ev adds one.
-func canvasOf(ev UIEvent) (Notice, bool) {
-	n, ok := noticeOf(ev)
-	return n, ok && n.Surface == NoticeCanvas
-}
-
 // noticeAdded returns the event that adds n to the transcript, which
 // sameEvents compares by n alone, as each notice takes an ID of its own.
 func noticeAdded(n Notice) UIEvent {

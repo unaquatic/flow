@@ -1,7 +1,6 @@
 package app
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"iter"
@@ -14,10 +13,6 @@ import (
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/extension"
 )
-
-// DefaultMaxSteps limits model responses within one run, unless the app's
-// Options.MaxSteps sets another limit.
-const DefaultMaxSteps = 16
 
 var (
 	// ErrClosed reports that the app was closed before an operation started.
@@ -621,7 +616,7 @@ func (s Session) runAgent(ctx context.Context, history []agent.Message, v agent.
 		Variant:         v,
 		Messages:        history,
 		ToolDefinitions: s.app.tools.WireTools(),
-		MaxSteps:        cmp.Or(s.app.maxSteps, DefaultMaxSteps),
+		MaxSteps:        s.app.maxSteps,
 		TurnHooks:       turnHooks(s.app.extensions),
 		SessionID:       s.id,
 		OnEvent:         s.publishAgent,

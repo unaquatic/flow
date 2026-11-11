@@ -34,7 +34,7 @@ func Classify(err error) RetryVerdict {
 		return RetryVerdict{}
 	}
 
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.Canceled) {
 		return RetryVerdict{}
 	}
 
@@ -42,6 +42,8 @@ func Classify(err error) RetryVerdict {
 		return classifyResponse(respErr)
 	}
 
+	// A request that timed out is a network error like any other; a
+	// deadline outside one ends the operation.
 	if _, ok := errors.AsType[*RequestError](err); ok {
 		return RetryVerdict{Retryable: true, Message: "network error"}
 	}

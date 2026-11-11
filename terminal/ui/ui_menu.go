@@ -49,7 +49,7 @@ func (ui *UI) SyncSlashStatus() {
 	if !ui.StatusBoxWanted() {
 		return
 	}
-	line := StatusLine(ui.statusModel, ui.statusUsage, ui.service.SessionWorked(), ui.theme)
+	line := StatusLine(ui.service.ModelDisplayName(ui.statusModel), ui.statusUsage, ui.service.SessionWorked(), ui.theme)
 	ui.statusRow.SetLine(line, ui.statusHeader.Keys.PlainText())
 }
 

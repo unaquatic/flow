@@ -54,8 +54,8 @@ type RunOptions struct {
 	// session, in place of the configuration's agent.system_prompt, or
 	// empty to keep it.
 	SystemPrompt string
-	// MaxSteps limits the model responses of the run, or is zero for the
-	// default limit.
+	// MaxSteps limits the model responses of the run, or is zero for no
+	// limit.
 	MaxSteps int
 	// Tools names the built-in tools the run offers the model, or patterns
 	// of them, in place of the default ones, as tools.Selection's Only
@@ -127,7 +127,7 @@ func (f OutputFormat) MarshalText() ([]byte, error) {
 func (f *OutputFormat) UnmarshalText(text []byte) error {
 	name := OutputFormat(strings.ToLower(strings.TrimSpace(string(text))))
 	if name != OutputText && name != OutputJSON {
-		return fmt.Errorf("unknown format %q; use text or json", text)
+		return fmt.Errorf("unknown format: %s; use text or json", text)
 	}
 	*f = name
 	return nil
@@ -186,7 +186,7 @@ func printFlags(fs *flag.FlagSet, o *RunOptions) {
 	fs.StringVar(&o.Name, "n", "", nameUsage)
 	fs.BoolVar(&o.NoContextFiles, "no-context-files", false, "Leave the AGENTS.md files out of the system prompt of a printed run")
 	fs.StringVar(&o.SystemPrompt, "system-prompt", "", "System prompt `text` of a printed run, in place of the configuration's agent.system_prompt")
-	fs.Var(positiveValue{n: &o.MaxSteps}, "max-steps", fmt.Sprintf("Most model responses a printed run makes, `n` (default %d)", app.DefaultMaxSteps))
+	fs.Var(positiveValue{n: &o.MaxSteps}, "max-steps", "Most model responses a printed run makes, `n` (default no limit)")
 	fs.Var(listValue{list: &o.Tools}, "tools",
 		"Built-in tools a printed run offers, in place of the default ones: comma-separated `names` or patterns, such as read,grep, or \"\" for none")
 	fs.Var(listValue{list: &o.ExcludeTools}, "exclude-tools", "Tools a printed run leaves out: comma-separated `names` or patterns, such as bash,write")
@@ -289,7 +289,7 @@ func attachFiles(paths []string) ([]message.ContentPart, error) {
 			text := fmt.Sprintf("<file path=%q>\n%s\n</file>", abs, strings.TrimSuffix(string(data), "\n"))
 			parts = append(parts, message.TextPart{ID: message.NewPartID(), Text: text})
 		default:
-			return nil, fmt.Errorf("--file %s: cannot attach a file of type %s; attach an image, a PDF or a text file", path, mediaType)
+			return nil, fmt.Errorf("--file %s: unsupported file type: %s; attach an image, a PDF or a text file", path, mediaType)
 		}
 	}
 	return parts, nil

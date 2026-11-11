@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/unaquatic/catalog/gateway"
@@ -21,6 +22,13 @@ func ParseModel(s string) (ProviderID, string) {
 	}
 	return "", s
 }
+
+// modelID matches a model ID: lab/model, such as lab-a/model-a:fast:high, or
+// model alone, each part with no slash or white space.
+var modelID = regexp.MustCompile(`^[^/\s]+(/[^/\s]+)?$`)
+
+// ValidModelID reports whether id matches modelID.
+func ValidModelID(id string) bool { return modelID.MatchString(id) }
 
 // FormatModel returns the canonical "provider/model" string, which
 // ParseModel reads back, or "" when t and model are both empty, so that no

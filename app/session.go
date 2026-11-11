@@ -23,7 +23,7 @@ var (
 	// ErrInvalidSessionID reports a session ID that holds characters other
 	// than ASCII letters, digits, '-' and '_'. Such an ID cannot name the
 	// session's lock file, so the session cannot be changed.
-	ErrInvalidSessionID = errors.New("invalid session id")
+	ErrInvalidSessionID = errors.New("invalid session ID")
 )
 
 // sessionLockWait is how long lockSession waits for a busy session lock. It
@@ -126,7 +126,7 @@ func (a *App) sessionLockPath(id message.SessionID) (string, error) {
 		return !('a' <= r && r <= 'z' || 'A' <= r && r <= 'Z' || '0' <= r && r <= '9' || r == '-' || r == '_')
 	}
 	if id == "" || strings.ContainsFunc(string(id), unsafe) {
-		return "", fmt.Errorf("%w %q", ErrInvalidSessionID, id)
+		return "", fmt.Errorf("%w: %s", ErrInvalidSessionID, id)
 	}
 	return filepath.Join(a.lockDir, string(id)+".lock"), nil
 }

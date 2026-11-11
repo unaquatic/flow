@@ -304,7 +304,7 @@ func mergeProvider(c *gateway.Catalog, id gateway.ProviderID, raw json.RawMessag
 		return at("unlisted", err)
 	}
 	if !slices.Contains(gateway.Formats, p.Endpoint.Format) {
-		return at("endpoint.format", fmt.Errorf("%q is none of %v", p.Endpoint.Format, gateway.Formats))
+		return at("endpoint.format", fmt.Errorf("unknown format: %s; use one of %v", p.Endpoint.Format, gateway.Formats))
 	}
 	if p.Endpoint.API == "" {
 		return at("endpoint.api", errors.New("not set"))

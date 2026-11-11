@@ -35,6 +35,10 @@ type Options struct {
 	// Heartbeat is how often GET /event sends a keepalive comment while no
 	// event comes. Zero is DefaultHeartbeat.
 	Heartbeat time.Duration
+	// WriteTimeout bounds each write of a streamed response, an event and
+	// its flush: a client that takes no write in that time is taken as gone,
+	// and its stream ends. Zero is DefaultWriteTimeout.
+	WriteTimeout time.Duration
 }
 
 // DefaultHeartbeat is how often GET /event sends a keepalive comment when
@@ -42,12 +46,25 @@ type Options struct {
 // connection idle for 30 seconds or more.
 const DefaultHeartbeat = 15 * time.Second
 
+// DefaultWriteTimeout bounds each write of a streamed response when Options
+// names no WriteTimeout: twice DefaultHeartbeat, so that a client is given
+// up on only once its connection has stalled for longer than a heartbeat.
+const DefaultWriteTimeout = 2 * DefaultHeartbeat
+
 // heartbeat returns Heartbeat, or DefaultHeartbeat.
 func (o Options) heartbeat() time.Duration {
 	if o.Heartbeat <= 0 {
 		return DefaultHeartbeat
 	}
 	return o.Heartbeat
+}
+
+// writeTimeout returns WriteTimeout, or DefaultWriteTimeout.
+func (o Options) writeTimeout() time.Duration {
+	if o.WriteTimeout <= 0 {
+		return DefaultWriteTimeout
+	}
+	return o.WriteTimeout
 }
 
 // Host returns the host the server listens on: Hostname, or DefaultHost.

@@ -126,7 +126,7 @@ func ParseTodos(v any) (TodoList, error) {
 			return nil, fmt.Errorf("todos[%d]: content is empty", i)
 		}
 		if !slices.Contains(TodoStatuses, item.Status) {
-			return nil, fmt.Errorf("todos[%d]: status %q is not one of %v", i, item.Status, TodoStatuses)
+			return nil, fmt.Errorf("todos[%d]: unknown status: %s; use one of %v", i, item.Status, TodoStatuses)
 		}
 	}
 	return list, nil

@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,108 +18,153 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
-	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
 )
 
-// StatusNotice returns the notices that show lines as the session info does:
-// LogoNotice under the product logo.
-func StatusNotice(lines []style.StyledText) []Notice {
-	return LogoNotice(slices.Collect(LogoLines()), lines)
+// StatusNotice returns the notice that shows lines as the session info does:
+// on the system surface, titled StatusTitle.
+func StatusNotice(lines []style.StyledText) Notice {
+	return Notice{Lines: lines, Surface: NoticeSystem, Title: StatusTitle}
 }
 
 // StatusTitle heads the session info while prompts show in PromptBar.
 const StatusTitle = "Status"
 
-// LogoNotice returns the notices that show logo on the canvas, from the
-// transcript's left edge, and under it lines on the system surface, titled
-// StatusTitle. An empty logo leaves the canvas notice out.
-func LogoNotice(logo, lines []style.StyledText) []Notice {
-	info := Notice{Lines: lines, Surface: NoticeSystem, Title: StatusTitle}
-	if len(logo) == 0 {
-		return []Notice{info}
-	}
-	return []Notice{{Lines: logo, Surface: NoticeCanvas}, info}
-}
-
-// ShowStatus runs /status, showing the session info as ShowInfoUnder does,
-// without the product logo, which only a new session opens under.
-func (s *Service) ShowStatus() []UIEvent {
-	return s.ShowInfoUnder(nil)
-}
-
 // StatusInfo holds the facts the session info shows, as StatusLines lays
 // them out.
 type StatusInfo struct {
-	// Version names the running product and its version.
-	Version string
 	// Session identifies the active session.
 	Session string
 	// Title is the session's title, or empty when it has none.
 	Title string
-	// Updated is when the session was last stored, or zero before it is.
-	Updated time.Time
-	// Messages counts the transcript's messages.
-	Messages int
-	// Provider names the provider of the terminal's model, as
-	// Service.ProviderName names it, such as "Provider A", or is empty when
-	// the model names none.
-	Provider string
-	// Model is the terminal's model variant without its provider, in
-	// "model:option:effort" form, such as "lab-a/model-a:fast:high".
+	// Account names the provider of the terminal's model and the kind of
+	// its active account, as AccountName names them, such as "Provider A
+	// OAuth", or is empty when the model names no provider.
+	Account string
+	// Model is the terminal's model variant as DisplayName names it, such
+	// as "Lab A Model A Fast High", or empty when no model is set.
 	Model string
 	// Usage is the session's token use, whose context and window the
 	// Context row shows.
 	Usage SessionUsage
 	// Directory is the working directory.
 	Directory string
+	// Branch is the git branch checked out in Directory, as GitBranch
+	// reads it, or empty when it is in no git work tree.
+	Branch string
+}
+
+// ShortSessionID returns the last part of id, after its last dash, such as
+// "4229c726c313" of "01a0e33d-4571-7ed4-b06b-4229c726c313", or id whole
+// when it has no dash.
+func ShortSessionID(id string) string {
+	return id[strings.LastIndexByte(id, '-')+1:]
+}
+
+// GitBranch returns the branch checked out in the git work tree that holds
+// dir, such as "main", read from its HEAD file, the first 7 characters of
+// the commit when HEAD names none, or "" when dir is in no work tree.
+func GitBranch(dir string) string {
+	for d := dir; ; d = filepath.Dir(d) {
+		gitDir := filepath.Join(d, ".git")
+		// A linked work tree's .git is a file that names its git directory.
+		if b, err := os.ReadFile(gitDir); err == nil {
+			path, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir: ")
+			if !ok {
+				return ""
+			}
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(d, path)
+			}
+			gitDir = path
+		}
+		if head, err := os.ReadFile(filepath.Join(gitDir, "HEAD")); err == nil {
+			ref := strings.TrimSpace(string(head))
+			if branch, ok := strings.CutPrefix(ref, "ref: refs/heads/"); ok {
+				return branch
+			}
+			return ref[:min(7, len(ref))]
+		}
+		if filepath.Dir(d) == d {
+			return ""
+		}
+	}
 }
 
 // statusLabelWidth is the width of the session info's label column.
 const statusLabelWidth = 10
 
-// StatusNone stands in the session info for a provider or model that is
+// StatusNone stands in the session info for an account or model that is
 // not set.
-const StatusNone = "none"
+const StatusNone = "None"
+
+// StatusUnknown names, in the session info and the Usage box, a provider,
+// lab or model the catalog does not list, before its ID in brackets, as
+// Unknown writes it.
+const StatusUnknown = "Unknown"
+
+// Unknown returns id as the session info names a provider, lab or model the
+// catalog does not list, such as "Unknown [provider-z]".
+func Unknown(id string) string {
+	return StatusUnknown + " " + Tag(id)
+}
+
+// tagPattern matches a bracketed ID, such as the "[model-x]" Unknown writes.
+var tagPattern = regexp.MustCompile(`\[[^\]]*\]`)
+
+// TagChunks returns name, as DisplayName or AccountName writes it, in text,
+// and each bracketed ID in it, such as "[model-x]", in dim.
+func TagChunks(name string, text, dim func(string) style.TextChunk) []style.TextChunk {
+	var chunks []style.TextChunk
+	last := 0
+	for _, m := range tagPattern.FindAllStringIndex(name, -1) {
+		if m[0] > last {
+			chunks = append(chunks, text(name[last:m[0]]))
+		}
+		chunks = append(chunks, dim(name[m[0]:m[1]]))
+		last = m[1]
+	}
+	if last < len(name) {
+		chunks = append(chunks, text(name[last:]))
+	}
+	return chunks
+}
 
 // StatusLines returns the rows of the session info, each a dim label and its
-// value: the version, the session's ID, its title when it has one, its last
-// update once it is stored, its message count, the model's provider, the
-// model without its provider, the context, and the working directory. A
-// provider or model that is not set reads as StatusNone, dim as the labels
-// are. The context reads as the tokens of the latest request, the model's
-// window and the share of it they fill, such as "18K / 400K 5%", or the
-// tokens alone when the window is not known, in th's warning or danger color
-// once they fill most of the window, as the slash menu's status row colors
-// them. The labels are in th's TextMuted. A nil th uses the default theme.
+// value: the session's title, as SessionTitle names it, with its ID after
+// it, as ShortSessionID cuts it, dim and bracketed, such as "Fix the login
+// [4229c726c313]", the context, the model, the model's provider and
+// account, and the working directory, as SessionDir writes it, with its git
+// branch after it, dim and bracketed, such as "~/work/project [main]". An
+// account or model that is not set reads as StatusNone, dim as the labels
+// are, as is the bracketed ID of one the catalog does not list, as
+// TagChunks dims it. The context reads as the tokens of the latest request,
+// the model's window and the share of it they fill, such as "18K / 400K
+// 5%", or the tokens alone when the window is not known, in th's warning or
+// danger color once they fill most of the window, as the slash menu's
+// status row colors them. The labels are in th's TextMuted. A nil th uses
+// the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
-	orNone := func(value string) style.TextChunk {
+	orNone := func(value string) []style.TextChunk {
 		if value == "" {
-			return dim(StatusNone)
+			return []style.TextChunk{dim(StatusNone)}
 		}
-		return style.Plain(value)
+		return TagChunks(value, style.Plain, dim)
 	}
-	rows := []LabeledRow{
-		{"Version", style.Plain(info.Version)},
-		{"Session", style.Plain(info.Session)},
+	directory := []style.TextChunk{style.Plain(SessionDir(info.Directory))}
+	if info.Branch != "" {
+		directory = append(directory, style.Plain(" "), dim(Tag(info.Branch)))
 	}
-	if info.Title != "" {
-		rows = append(rows, LabeledRow{"Title", style.Plain(info.Title)})
-	}
-	if !info.Updated.IsZero() {
-		rows = append(rows, LabeledRow{"Updated", style.Plain(info.Updated.Local().Format(time.DateTime))})
-	}
-	rows = append(rows,
-		LabeledRow{"Messages", style.Plain(strconv.Itoa(info.Messages))},
-		LabeledRow{"Provider", orNone(info.Provider)},
-		LabeledRow{"Model", orNone(info.Model)},
-		LabeledRow{"Context", ContextValue(info.Usage, th)},
-		LabeledRow{"Directory", style.Plain(info.Directory)},
-	)
-	return LabeledLines(rows, statusLabelWidth, th)
+	return LabeledLines([]LabeledRow{
+		{"Session", []style.TextChunk{style.Plain(SessionTitle(info.Title) + " "), dim(Tag(ShortSessionID(info.Session)))}},
+		{"Context", []style.TextChunk{ContextValue(info.Usage, th)}},
+		{"Model", orNone(info.Model)},
+		{"Account", orNone(info.Account)},
+		{"Directory", directory},
+	}, statusLabelWidth, th)
 }
 
 // LabeledRow is a row of a notice laid out as a column of labels and their
@@ -128,7 +173,7 @@ type LabeledRow struct {
 	// Label names the value.
 	Label string
 	// Value is what the row shows after the label.
-	Value style.TextChunk
+	Value []style.TextChunk
 }
 
 // LabeledLines returns rows as lines, each its label padded to width cells
@@ -137,7 +182,7 @@ func LabeledLines(rows []LabeledRow, width int, th *style.Theme) []style.StyledT
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
 	lines := make([]style.StyledText, len(rows))
 	for i, r := range rows {
-		lines[i] = style.NewStyledText(dim(PadWidth(r.Label, width)), r.Value)
+		lines[i] = style.NewStyledText(append([]style.TextChunk{dim(PadWidth(r.Label, width))}, r.Value...)...)
 	}
 	return lines
 }
@@ -158,17 +203,10 @@ func ContextValue(u SessionUsage, th *style.Theme) style.TextChunk {
 	return style.Plain(context)
 }
 
-// ShowInfo reports the running version and the active session in the
-// transcript, as StatusNotice shows them under the product logo, as a new
-// session starts.
+// ShowInfo runs /status, and heads the transcript as a session starts: it
+// reports the active session in the transcript, as StatusLines lays it out
+// and StatusNotice shows it.
 func (s *Service) ShowInfo() []UIEvent {
-	return s.ShowInfoUnder(slices.Collect(LogoLines()))
-}
-
-// ShowInfoUnder reports the running version and the active session in the
-// transcript, as StatusLines lays them out, under logo as LogoNotice shows
-// it, or alone when logo is empty.
-func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 	if s.state.Session == nil {
 		return s.ShowToast("No active session")
 	}
@@ -178,23 +216,20 @@ func (s *Service) ShowInfoUnder(logo []style.StyledText) []UIEvent {
 		return s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
 	}
 
-	provider, model := agent.ParseModel(s.state.Model)
 	info := StatusInfo{
-		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
-		Messages:  s.MessageCount(),
-		Model:     model,
+		Model:     s.ModelDisplayName(s.state.Model),
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
+		Branch:    GitBranch(s.app.WorkingDir()),
 	}
-	if provider != "" {
-		info.Provider = s.ProviderName(provider)
+	if provider, _ := agent.ParseModel(s.state.Model); provider != "" {
+		info.Account = s.AccountName(provider)
 	}
 	if stored != nil {
 		info.Title = stored.Title
-		info.Updated = stored.UpdatedAt
 	}
-	return s.AddNotice(LogoNotice(logo, StatusLines(info, nil))...)
+	return s.AddNotice(StatusNotice(StatusLines(info, nil)))
 }
 
 // HandleSessionList displays the stored sessions of every folder, one row
@@ -533,9 +568,9 @@ func ChatMessageOf(m message.Content) ChatMessage {
 }
 
 // InitSession opens the initial session, the stored session id or a new one
-// when id is empty, and returns the load of its transcript, the product logo
-// and the session info /status shows, as ShowInfo shows them, followed by
-// its messages, and its terminal title. A stored session takes the model
+// when id is empty, and returns the load of its transcript, the session info
+// /status shows, as ShowInfo shows it, followed by its messages, and its
+// terminal title. A stored session takes the model
 // variant its messages last ran, unless state.KeepModel keeps the
 // terminal's. A stored session that fails to load leaves the new session
 // active, and says so under the session info.
@@ -555,11 +590,12 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The logo and the session info head the transcript, above the messages
-	// they follow in. They show once the session and its model are set, so
-	// that the info reads them. The update that started this release
-	// shows under them.
+	// The product icon and the session info under it head the transcript,
+	// above the messages they follow in. The info shows once the session
+	// and its model are set, so that it reads them. The update that started
+	// this release shows under it.
 	loaded := len(s.state.Messages)
+	s.AddNotice(IconNotice())
 	s.ShowInfo()
 	if s.Updated != "" {
 		s.ShowUpdated(s.Updated)

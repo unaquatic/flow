@@ -651,6 +651,38 @@ func TestAgent_MaxSteps(t *testing.T) {
 	}
 }
 
+// TestAgent_NoMaxSteps checks that a run with no MaxSteps goes on for as
+// long as the model calls tools, with no limit of its own.
+func TestAgent_NoMaxSteps(t *testing.T) {
+	const calling = 40 // responses that call a tool before one that does not
+	responses := 0
+	ag := &agent.Agent{
+		Providers: agenttest.NewProviders(t, &agenttest.Gateway{StreamFunc: func() (agent.StreamResponse, error) {
+			responses++
+			if responses > calling {
+				return agenttest.TextResponse("done"), nil
+			}
+			return agenttest.ToolCallResponse("call_1", "echo", `{}`), nil
+		}}, "test"),
+		Tools: newTools(agent.Tool{
+			Name: "echo",
+			Execute: func(context.Context, map[string]any) (agent.ToolOutput, error) {
+				return agent.ToolOutput{Text: "ok"}, nil
+			},
+		}),
+		Variant:  agent.Variant{Provider: "test", Model: "test-model"},
+		Messages: []agent.Message{agent.NewUserMessage("loop")},
+	}
+
+	turns, _, err := runAgent(t, context.Background(), ag)
+	if err != nil {
+		t.Fatalf("run with no step limit: %v", err)
+	}
+	if len(turns) != calling+1 {
+		t.Fatalf("completed %d turns, want %d", len(turns), calling+1)
+	}
+}
+
 // TestAgent_NilOnEventIsSafe checks that event handling is optional.
 func TestAgent_NilOnEventIsSafe(t *testing.T) {
 	ag := &agent.Agent{

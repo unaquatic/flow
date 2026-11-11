@@ -40,23 +40,22 @@ func ANSI(st style.StyledText, mode style.ColorMode) string {
 	return b.String()
 }
 
-// LogoBanner returns the logo that help, the version and the resume notice
-// print, its "f" in the product's orange and the rest light grey, as the UI
-// draws it, after a blank line that sets it apart from the command line
-// above it.
-func LogoBanner() style.StyledText {
-	return ui.JoinStyledLines(append([]style.StyledText{{}}, slices.Collect(ui.LogoLines())...))
+// IconBanner returns the product icon that help and the resume notice print,
+// its "f" dark on an orange square, as the UI draws it, after a blank line
+// that sets it apart from the command line above it.
+func IconBanner() style.StyledText {
+	return ui.JoinStyledLines(append([]style.StyledText{{}}, slices.Collect(ui.IconLines())...))
 }
 
 // ResumeText returns the notice that tells how to resume session id as text
 // to print, once fullscreen mode has taken its screen and the notice on it:
-// LogoBanner, a blank line, a bold line that introduces the command, and
+// IconBanner, a blank line, a bold line that introduces the command, and
 // the command, indented, with the product name bold and orange. The other
 // text keeps the terminal's own color.
 func ResumeText(id message.SessionID) style.StyledText {
 	indent := style.NewStyledText(style.Plain(strings.Repeat(" ", ui.ResumeIndent)))
 	return ui.JoinStyledLines([]style.StyledText{
-		LogoBanner(),
+		IconBanner(),
 		{},
 		ui.ResumeIntro(style.ColorTransparent),
 		indent.Append(ui.ResumeCommand(id, style.ColorTransparent)),

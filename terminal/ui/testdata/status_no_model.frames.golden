@@ -1,22 +1,18 @@
 === text ===
 |■ Status                                |
-|  Version   flow v0.1.0                 |
-|  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Messages  4                           |
-|  Provider  none                        |
-|  Model     none                        |
+|  Session   Fix the login [4229c726c31  |
 |  Context   0K                          |
-|  Directory /work/project               |
+|  Model     None                        |
+|  Account   None                        |
+|  Directory /work/project [main]        |
 |                                        |
 === fg ===
 |A AAAAAA                                |
-|  BBBBBBB   AAAA AAAAAA                 |
-|  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
-|  BBBBBBBB  A                           |
-|  BBBBBBBB  BBBB                        |
-|  BBBBB     BBBB                        |
+|  BBBBBBB   AAA AAA AAAAA BBBBBBBBBBBB  |
 |  BBBBBBB   AA                          |
-|  BBBBBBBBB AAAAAAAAAAAAA               |
+|  BBBBB     BBBB                        |
+|  BBBBBBB   BBBB                        |
+|  BBBBBBBBB AAAAAAAAAAAAA BBBBBB        |
 |                                        |
 === legend ===
 A #e6e6e6

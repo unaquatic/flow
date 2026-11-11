@@ -93,25 +93,36 @@ func SumUsage(msgs []ChatMessage, price func(ChatMessage) (gateway.Price, bool))
 	return s
 }
 
-// labelEfforts are the reasoning efforts that ModelName sets apart from the
-// model with a space.
+// labelEfforts are the reasoning efforts that SplitEffort sets apart from
+// the model.
 var labelEfforts = []agent.ReasoningEffort{
 	agent.EffortNone, agent.EffortMinimal, agent.EffortLow, agent.EffortMedium,
 	agent.EffortHigh, agent.EffortXHigh, agent.EffortMax,
 }
 
 // ModelName returns model, a variant in "provider/model:option:effort"
-// format, as the slash menu's status row shows it before the context:
-// without its provider, and with a space in place of the colon before its
+// format, as the /usage notice shows it: without its provider, and with a space in place of the colon before its
 // reasoning effort, such as "model-a:fast medium". A colon before
 // anything else is part of the model ID, as in a fine-tuned model's, and
 // stays.
 func ModelName(model string) string {
-	_, name := agent.ParseModel(model)
-	if i := strings.LastIndexByte(name, ':'); i >= 0 && slices.Contains(labelEfforts, agent.ReasoningEffort(name[i+1:])) {
-		return name[:i] + " " + name[i+1:]
+	_, ref := agent.ParseModel(model)
+	if name, effort := SplitEffort(ref); effort != "" {
+		return name + " " + string(effort)
 	}
-	return name
+	return ref
+}
+
+// SplitEffort returns ref, a variant without its provider in
+// "model:option:effort" form, apart from the reasoning effort it ends in,
+// such as "model-a:fast" and "medium" of "model-a:fast:medium", or ref whole
+// and no effort when it ends in none. A colon before anything else is part
+// of the model ID, as in a fine-tuned model's, and stays.
+func SplitEffort(ref string) (string, agent.ReasoningEffort) {
+	if i := strings.LastIndexByte(ref, ':'); i >= 0 && slices.Contains(labelEfforts, agent.ReasoningEffort(ref[i+1:])) {
+		return ref[:i], agent.ReasoningEffort(ref[i+1:])
+	}
+	return ref, ""
 }
 
 // ContextChunk returns the context the latest request of u used, such as
@@ -160,26 +171,37 @@ func ContextWarnFg(u SessionUsage, th *style.Theme) (style.Color, bool) {
 // statusGap parts the fields of StatusLine.
 const statusGap = " "
 
+// Labels of the session's prompt tokens processed anew and its output tokens
+// in StatusLine.
+const (
+	statusInputLabel  = "↓"
+	statusOutputLabel = "↑"
+)
+
 // StatusLine returns the status line the slash menu shows above the input
-// box, such as "model-a medium context 64K 7% in 120K out 8.4K cache 310K
-// $0.42 worked 3m 12s": model as ModelName names it, the context as
-// ContextChunk gives it, the session's prompt tokens processed anew, its
-// output tokens, and its prompt tokens read from a cache, which u totals,
-// what they cost at API prices, and worked, how long the session's turns
-// took. Values show in titleFg, as the slash menu's commands do, after their
-// labels in mutedFg, as its descriptions do, statusGap apart.
-func StatusLine(model string, u SessionUsage, worked time.Duration, th *style.Theme) style.StyledText {
+// box, such as "Lab A Model A Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K
+// $0.42 Worked 3m 12s": the model by name, as DisplayName names it, its
+// bracketed IDs dim as TagChunks dims them, or a dim StatusNone when name is
+// empty, the
+// context as ContextChunk gives it, the session's prompt tokens processed
+// anew, its output tokens, and its prompt tokens read from a cache, which u
+// totals, what they cost at API prices, and worked, how long the session's
+// turns took. Values show in titleFg, as the slash menu's commands do, after
+// their labels in mutedFg, as its descriptions do, statusGap apart.
+func StatusLine(name string, u SessionUsage, worked time.Duration, th *style.Theme) style.StyledText {
 	text := style.New().WithFg(titleFg).Func()
 	dim := style.New().WithFg(mutedFg).Func()
-	chunks := []style.TextChunk{
-		text(ModelName(model)), style.Plain(statusGap), dim("context "), ContextChunk(u, titleFg, th),
+	model := TagChunks(name, text, dim)
+	if name == "" {
+		model = []style.TextChunk{dim(StatusNone)}
 	}
+	chunks := append(model, style.Plain(statusGap), dim("Context "), ContextChunk(u, titleFg, th))
 	for _, f := range []struct{ label, value string }{
-		{"in", FormatTokens(u.Input)},
-		{"out", FormatTokens(u.Output)},
-		{"cache", FormatTokens(u.CacheRead)},
+		{statusInputLabel, FormatTokens(u.Input)},
+		{statusOutputLabel, FormatTokens(u.Output)},
+		{"Cache", FormatTokens(u.CacheRead)},
 		{"", FormatCost(u.Cost)},
-		{"worked", FormatDuration(worked)},
+		{"Worked", FormatDuration(worked)},
 	} {
 		chunks = append(chunks, style.Plain(statusGap))
 		if f.label != "" {

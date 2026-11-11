@@ -3,10 +3,9 @@ name: CI Tag
 run-name: Release ${{ github.ref_name }}
 
 # Pushing a version tag, vX.Y.Z, checks the tagged commit and releases it on
-# GitHub, as release.yml does, and then mirrors the release to aquatic.dev,
-# as release-mirror.yml does, and starts release-npm.yml, which npm's trusted
-# publishing accepts as a run of its own. Tags are pushed by hand, on a
-# commit of main:
+# GitHub, as release.yml does, and then starts release-npm.yml, which npm's
+# trusted publishing accepts as a run of its own. Tags are pushed by hand, on
+# a commit of main:
 #
 #   git tag v0.1.0 origin/main && git push origin v0.1.0
 on:
@@ -31,17 +30,6 @@ jobs:
       tag: ${{ github.ref_name }}
     permissions:
       contents: write
-    secrets: inherit
-
-  release-mirror:
-    name: Release Mirror
-    needs: release
-    uses: ./.github/workflows/release-mirror.yml
-    with:
-      tag: ${{ github.ref_name }}
-    permissions:
-      attestations: read
-      contents: read
     secrets: inherit
 
   release-npm:

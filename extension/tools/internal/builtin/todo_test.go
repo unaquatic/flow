@@ -19,15 +19,15 @@ func TestTodo(t *testing.T) {
 			input: `{"todos":[{"content":"Find the tests","status":"completed"},{"content":"Add Divide","status":"in_progress"},{"content":"Run the tests","status":"pending"}]}`,
 			want:  "[✓] Find the tests\n[–] Add Divide\n[ ] Run the tests",
 		},
-		"cancelled":      {input: `{"todos":[{"content":"Benchmark","status":"cancelled"}]}`, wantErr: `todos[0]: status "cancelled"`},
+		"cancelled":      {input: `{"todos":[{"content":"Benchmark","status":"cancelled"}]}`, wantErr: "todos[0]: unknown status: cancelled"},
 		"empty list":     {input: `{"todos":[]}`, want: NoTodos},
 		"spaces joined":  {input: `{"todos":[{"content":"  Add\n  Divide ","status":"pending"}]}`, want: "[ ] Add Divide"},
 		"encoded list":   {input: `{"todos":"[{\"content\":\"Add Divide\",\"status\":\"pending\"}]"}`, want: "[ ] Add Divide"},
 		"missing todos":  {input: `{}`, wantErr: "missing todos"},
 		"not a list":     {input: `{"todos":{"content":"Add Divide"}}`, wantErr: "must be an array"},
 		"empty content":  {input: `{"todos":[{"content":"Add Divide","status":"pending"},{"content":" ","status":"pending"}]}`, wantErr: "todos[1]: content is empty"},
-		"unknown status": {input: `{"todos":[{"content":"Add Divide","status":"done"}]}`, wantErr: `todos[0]: status "done"`},
-		"no status":      {input: `{"todos":[{"content":"Add Divide"}]}`, wantErr: `todos[0]: status ""`},
+		"unknown status": {input: `{"todos":[{"content":"Add Divide","status":"done"}]}`, wantErr: "todos[0]: unknown status: done"},
+		"no status":      {input: `{"todos":[{"content":"Add Divide"}]}`, wantErr: "todos[0]: unknown status: ;"},
 	}
 	todo := Todo()
 	for name, tt := range tests {

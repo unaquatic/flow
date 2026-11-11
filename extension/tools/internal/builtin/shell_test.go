@@ -200,7 +200,7 @@ func TestShells_Path(t *testing.T) {
 		"empty name":      {name: "", want: bash},
 		"default by name": {name: "bash", want: bash},
 		"other shell":     {name: "sh", want: sh},
-		"not installed":   {name: "fish", wantErr: `shell fish not installed`},
+		"not installed":   {name: "fish", wantErr: "shell not installed: fish"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

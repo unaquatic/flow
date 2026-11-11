@@ -18,7 +18,7 @@ func TestRunDemos(t *testing.T) {
 		"answer":          demoRunAnswer + "\n",
 		"failure":         "error: provider-a response error (401): invalid API key\n",
 		"no-session":      "Hi!\n",
-		"missing-session": `error: no stored session matches "` + demoMissingSession + `"` + "\n",
+		"missing-session": "error: no session: " + demoMissingSession + "\n",
 		"no-prompt":       "error: " + errNoPrompt.Error() + "\n",
 	}
 	for _, c := range runDemos {

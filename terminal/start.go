@@ -70,7 +70,7 @@ func (s Start) FirstSession(ctx context.Context, sessions *session.Store) (messa
 			return "", err
 		}
 		if !ok {
-			return "", fmt.Errorf("no stored session matches %q", s.ID)
+			return "", fmt.Errorf("no session: %s", s.ID)
 		}
 		return s.ID, nil
 	}

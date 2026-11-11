@@ -65,7 +65,8 @@ type Agent struct {
 	// events.
 	OnEvent func(Event)
 
-	// MaxSteps limits model responses per Run. Nonpositive values use the default.
+	// MaxSteps, when positive, limits model responses per Run. Zero or less
+	// sets no limit: Run goes on until a response makes no tool calls.
 	MaxSteps int
 
 	// TurnHooks add parts to each turn's message as the turn ends, in
@@ -97,9 +98,8 @@ var (
 	ErrIncompleteToolInput = errors.New("tool arguments did not arrive in full")
 )
 
-const defaultMaxSteps = 16
-
-// MaxStepsError reports that Run reached its model response limit.
+// MaxStepsError reports that Run reached its model response limit,
+// Agent.MaxSteps.
 type MaxStepsError struct {
 	// Steps is the configured response limit.
 	Steps int
@@ -110,15 +110,12 @@ func (e *MaxStepsError) Error() string {
 	return fmt.Sprintf("agent loop exceeded %d steps", e.Steps)
 }
 
-// Run runs turns until one makes no tool calls, a turn fails, ctx ends, or the
-// step limit is reached. Each invocation starts from the current Messages
-// history. Once ctx ends, no further turn starts, and Run returns ctx's error.
+// Run runs turns until one makes no tool calls, a turn fails, ctx ends, or
+// MaxSteps, when set, is reached. Each invocation starts from the current
+// Messages history. Once ctx ends, no further turn starts, and Run returns
+// ctx's error.
 func (a *Agent) Run(ctx context.Context) error {
-	steps := a.MaxSteps
-	if steps <= 0 {
-		steps = defaultMaxSteps
-	}
-	for range steps {
+	for step := 0; a.MaxSteps <= 0 || step < a.MaxSteps; step++ {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -130,7 +127,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			return nil
 		}
 	}
-	return &MaxStepsError{Steps: steps}
+	return &MaxStepsError{Steps: a.MaxSteps}
 }
 
 // RunTurn streams one model response, processes its tool calls, and reports

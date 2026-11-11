@@ -86,7 +86,7 @@ var SlashCommandGroups = [][]SlashCommand{
 			Desc: "Clear the chat and start over", Run: (*Service).ClearMessages},
 		{Name: CommandModel, Desc: "Switch the model and effort", Run: (*Service).ShowModelMenu},
 		{Name: CommandStatus, Aliases: []Command{"info"},
-			Desc: "Show the version and session info", Run: (*Service).ShowStatus},
+			Desc: "Show the version and session info", Run: (*Service).ShowInfo},
 		{Name: CommandUsage, Aliases: []Command{"context"},
 			Desc: "Show context, tokens and cost", Run: (*Service).ShowUsage},
 	},

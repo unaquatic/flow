@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -119,7 +120,7 @@ func DecodeTree(data []byte) ([]TreeEntry, error) {
 func decodeEntry(data []byte) (TreeEntry, []byte, error) {
 	mode, rest, ok := bytes.Cut(data, []byte{' '})
 	if !ok {
-		return TreeEntry{}, nil, fmt.Errorf("snapshot: malformed tree entry: no mode")
+		return TreeEntry{}, nil, errors.New("snapshot: malformed tree entry: no mode")
 	}
 	name, rest, ok := bytes.Cut(rest, []byte{0})
 	if !ok || len(rest) < sha1.Size {

@@ -184,7 +184,7 @@ func (u *Updater) Background(inst Install) error {
 		fmt.Fprintf(log, "%s replacing %s with %s\n", time.Now().UTC().Format(time.RFC3339), u.Executable, inst.Version)
 		if err := u.Replace(context.Background(), inst.Version); err != nil {
 			fmt.Fprintf(log, "failed: %v\n", err)
-			return fmt.Errorf("%w, see %s", err, log.Name())
+			return fmt.Errorf("%w; see %s", err, log.Name())
 		}
 		return nil
 	}
@@ -195,7 +195,7 @@ func (u *Updater) Background(inst Install) error {
 	detach(cmd, lock)
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(log, "failed: %v\n", err)
-		return fmt.Errorf("install failed: %s: %w, see %s", inst, err, log.Name())
+		return fmt.Errorf("install %s: %w; see %s", inst, err, log.Name())
 	}
 	return nil
 }

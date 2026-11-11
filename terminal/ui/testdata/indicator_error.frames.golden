@@ -1,10 +1,10 @@
 === text ===
 |■ ok                                                                    |
 |                                                                        |
-|■ Error request failed: Post "https://api.example.com/v1/messages":     |
-|  EOF                                                                   |
+|■ Error send request: Post "https://api.example.com/v1/messages": EOF   |
 |                                                                        |
 |■                                                                       |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -13,10 +13,10 @@
 === fg ===
 |A AA                                                                    |
 |                                                                        |
-|B BBBBB CCCCCCC CCCCCCC CCCC CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC     |
-|  CCC                                                                   |
+|B BBBBB CCCC CCCCCCCC CCCC CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC CCC   |
 |                                                                        |
 |A                                                                       |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |

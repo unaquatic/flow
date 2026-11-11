@@ -100,7 +100,7 @@ func SnapshotDelay() (time.Duration, error) {
 		return 0, fmt.Errorf("%s: %w", EnvSnapshotDelay, err)
 	}
 	if d < 0 {
-		return 0, fmt.Errorf("%s: %q is negative", EnvSnapshotDelay, v)
+		return 0, fmt.Errorf("%s: negative duration: %s", EnvSnapshotDelay, v)
 	}
 	return d, nil
 }

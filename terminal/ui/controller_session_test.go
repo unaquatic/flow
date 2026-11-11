@@ -194,8 +194,8 @@ func TestActiveSessionIDOffLoop(t *testing.T) {
 
 // TestInitSessionNoticeFirst checks that a session opened at startup loads its
 // transcript in one event, which the UI builds the last rows of, with the
-// logo and the /status notice above its messages, and adds nothing to it
-// after.
+// product icon and then the /status notice above its messages, and adds
+// nothing to it after.
 func TestInitSessionNoticeFirst(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -242,15 +242,14 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 			if !slices.Equal(got, tt.want) {
 				t.Fatalf("loaded transcript = %q, want %q", got, tt.want)
 			}
-			// The /status notice reads the session opened, and its messages.
+			// The icon draws product.Icon, and the /status notice reads the
+			// session opened.
+			if got := JoinStyledLines(loads[0].Messages[0].Notice.Lines).PlainText(); got != product.Icon {
+				t.Errorf("icon notice =\n%s\nwant\n%s", got, product.Icon)
+			}
 			status := loads[0].Messages[1].Notice
-			for _, want := range []string{
-				fmt.Sprintf("%-10s%s", "Session", s.SessionID()),
-				fmt.Sprintf("%-10s%d", "Messages", tt.messages),
-			} {
-				if !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
-					t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
-				}
+			if want := fmt.Sprintf("%-10s%s [%s]", "Session", UntitledName, ShortSessionID(string(s.SessionID()))); !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
+				t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
 			}
 			// A transcript built again from the state shows them in order too.
 			messages := false
@@ -267,34 +266,24 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 	}
 }
 
-// TestShowInfoIsSystemNotice checks that /status draws the logo on the
-// canvas, and under it a system notice that starts with the version.
+// TestShowInfoIsSystemNotice checks that /status draws a system notice alone,
+// with no logo, that starts with the session and ends with the directory.
 func TestShowInfoIsSystemNotice(t *testing.T) {
 	s, _ := newTestService(t)
 	s.InitSession(t.Context(), "")
 
 	events := s.ShowInfo()
 
-	if len(events) != 2 {
-		t.Fatalf("ShowInfo returned %d events, want the logo and the notice", len(events))
+	if len(events) != 1 {
+		t.Fatalf("ShowInfo returned %d events, want the notice alone", len(events))
 	}
-	logo, ok := canvasOf(events[0])
-	if !ok {
-		t.Fatalf("first event is %+v, want the logo on the canvas", events[0])
-	}
-	var rows []string
-	for _, line := range logo.Lines {
-		rows = append(rows, line.PlainText())
-	}
-	if want := strings.Split(product.Logo, "\n"); !slices.Equal(rows, want) {
-		t.Errorf("canvas rows = %q, want the logo %q", rows, want)
-	}
-	toast, ok := toastOf(events[1])
+	toast, ok := toastOf(events[0])
 	if !ok || toast.Surface != NoticeSystem {
-		t.Fatalf("second event is %+v, want a system notice", events[1])
+		t.Fatalf("event is %+v, want a system notice", events[0])
 	}
-	if len(toast.Lines) == 0 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Version") {
-		t.Errorf("notice lines = %+v, want them to start with the version", toast.Lines)
+	n := len(toast.Lines)
+	if n < 2 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Session") || !strings.HasPrefix(toast.Lines[n-1].PlainText(), "Directory") {
+		t.Errorf("notice lines = %+v, want the session first and the directory last", toast.Lines)
 	}
 }
 
@@ -327,7 +316,7 @@ func TestClearMessagesShowsStatusFirst(t *testing.T) {
 	if len(toasts) == 0 || toasts[0].Surface != NoticeSystem {
 		t.Fatalf("notices = %+v, want the /status notice first", toasts)
 	}
-	session := fmt.Sprintf("%-10s%s", "Session", s.SessionID())
+	session := fmt.Sprintf("%-10s%s [%s]", "Session", UntitledName, ShortSessionID(string(s.SessionID())))
 	if !slices.ContainsFunc(toasts[0].Lines, func(l style.StyledText) bool { return l.PlainText() == session }) {
 		t.Errorf("first notice = %+v, want the /status of session %s", toasts[0], s.SessionID())
 	}

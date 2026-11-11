@@ -20,8 +20,8 @@ type Script struct {
 	// Tools runs the calls the model makes, and are the tools each request
 	// offers it.
 	Tools *agent.Tools
-	// MaxSteps limits the responses of a turn. Nonpositive values use the
-	// agent's default.
+	// MaxSteps, when positive, limits the responses of a turn. Zero sets no
+	// limit.
 	MaxSteps int
 	// Next returns the prompt that opens turn i, the first being 0, which it
 	// may wait for, and reports false to end the run, as when ctx, the run's

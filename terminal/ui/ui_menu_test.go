@@ -344,13 +344,13 @@ func TestSlashStatusRow(t *testing.T) {
 		{ID: "a1", Role: message.RoleAgent, Worked: 3 * time.Minute},
 	}
 	ui.ShowSlashMenu(ui.service.SlashMenuItems(""))
-	want := "lab-a/model-h medium context 0K in 0K out 0K cache 0K $0.00 worked 3m 00s"
+	want := "Lab A Unknown [model-h] Medium Context 0K ↓ 0K ↑ 0K Cache 0K $0.00 Worked 3m 00s"
 	if got := ui.slashStatus.PlainText(); got != want {
 		t.Errorf("opened: status = %q\nwant             %q", got, want)
 	}
 
 	ui.SetUsage(SessionUsage{Input: 1_200, Output: 300, CacheRead: 4_000, Cost: 0.051, Context: 5_500, Window: 100_000})
-	want = "lab-a/model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 00s"
+	want = "Lab A Unknown [model-h] Medium Context 5.5K 6% ↓ 1.2K ↑ 0.3K Cache 4.0K $0.05 Worked 3m 00s"
 	if got := ui.slashStatus.PlainText(); got != want {
 		t.Errorf("usage changed: status = %q\nwant                    %q", got, want)
 	}
@@ -359,7 +359,7 @@ func TestSlashStatusRow(t *testing.T) {
 		ui.service.StartTurn(time.Now())
 		time.Sleep(12 * time.Second)
 		ui.Tick()
-		want := "lab-a/model-h medium context 5.5K 6% in 1.2K out 0.3K cache 4.0K $0.05 worked 3m 12s"
+		want := "Lab A Unknown [model-h] Medium Context 5.5K 6% ↓ 1.2K ↑ 0.3K Cache 4.0K $0.05 Worked 3m 12s"
 		if got := ui.slashStatus.PlainText(); got != want {
 			t.Errorf("turn under way: status = %q\nwant                     %q", got, want)
 		}

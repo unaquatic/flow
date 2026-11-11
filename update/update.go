@@ -58,10 +58,6 @@ type Updater struct {
 	// GitHubAPI is the base URL of the GitHub API, which a flow that the
 	// install script installed updates from. Empty selects DefaultGitHubAPI.
 	GitHubAPI string
-	// Mirror is the base URL of the mirror of the releases, which such a
-	// flow updates from when GitHub does not answer. Empty selects
-	// DefaultMirror.
-	Mirror string
 	// Client sends the requests to the registry. Nil selects
 	// http.DefaultClient.
 	Client *http.Client
@@ -88,7 +84,7 @@ type Updater struct {
 func New(dir string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("locating the running flow: %w", err)
+		return nil, fmt.Errorf("locate the running flow: %w", err)
 	}
 	if real, err := filepath.EvalSymlinks(exe); err == nil {
 		exe = real
@@ -146,13 +142,13 @@ func (u *Updater) Latest(ctx context.Context) (string, error) {
 	}
 	if err := u.getJSON(ctx, endpoint, &body); err != nil {
 		if se, ok := errors.AsType[*StatusError](err); ok && se.Code == http.StatusNotFound {
-			return "", fmt.Errorf("check failed: not published: %s", PackageName)
+			return "", fmt.Errorf("check for updates: not published: %s", PackageName)
 		}
-		return "", fmt.Errorf("check failed: %w", err)
+		return "", fmt.Errorf("check for updates: %w", err)
 	}
 	v := Canonical(body.Version)
 	if v == "" {
-		return "", fmt.Errorf("check failed: invalid version: %q", body.Version)
+		return "", fmt.Errorf("check for updates: invalid version: %s", body.Version)
 	}
 	return v, nil
 }

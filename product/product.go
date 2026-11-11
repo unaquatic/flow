@@ -2,7 +2,16 @@
 // package of this module, so every package can use it.
 package product
 
-import "runtime/debug"
+import (
+	"runtime"
+	"runtime/debug"
+)
+
+// Platform returns the system and CPU the binary runs on, as Go names them,
+// such as darwin/arm64.
+func Platform() string {
+	return runtime.GOOS + "/" + runtime.GOARCH
+}
 
 const (
 	// Name is the application's name, which is also the name of its command.
@@ -13,7 +22,7 @@ const (
 	// as FLOW_HOME_DIR.
 	ID = "flow"
 
-	// PrimaryColor is the application's orange. It draws the "f" of Logo, the
+	// PrimaryColor is the application's orange. It draws the square of Icon, the
 	// selected row of a menu, and the application's name where a notice or
 	// the command line names it.
 	PrimaryColor = "#ff5f00"

@@ -17,7 +17,7 @@ import (
 const Name = "database"
 
 // ErrInvalidMigrationID reports a migration ID that is not snake_case.
-var ErrInvalidMigrationID = errors.New("migration id is not snake_case")
+var ErrInvalidMigrationID = errors.New("migration ID is not snake_case")
 
 // ErrNewerSchema reports tables that a newer build of the program has
 // upgraded past the migrations this build knows, which it cannot safely read

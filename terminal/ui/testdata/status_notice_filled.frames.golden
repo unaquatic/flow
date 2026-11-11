@@ -1,53 +1,20 @@
 === text ===
-|    ▄▄▄ ▄▄▄                             |
-|   ██▀▀ ▀██                             |
-| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄          |
-| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██          |
-|   ██    ██  ██    ██ ██    ██          |
-|   ██    ██  ██    ██ ██ ▄▄ ██          |
-|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████          |
-|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀           |
 |                                        |
-|                                        |
-|  Version   flow v0.1.0                 |
-|  Session   01a0e33d-4571-7ed4-b06b-42  |
-|  Messages  4                           |
-|  Provider  Provider A                  |
-|  Model     lab-a/model-a               |
+|  Session   Fix the login [4229c726c31  |
 |  Context   20K / 400K 5%               |
-|  Directory /work/project               |
+|  Model     Lab A Model A Fast High     |
+|  Account   Provider A OAuth            |
+|  Directory /work/project [main]        |
 |                                        |
 === fg ===
-|    AAA BBB                             |
-|   AAAA BBB                             |
-| AAAAAA  BB   BBBBBB  BB    BB          |
-| AAAAAA  BB  BBBBBBBB BB    BB          |
-|   AA    BB  BB    BB BB    BB          |
-|   AA    BB  BB    BB BB BB BB          |
-|AA AA   BBBB BBBBBBBB BBBBBBBB          |
-|AAAAA   BBBB  BBBBBB   BB  BB           |
 |                                        |
-|                                        |
-|  CCCCCCC   BBBB BBBBBB                 |
-|  CCCCCCC   BBBBBBBBBBBBBBBBBBBBBBBBBB  |
-|  CCCCCCCC  B                           |
-|  CCCCCCCC  BBBBBBBB B                  |
-|  CCCCC     BBBBBBBBBBBBB               |
-|  CCCCCCC   BBB B BBBB BB               |
-|  CCCCCCCCC BBBBBBBBBBBBB               |
+|  AAAAAAA   BBB BBB BBBBB AAAAAAAAAAAA  |
+|  AAAAAAA   BBB B BBBB BB               |
+|  AAAAA     BBB B BBBBB B BBBB BBBB     |
+|  AAAAAAA   BBBBBBBB B BBBBB            |
+|  AAAAAAAAA BBBBBBBBBBBBB AAAAAA        |
 |                                        |
 === bg ===
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -56,7 +23,6 @@
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 === legend ===
-A #ff5f00
+A #8a8a8a
 B #e6e6e6
-C #8a8a8a
 ░ #1f1f1f SurfaceRaised/SuccessSurface

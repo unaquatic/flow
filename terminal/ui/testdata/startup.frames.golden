@@ -1,0 +1,62 @@
+=== text ===
+|        ▄▄▄                             |
+|       ██▀▀                             |
+|     ▄▄██▄▄                             |
+|     ▀▀██▀▀                             |
+|       ██                               |
+|       ██                               |
+|    ██▄██                               |
+|     ▀▀▀                                |
+|                                        |
+|■ Status                                |
+|  Session   Fix the login [4229c726c31  |
+|  Context   20K / 400K 5%               |
+|  Model     Lab A Model A Fast High     |
+|  Account   Provider A OAuth            |
+|  Directory /work/project [main]        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|        AAA                             |
+|       AAAA                             |
+|     AAAAAA                             |
+|     AAAAAA                             |
+|       AA                               |
+|       AA                               |
+|    AAAAA                               |
+|     AAA                                |
+|                                        |
+|B BBBBBB                                |
+|  CCCCCCC   BBB BBB BBBBB CCCCCCCCCCCC  |
+|  CCCCCCC   BBB B BBBB BB               |
+|  CCCCC     BBB B BBBBB B BBBB BBBB     |
+|  CCCCCCC   BBBBBBBB B BBBBB            |
+|  CCCCCCCCC BBBBBBBBBBBBB CCCCCC        |
+|                                        |
+|                                        |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|░░░░░░░░░░░░░░░░                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #111111
+B #e6e6e6
+C #8a8a8a
+░ #ff5f00

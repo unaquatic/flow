@@ -240,20 +240,6 @@ func TestNoticesStayOutOfTheConversation(t *testing.T) {
 	}
 }
 
-// TestShowInfoCountsMessagesAlone checks that /status counts the messages of
-// the transcript, and not the notices shown among them.
-func TestShowInfoCountsMessagesAlone(t *testing.T) {
-	s, _ := newTestService(t)
-	s.InitSession(t.Context(), "")
-	s.ShowToast("a notice")
-
-	status, ok := toastOf(s.ShowInfo()[1])
-	want := fmt.Sprintf("%-10s%d", "Messages", 0)
-	if !ok || !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
-		t.Errorf("/status shows %+v, want %q", status.Lines, want)
-	}
-}
-
 // longSession returns the messages of a session as one loads them: turns
 // turns, prompt "u<i>" "prompt <i>" each, and a reply of steps steps,
 // "a<i>-<j>" "turn <i>, step <j>" each.

@@ -96,7 +96,7 @@ func (a *OAuth) BeginBrowser() agent.LoginPrompt {
 // CompleteBrowser exchanges a pasted result using the proof from BeginBrowser.
 func (a *OAuth) CompleteBrowser(ctx context.Context, state agent.LoginState, pasted string) (agent.OAuthToken, error) {
 	if state.Verifier == "" || state.State == "" {
-		return agent.OAuthToken{}, errors.New("missing OAuth login state; please log in again")
+		return agent.OAuthToken{}, errors.New("missing OAuth login state; log in again")
 	}
 	code, err := ParseCode(pasted, state.State)
 	if err != nil {
@@ -133,7 +133,7 @@ func ParseCode(input, expectedState string) (string, error) {
 		return "", fmt.Errorf("%w: paste the complete code (code#state) or callback URL", agent.ErrInvalidLoginCode)
 	}
 	if state != expectedState {
-		return "", errors.New("OAuth authorization has unexpected state; please log in again")
+		return "", errors.New("unexpected OAuth state; log in again")
 	}
 	return code, nil
 }

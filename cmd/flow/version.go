@@ -38,10 +38,12 @@ type VersionInfo struct {
 	// Version is its version, such as v1.2.3, or (devel) for a
 	// development build.
 	Version string `json:"version"`
+	// Platform is the system and CPU it runs on, such as darwin/arm64.
+	Platform string `json:"platform"`
 }
 
-// writeVersionJSON writes the name and version of the application to w, as
-// a VersionInfo.
+// writeVersionJSON writes the name and version of the application and the
+// platform it runs on to w, as a VersionInfo.
 func writeVersionJSON(w io.Writer) error {
-	return writeJSON(w, VersionInfo{Name: product.Name, Version: product.Version()})
+	return writeJSON(w, VersionInfo{Name: product.Name, Version: product.Version(), Platform: product.Platform()})
 }

@@ -98,10 +98,10 @@ func (e *AuthEntry) UnmarshalJSON(data []byte) error {
 	out := AuthEntry{Active: ej.Active, Accounts: make(map[AccountID]Credential, len(ej.Accounts))}
 	for i, r := range ej.Accounts {
 		if r.ID == "" {
-			return fmt.Errorf("account %d has no id", i)
+			return fmt.Errorf("account %d has no ID", i)
 		}
 		if _, ok := out.Accounts[r.ID]; ok {
-			return fmt.Errorf("account %s appears twice", r.ID)
+			return fmt.Errorf("duplicate account: %s", r.ID)
 		}
 		c, err := decode(r)
 		if err != nil {
@@ -144,7 +144,7 @@ func encode(id AccountID, c Credential) (record, error) {
 		}
 		return r, nil
 	}
-	return record{}, fmt.Errorf("unsupported credential %T", c)
+	return record{}, fmt.Errorf("unsupported credential: %T", c)
 }
 
 // decode returns the credential of r.
@@ -165,5 +165,5 @@ func decode(r record) (Credential, error) {
 		}
 		return t, nil
 	}
-	return nil, fmt.Errorf("unknown credential type %q", r.Type)
+	return nil, fmt.Errorf("unknown credential type: %s", r.Type)
 }

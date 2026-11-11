@@ -138,17 +138,8 @@ type Provider struct {
 	Disabled bool `json:"disabled,omitempty"`
 }
 
-// Agent holds model tuning and agent behavior parameters.
+// Agent holds agent behavior parameters.
 type Agent struct {
-	// Temperature controls sampling randomness.
-	Temperature *float64 `json:"temperature,omitempty"`
-
-	// TopP controls nucleus sampling probability mass.
-	TopP *float64 `json:"top_p,omitempty"`
-
-	// MaxSteps is the maximum number of agentic iterations per run.
-	MaxSteps int `json:"max_steps,omitempty"`
-
 	// RetryMaxAttempts includes the initial provider attempt.
 	RetryMaxAttempts int `json:"retry_max_attempts,omitempty"`
 
@@ -305,7 +296,7 @@ func DataDir() (string, error) {
 		return "", err
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", fmt.Errorf("creating data directory: %w", err)
+		return "", fmt.Errorf("create data directory: %w", err)
 	}
 	return dir, nil
 }
@@ -315,7 +306,7 @@ func DataDir() (string, error) {
 func dataDirPath(name string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil && (name == "" || strings.HasPrefix(name, "~")) {
-		return "", fmt.Errorf("determining home directory: %w", err)
+		return "", fmt.Errorf("find home directory: %w", err)
 	}
 	switch {
 	case name == "":
@@ -337,7 +328,6 @@ func Defaults(dir string) *Config {
 		ShowBorder: true,
 		AutoUpdate: true,
 		Agent: Agent{
-			MaxSteps:         50,
 			RetryMaxAttempts: 5,
 			RetryDelay:       Duration{3 * time.Second},
 		},
@@ -352,7 +342,7 @@ func LoadDir(dir string) (*Config, error) {
 	cfg := Defaults(dir)
 
 	if err := mergeFromFile(cfg, File{Dir: dir, Name: FileName}); err != nil {
-		return nil, fmt.Errorf("loading global config: %w", err)
+		return nil, fmt.Errorf("load global config: %w", err)
 	}
 
 	applyEnvOverrides(cfg)
@@ -392,7 +382,7 @@ func mergeFromFile(cfg *Config, f File) error {
 	// Read an older file as its upgrade to Version, which a write saves.
 	if err := upgrade(raw); err != nil {
 		path, _ := f.Path()
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return fmt.Errorf("parse %s: %w", path, err)
 	}
 	// Decode the overlay from the keys of the one read, so that both see
 	// the same file even when a write replaces it meanwhile.
@@ -403,18 +393,18 @@ func mergeFromFile(cfg *Config, f File) error {
 	var overlay Config
 	if err := json.Unmarshal(data, &overlay); err != nil {
 		path, _ := f.Path()
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return fmt.Errorf("parse %s: %w", path, err)
 	}
 
 	cfg.Version = overlay.Version
 	if cfg.DefaultProvider, cfg.DefaultModel, err = defaultModelOf(raw); err != nil {
 		path, _ := f.Path()
-		return fmt.Errorf("parsing %s: %w", path, err)
+		return fmt.Errorf("parse %s: %w", path, err)
 	}
 	if _, ok := raw["log_level"]; ok {
 		if !overlay.LogLevel.Valid() {
 			path, _ := f.Path()
-			return fmt.Errorf("parsing %s: log_level %q is none of %q, %q, %q and %q",
+			return fmt.Errorf("parse %s: unknown log_level: %s; use %s, %s, %s or %s",
 				path, overlay.LogLevel, LogDebug, LogInfo, LogWarn, LogError)
 		}
 		cfg.LogLevel = overlay.LogLevel
@@ -442,15 +432,6 @@ func mergeFromFile(cfg *Config, f File) error {
 	}
 
 	if _, ok := raw["agent"]; ok {
-		if overlay.Agent.Temperature != nil {
-			cfg.Agent.Temperature = overlay.Agent.Temperature
-		}
-		if overlay.Agent.TopP != nil {
-			cfg.Agent.TopP = overlay.Agent.TopP
-		}
-		if overlay.Agent.MaxSteps > 0 {
-			cfg.Agent.MaxSteps = overlay.Agent.MaxSteps
-		}
 		if overlay.Agent.RetryMaxAttempts > 0 {
 			cfg.Agent.RetryMaxAttempts = overlay.Agent.RetryMaxAttempts
 		}

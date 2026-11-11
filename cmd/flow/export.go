@@ -53,7 +53,7 @@ func (f ExportFormat) MarshalText() ([]byte, error) {
 func (f *ExportFormat) UnmarshalText(text []byte) error {
 	name := ExportFormat(strings.ToLower(strings.TrimSpace(string(text))))
 	if name != ExportMarkdown && name != ExportJSON && name != ExportJSONL {
-		return fmt.Errorf("unknown format %q; use markdown, json or jsonl", text)
+		return fmt.Errorf("unknown format: %s; use markdown, json or jsonl", text)
 	}
 	*f = name
 	return nil
@@ -97,7 +97,7 @@ func runExport(ctx context.Context, w io.Writer, a *app.App, o ExportOptions, ar
 	}
 	stored, err := a.Sessions().Session(ctx, id)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("no stored session matches %q", id)
+		return fmt.Errorf("no session: %s", id)
 	}
 	if err != nil {
 		return err

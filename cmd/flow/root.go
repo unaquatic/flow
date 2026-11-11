@@ -226,12 +226,12 @@ var stderr io.Writer = os.Stderr
 // --color names another.
 var colorMode = fluidterm.DetectColorMode()
 
-// banner is terminal.LogoBanner as plain text, which help shows where colors
+// banner is terminal.IconBanner as plain text, which help shows where colors
 // are not shown.
-var banner = terminal.LogoBanner().PlainText()
+var banner = terminal.IconBanner().PlainText()
 
-// colorBanner is terminal.LogoBanner in colorMode, which help shows.
-var colorBanner = terminal.ANSI(terminal.LogoBanner(), colorMode)
+// colorBanner is terminal.IconBanner in colorMode, which help shows.
+var colorBanner = terminal.ANSI(terminal.IconBanner(), colorMode)
 
 // highlight returns s, a value the user may copy, such as an account ID, a
 // URL or a code, in product.PrimaryColor as terminal.ANSI draws it in
@@ -333,8 +333,8 @@ func writeFieldLine(w io.Writer, label, value string) {
 	fmt.Fprintf(w, "%s\n%s%s\n", label, strings.Repeat(" ", ui.ResumeIndent), value)
 }
 
-// printVersion writes the name and version of the application to w, such
-// as "flow v1.2.3".
+// printVersion writes the name and version of the application to w, and the
+// platform it runs on in brackets, such as "flow v1.2.3 [darwin/arm64]".
 func printVersion(w io.Writer) {
-	fmt.Fprintf(w, "%s %s\n", product.Name, product.Version())
+	fmt.Fprintf(w, "%s %s [%s]\n", product.Name, product.Version(), product.Platform())
 }

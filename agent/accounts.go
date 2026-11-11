@@ -172,7 +172,7 @@ func (s *Accounts) Login(ctx context.Context, t ProviderID, id AccountID, m Logi
 	case LoginDevice:
 		run = flow.Device
 	default:
-		return fmt.Errorf("unknown login method %q", m)
+		return fmt.Errorf("unknown login method: %s", m)
 	}
 
 	ctx, done, err := s.begin(ctx, t)
@@ -345,7 +345,7 @@ func (s *Accounts) selected(ctx context.Context, t ProviderID) (selection, error
 	}
 	sel, ok := accts.selected()
 	if !ok {
-		return selection{}, fmt.Errorf("%w: no %s account", ErrNotAuthenticated, t)
+		return selection{}, fmt.Errorf("%w: no account: %s", ErrNotAuthenticated, t)
 	}
 	return sel, nil
 }

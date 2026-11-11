@@ -3,14 +3,14 @@
 |                                                                        |
 |■ All tests pass.                                                       |
 |                                                                        |
-|    ▄▄▄ ▄▄▄                                                             |
-|   ██▀▀ ▀██                                                             |
-| ▄▄██▄▄  ██   ▄▄▄▄▄▄  ▄▄    ▄▄                                          |
-| ▀▀██▀▀  ██  ██▀▀▀▀██ ██    ██                                          |
-|   ██    ██  ██    ██ ██    ██                                          |
-|   ██    ██  ██    ██ ██ ▄▄ ██                                          |
-|▄▄ ██   ▄██▄ ██▄▄▄▄██ ████████                                          |
-|▀███▀   ▀▀▀▀  ▀▀▀▀▀▀   ▀▀  ▀▀                                           |
+|        ▄▄▄                                                             |
+|       ██▀▀                                                             |
+|     ▄▄██▄▄                                                             |
+|     ▀▀██▀▀                                                             |
+|       ██                                                               |
+|       ██                                                               |
+|    ██▄██                                                               |
+|     ▀▀▀                                                                |
 |                                                                        |
 |Resume this session with:                                               |
 |  flow --session 01a12e38-2689-73a1-a799-5db6b6a8bc44                   |
@@ -26,17 +26,40 @@
 |                                                                        |
 |B AAA AAAAA AAAAA                                                       |
 |                                                                        |
-|    CCC AAA                                                             |
-|   CCCC AAA                                                             |
-| CCCCCC  AA   AAAAAA  AA    AA                                          |
-| CCCCCC  AA  AAAAAAAA AA    AA                                          |
-|   CC    AA  AA    AA AA    AA                                          |
-|   CC    AA  AA    AA AA AA AA                                          |
-|CC CC   AAAA AAAAAAAA AAAAAAAA                                          |
-|CCCCC   AAAA  AAAAAA   AA  AA                                           |
+|        CCC                                                             |
+|       CCCC                                                             |
+|     CCCCCC                                                             |
+|     CCCCCC                                                             |
+|       CC                                                               |
+|       CC                                                               |
+|    CCCCC                                                               |
+|     CCC                                                                |
 |                                                                        |
 |AAAAAA AAAA AAAAAAA AAAAA                                               |
-|  CCCC AAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA                   |
+|  DDDD AAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA                   |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+=== bg ===
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|░░░░░░░░░░░░░░░░                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
@@ -70,4 +93,6 @@
 === legend ===
 A #e6e6e6
 B #eb7513
-C #ff5f00
+C #111111
+D #ff5f00
+░ #ff5f00

@@ -106,7 +106,7 @@ func Matcher(tools []agent.Tool, patterns []string) (func(name string) bool, err
 	}
 	for _, p := range patterns {
 		if _, err := path.Match(p, ""); err != nil {
-			return nil, fmt.Errorf("tool pattern %q: %w", p, err)
+			return nil, fmt.Errorf("tool pattern %s: %w", p, err)
 		}
 		if !slices.ContainsFunc(tools, func(t agent.Tool) bool { return match(p, t.Name) }) {
 			names := make([]string, 0, len(tools))
@@ -114,7 +114,7 @@ func Matcher(tools []agent.Tool, patterns []string) (func(name string) bool, err
 				names = append(names, t.Name)
 			}
 			slices.Sort(names)
-			return nil, fmt.Errorf("unknown tool %q; the built-in tools are %s", p, strings.Join(names, ", "))
+			return nil, fmt.Errorf("unknown tool: %s; built-in tools: %s", p, strings.Join(names, ", "))
 		}
 	}
 	return func(name string) bool {

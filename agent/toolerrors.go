@@ -13,7 +13,7 @@ import (
 
 var (
 	// ErrToolNotFound identifies an unregistered tool.
-	ErrToolNotFound = errors.New("tool not found")
+	ErrToolNotFound = errors.New("unknown tool")
 
 	// ErrInvalidArgs identifies malformed tool arguments.
 	ErrInvalidArgs = errors.New("invalid tool arguments")

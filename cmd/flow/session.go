@@ -111,7 +111,7 @@ func runSessionDelete(ctx context.Context, w io.Writer, a *app.App, o SessionDel
 	for _, id := range args {
 		sess, err := a.Sessions().Session(ctx, message.SessionID(id))
 		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("no stored session matches %q", id)
+			return fmt.Errorf("no session: %s", id)
 		}
 		if err != nil {
 			return err

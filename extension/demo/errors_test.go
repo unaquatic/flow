@@ -20,7 +20,7 @@ func TestErrors(t *testing.T) {
 		{name: "html response", err: BadGatewayError(),
 			want: "provider-a response error (502): <html> <head><title>502 Bad Gateway</title></head> <body> <center><h1>502 Bad Gateway</h1></center> </body> </html>"},
 		{name: "stream", err: StreamError(), want: "provider-a response error: Overloaded"},
-		{name: "request", err: RequestError(), want: `request failed: Post "` + APIURL + `": EOF`},
+		{name: "request", err: RequestError(), want: `send request: Post "` + APIURL + `": EOF`},
 		{name: "token", err: TokenError(), want: "token endpoint error (401): " + TokenErrorBody},
 	}
 	for _, tt := range tests {

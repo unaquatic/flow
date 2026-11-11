@@ -100,7 +100,7 @@ func (v positiveValue) String() string {
 func (v positiveValue) Set(s string) error {
 	n, err := strconv.Atoi(strings.TrimSpace(s))
 	if err != nil || n <= 0 {
-		return fmt.Errorf("%q is not a positive number", s)
+		return fmt.Errorf("not a positive number: %s", s)
 	}
 	*v.n = n
 	return nil
@@ -184,7 +184,7 @@ func (c colorFlag) MarshalText() ([]byte, error) {
 func (c *colorFlag) UnmarshalText(text []byte) error {
 	name := colorFlag(strings.ToLower(strings.TrimSpace(string(text))))
 	if _, ok := colorModes[name]; !ok && name != colorAuto {
-		return fmt.Errorf("unknown color mode %q; use auto, truecolor, 256 or 16", text)
+		return fmt.Errorf("unknown color mode: %s; use auto, truecolor, 256 or 16", text)
 	}
 	*c = name
 	return nil

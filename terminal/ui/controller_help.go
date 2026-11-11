@@ -35,14 +35,14 @@ func UsageLines(info UsageInfo, th *style.Theme) []style.StyledText {
 		model = style.New().WithFg(themeOrDefault(th).TextMuted).Func()(StatusNone)
 	}
 	return LabeledLines([]LabeledRow{
-		{"Model", model},
-		{"Context", ContextValue(u, th)},
-		{"Input", style.Plain(FormatTokens(u.Input))},
-		{"Output", style.Plain(FormatTokens(u.Output))},
-		{"Cache read", style.Plain(FormatTokens(u.CacheRead))},
-		{"Cache write", style.Plain(FormatTokens(u.CacheWrite))},
-		{"Cost", style.Plain(FormatCost(u.Cost))},
-		{"Worked", style.Plain(FormatDuration(info.Worked))},
+		{"Model", []style.TextChunk{model}},
+		{"Context", []style.TextChunk{ContextValue(u, th)}},
+		{"Input", []style.TextChunk{style.Plain(FormatTokens(u.Input))}},
+		{"Output", []style.TextChunk{style.Plain(FormatTokens(u.Output))}},
+		{"Cache read", []style.TextChunk{style.Plain(FormatTokens(u.CacheRead))}},
+		{"Cache write", []style.TextChunk{style.Plain(FormatTokens(u.CacheWrite))}},
+		{"Cost", []style.TextChunk{style.Plain(FormatCost(u.Cost))}},
+		{"Worked", []style.TextChunk{style.Plain(FormatDuration(info.Worked))}},
 	}, usageLabelWidth, th)
 }
 

@@ -15,11 +15,11 @@ import (
 )
 
 // TestPrintVersion checks that the version is the name and the version of
-// the application alone, on one line, with no logo.
+// the application and the platform it runs on, on one line, with no logo.
 func TestPrintVersion(t *testing.T) {
 	var out strings.Builder
 	printVersion(&out)
-	if got, want := out.String(), product.Name+" "+product.Version()+"\n"; got != want {
+	if got, want := out.String(), product.Name+" "+product.Version()+" ["+product.Platform()+"]\n"; got != want {
 		t.Errorf("version = %q, want %q", got, want)
 	}
 }

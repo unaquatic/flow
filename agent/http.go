@@ -16,7 +16,7 @@ func StreamEvents(body io.ReadCloser, handle func(sse.Event, func(StreamPart, er
 		defer body.Close()
 		for ev, err := range sse.Read(body) {
 			if err != nil {
-				yield(nil, &ResponseParseError{Err: fmt.Errorf("reading event stream: %w", err)})
+				yield(nil, &ResponseParseError{Err: fmt.Errorf("read event stream: %w", err)})
 				return
 			}
 			if !handle(ev, yield) {
