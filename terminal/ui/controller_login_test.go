@@ -425,7 +425,7 @@ func TestAccountMenu(t *testing.T) {
 
 // TestModelLabel checks that the label under the input shows the model
 // alone, whatever account is active, and that /status shows the provider,
-// by its catalog name, and then the model without it.
+// by its ID, and then the model without it.
 func TestModelLabel(t *testing.T) {
 	s, a := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -439,7 +439,7 @@ func TestModelLabel(t *testing.T) {
 	row := func(text string) int {
 		return slices.IndexFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
 	}
-	if p, m := row("Provider  Provider A"), row("Model     model"); p < 0 || m != p+1 {
+	if p, m := row("Provider  "+string(providerA)), row("Model     model"); p < 0 || m != p+1 {
 		t.Errorf("/status lines = %+v, want the provider row and then the model without it", status.Lines)
 	}
 

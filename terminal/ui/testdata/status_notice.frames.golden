@@ -3,7 +3,7 @@
 |  Version   flow v0.1.0                 |
 |  Session   01a0e33d-4571-7ed4-b06b-42  |
 |  Messages  4                           |
-|  Provider  Provider A                  |
+|  Provider  provider-a                  |
 |  Model     lab-a/model-a               |
 |  Context   20K / 400K 5%               |
 |  Directory /work/project               |
@@ -13,7 +13,7 @@
 |  BBBBBBB   AAAA AAAAAA                 |
 |  BBBBBBB   AAAAAAAAAAAAAAAAAAAAAAAAAA  |
 |  BBBBBBBB  A                           |
-|  BBBBBBBB  AAAAAAAA A                  |
+|  BBBBBBBB  AAAAAAAAAA                  |
 |  BBBBB     AAAAAAAAAAAAA               |
 |  BBBBBBB   AAA A AAAA AA               |
 |  BBBBBBBBB AAAAAAAAAAAAA               |

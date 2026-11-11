@@ -46,9 +46,8 @@ type StatusInfo struct {
 	Updated time.Time
 	// Messages counts the transcript's messages.
 	Messages int
-	// Provider names the provider of the terminal's model, as
-	// Service.ProviderName names it, such as "Provider A", or is empty when
-	// the model names none.
+	// Provider is the ID of the provider of the terminal's model, such as
+	// "provider-a", or is empty when the model names none.
 	Provider string
 	// Model is the terminal's model variant without its provider, in
 	// "model:option:effort" form, such as "lab-a/model-a:fast:high".
@@ -159,12 +158,10 @@ func (s *Service) ShowInfo() []UIEvent {
 		Version:   product.Name + " " + product.Version(),
 		Session:   string(id),
 		Messages:  s.MessageCount(),
+		Provider:  string(provider),
 		Model:     model,
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
-	}
-	if provider != "" {
-		info.Provider = s.ProviderName(provider)
 	}
 	if stored != nil {
 		info.Title = stored.Title
