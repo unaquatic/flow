@@ -160,8 +160,8 @@ const (
 	// demoScript is the folder the install script installed flow in, which
 	// updates from its GitHub release.
 	demoScript
-	// demoInterrupted is demoScript's, whose download breaks off just
-	// before it is done, from GitHub and from the mirror alike.
+	// demoInterrupted is demoScript's, whose download from GitHub breaks
+	// off just before it is done.
 	demoInterrupted
 )
 
@@ -193,7 +193,7 @@ var updateDemoCases = []updateDemo{
 	{name: "check", desc: "A newer release, only checked for", current: demoOlder, opts: updateOptions{check: true}},
 	{name: "install", desc: "A newer release, installed with npm", current: demoOlder},
 	{name: "script", desc: "A newer release, downloaded from GitHub for a flow the install script installed", current: demoOlder, install: demoScript},
-	{name: "interrupted", desc: "A newer release, whose download breaks off, from the mirror too", current: demoOlder, install: demoInterrupted},
+	{name: "interrupted", desc: "A newer release, whose download from GitHub breaks off", current: demoOlder, install: demoInterrupted},
 	{name: "readonly", desc: "A newer release, into a global folder the user cannot write to", current: demoOlder, install: demoReadOnly},
 	{name: "unmanaged", desc: "A newer release, for a flow installed by neither a package manager nor the install script", current: demoOlder, install: demoUnmanaged},
 	{name: "devel", desc: "A development build", current: "(devel)"},
@@ -271,15 +271,11 @@ func (d updateDemo) run(ctx context.Context, w io.Writer, _ bool) error {
 // release asset of demoui.UpdateVersion, as GitHub serves a release's.
 var demoReleaseURL = "https://github.com/" + update.Repository + "/releases/download/" + demoui.UpdateVersion + "/" + update.ReleaseAsset()
 
-// demoMirrorURL is where the canned mirror of the update demos serves the
-// same asset, as update.DefaultMirror serves a release's.
-var demoMirrorURL = update.DefaultMirror + "/" + demoui.UpdateVersion + "/" + update.ReleaseAsset()
-
 // scriptUpdater returns the Updater of case d, a flow that the install script
 // installed in dir, with its marker beside it, which updates from a canned
-// GitHub and mirror: their latest release is demoui.UpdateVersion, whose
-// asset holds a demo binary, sent in parts, a while apart when slow is set.
-// Both break it off before its last part in the demoInterrupted case.
+// GitHub: its latest release is demoui.UpdateVersion, whose asset holds a
+// demo binary, sent in parts, a while apart when slow is set. It breaks the
+// download off before its last part in the demoInterrupted case.
 func scriptUpdater(dir string, d updateDemo, slow bool) (*update.Updater, error) {
 	exe := filepath.Join(dir, "bin", update.ExecutableName())
 	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
@@ -314,17 +310,11 @@ func scriptUpdater(dir string, d updateDemo, slow bool) (*update.Updater, error)
 		switch r.URL.String() {
 		case demoReleaseURL:
 			return parts(r, d.install == demoInterrupted), nil
-		case update.DefaultMirror + "/latest":
-			return text(r, demoui.UpdateVersion+"\n"), nil
-		case update.DefaultMirror + "/" + demoui.UpdateVersion + "/SHA256SUMS":
-			return text(r, hex.EncodeToString(sum[:])+"  "+update.ReleaseAsset()+"\n"), nil
-		case demoMirrorURL:
-			return parts(r, d.install == demoInterrupted), nil
 		}
 		return text(r, string(release)), nil
 	})
 	return &update.Updater{Dir: dir, Current: d.current, Executable: exe,
-		GitHubAPI: "https://api.github.com", Mirror: update.DefaultMirror, Client: &http.Client{Transport: demoSlow(slow, transport)}}, nil
+		GitHubAPI: "https://api.github.com", Client: &http.Client{Transport: demoSlow(slow, transport)}}, nil
 }
 
 // demoAsset returns a release asset of the platform, as update.ReleaseAsset

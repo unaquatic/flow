@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -234,32 +233,6 @@ func TestAutoStandalone(t *testing.T) {
 	}
 }
 
-// mirror serves release v1.2.3 of flow as the mirror would: latest, the
-// asset of the platform, which holds the binary "mirror", and SHA256SUMS of
-// it, wrong with tamper set.
-func mirror(t *testing.T, tamper bool) *httptest.Server {
-	t.Helper()
-	asset := tarGz(t, ExecutableName(), "mirror")
-	sum := sha256.Sum256(asset)
-	if tamper {
-		sum = sha256.Sum256([]byte("other"))
-	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/latest":
-			fmt.Fprintln(w, "v1.2.3")
-		case "/v1.2.3/SHA256SUMS":
-			fmt.Fprintf(w, "%x  flow-other.tar.gz\n%x  %s\n", sha256.Sum256(nil), sum, ReleaseAsset())
-		case "/v1.2.3/" + ReleaseAsset():
-			w.Write(asset)
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	t.Cleanup(srv.Close)
-	return srv
-}
-
 // down answers every request with 503 Service Unavailable, as GitHub does
 // when it does not answer.
 func down(t *testing.T) *httptest.Server {
@@ -271,49 +244,18 @@ func down(t *testing.T) *httptest.Server {
 	return srv
 }
 
-// TestReplaceMirror checks that the mirror stands in for GitHub only when
-// GitHub does not answer, and that its download is checked against its
-// SHA256SUMS.
-func TestReplaceMirror(t *testing.T) {
+// TestGitHubDown checks that a flow that the install script installed
+// neither finds nor installs a release while GitHub does not answer, and
+// leaves its binary as it was.
+func TestGitHubDown(t *testing.T) {
 	u := standalone(t, down(t))
-	u.Mirror = mirror(t, false).URL
-	if err := u.Replace(t.Context(), "v1.2.3"); err != nil {
-		t.Fatal(err)
+	if got, err := u.Latest(t.Context()); err == nil {
+		t.Errorf("Latest with GitHub down = %q, want an error", got)
 	}
-	if got := binary(t, u); got != "mirror" {
-		t.Errorf("binary with GitHub down = %q, want the mirror's", got)
-	}
-
-	// A download from GitHub that does not match its digest is no outage.
-	u = standalone(t, releases(t, true))
-	u.Mirror = mirror(t, false).URL
-	if err := u.Replace(t.Context(), "v1.2.3"); err == nil || !strings.Contains(err.Error(), "digest mismatch") {
-		t.Errorf("Replace with a tampered GitHub asset = %v, want a digest mismatch", err)
+	if err := u.Replace(t.Context(), "v1.2.3"); err == nil || !strings.Contains(err.Error(), "503") {
+		t.Errorf("Replace with GitHub down = %v, want the 503 it answered", err)
 	}
 	if got := binary(t, u); got != "old" {
 		t.Errorf("binary = %q, want it left as it was", got)
-	}
-
-	u = standalone(t, down(t))
-	u.Mirror = mirror(t, true).URL
-	if err := u.Replace(t.Context(), "v1.2.3"); err == nil || !strings.Contains(err.Error(), "; mirror: digest mismatch") {
-		t.Errorf("Replace with GitHub down and a tampered mirror = %v, want both failures", err)
-	}
-	if got := binary(t, u); got != "old" {
-		t.Errorf("binary = %q, want it left as it was", got)
-	}
-}
-
-// TestLatestMirror checks that a flow that the install script installed
-// takes the latest release from the mirror when GitHub does not answer.
-func TestLatestMirror(t *testing.T) {
-	u := standalone(t, down(t))
-	u.Mirror = mirror(t, false).URL
-	if got, err := u.Latest(t.Context()); err != nil || got != "v1.2.3" {
-		t.Errorf("Latest with GitHub down = %q, %v; want v1.2.3 from the mirror", got, err)
-	}
-	u.Mirror = down(t).URL
-	if _, err := u.Latest(t.Context()); err == nil || !strings.Contains(err.Error(), "; mirror:") {
-		t.Errorf("Latest with both down = %v, want both failures", err)
 	}
 }

@@ -1,8 +1,7 @@
 #!/bin/sh
 # install.sh installs flow: the latest release, or the one FLOW_VERSION or
 # --version names, from its GitHub release, checked against the SHA-256
-# digest GitHub reports for it, or, when GitHub does not answer, from its
-# mirror at aquatic.dev, checked against the mirror's SHA256SUMS. It installs flow into ~/.flow/bin, or
+# digest GitHub reports for it. It installs flow into ~/.flow/bin, or
 # FLOW_INSTALL_DIR, beside the marker that makes flow update itself the same
 # way, links it from ~/.local/bin, and adds that folder to PATH unless it is
 # on it already, or FLOW_NO_MODIFY_PATH or --no-modify-path says not to. It
@@ -21,7 +20,6 @@ main() {
 repo=unaquatic/flow
 marker=.flow-standalone
 github_api=${FLOW_GITHUB_API:-https://api.github.com}
-mirror=${FLOW_MIRROR_URL:-https://aquatic.dev/flow/releases}
 version=${FLOW_VERSION:-latest}
 modify_path=true
 case ${FLOW_NO_MODIFY_PATH:-} in 1 | true | yes) modify_path=false ;; esac
@@ -182,16 +180,14 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-# The downloads below say why they failed in failure, and return 2 when the
-# server did not answer, after which download tries the mirror, and 1 when
-# it answered with something wrong, after which it gives up.
+# The downloads below say why they failed in failure, and return 1.
 failure=
 
 # fetch downloads $1 into $2.
 fetch() {
 	curl -fsL --retry 2 --connect-timeout 10 -o "$2" "$1" || {
 		failure="download failed: $1"
-		return 2
+		return 1
 	}
 }
 
@@ -256,7 +252,7 @@ progress() {
 	printf '\033[2A\r\033[J\033[?25h'
 	if [ "$status" -ne 0 ]; then
 		failure="download failed: $1"
-		return 2
+		return 1
 	fi
 }
 
@@ -293,34 +289,6 @@ from_github() {
 	fi
 }
 
-# from_mirror downloads the asset of the platform from the mirror into
-# $tmp/$asset, checked against the mirror's SHA256SUMS, and sets tag.
-from_mirror() {
-	tag=$version
-	if [ "$version" = latest ]; then
-		fetch "$mirror/latest" "$tmp/latest" || return
-		tag=$(tr -d ' \r\n' <"$tmp/latest")
-		case $tag in
-			v[0-9]*) ;;
-			*)
-				failure="download failed: $mirror/latest"
-				return 2
-				;;
-		esac
-	fi
-	fetch "$mirror/$tag/SHA256SUMS" "$tmp/SHA256SUMS" || return
-	sum=$(awk -v asset="$asset" '{ name = $2; sub(/^\*/, "", name) } name == asset { print $1; exit }' "$tmp/SHA256SUMS")
-	if [ -z "$sum" ]; then
-		failure="release $tag has no build: $asset"
-		return 1
-	fi
-	progress "$mirror/$tag/$asset" "$tmp/$asset" || return
-	if [ "$(sha256 "$tmp/$asset")" != "$sum" ]; then
-		failure="digest mismatch: $asset"
-		return 1
-	fi
-}
-
 # unpack takes the flow binary out of $tmp/$asset into $tmp/flow, and checks
 # that it is the version it was released as.
 unpack() {
@@ -340,28 +308,13 @@ unpack() {
 	fi
 }
 
-# download downloads and unpacks the release from GitHub, or, when GitHub
-# does not answer, from the mirror, and tells what failed.
+# download downloads and unpacks the release from GitHub, and tells what
+# failed.
 download() {
-	status=0
-	from_github || status=$?
-	if [ "$status" -eq 2 ]; then
-		github_failure=$failure
-		status=0
-		from_mirror || status=$?
-		if [ "$status" -ne 0 ]; then
-			error "$github_failure"
-			error "$failure"
-			return 1
-		fi
-	elif [ "$status" -ne 0 ]; then
+	if ! from_github || ! unpack; then
 		error "$failure"
 		return 1
 	fi
-	unpack || {
-		error "$failure"
-		return 1
-	}
 }
 
 download || exit 1
