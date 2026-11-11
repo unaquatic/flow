@@ -1,5 +1,5 @@
 === text ===
-|■ Usage Lab A Model A Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K $0.42 Worked…  |
+|■ Usage Model A Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K $0.42 Worked 3m 12s  |
 |                                                                                    |
 |■ hello                                                                             |
 |                                                                                    |
@@ -11,7 +11,7 @@
 |                                                                                    |
 |                                                                                    |
 === fg ===
-|A AAAAA BBB B BBBBB B BBBBBB AAAAAAA BBB BB A BBBB A BBBB AAAAA BBBB BBBBB AAAAAAB  |
+|A AAAAA BBBBB B BBBBBB AAAAAAA BBB BB A BBBB A BBBB AAAAA BBBB BBBBB AAAAAA BB BBB  |
 |                                                                                    |
 |B BBBBB                                                                             |
 |                                                                                    |

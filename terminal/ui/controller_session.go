@@ -44,7 +44,7 @@ type StatusInfo struct {
 	// OAuth", or is empty when the model names no provider.
 	Account string
 	// Model is the terminal's model variant as DisplayName names it, such
-	// as "Lab A Model A Fast High", or empty when no model is set.
+	// as "Model A Fast High", or empty when no model is set.
 	Model string
 	// Usage is the session's token use, whose context and window the
 	// Context row shows.

@@ -119,19 +119,19 @@ func TestModelName(t *testing.T) {
 	}
 }
 
-// TestDisplayName checks that a model reads as its lab's name, its variant's
-// name and its effort's name, without its lab twice, and that a model the
-// catalog does not list reads as its lab, by name or as unknown, the model
-// as unknown, and the name of its effort.
+// TestDisplayName checks that a model reads as its variant's name and its
+// effort's name, without its lab's, and that a model the catalog does not
+// list reads as its model, after its lab, as unknown, and the name of its
+// effort.
 func TestDisplayName(t *testing.T) {
 	cat := protocoltest.FromAPI(t, testCatalog)
 	for model, want := range map[string]string{
-		"provider-a/lab-a/model-a":             "Lab A Model A",
-		"provider-a/lab-a/model-a:fast":        "Lab A Model A Fast",
-		"provider-a/lab-a/model-a:fast:xhigh":  "Lab A Model A Fast Extra High",
-		"provider-b/lab-b/model-f:medium":      "Lab B Model F Medium",
-		"provider-a/lab-a/model-h:medium":      "Lab A Unknown [model-h] Medium",
-		"provider-z/lab-z/model-z:high":        "Unknown [lab-z] Unknown [model-z] High",
+		"provider-a/lab-a/model-a":             "Model A",
+		"provider-a/lab-a/model-a:fast":        "Model A Fast",
+		"provider-a/lab-a/model-a:fast:xhigh":  "Model A Fast Extra High",
+		"provider-b/lab-b/model-f:medium":      "Model F Medium",
+		"provider-a/lab-a/model-h:medium":      "Unknown [model-h] Medium",
+		"provider-z/lab-z/model-z:high":        "Unknown [model-z] High",
 		"provider-a/model-x":                   "Unknown [model-x]",
 		"provider-a/ft:model-a:acme:a1b2":      "Unknown [ft:model-a:acme:a1b2]",
 		"provider-a/ft:model-a:acme:a1b2:high": "Unknown [ft:model-a:acme:a1b2] High",
@@ -139,10 +139,6 @@ func TestDisplayName(t *testing.T) {
 		if got := DisplayName(cat, agent.ParseVariant(model, cat)); got != want {
 			t.Errorf("DisplayName(%q) = %q, want %q", model, got, want)
 		}
-	}
-	cat.Labs["lab-a"] = gateway.Lab{ID: "lab-a", Name: "Model"}
-	if got, want := DisplayName(cat, agent.ParseVariant("provider-a/lab-a/model-a", cat)), "Model A"; got != want {
-		t.Errorf("DisplayName of a model named after its lab = %q, want %q", got, want)
 	}
 }
 
@@ -248,11 +244,11 @@ func TestStatusLine(t *testing.T) {
 	}{
 		{
 			name:  "session under way",
-			model: "Lab A Model H Medium",
+			model: "Model H Medium",
 			usage: SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000,
 				Cost: 0.4249, Context: 64_000, Window: 922_000},
 			worked: 3*time.Minute + 12*time.Second,
-			want:   "Lab A Model H Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K $0.42 Worked 3m 12s",
+			want:   "Model H Medium Context 64K 7% ↓ 120K ↑ 8.4K Cache 310K $0.42 Worked 3m 12s",
 		},
 		// Before any request every count and the cost show as none.
 		{name: "new session", model: "Lab B Model D", usage: SessionUsage{Window: 200_000},
