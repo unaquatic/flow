@@ -5,8 +5,9 @@ run-name: Release ${{ inputs.tag }}
 # Release creates the GitHub release of a version tag, vX.Y.Z, pushed by hand
 # on a commit of main, with the flow binary of each platform, as
 # release-assets.sh builds them. Its notes are left empty, to be written by
-# hand once it is out, which an immutable release still allows.
-# release-notes.sh prints a draft of them. The release is published once every asset is attached,
+# hand once it is out, which an immutable release still allows; Release
+# Mirror copies them to aquatic.dev on every edit. release-notes.sh prints a
+# draft of them. The release is published once every asset is attached,
 # as it is immutable from then on, and GitHub attests it. A tag released
 # before is left as it is.
 on:

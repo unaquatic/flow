@@ -35,6 +35,14 @@ const (
 	// when its GitHubAPI is empty.
 	DefaultGitHubAPI = "https://api.github.com"
 
+	// DefaultMirror is the mirror of the releases, which flow's Release
+	// Mirror workflow uploads each one to: latest, the latest release as
+	// JSON, {"tag": "v1.2.3", ...}, and for each release
+	// vX.Y.Z/flow-OS-ARCH.tar.gz and vX.Y.Z/SHA256SUMS of them. New checks its latest for updates; an
+	// Updater downloads from it only when its Mirror names it, as none does
+	// by default.
+	DefaultMirror = "https://aquatic.dev/flow/releases"
+
 	// InstallCommand runs the install script, which installs the latest
 	// release, and updates a flow that it installed.
 	InstallCommand = "curl -fsSL https://aquatic.dev/flow/install | sh"
@@ -101,6 +109,22 @@ type githubRelease struct {
 	} `json:"assets"`
 }
 
+// unavailable marks an error as GitHub not answering, as a failed request, a
+// status other than 200 OK and 404, or a download cut off, does, rather than
+// answering with something wrong, so that the mirror is tried instead. A
+// release that GitHub says is not there, or a download that does not match
+// its digest, is not unavailable: the mirror would not do better.
+type unavailable struct{ error }
+
+func (e unavailable) Unwrap() error { return e.error }
+
+// isUnavailable reports whether err is GitHub not answering, as unavailable
+// marks it.
+func isUnavailable(err error) bool {
+	_, ok := errors.AsType[unavailable](err)
+	return ok
+}
+
 // release returns GitHub's release of tag, or the latest release when tag is
 // "latest".
 func (u *Updater) release(ctx context.Context, tag string) (githubRelease, error) {
@@ -116,15 +140,23 @@ func (u *Updater) release(ctx context.Context, tag string) (githubRelease, error
 		return r, fmt.Errorf("no release: %s", tag)
 	}
 	if err != nil {
-		return r, fmt.Errorf("download: %w", err)
+		return r, unavailable{fmt.Errorf("download: %w", err)}
 	}
 	return r, nil
 }
 
 // latestRelease returns the tag of GitHub's latest release, in Canonical
-// form, such as v0.2.0.
+// form, such as v0.2.0, or the mirror's when GitHub does not answer and
+// u.Mirror names one.
 func (u *Updater) latestRelease(ctx context.Context) (string, error) {
 	r, err := u.release(ctx, "latest")
+	if isUnavailable(err) && u.Mirror != "" {
+		tag, mirrorErr := u.mirrorLatest(ctx, u.Mirror)
+		if mirrorErr != nil {
+			return "", fmt.Errorf("check for updates: %w; mirror: %w", err, mirrorErr)
+		}
+		r.Tag, err = tag, nil
+	}
 	if err != nil {
 		return "", fmt.Errorf("check for updates: %w", err)
 	}
@@ -137,8 +169,10 @@ func (u *Updater) latestRelease(ctx context.Context) (string, error) {
 
 // Replace replaces the executable with the flow binary of release version
 // of the platform: its release asset on GitHub, checked against the SHA-256
-// digest that GitHub reports for it. It downloads the asset to the system's
-// temporary folder, writes the binary beside the executable, named as
+// digest that GitHub reports for it, or, when GitHub does not answer and
+// u.Mirror names a mirror, the asset of the mirror, checked against the
+// mirror's SHA256SUMS. It
+// downloads the asset to the system's temporary folder, writes the binary beside the executable, named as
 // newBinaryPattern, and renames it over it, so that the executable is the
 // old binary or the new one, never part of either. It first removes the new
 // binaries that a replace which flow exited during left, which the install
@@ -147,6 +181,19 @@ func (u *Updater) Replace(ctx context.Context, version string) error {
 	ctx, cancel := context.WithTimeout(ctx, DownloadTimeout)
 	defer cancel()
 	removeLeftovers(filepath.Dir(u.Executable))
+	err := u.replaceFromGitHub(ctx, version)
+	if !isUnavailable(err) || u.Mirror == "" {
+		return err
+	}
+	if mirrorErr := u.replaceFromMirror(ctx, version); mirrorErr != nil {
+		return fmt.Errorf("%w; mirror: %w", err, mirrorErr)
+	}
+	return nil
+}
+
+// replaceFromGitHub replaces the executable with the binary of the release
+// asset of version on GitHub, as Replace describes.
+func (u *Updater) replaceFromGitHub(ctx context.Context, version string) error {
 	asset := ReleaseAsset()
 	release, err := u.release(ctx, Canonical(version))
 	if err != nil {
@@ -166,6 +213,29 @@ func (u *Updater) Replace(ctx context.Context, version string) error {
 	return fmt.Errorf("release %s has no build: %s", Canonical(version), asset)
 }
 
+// replaceFromMirror replaces the executable with the binary of the asset of
+// version on the mirror, checked against the mirror's SHA256SUMS of it, as
+// Replace describes.
+func (u *Updater) replaceFromMirror(ctx context.Context, version string) error {
+	tag, asset := Canonical(version), ReleaseAsset()
+	sums, err := u.mirrorText(ctx, tag+"/SHA256SUMS")
+	if err != nil {
+		return err
+	}
+	for line := range strings.Lines(sums) {
+		hexSum, name, ok := strings.Cut(strings.TrimSpace(line), "  ")
+		if !ok || strings.TrimPrefix(name, "*") != asset {
+			continue
+		}
+		sum, err := hex.DecodeString(hexSum)
+		if err != nil || len(sum) != sha256.Size {
+			break
+		}
+		return u.installAsset(ctx, u.mirrorURL(tag+"/"+asset), sum)
+	}
+	return fmt.Errorf("release %s has no build: %s", tag, asset)
+}
+
 // installAsset downloads the release asset at rawURL, checked against sum,
 // its SHA-256, and installs the binary in it over the executable.
 func (u *Updater) installAsset(ctx context.Context, rawURL string, sum []byte) error {
@@ -180,6 +250,33 @@ func (u *Updater) installAsset(ctx context.Context, rawURL string, sum []byte) e
 	return installFrom(f, strings.HasSuffix(rawURL, ".zip"), ExecutableName(), u.Executable)
 }
 
+// mirrorURL returns the URL of name on the mirror.
+func (u *Updater) mirrorURL(name string) string {
+	return strings.TrimSuffix(u.Mirror, "/") + "/" + name
+}
+
+// mirrorText returns the text of name on the mirror, such as
+// v0.2.0/SHA256SUMS.
+func (u *Updater) mirrorText(ctx context.Context, name string) (string, error) {
+	return u.text(ctx, u.mirrorURL(name))
+}
+
+// text returns what a GET of rawURL answers with, within RequestTimeout.
+func (u *Updater) text(ctx context.Context, rawURL string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, RequestTimeout)
+	defer cancel()
+	resp, err := u.get(ctx, rawURL)
+	if err != nil {
+		return "", fmt.Errorf("download: %w", err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", fmt.Errorf("download %s: %w", rawURL, err)
+	}
+	return string(data), nil
+}
+
 // download writes what a GET of rawURL answers with to a new file in the
 // system's temporary folder, and returns it, rewound, once it has checked
 // that h hashes it to want, telling u.Progress how far it is. The caller
@@ -187,7 +284,7 @@ func (u *Updater) installAsset(ctx context.Context, rawURL string, sum []byte) e
 func (u *Updater) download(ctx context.Context, rawURL string, h hash.Hash, want []byte) (*os.File, error) {
 	resp, err := u.get(ctx, rawURL)
 	if err != nil {
-		return nil, fmt.Errorf("download: %w", err)
+		return nil, unavailable{fmt.Errorf("download: %w", err)}
 	}
 	defer resp.Body.Close()
 	f, err := os.CreateTemp("", "flow-download-*")
@@ -201,7 +298,7 @@ func (u *Updater) download(ctx context.Context, rawURL string, h hash.Hash, want
 	}
 	if _, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(body, maxBinarySize)); err != nil {
 		removeTemp(f)
-		return nil, fmt.Errorf("download %s: %w", rawURL, err)
+		return nil, unavailable{fmt.Errorf("download %s: %w", rawURL, err)}
 	}
 	if got := h.Sum(nil); !bytes.Equal(got, want) {
 		removeTemp(f)

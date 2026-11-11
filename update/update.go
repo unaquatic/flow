@@ -1,7 +1,7 @@
-// Package update finds the latest release of flow in the npm registry and
-// installs it with the package manager that installed flow: on request, as
-// the update command does, and in the background, as the terminal UI does
-// once it starts.
+// Package update finds the latest release of flow, at aquatic.dev first and
+// else on GitHub or in the npm registry, as flow was installed, and installs
+// it the way flow was installed: on request, as the update command does, and
+// in the background, as the terminal UI does once it starts.
 package update
 
 import (
@@ -58,6 +58,15 @@ type Updater struct {
 	// GitHubAPI is the base URL of the GitHub API, which a flow that the
 	// install script installed updates from. Empty selects DefaultGitHubAPI.
 	GitHubAPI string
+	// Check is the base URL of the releases whose latest file Latest reads
+	// the latest release from first, such as DefaultMirror, which New sets.
+	// Empty, or a check that fails, reads it where the way flow was
+	// installed tells instead.
+	Check string
+	// Mirror is the base URL of the mirror of the releases, such as
+	// DefaultMirror, which such a flow updates from when GitHub does not
+	// answer. Empty, the default, tries no mirror.
+	Mirror string
 	// Client sends the requests to the registry. Nil selects
 	// http.DefaultClient.
 	Client *http.Client
@@ -80,7 +89,8 @@ type Updater struct {
 
 // New returns an Updater of the running flow, at product.Version, for data
 // directory dir, installed by the package manager that
-// config.EnvManagedBy names, when it names npm or pnpm.
+// config.EnvManagedBy names, when it names npm or pnpm, that checks for
+// updates at DefaultMirror first.
 func New(dir string) (*Updater, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -93,7 +103,7 @@ func New(dir string) (*Updater, error) {
 	if m != MethodNPM && m != MethodPNPM {
 		m = MethodNone
 	}
-	return &Updater{Dir: dir, Current: product.Version(), Executable: exe, Method: m}, nil
+	return &Updater{Dir: dir, Current: product.Version(), Executable: exe, Method: m, Check: DefaultMirror}, nil
 }
 
 // Canonical returns v as a semantic version with its leading "v", which Go
@@ -126,12 +136,33 @@ func Newer(latest, current string) bool {
 	return l != "" && c != "" && semver.Compare(l, c) > 0
 }
 
-// Latest returns the latest release, in Canonical form, such as v0.2.0, as
-// the way flow was installed tells of it: the latest GitHub release for a
-// flow that the install script installed, as IsStandalone tells, and the
-// version of PackageName that the npm registry's "latest" dist-tag names
-// otherwise.
+// Latest returns the latest release, such as v0.2.0: the tag of the latest
+// release at u.Check, or, when u.Check is empty or does not answer, as
+// latestInstalled reads it.
 func (u *Updater) Latest(ctx context.Context) (string, error) {
+	if u.Check != "" {
+		if tag, err := u.mirrorLatest(ctx, u.Check); err == nil {
+			return tag, nil
+		}
+	}
+	return u.latestInstalled(ctx)
+}
+
+// mirrorLatest returns the tag of the latest release at mirror, whose
+// latest answers with it as JSON: {"tag": "v1.2.3", ...}.
+func (u *Updater) mirrorLatest(ctx context.Context, mirror string) (string, error) {
+	var r struct {
+		Tag string `json:"tag"`
+	}
+	err := u.getJSON(ctx, mirror+"/latest", &r)
+	return r.Tag, err
+}
+
+// latestInstalled returns the latest release, in Canonical form, as the way
+// flow was installed tells of it: the latest GitHub release for a flow that
+// the install script installed, as IsStandalone tells, and the version of
+// PackageName that the npm registry's "latest" dist-tag names otherwise.
+func (u *Updater) latestInstalled(ctx context.Context) (string, error) {
 	if IsStandalone(u.Executable) {
 		return u.latestRelease(ctx)
 	}

@@ -1,0 +1,113 @@
+name: Release Mirror
+
+run-name: Release Mirror ${{ inputs.tag || github.event.release.tag_name }}
+
+# Release Mirror copies the GitHub release of a version tag, vX.Y.Z, to
+# aquatic.dev, which serves it at /flow/releases/: the flow binary of every
+# platform, once its release attestation verifies it, to the R2 bucket
+# flow-releases, as flow/vX.Y.Z/flow-OS-ARCH.tar.gz, then flow/vX.Y.Z/SHA256SUMS
+# of them, which marks the version as mirrored whole, and the release, its
+# date, page, notes and files, and whether it is GitHub's latest release, to
+# aquatic.dev's API, PUT /flow/releases/vX.Y.Z, which keeps it in D1.
+# ci-tag.yml calls it once the release is out. A version mirrored before
+# keeps its files, but the release goes to the API again on every run, which
+# an edit of a published release on GitHub starts too.
+#
+# It needs the secrets CLOUDFLARE_R2_TOKEN, an API token that may edit the
+# bucket's objects, CLOUDFLARE_ACCOUNT_ID, and AQUATIC_MIRROR_TOKEN, the
+# MIRROR_TOKEN secret of the aquatic worker.
+on:
+  release:
+    types: [edited]
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to mirror, vX.Y.Z"
+        type: string
+        required: true
+
+  workflow_call:
+    inputs:
+      tag:
+        description: "Version tag to mirror, vX.Y.Z"
+        type: string
+        required: true
+
+concurrency:
+  group: release-mirror
+  cancel-in-progress: false
+
+permissions:
+  attestations: read
+  contents: read
+
+jobs:
+  mirror:
+    name: Release Mirror
+    # A draft is not mirrored until it is published.
+    if: github.event_name != 'release' || !github.event.release.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Mirror
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AQUATIC_MIRROR_TOKEN: ${{ secrets.AQUATIC_MIRROR_TOKEN }}
+          AQUATIC_API: https://aquatic.dev/flow/releases
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          if ! [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "$TAG is no version vX.Y.Z" >&2
+            exit 1
+          fi
+          for key in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID AQUATIC_MIRROR_TOKEN; do
+            [ -n "${!key}" ] || { echo "missing secret $key" >&2; exit 1; }
+          done
+          npm install --global --no-fund --no-audit wrangler@4 >/dev/null
+          bucket=flow-releases
+          immutable='public, max-age=31536000, immutable'
+
+          if wrangler r2 object get "$bucket/flow/$TAG/SHA256SUMS" --remote --pipe > "$RUNNER_TEMP/sums" 2>/dev/null \
+            && grep -q 'flow-' "$RUNNER_TEMP/sums"; then
+            echo "$TAG is mirrored already"
+          else
+            assets=$RUNNER_TEMP/assets
+            gh release download "$TAG" --repo "$REPO" --pattern 'flow-*.tar.gz' --dir "$assets"
+            for asset in "$assets"/*; do
+              gh release verify-asset "$TAG" "$asset" --repo "$REPO"
+            done
+            (cd "$assets" && sha256sum flow-*.tar.gz > "$RUNNER_TEMP/SHA256SUMS")
+            for asset in "$assets"/flow-*.tar.gz; do
+              wrangler r2 object put "$bucket/flow/$TAG/$(basename "$asset")" --remote --file "$asset" \
+                --content-type application/gzip --cache-control "$immutable"
+            done
+            wrangler r2 object put "$bucket/flow/$TAG/SHA256SUMS" --remote --file "$RUNNER_TEMP/SHA256SUMS" \
+              --content-type 'text/plain; charset=utf-8' --cache-control "$immutable"
+          fi
+
+          # The release goes to aquatic's API on every run, so that it
+          # follows every edit. latest is true on GitHub's latest release
+          # alone, so that mirroring an older version again never takes it
+          # back.
+          latest=$(gh release view --repo "$REPO" --json tagName --jq .tagName)
+          gh release view "$TAG" --repo "$REPO" --json tagName,publishedAt,url,body,assets > "$RUNNER_TEMP/github.json"
+          sums=$RUNNER_TEMP/SHA256SUMS
+          [ -f "$sums" ] || sums=$RUNNER_TEMP/sums
+          jq --rawfile sums "$sums" --arg latest "$latest" '
+            ($sums | split("\n") | map(select(. != "") | split("  ") | {key: .[1], value: .[0]}) | from_entries) as $sha
+            | {published_at: .publishedAt, url, notes: .body, latest: (.tagName == $latest),
+               assets: [.assets[] | select(.name | test("^flow-.*[.](tar[.]gz|zip)$")) | {name, size, sha256: $sha[.name]}]}
+          ' "$RUNNER_TEMP/github.json" > "$RUNNER_TEMP/release.json"
+          curl -fsS -X PUT "$AQUATIC_API/$TAG" \
+            -H "Authorization: Bearer $AQUATIC_MIRROR_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @"$RUNNER_TEMP/release.json"
