@@ -17,7 +17,7 @@ type ModelListing struct {
 	// Provider identifies the provider.
 	Provider agent.ProviderID `json:"provider"`
 	// Models contains the provider's offerings of the catalog's models,
-	// and then its unlisted models, each with its variants.
+	// each with its variants.
 	Models []agent.Listing `json:"models"`
 	// ReasoningEfforts maps the ID of each model that takes reasoning efforts
 	// to them, in the order the catalog lists them, as the ":effort" suffix

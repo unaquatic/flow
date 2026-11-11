@@ -107,7 +107,7 @@ func DisplayName(cat *gateway.Catalog, v agent.Variant) string {
 	effort := v.Effort
 	if off, ok := agent.Lookup(cat, v); ok {
 		name := VariantName(off, v)
-		lab := cat.Labs[cmp.Or(off.Lab, gateway.ModelID(v.Model).Lab())].Name
+		lab := cat.Labs[gateway.ModelID(v.Model).Lab()].Name
 		if lab != "" && !strings.HasPrefix(name, lab+" ") {
 			words = append(words, lab)
 		}

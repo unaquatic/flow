@@ -174,7 +174,7 @@ func TestNew_ModelsFile(t *testing.T) {
 
 	writeModels(`{"providers": {"local": {
 		"endpoint": {"format": "` + string(gateway.FormatOpenAIChat) + `", "api": "http://local.example/v1", "auth": {"scheme": "bearer"}, "env": ["LOCAL_KEY"]},
-		"unlisted": {"model-x": {"limit": {"context": 32768, "output": 4096}}}
+		"models": {"model-x": {"limit": {"context": 32768, "output": 4096}}}
 	}}}`)
 	t.Setenv("LOCAL_KEY", "sk-local")
 	a, err := open()

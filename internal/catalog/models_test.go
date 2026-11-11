@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"log/slog"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -49,10 +50,11 @@ func chat(doc string) string {
 }
 
 // TestMergeNewProvider checks that a provider the catalog does not list is
-// added, as a community gateway named by its ID, with its unlisted models
-// sending their IDs as the file spells them and its offerings of the
-// catalog's models starting from the model and its lab's reasoning, and
-// that the catalog lists it among the providers of the models it offers.
+// added, as a community gateway named by its ID, with the models it adds,
+// under the provider as their lab, sending their IDs as the file spells
+// them, and its offerings of the catalog's models starting from the model
+// and its lab's reasoning, and that the catalog lists it among the
+// providers of the models it offers.
 func TestMergeNewProvider(t *testing.T) {
 	base := baseCatalog()
 	c, err := Merge(base, []byte(chat(`{
@@ -60,8 +62,10 @@ func TestMergeNewProvider(t *testing.T) {
 		"providers": {
 			"local": {
 				"endpoint": {"format": "CHAT", "api": "http://local.example/v1", "auth": {"scheme": "bearer"}, "env": ["LOCAL_KEY"]},
-				"unlisted": {"Model-X:Large": {"limit": {"context": 131072, "output": 16384}, "capabilities": {"tools": true}}},
-				"models": {"lab-a/model-a": {"limit": {"output": 8000}}}
+				"models": {
+					"Model-X:Large": {"limit": {"context": 131072, "output": 16384}, "capabilities": {"tools": true}},
+					"lab-a/model-a": {"limit": {"output": 8000}}
+				}
 			}
 		}
 	}`)))
@@ -79,15 +83,19 @@ func TestMergeNewProvider(t *testing.T) {
 		t.Errorf("endpoint = %+v", p.Endpoint)
 	}
 
-	u, ok := p.Unlisted["model-x:large"]
+	u, ok := p.Models["local/model-x:large"]
 	if !ok {
-		t.Fatalf("unlisted = %v, want model-x:large in lower case", p.Unlisted)
+		t.Fatalf("models = %v, want local/model-x:large in lower case", slices.Collect(maps.Keys(p.Models)))
 	}
 	if u.Name != "Model-X:Large" || u.ProviderOptions.ID != "Model-X:Large" || u.Limit.Context != 131072 || !u.Capabilities.Tools {
-		t.Errorf("unlisted offering = %+v", u)
+		t.Errorf("added offering = %+v", u)
 	}
-	if r, ok := c.Resolve("local", "model-x:large"); !ok || r.ProviderOptions.ID != "Model-X:Large" || r.ProviderOptions.Endpoint.API != p.Endpoint.API {
-		t.Errorf("Resolve(local, model-x:large) = %+v, %v", r, ok)
+	if m, ok := c.Models["local/model-x:large"]; !ok || m.Lab != "local" || m.Name != "Model-X:Large" || m.Limit.Context != 131072 ||
+		!slices.Equal(m.Providers, []gateway.ProviderID{"local"}) {
+		t.Errorf("added model = %+v, %v; want local's, of the offering's facts", m, ok)
+	}
+	if r, ok := c.Resolve("local", "local/model-x:large"); !ok || r.ProviderOptions.ID != "Model-X:Large" || r.ProviderOptions.Endpoint.API != p.Endpoint.API {
+		t.Errorf("Resolve(local, local/model-x:large) = %+v, %v", r, ok)
 	}
 
 	o := p.Models["lab-a/model-a"]
@@ -102,8 +110,85 @@ func TestMergeNewProvider(t *testing.T) {
 	}
 
 	// The catalog merged into is left as it was.
-	if _, ok := base.Providers["local"]; ok || len(base.Models["lab-a/model-a"].Providers) != 2 {
+	if _, ok := base.Providers["local"]; ok || len(base.Models["lab-a/model-a"].Providers) != 2 || len(base.Models) != 1 {
 		t.Error("Merge changed the catalog it merged into")
+	}
+}
+
+// TestMergeModelKeys checks that a key of a provider's models names a
+// model of its lab, or of the provider when it names none, whatever its
+// case: one the catalog lists sends its ID without the lab, and one it does
+// not know sends the key as the file spells it.
+func TestMergeModelKeys(t *testing.T) {
+	c, err := Merge(baseCatalog(), []byte(`{"providers": {"gw": {"models": {
+		"Lab-A/Model-A": {"limit": {"output": 100}},
+		"Lab-Z/Model-Z": {"limit": {"context": 4096}},
+		"model-y": {}
+	}}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := c.Providers["gw"]
+	for _, tt := range []struct {
+		id   gateway.ModelID
+		lab  gateway.ProviderID
+		send string
+	}{
+		{"lab-a/model-a", "lab-a", "lab-a/model-a"},
+		{"lab-z/model-z", "lab-z", "Lab-Z/Model-Z"},
+		{"gw/model-y", "gw", "model-y"},
+	} {
+		if o, ok := p.Models[tt.id]; !ok || o.ProviderOptions.ID != tt.send {
+			t.Errorf("gw's %s = %+v, %v; want it, sending %s", tt.id, o, ok, tt.send)
+		}
+		if m, ok := c.Models[tt.id]; !ok || m.Lab != tt.lab || !slices.Contains(m.Providers, "gw") {
+			t.Errorf("model %s = %+v, %v; want one of lab %s that gw serves", tt.id, m, ok, tt.lab)
+		}
+	}
+	if got := ModelKey("gw", "Model-Y"); got != "gw/model-y" {
+		t.Errorf("ModelKey(gw, Model-Y) = %s, want gw/model-y", got)
+	}
+}
+
+// TestMergeVariants checks that an offering's variants take their mode and
+// tier from their keys when they set neither, are named as the catalog
+// names its variants when they have no name, and resolve with their own
+// provider options over the offering's.
+func TestMergeVariants(t *testing.T) {
+	c, err := Merge(baseCatalog(), []byte(chat(`{"providers": {"local": {
+		"endpoint": {"format": "CHAT", "api": "http://local.example/v1"},
+		"models": {"lab-z/model-z": {
+			"name": "Model Z",
+			"provider_options": {"id": "model-z"},
+			"variants": {
+				"fast": {"provider_options": {"body": {"service_tier": "priority"}}},
+				"thinking:fast": {"provider_options": {"id": "model-z-thinking"}},
+				"free": {"name": "Model Z (free)", "tier": "free"}
+			}
+		}}
+	}}}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	vs := c.Providers["local"].Models["lab-z/model-z"].Variants
+	for _, tt := range []struct {
+		key, name, mode string
+		tier            gateway.Tier
+	}{
+		{"fast", "Model Z Fast", "", gateway.TierFast},
+		{"thinking:fast", "Model Z Thinking Fast", gateway.ModeThinking, gateway.TierFast},
+		{"free", "Model Z (free)", "", gateway.TierFree},
+	} {
+		if v := vs[tt.key]; v.Name != tt.name || v.Mode != tt.mode || v.Tier != tt.tier {
+			t.Errorf("variant %s = %+v, want %q in mode %q, tier %q", tt.key, v, tt.name, tt.mode, tt.tier)
+		}
+	}
+	r, ok := c.Resolve("local", "lab-z/model-z:fast")
+	if !ok || r.ProviderOptions.ID != "model-z" || r.ProviderOptions.Body["service_tier"] != "priority" {
+		t.Errorf("Resolve(fast) = %+v, %v; want model-z with the service tier", r, ok)
+	}
+	if r, ok := c.Resolve("local", "lab-z/model-z:thinking:fast"); !ok || r.ProviderOptions.ID != "model-z-thinking" {
+		t.Errorf("Resolve(thinking:fast) = %+v, %v; want model-z-thinking", r, ok)
 	}
 }
 
@@ -182,12 +267,17 @@ func TestMergeErrors(t *testing.T) {
 		{"not JSON", `{`, "unexpected EOF"},
 		{"unknown top-level key", `{"provider": {}}`, `unknown field "provider"`},
 		{"provider not an object", `{"providers": {"x": 1}}`, "providers.x: not an object"},
-		{"new provider without endpoint", `{"providers": {"x": {"unlisted": {}}}}`, "providers.x.endpoint.format"},
+		{"new provider without endpoint", `{"providers": {"x": {"models": {}}}}`, "providers.x.endpoint.format"},
 		{"unknown format", `{"providers": {"x": {"endpoint": {"format": "soap", "api": "http://h"}}}}`, "providers.x.endpoint.format: unknown format: soap"},
 		{"no base URL", chat(`{"providers": {"x": {"endpoint": {"format": "CHAT"}}}}`), "providers.x.endpoint.api: not set"},
 		{"unknown provider key", `{"providers": {"gw": {"base_url": "http://h"}}}`, `providers.gw: json: unknown field "base_url"`},
-		{"unknown offering key", `{"providers": {"gw": {"unlisted": {"m": {"context_window": 1}}}}}`, `providers.gw.unlisted.m: json: unknown field "context_window"`},
-		{"model not in the catalog", `{"providers": {"gw": {"models": {"lab-z/m": {}}}}}`, "providers.gw.models.lab-z/m: not a model of the catalog"},
+		{"no unlisted", `{"providers": {"gw": {"unlisted": {}}}}`, `providers.gw: json: unknown field "unlisted"`},
+		{"unknown tier", `{"providers": {"gw": {"models": {"lab-a/model-a": {"variants": {"turbo": {}}}}}}}`, "providers.gw.models.lab-a/model-a.variants.turbo: unknown tier: turbo"},
+		{"unknown mode", `{"providers": {"gw": {"models": {"lab-a/model-a": {"variants": {"x": {"mode": "dream"}}}}}}}`, "variants.x: unknown mode: dream"},
+		{"key not mode and tier", `{"providers": {"gw": {"models": {"lab-a/model-a": {"variants": {"quick": {"tier": "fast"}}}}}}}`, `variants.quick: key is not "fast"`},
+		{"tier before mode", `{"providers": {"gw": {"models": {"lab-a/model-a": {"variants": {"fast:thinking": {}}}}}}}`, `variants.fast:thinking: key is not "thinking:fast"`},
+		{"variant of neither", `{"providers": {"gw": {"models": {"lab-a/model-a": {"variants": {"": {}}}}}}}`, "sets no mode or tier"},
+		{"unknown offering key", `{"providers": {"gw": {"models": {"m": {"context_window": 1}}}}}`, `providers.gw.models.m: json: unknown field "context_window"`},
 		{"wrong type", `{"providers": {"gw": {"models": {"lab-a/model-a": {"limit": {"context": "big"}}}}}}`, "providers.gw.models.lab-a/model-a"},
 	}
 	for _, tt := range tests {

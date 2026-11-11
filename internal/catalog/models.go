@@ -30,15 +30,22 @@ const ModelsFile = "models.json"
 // Objects merge into the catalog's, key by key, at any depth; any other
 // value replaces the catalog's, and null removes it. A provider the catalog
 // does not list is added, and needs an endpoint whose format is one of
-// gateway.Formats and whose api is set. Under a provider:
+// gateway.Formats and whose api is set. Under a provider, models holds its
+// offerings, by model ID, as ModelKey reads the key:
 //
-//   - models holds offerings of the catalog's models, by model ID. An
-//     offering the provider lacks starts from the model's facts, and the
-//     reasoning of its lab's offering, and sends the model ID without its
-//     lab, unless provider_options.id says otherwise.
-//   - unlisted holds models the catalog does not know, by the provider's
-//     model ID, which an offering sends unless provider_options.id says
-//     otherwise.
+//   - An offering of a model the catalog lists, which the provider lacks,
+//     starts from the model's facts, and the reasoning of its lab's
+//     offering, and sends the model ID without its lab.
+//   - An offering of a model the catalog does not know adds the model, of
+//     the facts the offering gives it, and sends the key as it is written.
+//
+// Either sends what provider_options.id says instead, when it says so.
+//
+// An offering's variants are keyed by their mode and tier, either or both,
+// as gateway.VariantKey joins them, such as "fast" and "thinking:fast", of
+// gateway.Modes and gateway.Tiers. A variant that sets neither takes them
+// from its key, and one without a name is named as the catalog names its
+// variants, as "Model X Fast" of "Model X".
 //
 // For example:
 //
@@ -46,10 +53,17 @@ const ModelsFile = "models.json"
 //	  "providers": {
 //	    "local": {
 //	      "endpoint": {"format": "<one of gateway.Formats>", "api": "http://local.example/v1", "auth": {"scheme": "bearer"}},
-//	      "unlisted": {"model-x:large": {"limit": {"context": 131072, "output": 16384}}}
+//	      "models": {"model-x:large": {
+//	        "limit": {"context": 131072, "output": 16384},
+//	        "variants": {"fast": {"provider_options": {"body": {"service_tier": "priority"}}}}
+//	      }}
 //	    }
 //	  }
 //	}
+//
+// adds the model local/model-x:large, which provider local serves, sending
+// "model-x:large", and its fast tier, local/model-x:large:fast, which sends
+// the service tier too.
 type Document struct {
 	// Schema is the URL of a JSON Schema of the document, for editors.
 	Schema string `json:"$schema,omitempty"`
@@ -206,9 +220,8 @@ func (m *Overlay) stat() (fileStamp, error) {
 // Merge returns a copy of c with data, a models file in the form Document
 // describes, merged into it. It returns c itself when data is empty. It
 // fails, naming the key at fault, when data is not such a document, sets a
-// key gateway.Provider or gateway.Offering does not have, offers a model
-// the catalog does not list under models, or leaves a provider without an
-// endpoint flow can call.
+// key gateway.Provider or gateway.Offering does not have, or leaves a
+// provider without an endpoint flow can call.
 func Merge(c *gateway.Catalog, data []byte) (*gateway.Catalog, error) {
 	if len(bytes.TrimSpace(data)) == 0 {
 		return c, nil
@@ -227,7 +240,7 @@ func Merge(c *gateway.Catalog, data []byte) (*gateway.Catalog, error) {
 		out.Models = make(map[gateway.ModelID]gateway.Model)
 	}
 	for _, id := range slices.Sorted(maps.Keys(doc.Providers)) {
-		if err := mergeProvider(&out, id, doc.Providers[id]); err != nil {
+		if err := mergeProvider(&out, c.Models, id, doc.Providers[id]); err != nil {
 			return nil, at("providers."+string(id), err)
 		}
 	}
@@ -262,8 +275,9 @@ func at(path string, err error) error {
 }
 
 // mergeProvider merges raw, the change to provider id, into c's provider of
-// that ID, or adds the provider, removing it when raw is null.
-func mergeProvider(c *gateway.Catalog, id gateway.ProviderID, raw json.RawMessage) error {
+// that ID, or adds the provider, removing it when raw is null. listed are
+// the models of the catalog the file changes.
+func mergeProvider(c *gateway.Catalog, listed map[gateway.ModelID]gateway.Model, id gateway.ProviderID, raw json.RawMessage) error {
 	patch, err := decodeValue(raw)
 	if err != nil {
 		return at("", err)
@@ -276,32 +290,28 @@ func mergeProvider(c *gateway.Catalog, id gateway.ProviderID, raw json.RawMessag
 	if !ok {
 		return errors.New("not an object")
 	}
-	base, listed := c.Providers[id]
-	if !listed {
+	base, ok := c.Providers[id]
+	if !ok {
 		base = gateway.Provider{ID: id, Name: string(id), Kind: gateway.KindGateway, Type: gateway.ProviderCommunity}
 	}
-	models, unlisted := fields["models"], fields["unlisted"]
+	models := fields["models"]
 	delete(fields, "models")
-	delete(fields, "unlisted")
 
 	// Merge the provider's own keys, leaving its offerings as they are.
 	own := base
-	own.Models, own.Unlisted = nil, nil
+	own.Models = nil
 	var p gateway.Provider
 	if err := mergeInto(own, fields, &p); err != nil {
 		return at("", err)
 	}
 	p.ID = id
-	p.Models, p.Unlisted = maps.Clone(base.Models), maps.Clone(base.Unlisted)
+	p.Models = maps.Clone(base.Models)
 	if p.Models == nil {
 		p.Models = make(map[gateway.ModelID]gateway.Offering)
 	}
 
-	if err := mergeModels(c, &p, models); err != nil {
+	if err := mergeModels(c, listed, &p, models); err != nil {
 		return at("models", err)
-	}
-	if err := mergeUnlisted(&p, unlisted); err != nil {
-		return at("unlisted", err)
 	}
 	if !slices.Contains(gateway.Formats, p.Endpoint.Format) {
 		return at("endpoint.format", fmt.Errorf("unknown format: %s; use one of %v", p.Endpoint.Format, gateway.Formats))
@@ -313,16 +323,29 @@ func mergeProvider(c *gateway.Catalog, id gateway.ProviderID, raw json.RawMessag
 	return nil
 }
 
+// ModelKey returns the model ID that key, a key of a provider's models in
+// a models file, names at provider p: the key in lower case, as the
+// catalog's IDs are, with p as its lab when it names none, so that
+// "Model-X" of provider local is local/model-x.
+func ModelKey(p gateway.ProviderID, key string) gateway.ModelID {
+	id := strings.ToLower(key)
+	if !strings.Contains(id, "/") {
+		id = string(p) + "/" + id
+	}
+	return gateway.ModelID(id)
+}
+
 // mergeModels merges patch, the models of a provider's change, into the
-// offerings of p, a provider of c, keeping the providers c lists for each
-// model up to date.
-func mergeModels(c *gateway.Catalog, p *gateway.Provider, patch any) error {
+// offerings of p, a provider of c, adding to c the models that listed, the
+// models of the catalog the file changes, lack, and keeping the providers
+// c lists for each model up to date.
+func mergeModels(c *gateway.Catalog, listed map[gateway.ModelID]gateway.Model, p *gateway.Provider, patch any) error {
 	switch patch := patch.(type) {
 	case nil:
 		return nil
 	case map[string]any:
 		for _, key := range slices.Sorted(maps.Keys(patch)) {
-			id := gateway.ModelID(strings.ToLower(key))
+			id := ModelKey(p.ID, key)
 			if patch[key] == nil {
 				delete(p.Models, id)
 				setOffered(c, id, p.ID, false)
@@ -330,16 +353,23 @@ func mergeModels(c *gateway.Catalog, p *gateway.Provider, patch any) error {
 			}
 			off, ok := p.Models[id]
 			if !ok {
-				m, known := c.Models[id]
-				if !known {
-					return at(key, errors.New("not a model of the catalog; list it under unlisted"))
+				if m, ok := listed[id]; ok {
+					off = offeringOf(c, m)
+				} else {
+					// The model ID sent keeps the case the file gives it.
+					off = gateway.Offering{Name: key, ProviderOptions: gateway.ProviderOptions{ID: key}}
 				}
-				off = offeringOf(c, m)
 			}
 			if err := mergeInto(off, patch[key], &off); err != nil {
 				return at(key, err)
 			}
+			if err := FillVariants(&off); err != nil {
+				return at(key+".variants", err)
+			}
 			p.Models[id] = off
+			if _, ok := c.Models[id]; !ok {
+				c.Models[id] = modelOf(id, off)
+			}
 			setOffered(c, id, p.ID, true)
 		}
 		return nil
@@ -347,36 +377,71 @@ func mergeModels(c *gateway.Catalog, p *gateway.Provider, patch any) error {
 	return errors.New("not an object")
 }
 
-// mergeUnlisted merges patch, the unlisted models of a provider's change,
-// into those of p.
-func mergeUnlisted(p *gateway.Provider, patch any) error {
-	switch patch := patch.(type) {
-	case nil:
-		return nil
-	case map[string]any:
-		for _, key := range slices.Sorted(maps.Keys(patch)) {
-			// The catalog's keys are lower case, as Lookup finds them; the
-			// model ID sent keeps the case the file gives it.
-			id := strings.ToLower(key)
-			if patch[key] == nil {
-				delete(p.Unlisted, id)
-				continue
+// FillVariants checks the variants of off, as a models file gives them,
+// and fills in what they leave out: a variant that sets no mode or tier
+// takes them from its key, and one without a name gets the name the
+// catalog gives its variants, the offering's name and the key's words, as
+// "Model X Thinking Fast". It fails, naming the variant at fault, on a mode
+// or tier the catalog does not list, a variant of neither, or a key that is
+// not its mode and tier joined, as gateway.VariantKey joins them.
+func FillVariants(off *gateway.Offering) error {
+	for _, k := range slices.Sorted(maps.Keys(off.Variants)) {
+		v := off.Variants[k]
+		if v.Mode == "" && v.Tier == "" {
+			for seg := range strings.SplitSeq(k, ":") {
+				if slices.Contains(gateway.Modes, seg) {
+					v.Mode = seg
+				} else {
+					v.Tier = gateway.Tier(seg)
+				}
 			}
-			off, ok := p.Unlisted[id]
-			if !ok {
-				off = gateway.Offering{Name: key, ProviderOptions: gateway.ProviderOptions{ID: key}}
-			}
-			if err := mergeInto(off, patch[key], &off); err != nil {
-				return at(key, err)
-			}
-			if p.Unlisted == nil {
-				p.Unlisted = make(map[string]gateway.Offering)
-			}
-			p.Unlisted[id] = off
 		}
-		return nil
+		switch {
+		case v.Mode == "" && v.Tier == "":
+			return at(k, errors.New("sets no mode or tier"))
+		case v.Mode != "" && !slices.Contains(gateway.Modes, v.Mode):
+			return at(k, fmt.Errorf("unknown mode: %s; use one of %v", v.Mode, gateway.Modes))
+		case v.Tier != "" && !slices.Contains(gateway.Tiers, v.Tier):
+			return at(k, fmt.Errorf("unknown tier: %s; use one of %v", v.Tier, gateway.Tiers))
+		case v.Key() != k:
+			return at(k, fmt.Errorf("key is not %q, its mode and tier joined", v.Key()))
+		}
+		if v.Name == "" {
+			v.Name = variantName(off.Name, k)
+		}
+		off.Variants[k] = v
 	}
-	return errors.New("not an object")
+	return nil
+}
+
+// variantName returns the name of variant key of an offering named name:
+// the offering's name and the key's words, each with a capital, as the
+// catalog names its variants: "Model X Thinking Fast".
+func variantName(name, key string) string {
+	words := []string{name}
+	for w := range strings.SplitSeq(key, ":") {
+		words = append(words, strings.ToUpper(w[:1])+w[1:])
+	}
+	return strings.Join(words, " ")
+}
+
+// modelOf returns the model that a models file adds as id, of the facts of
+// off, its first offering.
+func modelOf(id gateway.ModelID, off gateway.Offering) gateway.Model {
+	return gateway.Model{
+		ID:           id,
+		Lab:          id.Lab(),
+		Name:         off.Name,
+		Family:       off.Family,
+		Type:         off.Type,
+		Released:     off.Released,
+		Updated:      off.Updated,
+		Knowledge:    off.Knowledge,
+		OpenWeights:  off.OpenWeights,
+		Reasoning:    off.Reasoning != nil,
+		Capabilities: off.Capabilities,
+		Limit:        off.Limit,
+	}
 }
 
 // offeringOf returns the offering a provider starts with of model m of c:

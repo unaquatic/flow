@@ -70,11 +70,9 @@ func FromAPI(t testing.TB, doc string) *gateway.Catalog {
 		if f, ok := providers[pid]; ok {
 			setFormat(&p.Endpoint, f)
 		}
-		for _, offs := range []map[string]gateway.Offering{offerings(p.Models), p.Unlisted} {
-			for _, off := range offs {
-				if f, ok := models[pid][off.ProviderOptions.ID]; ok && off.ProviderOptions.Endpoint != nil {
-					setFormat(off.ProviderOptions.Endpoint, f)
-				}
+		for _, off := range p.Models {
+			if f, ok := models[pid][off.ProviderOptions.ID]; ok && off.ProviderOptions.Endpoint != nil {
+				setFormat(off.ProviderOptions.Endpoint, f)
 			}
 		}
 		cat.Providers[pid] = p
@@ -109,14 +107,4 @@ func takeFormat(t testing.TB, obj map[string]any) string {
 // setFormat makes ep an endpoint of format f.
 func setFormat(ep *gateway.Endpoint, f string) {
 	ep.Format, ep.Auth = formats[f].format, formats[f].auth
-}
-
-// offerings returns offs keyed by strings, as a provider's unlisted
-// offerings are.
-func offerings(offs map[gateway.ModelID]gateway.Offering) map[string]gateway.Offering {
-	out := make(map[string]gateway.Offering, len(offs))
-	for id, off := range offs {
-		out[string(id)] = off
-	}
-	return out
 }
