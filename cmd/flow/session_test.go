@@ -49,13 +49,16 @@ func TestSessionList(t *testing.T) {
 		if len(rows) != 2 {
 			t.Fatalf("all %v: rows =\n%s\nwant 2", all, out.String())
 		}
-		// The column cuts a long folder from the left, keeping its name.
+		// The column cuts a long folder from the left, keeping its name. The
+		// name, such as 001, is looked for before the session's ID, which
+		// may hold the same digits.
 		dir := filepath.Base(sessions[0].Worktree)
 		for i, row := range rows {
-			if !strings.HasPrefix(row, ui.UntitledName) || !strings.HasSuffix(row, string(sessions[i].ID)) {
+			before, ok := strings.CutSuffix(row, string(sessions[i].ID))
+			if !strings.HasPrefix(row, ui.UntitledName) || !ok {
 				t.Errorf("all %v: row %d = %q, want %s first and %s last", all, i, row, ui.UntitledName, sessions[i].ID)
 			}
-			if strings.Contains(row, dir) != all {
+			if strings.Contains(before, dir) != all {
 				t.Errorf("all %v: row %d = %q, want the folder %s shown only with --all", all, i, row, dir)
 			}
 		}
