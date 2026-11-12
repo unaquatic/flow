@@ -3,7 +3,6 @@
 |  Session   Fix the login [4229c726c31  |
 |  Context   0K                          |
 |  Model     None                        |
-|  Account   None                        |
 |  Directory /work/project [main]        |
 |                                        |
 === fg ===
@@ -11,7 +10,6 @@
 |  BBBBBBB   AAA AAA AAAAA BBBBBBBBBBBB  |
 |  BBBBBBB   AA                          |
 |  BBBBB     BBBB                        |
-|  BBBBBBB   BBBB                        |
 |  BBBBBBBBB AAAAAAAAAAAAA BBBBBB        |
 |                                        |
 === legend ===

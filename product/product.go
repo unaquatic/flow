@@ -17,6 +17,10 @@ const (
 	// Name is the application's name, which is also the name of its command.
 	Name = "flow"
 
+	// DisplayName is the application's name as a title writes it, such as
+	// the one that heads the transcript at startup.
+	DisplayName = "Flow"
+
 	// ID identifies the application in file and directory names, such as its
 	// default data directory ~/.flow, and in environment variable names, such
 	// as FLOW_HOME_DIR.
