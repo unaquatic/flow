@@ -48,6 +48,13 @@ func eventsOfType[E Event](events []Event) []E {
 // testInstructions is the AGENTS.md of the user of newActorTestApp's app.
 const testInstructions = "Be brief."
 
+// testSystemText returns the system prompt of a new session of a, an app of
+// newActorTestApp, whose user's AGENTS.md holds testInstructions and whose
+// configuration's agent.instructions is extra.
+func testSystemText(a *App, extra string) string {
+	return SystemInstruction([]Instruction{{Path: filepath.Join(a.config.Dir, InstructionsFile), Text: testInstructions}}, extra)
+}
+
 // newActorTestApp returns an isolated app with a stubbed text stream, whose
 // user's AGENTS.md holds testInstructions.
 func newActorTestApp(t *testing.T, streamText string) (*App, *agenttest.Gateway) {
@@ -156,7 +163,7 @@ func TestSend_StreamsAndPersists(t *testing.T) {
 	if !ok || system.Message.Role != message.RoleSystem || system.Message.ParentID != nil {
 		t.Fatalf("second event = %+v, want the start of the system message at the root", got[1])
 	}
-	if text := system.Message.Parts[0].(message.TextPart).Text; text != testInstructions {
+	if text := system.Message.Parts[0].(message.TextPart).Text; text != testSystemText(a, "") {
 		t.Errorf("system message = %q, want the user's instructions", text)
 	}
 	if e, ok := got[2].(EventMessageEnded); !ok || e.Message.ID != system.Message.ID || e.Message.CreatedAt.IsZero() {
@@ -207,7 +214,7 @@ func conversation(t *testing.T, branch []message.Content) []message.Content {
 
 // TestSend_OpensWithTheSystemPrompt checks that a session's first prompt is
 // stored below a system message holding the user's and the project's
-// AGENTS.md and the configuration's agent.system_prompt, and nothing else,
+// AGENTS.md and the configuration's agent.instructions, and nothing else,
 // that every request of the session sends it first, and that a later prompt
 // stores no other.
 func TestSend_OpensWithTheSystemPrompt(t *testing.T) {
@@ -215,7 +222,7 @@ func TestSend_OpensWithTheSystemPrompt(t *testing.T) {
 	a.workingDir = t.TempDir()
 	userFile, projectFile := filepath.Join(a.config.Dir, InstructionsFile), filepath.Join(a.workingDir, InstructionsFile)
 	for path, body := range map[string]string{
-		filepath.Join(a.config.Dir, config.FileName): `{"default_provider":"mock","default_model":"test-model","agent":{"system_prompt":"Answer in haiku."}}`,
+		filepath.Join(a.config.Dir, config.FileName): `{"default_provider":"mock","default_model":"test-model","agent":{"instructions":"Answer in haiku."}}`,
 		userFile:    "Call me Sam.\n",
 		projectFile: "\n# Project\n\nUse tabs.\n",
 	} {
@@ -245,7 +252,19 @@ func TestSend_OpensWithTheSystemPrompt(t *testing.T) {
 		t.Errorf("stored %d system messages, want 1", systems)
 	}
 	text := branch[0].Parts[0].(message.TextPart).Text
-	want := "Call me Sam.\n\n# Project\n\nUse tabs.\n\nAnswer in haiku."
+	want := `<instructions path="` + userFile + `">
+Call me Sam.
+</instructions>
+
+<instructions path="` + projectFile + `">
+# Project
+
+Use tabs.
+</instructions>
+
+<instructions>
+Answer in haiku.
+</instructions>`
 	if text != want {
 		t.Errorf("system message = %q, want %q", text, want)
 	}
@@ -260,7 +279,7 @@ func TestSend_OpensWithTheSystemPrompt(t *testing.T) {
 }
 
 // TestSend_WithoutInstructionsSendsNoSystemMessage checks that a session
-// with no AGENTS.md and no agent.system_prompt has no system message to
+// with no AGENTS.md and no agent.instructions has no system message to
 // send, and so stores none: its first prompt opens its history.
 func TestSend_WithoutInstructionsSendsNoSystemMessage(t *testing.T) {
 	a, gw := newActorTestApp(t, "reply")
@@ -280,34 +299,39 @@ func TestSend_WithoutInstructionsSendsNoSystemMessage(t *testing.T) {
 	}
 }
 
-// TestSend_SystemPromptOptions checks that Options.NoInstructions leaves
+// TestSend_SystemPromptOptions checks that Options.NoInstructionFiles leaves
 // the AGENTS.md files out of a new session's system message, and that
-// Options.SystemPrompt takes the place of the configuration's
-// agent.system_prompt in it, or alone opens no system message when both
+// Options.Instructions takes the place of the configuration's
+// agent.instructions in it, or alone opens no system message when both
 // leave it empty.
 func TestSend_SystemPromptOptions(t *testing.T) {
 	for _, tt := range []struct {
-		name           string
-		noInstructions bool
-		systemPrompt   string
-		want           string
+		name               string
+		noInstructionFiles bool
+		instructions       string
+		// extra is the configured text the system message holds.
+		extra string
 	}{
-		{"default", false, "", testInstructions + "\n\nAnswer in prose."},
+		{"default", false, "", "Answer in prose."},
 		{"no instructions", true, "", "Answer in prose."},
-		{"system prompt", false, "Answer in haiku.", testInstructions + "\n\nAnswer in haiku."},
+		{"instructions", false, "Answer in haiku.", "Answer in haiku."},
 		{"both", true, "Answer in haiku.", "Answer in haiku."},
 	} {
 		a, gw := newActorTestApp(t, "reply")
-		settings := `{"default_provider":"mock","default_model":"test-model","agent":{"system_prompt":"Answer in prose."}}`
+		want := testSystemText(a, tt.extra)
+		if tt.noInstructionFiles {
+			want = SystemInstruction(nil, tt.extra)
+		}
+		settings := `{"default_provider":"mock","default_model":"test-model","agent":{"instructions":"Answer in prose."}}`
 		if err := os.WriteFile(filepath.Join(a.config.Dir, config.FileName), []byte(settings), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		a.noInstructions, a.systemPrompt = tt.noInstructions, tt.systemPrompt
+		a.noInstructionFiles, a.instructions = tt.noInstructionFiles, tt.instructions
 		events := a.Subscribe(t.Context())
 		send(t, a, "ses_options", SendInput{Text: "hi"})
 		collectUntilIdle(t, events)
-		if call := gw.StreamCalls[0]; call[0].Role != message.RoleSystem || call[0].TextContent() != tt.want {
-			t.Errorf("%s: request opens with %+v, want the system message %q", tt.name, call[0], tt.want)
+		if call := gw.StreamCalls[0]; call[0].Role != message.RoleSystem || call[0].TextContent() != want {
+			t.Errorf("%s: request opens with %+v, want the system message %q", tt.name, call[0], want)
 		}
 	}
 }
@@ -348,7 +372,7 @@ func TestSend_StoresTheTools(t *testing.T) {
 		t.Fatalf("stored %d system messages, want 1", len(systems))
 	}
 	root := systems[0]
-	if text, ok := root.Parts[0].(message.TextPart); !ok || text.Text != testInstructions {
+	if text, ok := root.Parts[0].(message.TextPart); !ok || text.Text != testSystemText(a, "") {
 		t.Errorf("system message opens with %+v, want the instructions", root.Parts[0])
 	}
 	if got := toolsOf(root); !agent.SameTools(got, a.tools.WireTools()) || got[0].Name != "bash" {
@@ -378,7 +402,7 @@ func TestSend_StoresTheTools(t *testing.T) {
 	if got, ok := agent.ToolsIn(last); !ok || !agent.SameTools(got, a.tools.WireTools()) {
 		t.Errorf("tools in force in the last request = %+v, %v; want the new set", got, ok)
 	}
-	if last[0].TextContent() != testInstructions {
+	if last[0].TextContent() != testSystemText(a, "") {
 		t.Errorf("last request opens with %+v, want the system prompt the session opened with", last[0])
 	}
 

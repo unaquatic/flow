@@ -154,11 +154,13 @@ type Agent struct {
 	// RetryDelay is the delay between provider attempts.
 	RetryDelay Duration `json:"retry_delay"`
 
-	// SystemPrompt is additional text appended to the system prompt, after
-	// the AGENTS.md files, as app.SystemPrompt joins them. A session stores
-	// its system prompt with its first prompt, so a change applies to the
-	// sessions opened after it.
-	SystemPrompt string `json:"system_prompt,omitempty"`
+	// Instructions is additional text appended to the system prompt, after
+	// the AGENTS.md files, in an <instructions> tag without a path, as
+	// app.SystemInstruction joins them. A session stores its system prompt
+	// with its first prompt, so a change applies to the sessions opened after
+	// it. A file that sets the older key "system_prompt" and not this one
+	// sets it too.
+	Instructions string `json:"instructions,omitempty"`
 }
 
 // Terminal holds the settings of the terminal UI, which its /config
@@ -442,15 +444,24 @@ func mergeFromFile(cfg *Config, f File) error {
 		}
 	}
 
-	if _, ok := raw["agent"]; ok {
+	if agent, ok := raw["agent"]; ok {
 		if overlay.Agent.RetryMaxAttempts > 0 {
 			cfg.Agent.RetryMaxAttempts = overlay.Agent.RetryMaxAttempts
 		}
 		if overlay.Agent.RetryDelay.Duration > 0 {
 			cfg.Agent.RetryDelay = overlay.Agent.RetryDelay
 		}
-		if overlay.Agent.SystemPrompt != "" {
-			cfg.Agent.SystemPrompt = overlay.Agent.SystemPrompt
+		if overlay.Agent.Instructions == "" {
+			// The older name of instructions, read when the new one is unset.
+			var legacy struct {
+				SystemPrompt string `json:"system_prompt"`
+			}
+			if err := json.Unmarshal(agent, &legacy); err == nil {
+				overlay.Agent.Instructions = legacy.SystemPrompt
+			}
+		}
+		if overlay.Agent.Instructions != "" {
+			cfg.Agent.Instructions = overlay.Agent.Instructions
 		}
 	}
 

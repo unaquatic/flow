@@ -50,10 +50,10 @@ type RunOptions struct {
 	// NoContextFiles leaves the AGENTS.md files out of the system prompt
 	// of the run's new session.
 	NoContextFiles bool
-	// SystemPrompt is the system prompt's own text in the run's new
-	// session, in place of the configuration's agent.system_prompt, or
-	// empty to keep it.
-	SystemPrompt string
+	// Instructions is the text of the instructions section of the system
+	// prompt of the run's new session, in place of the configuration's
+	// agent.instructions, or empty to keep it.
+	Instructions string
 	// MaxSteps limits the model responses of the run, or is zero for no
 	// limit.
 	MaxSteps int
@@ -73,21 +73,21 @@ type RunOptions struct {
 // which flow takes only with --print.
 func (o RunOptions) PrintOnly() bool {
 	return o.Format != OutputText || o.Output != "" || o.NoSession || o.Name != "" ||
-		o.NoContextFiles || o.SystemPrompt != "" || o.MaxSteps != 0 ||
+		o.NoContextFiles || o.Instructions != "" || o.MaxSteps != 0 ||
 		o.Tools != nil || o.ExcludeTools != nil || o.Files != nil
 }
 
 // AppOptions returns the options of the app the run starts on: in the
-// folder of the session that Session names, with the system prompt, step
+// folder of the session that Session names, with the instructions, step
 // limit and tools that o's flags choose.
 func (o RunOptions) AppOptions() app.Options {
 	sel := tools.Selection{Only: o.Tools, Exclude: o.ExcludeTools}
 	return app.Options{
-		Session:        message.SessionID(o.Session),
-		Extensions:     extensionsWith(sel.Load),
-		NoInstructions: o.NoContextFiles,
-		SystemPrompt:   o.SystemPrompt,
-		MaxSteps:       o.MaxSteps,
+		Session:            message.SessionID(o.Session),
+		Extensions:         extensionsWith(sel.Load),
+		NoInstructionFiles: o.NoContextFiles,
+		Instructions:       o.Instructions,
+		MaxSteps:           o.MaxSteps,
 	}
 }
 
@@ -167,7 +167,7 @@ var runCmd = &cmdline.Command[RunOptions]{
 // leave out, which some providers refuse to take without them.
 var printExclusive = [][]string{
 	{"no-session", "continue"}, {"no-session", "session"}, {"no-session", "name"},
-	{"system-prompt", "continue"}, {"system-prompt", "session"},
+	{"instructions", "continue"}, {"instructions", "session"},
 	{"no-context-files", "continue"}, {"no-context-files", "session"},
 	{"tools", "continue"}, {"tools", "session"},
 	{"exclude-tools", "continue"}, {"exclude-tools", "session"},
@@ -185,7 +185,7 @@ func printFlags(fs *flag.FlagSet, o *RunOptions) {
 	fs.StringVar(&o.Name, "name", "", nameUsage)
 	fs.StringVar(&o.Name, "n", "", nameUsage)
 	fs.BoolVar(&o.NoContextFiles, "no-context-files", false, "Leave the AGENTS.md files out of the system prompt of a printed run")
-	fs.StringVar(&o.SystemPrompt, "system-prompt", "", "System prompt `text` of a printed run, in place of the configuration's agent.system_prompt")
+	fs.StringVar(&o.Instructions, "instructions", "", "Instructions `text` of a printed run, in place of the configuration's agent.instructions")
 	fs.Var(positiveValue{n: &o.MaxSteps}, "max-steps", "Most model responses a printed run makes, `n` (default no limit)")
 	fs.Var(listValue{list: &o.Tools}, "tools",
 		"Built-in tools a printed run offers, in place of the default ones: comma-separated `names` or patterns, such as read,grep, or \"\" for none")

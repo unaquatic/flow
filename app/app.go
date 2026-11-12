@@ -47,11 +47,11 @@ type App struct {
 	workingDir string
 	// lockDir holds the lock file of each session.
 	lockDir string
-	// noInstructions, systemPrompt and maxSteps are those of the Options
-	// the app was made with.
-	noInstructions bool
-	systemPrompt   string
-	maxSteps       int
+	// noInstructionFiles, instructions and maxSteps are those of the
+	// Options the app was made with.
+	noInstructionFiles bool
+	instructions       string
+	maxSteps           int
 
 	cancel    context.CancelFunc
 	workerCtx context.Context
@@ -93,14 +93,14 @@ type Options struct {
 	// are those of that folder. A session the database does not hold leaves
 	// the working directory as it is.
 	Session message.SessionID
-	// NoInstructions leaves the InstructionsFile files out of the system
-	// prompt of each new session, which then holds the system prompt of
-	// the configuration, or SystemPrompt, alone.
-	NoInstructions bool
-	// SystemPrompt, when not empty, is the system prompt's own text in
-	// each new session, in place of the configuration's
-	// agent.system_prompt.
-	SystemPrompt string
+	// NoInstructionFiles leaves the files of instructions, such as AGENTS.md,
+	// out of the system prompt of each new session, which then holds the
+	// instructions of the configuration, or Instructions, alone.
+	NoInstructionFiles bool
+	// Instructions, when not empty, is the text of the system prompt's
+	// InstructionsTag section in each new session, in place of the
+	// configuration's agent.instructions.
+	Instructions string
 	// MaxSteps, when positive, limits the model responses of each run. Zero
 	// sets no limit.
 	MaxSteps int
@@ -204,9 +204,9 @@ func New(ctx context.Context, conf *config.Service, opts Options) (*App, error) 
 		workingDir: wd,
 		lockDir:    filepath.Join(conf.Dir, "locks"),
 
-		noInstructions: opts.NoInstructions,
-		systemPrompt:   opts.SystemPrompt,
-		maxSteps:       opts.MaxSteps,
+		noInstructionFiles: opts.NoInstructionFiles,
+		instructions:       opts.Instructions,
+		maxSteps:           opts.MaxSteps,
 
 		workerCtx:  wCtx,
 		cancel:     wCancel,

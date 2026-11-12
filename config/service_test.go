@@ -80,6 +80,24 @@ func TestServiceGetReadsEverySetting(t *testing.T) {
 	}
 }
 
+// TestServiceGetInstructions checks that Get reads the agent's instructions
+// under their key, and under the older system_prompt key when the file
+// does not set the new one, which wins when it sets both.
+func TestServiceGetInstructions(t *testing.T) {
+	for _, tt := range []struct{ file, want string }{
+		{`{"agent":{"instructions":"Be brief."}}`, "Be brief."},
+		{`{"agent":{"system_prompt":"Be brief."}}`, "Be brief."},
+		{`{"agent":{"instructions":"Be brief.","system_prompt":"Be long."}}`, "Be brief."},
+		{`{"agent":{"retry_max_attempts":2}}`, ""},
+	} {
+		dir := t.TempDir()
+		write(t, dir, tt.file)
+		if cfg, err := NewService(dir).Get(); err != nil || cfg.Agent.Instructions != tt.want {
+			t.Errorf("Get of %s = instructions %q, %v; want %q", tt.file, cfg.Agent.Instructions, err, tt.want)
+		}
+	}
+}
+
 // TestServiceGetUnreadableFile checks that Get fails on a config file it
 // cannot parse, rather than return settings the file does not set.
 func TestServiceGetUnreadableFile(t *testing.T) {

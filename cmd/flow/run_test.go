@@ -223,14 +223,14 @@ func newRunTestAppWith(t *testing.T, answer, settings string, opts app.Options) 
 
 // TestRunAppOptions checks that the app a printed run starts on, with the
 // options its flags give, leaves the AGENTS.md files out of a new session's
-// system prompt with --no-context-files, holds --system-prompt's text in
+// system prompt with --no-context-files, holds --instructions's text in
 // it, offers the model the built-in tools --tools names but for those
 // --exclude-tools names, even one flow offers no model by default, and
 // stops the run once the model has answered --max-steps times, printing
 // the answer it got to and telling of the flag.
 func TestRunAppOptions(t *testing.T) {
 	o := RunOptions{
-		Format: OutputText, NoContextFiles: true, SystemPrompt: "Answer in haiku.", MaxSteps: 2,
+		Format: OutputText, NoContextFiles: true, Instructions: "Answer in haiku.", MaxSteps: 2,
 		Tools: []string{"read", "grep", "bash"}, ExcludeTools: []string{"bash"},
 	}
 	settings := `{"default_provider":"mock","default_model":"test-model","catalog_source":"http://127.0.0.1:1",` +
@@ -264,8 +264,8 @@ func TestRunAppOptions(t *testing.T) {
 	if len(gw.StreamCalls) != 2 {
 		t.Fatalf("gateway saw %d requests, want 2", len(gw.StreamCalls))
 	}
-	if first := gw.StreamCalls[0][0]; first.Role != message.RoleSystem || first.TextContent() != o.SystemPrompt {
-		t.Errorf("request opens with %+v, want the system prompt alone", first)
+	if first := gw.StreamCalls[0][0]; first.Role != message.RoleSystem || first.TextContent() != app.SystemInstruction(nil, o.Instructions) {
+		t.Errorf("request opens with %+v, want the instructions alone", first)
 	}
 	var names []string
 	for _, d := range gw.StreamTools[0] {

@@ -2,6 +2,8 @@ package app
 
 import (
 	"errors"
+	"fmt"
+	"html"
 	"io/fs"
 	"iter"
 	"log/slog"
@@ -14,18 +16,34 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 )
 
-// DefaultSystemPrompt is the instructions every session opens with, before
-// the InstructionsFile files and the configuration's agent.system_prompt, as
-// SystemPrompt joins them. It is empty: a session's system prompt is what
-// those files and the configuration say, and nothing of flow's own. The
-// tools the model may call are stored beside it, in the same system
-// message, as emitSystem stores them.
+// DefaultSystemPrompt is the instructions every session opens with, untagged,
+// before the files of instructions and the configuration's
+// agent.instructions, as SystemInstruction joins them. It is empty: a
+// session's system prompt is what those files and the configuration say, and
+// nothing of flow's own. The tools the model may call are stored beside it, in the
+// same system message, as emitSystem stores them.
 var DefaultSystemPrompt = ""
 
-// InstructionsFile is the name of the file of instructions that the system
-// prompt holds: the user's own, in flow's data directory, and the project's,
-// as FindInstructions finds them.
+// InstructionsFile is the usual name of the file of instructions that the
+// system prompt holds: the user's own, in flow's data directory, and the
+// project's, as FindInstructions finds them. InstructionsFiles names the
+// others a folder may hold in its place.
 const InstructionsFile = "AGENTS.md"
+
+// InstructionsOverrideFile is the name of a file of instructions that takes
+// the place of the InstructionsFile of the same folder, and of no other.
+const InstructionsOverrideFile = "AGENTS.override.md"
+
+// InstructionsFiles are the names of the files of instructions that
+// FindInstructions looks for in a folder, in the order it tries them: of
+// those a folder holds, the first that is not blank is the folder's file.
+var InstructionsFiles = [...]string{InstructionsOverrideFile, InstructionsFile}
+
+// InstructionsTag is the tag of each section of the system prompt: one for
+// each file of instructions, whose path attribute names the file, and then
+// one, without a path, for the configuration's agent.instructions, or the
+// app's Options.Instructions in its place.
+const InstructionsTag = "instructions"
 
 // Instruction is a file of instructions the system prompt holds.
 type Instruction struct {
@@ -35,30 +53,52 @@ type Instruction struct {
 	Text string
 }
 
-// SystemPrompt returns the text of the system message a session opens with,
-// each piece a blank line after the one before it: DefaultSystemPrompt, the
-// text of each of instructions as the file holds it, and then extra, the
-// configuration's agent.system_prompt. A blank piece is left out, so the
-// text is empty when every piece is.
-func SystemPrompt(instructions []Instruction, extra string) string {
+// Tagged returns the file's Text in an InstructionsTag tag whose path
+// attribute is Path, escaped, each tag on a line of its own.
+func (in Instruction) Tagged() string {
+	return fmt.Sprintf("<%s path=\"%s\">\n%s\n</%s>", InstructionsTag, html.EscapeString(in.Path), strings.TrimSpace(in.Text), InstructionsTag)
+}
+
+// Section returns text, without the blank space around it, in a tag of
+// name, each tag on a line of its own, or "" when text is blank.
+func Section(name, text string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	return "<" + name + ">\n" + text + "\n</" + name + ">"
+}
+
+// SystemInstruction returns the text of the system message a session opens
+// with, each piece a blank line after the one before it: DefaultSystemPrompt
+// as it is, then each of instructions as Tagged writes it, and then extra,
+// the configuration's agent.instructions, in an InstructionsTag section
+// without a path. A blank instruction is left out, as is a blank piece, so
+// the text is empty when every piece is.
+func SystemInstruction(instructions []Instruction, extra string) string {
 	pieces := []string{strings.TrimSpace(DefaultSystemPrompt)}
 	for _, in := range instructions {
-		pieces = append(pieces, in.Text)
+		if strings.TrimSpace(in.Text) != "" {
+			pieces = append(pieces, in.Tagged())
+		}
 	}
-	pieces = append(pieces, strings.TrimSpace(extra))
+	pieces = append(pieces, Section(InstructionsTag, extra))
 	return strings.Join(slices.DeleteFunc(pieces, func(p string) bool { return p == "" }), "\n\n")
 }
 
-// FindInstructions returns the InstructionsFile files the system prompt
+// FindInstructions returns the files of instructions the system prompt
 // holds, in this order: the user's own, in dataDir, flow's data directory,
 // and then the project's, the nearest to workingDir, in it or in a folder
 // above it up to the root of the git repository that holds it. Outside a
 // repository only workingDir itself is looked in, so that a file of an
-// unrelated folder above it is never read. A path read already, as when
-// the project is the data directory, is not read again. A file that is
-// missing or blank is left out, and one that cannot be read is logged and
-// left out, so that it never keeps a prompt from being sent. Either
-// directory may be empty, for none.
+// unrelated folder above it is never read. In each folder it tries the
+// names of InstructionsFiles in order and reads the first file it finds, so
+// that an InstructionsOverrideFile takes the place of the folder's
+// InstructionsFile. A path read already, as when the project is the data
+// directory, is not read again. A file that is missing or blank is left
+// out, so that the next name, or the next folder, is tried, and one that
+// cannot be read is logged and left out, so that it never keeps a prompt
+// from being sent. Either directory may be empty, for none.
 func FindInstructions(dataDir, workingDir string) []Instruction {
 	var out []Instruction
 	read := func(path string) bool {
@@ -79,13 +119,23 @@ func FindInstructions(dataDir, workingDir string) []Instruction {
 		out = append(out, Instruction{Path: path, Text: text})
 		return true
 	}
+	// readDir reads the first file of InstructionsFiles in dir, and reports
+	// whether there is one.
+	readDir := func(dir string) bool {
+		for _, name := range InstructionsFiles {
+			if read(filepath.Join(dir, name)) {
+				return true
+			}
+		}
+		return false
+	}
 	if dataDir != "" {
 		if abs, err := filepath.Abs(dataDir); err == nil {
-			read(filepath.Join(abs, InstructionsFile))
+			readDir(abs)
 		}
 	}
 	for dir := range ProjectDirs(workingDir) {
-		if read(filepath.Join(dir, InstructionsFile)) {
+		if readDir(dir) {
 			break
 		}
 	}
@@ -135,12 +185,12 @@ func ProjectDirs(workingDir string) iter.Seq[string] {
 // root, the message is the first of the history every run of the branch
 // sends, as the transcript shows it. The system message is the first
 // message of a new session, so it stores the session too, which it then
-// publishes as EventSessionUpdated. Its text is SystemPrompt's, of the
-// InstructionsFile files FindInstructions finds, in flow's data directory
-// and the project, unless the app's Options.NoInstructions leaves them out,
-// and the configuration's agent.system_prompt, or the app's
-// Options.SystemPrompt in its place. Its message.ToolSetPart, after the text,
-// holds tools, the definitions the run sends, when there are any. When
+// publishes as EventSessionUpdated. Its text is SystemInstruction's, of the
+// files of instructions FindInstructions finds, in flow's data directory
+// and the project, unless the app's Options.NoInstructionFiles leaves them
+// out, and the configuration's agent.instructions, or the app's
+// Options.Instructions in its place. Its message.ToolSetPart, after the
+// text, holds tools, the definitions the run sends, when there are any. When
 // there is neither, there is nothing to send, and it stores none. It fails
 // when the config file cannot be read.
 //
@@ -160,14 +210,14 @@ func (s Session) emitSystem(tools []agent.ToolDefinition) error {
 		return err
 	}
 	var instructions []Instruction
-	if !s.app.noInstructions {
+	if !s.app.noInstructionFiles {
 		instructions = FindInstructions(s.app.config.Dir, s.app.workingDir)
 	}
-	extra := cfg.Agent.SystemPrompt
-	if s.app.systemPrompt != "" {
-		extra = s.app.systemPrompt
+	extra := cfg.Agent.Instructions
+	if s.app.instructions != "" {
+		extra = s.app.instructions
 	}
-	text := SystemPrompt(instructions, extra)
+	text := SystemInstruction(instructions, extra)
 	if text == "" && len(tools) == 0 {
 		return nil
 	}
