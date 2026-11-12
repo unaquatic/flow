@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html"
 	"io/fs"
-	"iter"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/extension"
+	"github.com/unaquatic/flow/internal/project"
 )
 
 // DefaultSystemPrompt is the instructions every session opens with, untagged,
@@ -71,16 +72,20 @@ func Section(name, text string) string {
 
 // SystemInstruction returns the text of the system message a session opens
 // with, each piece a blank line after the one before it: DefaultSystemPrompt
-// as it is, then each of instructions as Tagged writes it, and then extra,
-// the configuration's agent.instructions, in an InstructionsTag section
-// without a path. A blank instruction is left out, as is a blank piece, so
-// the text is empty when every piece is.
-func SystemInstruction(instructions []Instruction, extra string) string {
+// as it is, then each of instructions as Tagged writes it, then each of
+// sections, which the extension.SystemHook of the app's extensions add, as
+// they wrote it, and then extra, the configuration's agent.instructions, in
+// an InstructionsTag section without a path. A blank instruction is left
+// out, as is a blank piece, so the text is empty when every piece is.
+func SystemInstruction(instructions []Instruction, extra string, sections ...string) string {
 	pieces := []string{strings.TrimSpace(DefaultSystemPrompt)}
 	for _, in := range instructions {
 		if strings.TrimSpace(in.Text) != "" {
 			pieces = append(pieces, in.Tagged())
 		}
+	}
+	for _, s := range sections {
+		pieces = append(pieces, strings.TrimSpace(s))
 	}
 	pieces = append(pieces, Section(InstructionsTag, extra))
 	return strings.Join(slices.DeleteFunc(pieces, func(p string) bool { return p == "" }), "\n\n")
@@ -134,48 +139,12 @@ func FindInstructions(dataDir, workingDir string) []Instruction {
 			readDir(abs)
 		}
 	}
-	for dir := range ProjectDirs(workingDir) {
+	for dir := range project.Dirs(workingDir) {
 		if readDir(dir) {
 			break
 		}
 	}
 	return out
-}
-
-// ProjectDirs yields the folders that hold workingDir's project, nearest
-// first, by their absolute paths: workingDir, and each folder above it up
-// to the root of the git repository that holds it, the folder with a .git
-// entry. Outside a repository it yields workingDir alone, and for an empty
-// workingDir nothing.
-func ProjectDirs(workingDir string) iter.Seq[string] {
-	return func(yield func(string) bool) {
-		if workingDir == "" {
-			return
-		}
-		start, err := filepath.Abs(workingDir)
-		if err != nil {
-			return
-		}
-		var dirs []string
-		for dir := start; ; {
-			dirs = append(dirs, dir)
-			if _, err := os.Lstat(filepath.Join(dir, ".git")); err == nil {
-				break
-			}
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				// No repository holds workingDir.
-				dirs = dirs[:1]
-				break
-			}
-			dir = parent
-		}
-		for _, dir := range dirs {
-			if !yield(dir) {
-				return
-			}
-		}
-	}
 }
 
 // emitSystem stores the system message that opens the conversation, and
@@ -188,8 +157,10 @@ func ProjectDirs(workingDir string) iter.Seq[string] {
 // publishes as EventSessionUpdated. Its text is SystemInstruction's, of the
 // files of instructions FindInstructions finds, in flow's data directory
 // and the project, unless the app's Options.NoInstructionFiles leaves them
-// out, and the configuration's agent.instructions, or the app's
-// Options.Instructions in its place. Its message.ToolSetPart, after the
+// out, the sections the extension.SystemHook of the app's extensions add,
+// such as the skills the model may load, and the configuration's
+// agent.instructions, or the app's Options.Instructions in its place. Its
+// message.ToolSetPart, after the
 // text, holds tools, the definitions the run sends, when there are any. When
 // there is neither, there is nothing to send, and it stores none. It fails
 // when the config file cannot be read.
@@ -217,7 +188,12 @@ func (s Session) emitSystem(tools []agent.ToolDefinition) error {
 	if s.app.instructions != "" {
 		extra = s.app.instructions
 	}
-	text := SystemInstruction(instructions, extra)
+	var sections []string
+	sys := extension.System{SessionID: s.id, Tools: slices.Clone(tools)}
+	for hook := range extension.Hooks[extension.SystemHook](s.app.extensions) {
+		sections = append(sections, hook.SystemPrompt(s.ctx, sys))
+	}
+	text := SystemInstruction(instructions, extra, sections...)
 	if text == "" && len(tools) == 0 {
 		return nil
 	}

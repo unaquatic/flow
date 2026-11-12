@@ -592,6 +592,10 @@ type UIState struct {
 	// MovesPending counts the history moves in progress, which hold the
 	// queue until they finish.
 	MovesPending int
+	// UndonePrompt is the text of the prompt that the undo in progress moves
+	// back over, which the input gets once the undo succeeds, or empty when
+	// no undo is in progress or the prompt holds no text.
+	UndonePrompt string
 	// TurnStart is when the turn in progress began: when its run started,
 	// or when the prompt that opened it did. It is zero while no turn of the
 	// active session is in progress.

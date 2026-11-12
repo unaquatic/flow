@@ -113,6 +113,8 @@ func TestSlashMenuBestMatch(t *testing.T) {
 		{name: "neighboring key", text: "/stqtus", want: CommandStatus},
 		{name: "extra letter", text: "/quiit", want: CommandQuit},
 		{name: "typo in partial input", text: "/lgo", want: CommandLogin},
+		// Tab leaves a space after the command it completes.
+		{name: "trailing space", text: "/new ", want: CommandNew},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -229,7 +231,7 @@ func TestSlashMenuNoMatch(t *testing.T) {
 		{name: "too short for a typo", text: "/gl"},
 		{name: "path", text: "/path/to/file"},
 		{name: "whitespace", text: "/new feature"},
-		{name: "trailing space", text: "/new "},
+		{name: "whitespace then space", text: "/new feature "},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

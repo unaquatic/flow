@@ -12,6 +12,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
+	"github.com/unaquatic/flow/extension/tools"
 	"github.com/unaquatic/flow/internal/cmdline"
 	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/flow/terminal"
@@ -37,6 +38,9 @@ type rootOptions struct {
 	// dir is the folder flow works in, in place of the one it started in,
 	// or empty.
 	dir string
+	// noSkills loads no skills, in the terminal UI and in a printed run, as
+	// --no-skills asks.
+	noSkills bool
 
 	// print sends the prompt without the terminal UI, prints the final
 	// answer and exits, as the run command does, with the flags of a
@@ -46,14 +50,15 @@ type rootOptions struct {
 }
 
 // runOptions returns the options of the run that --print starts: o's
-// model, session and folder flags, and the flags of a printed run that
-// printed holds.
+// model, session, folder and skills flags, and the flags of a printed run
+// that printed holds.
 func (o rootOptions) runOptions() RunOptions {
 	r := o.printed
 	r.modelOptions = o.modelOptions
 	r.Continue = o.cont
 	r.Session = o.session
 	r.Dir = o.dir
+	r.NoSkills = o.noSkills
 	return r
 }
 
@@ -104,6 +109,7 @@ var rootCmd = &cmdline.Command[rootOptions]{
 		colorFlags(fs, &o.color)
 		sessionFlags(fs, o)
 		dirFlag(fs, &o.dir)
+		noSkillsFlag(fs, &o.noSkills)
 		const printUsage = "Send the prompt, print the final answer and exit, without the terminal UI"
 		fs.BoolVar(&o.print, "print", false, printUsage)
 		fs.BoolVar(&o.print, "p", false, printUsage)
@@ -169,9 +175,13 @@ func envVars() []cmdline.EnvVar {
 }
 
 // rootAppOptions returns the app options of the root command's flags: a
-// session that --session names makes the app work in that session's folder.
+// session that --session names makes the app work in that session's folder,
+// and --no-skills leaves the skills extension out.
 func rootAppOptions(o rootOptions) app.Options {
-	return app.Options{Session: message.SessionID(o.session)}
+	return app.Options{
+		Session:    message.SessionID(o.session),
+		Extensions: extensionsWith(tools.Load, o.noSkills),
+	}
 }
 
 // runTerminal runs the terminal UI of a on the session that o chooses, with
@@ -208,11 +218,14 @@ func runTerminal(ctx context.Context, a *app.App, o rootOptions, prompt string) 
 
 // relaunchArgs returns the arguments that start flow again on session id,
 // as --session opens it in its own folder, in the color mode that o's
-// --color chose, if any.
+// --color chose, if any, and with --no-skills when o has it.
 func relaunchArgs(o rootOptions, id message.SessionID) []string {
 	args := []string{"--session", string(id)}
 	if o.color != "" && o.color != colorAuto {
 		args = append(args, "--color", string(o.color))
+	}
+	if o.noSkills {
+		args = append(args, "--no-skills")
 	}
 	return args
 }

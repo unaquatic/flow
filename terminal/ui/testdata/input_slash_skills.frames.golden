@@ -1,0 +1,44 @@
+=== text ===
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
+|                                                            |
+|■ Commands [↑/↓ move] [esc cancel]                          |
+|                                                            |
+|  /skill:review             Review the changes for bugs an  |
+|  /skill:deploy             Deploy the service to staging.  |
+|                                                            |
+|■ /skill                                                    |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|A AAAAA BBBBBBB AAAAAAA AAAAAAA BB A BB A BBB AAAAAAA AAAA  |
+|                                                            |
+|B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
+|                                                            |
+|  CCCCCCCCCCCCC             CCCCCC CCC CCCCCCC CCC CCCC CC  |
+|  BBBBBBBBBBBBB             AAAAAA AAA AAAAAAA AA AAAAAAAA  |
+|                                                            |
+|B BBBBBB                                                    |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== bg ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #232323 BoxBg
+░ #ff5f00

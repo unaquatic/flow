@@ -161,6 +161,18 @@ func AssertIndicatorFrames(t *testing.T, ui *UI, name string, w, h int) {
 	testutil.AssertGoldenFrames(t, name, renderFrames(w, h, rows...), surfaceNames(ui))
 }
 
+// AssertSlashMenuFrames types text in the input of ui, built with an input
+// box, opens the slash menu on the commands it matches, as typing it would,
+// and checks the input box w cells wide and h rows tall against the golden
+// frames name, as TestInputFrames does.
+func AssertSlashMenuFrames(t *testing.T, ui *UI, name, text string, w, h int) {
+	t.Helper()
+	ui.SetInputText(text)
+	query, _ := CutCommand(text)
+	ui.ShowSlashMenu(ui.service.SlashMenuItems(query))
+	testutil.AssertGoldenFrames(t, name, renderFrames(w, h, ui.inputWrapper), surfaceNames(ui))
+}
+
 // Service returns the controller of ui.
 func (ui *UI) Service() *Service { return ui.service }
 

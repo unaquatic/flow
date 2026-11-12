@@ -1,0 +1,54 @@
+=== text ===
+|■ # Review                              |
+|                                        |
+|  Read scripts/check.sh.                |
+|                                        |
+|  check main.go                         |
+|                                        |
+|■ Reviewed main.go.                     |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A B BBBBBB                              |
+|                                        |
+|  AAAA AAAAAAAAAAAAAAAAA                |
+|                                        |
+|  AAAAA AAAAAAA                         |
+|                                        |
+|B AAAAAAAA AAAAAAAA                     |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|  BBBBBBBB                              |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #eb7513

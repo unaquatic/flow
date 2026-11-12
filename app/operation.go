@@ -474,6 +474,9 @@ func (s Session) emitSessionLoaded() error {
 // context, ends. Cancellation settles without an error, unless it left a
 // message unstored.
 //
+// Its text is first what an extension.ExpandHook expands it to, as
+// expandPrompt says.
+//
 // A prompt sent while the head sits behind its branch forks the history: the
 // prompt is stored below the head, and the messages that previously followed
 // it stay on the branch left behind. A prompt that would open the history
@@ -488,6 +491,7 @@ func (s Session) processSend(ctx context.Context, snd SendInput) error {
 	if err := s.emitSystem(s.app.tools.WireTools()); err != nil {
 		return err
 	}
+	snd = s.expandPrompt(snd, v, s.app.extensions)
 	if err := s.emitPrompt(snd, snd.content(), v, s.app.extensions); err != nil {
 		return err
 	}
@@ -546,7 +550,8 @@ func settle(ctx context.Context, err error) error {
 
 // emitPrompt persists the prompt opening a run, snd's, whose parts are
 // parts, as snd.content returns them, and publishes it as a reply is
-// published: it starts with those parts, the parts that the extension.PromptHook
+// published: it starts with those parts, the parts that the
+// extension.PromptHook
 // of each of exts adds, such as the workspace snapshot the run's first reply
 // starts from, arrive through the part events, and it ends once stored, with
 // its parent, creation time and branch position. The position is the
@@ -609,6 +614,26 @@ func (s Session) emitPrompt(snd SendInput, parts []message.ContentPart, v agent.
 	}
 	s.startTitling(p)
 	return err
+}
+
+// expandPrompt returns snd, a prompt to send with model variant v, with its
+// text replaced by the text that the first extension.ExpandHook among exts
+// expands it to, before the text becomes the prompt's text part, or snd as
+// it is when none does. It gives snd a MessageID when it has none, so that
+// the hooks and the stored prompt name the same message.
+func (s Session) expandPrompt(snd SendInput, v agent.Variant, exts []extension.Extension) SendInput {
+	if snd.MessageID == "" {
+		snd.MessageID = message.NewID()
+	}
+	p := extension.Prompt{SessionID: s.id, MessageID: snd.MessageID, Text: snd.Text, Model: v.String()}
+	for hook := range extension.Hooks[extension.ExpandHook](exts) {
+		if text, ok := hook.ExpandPrompt(s.ctx, p); ok {
+			s.Logger().Info("prompt expanded", "message", p.MessageID, "extension", hook.Name())
+			snd.Text = text
+			return snd
+		}
+	}
+	return snd
 }
 
 // runAgent runs the model and tool loop, with the retry settings the config

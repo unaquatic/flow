@@ -40,6 +40,10 @@ Be brief.
 	if got := SystemInstruction(instructions[:1], ""); got != want {
 		t.Errorf("SystemInstruction without configured text = %q, want %q", got, want)
 	}
+	want = "<instructions path=\"/home/a/AGENTS.md\">\nCall me Sam.\n</instructions>\n\n<skills>\n</skills>\n\n<instructions>\nBe brief.\n</instructions>"
+	if got := SystemInstruction(instructions[:1], "Be brief.", " \n", "\n<skills>\n</skills>\n"); got != want {
+		t.Errorf("SystemInstruction with sections = %q, want them between the files and the configured text, %q", got, want)
+	}
 }
 
 // TestInstructionTagged checks that a path that holds a quote or an

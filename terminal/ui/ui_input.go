@@ -346,13 +346,16 @@ func (ui *UI) SetInputText(text string) {
 }
 
 // CompleteSlashCommand replaces the input with the selected slash command
-// and refreshes the menu filter.
+// and a space after it, where what the command is given follows, as in
+// "/skill:review main.go", and refreshes the menu, which still offers the
+// command, as SlashMenuItems leaves the space out, until what follows it is
+// typed.
 func (ui *UI) CompleteSlashCommand() {
 	item := ui.slashMenu.SelectedItem()
 	if item == nil {
 		return
 	}
-	text := item.Value.(Command).String()
+	text := item.Value.(Command).String() + " "
 	ui.SetInputText(text)
 	ui.Apply(ui.service.UpdateSlashMenu(text))
 }

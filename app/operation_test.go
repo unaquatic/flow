@@ -336,6 +336,45 @@ func TestSend_SystemPromptOptions(t *testing.T) {
 	}
 }
 
+// sectioner is an extension that adds a section to the system prompt, and
+// records the system prompts it was asked about.
+type sectioner struct {
+	section string
+	asked   []extension.System
+}
+
+func (*sectioner) Name() string { return "sectioner" }
+
+func (s *sectioner) SystemPrompt(_ context.Context, sys extension.System) string {
+	s.asked = append(s.asked, sys)
+	return s.section
+}
+
+// TestSend_SystemHook checks that the section an extension.SystemHook adds
+// follows the AGENTS.md files of a new session's system message and comes
+// before the configured instructions, that the hook is told the tools the
+// session opens with, and that it is asked once, as the session opens.
+func TestSend_SystemHook(t *testing.T) {
+	a, gw := newActorTestApp(t, "reply")
+	hook := &sectioner{section: "<available_skills>\n</available_skills>"}
+	a.extensions = append(a.extensions, hook)
+	a.tools = newTools(agent.Tool{Name: "read", Schema: agent.InputSchema{Type: "object"}})
+	a.instructions = "Answer in haiku."
+	events := a.Subscribe(t.Context())
+	for _, text := range []string{"hi", "again"} {
+		send(t, a, "ses_hook", SendInput{Text: text})
+		collectUntilIdle(t, events)
+	}
+	want := SystemInstruction([]Instruction{{Path: filepath.Join(a.config.Dir, InstructionsFile), Text: testInstructions}},
+		"Answer in haiku.", hook.section)
+	if call := gw.StreamCalls[0]; call[0].Role != message.RoleSystem || call[0].TextContent() != want {
+		t.Errorf("request opens with %+v, want the system message %q", call[0], want)
+	}
+	if len(hook.asked) != 1 || hook.asked[0].SessionID != "ses_hook" || len(hook.asked[0].Tools) != 1 || hook.asked[0].Tools[0].Name != "read" {
+		t.Errorf("hook asked about %+v, want the new session once, with its read tool", hook.asked)
+	}
+}
+
 // toolsOf returns the tool definitions msg holds, in order.
 func toolsOf(msg message.Content) []agent.ToolDefinition {
 	p, _ := message.LastPart[message.ToolSetPart](msg.Parts)
@@ -494,6 +533,88 @@ func (noter) OnTurnEnd(_ context.Context, _ agent.Turn, sink agent.PartSink) {
 	part := message.TextPart{ID: message.NewPartID(), Text: "Turn noted."}
 	sink.Start(part)
 	sink.End(part)
+}
+
+// expander expands a prompt that reads "/note what" to "<note/>" and then
+// "what", and records the prompts it was asked about.
+type expander struct{ asked []extension.Prompt }
+
+func (*expander) Name() string { return "expander" }
+
+func (e *expander) ExpandPrompt(_ context.Context, p extension.Prompt) (string, bool) {
+	e.asked = append(e.asked, p)
+	what, ok := strings.CutPrefix(p.Text, "/note ")
+	if !ok {
+		return "", false
+	}
+	return "<note/>\n\n" + what, true
+}
+
+// prompted records the text of each prompt it is told of.
+type prompted struct{ texts []string }
+
+func (*prompted) Name() string { return "prompted" }
+
+func (r *prompted) OnPrompt(_ context.Context, p extension.Prompt, _ agent.PartSink) {
+	r.texts = append(r.texts, p.Text)
+}
+
+// TestSend_ExpandHook checks that the text an extension.ExpandHook expands a
+// prompt's text to takes the place of what was typed, which is stored
+// nowhere, as the prompt's text part, before the files it attaches and the
+// parts a PromptHook adds; that the hook is told the prompt as typed and its
+// ID, and a PromptHook the expanded text; and that a prompt the hook does
+// not expand is stored as it was sent.
+func TestSend_ExpandHook(t *testing.T) {
+	a, _ := newActorTestApp(t, "reply")
+	hook, told := &expander{}, &prompted{}
+	a.extensions = []extension.Extension{hook, told, noter{}}
+	file := message.FilePart{ID: message.NewPartID(), Data: "aGk=", MediaType: "text/plain", Filename: "a.txt"}
+	const id = "ses_expand"
+	events := a.Subscribe(t.Context())
+	send(t, a, id, SendInput{Text: "/note check main.go", Parts: []message.ContentPart{file}, MessageID: "u1"})
+	collectUntilIdle(t, events)
+	send(t, a, id, SendInput{Text: "plain"})
+	collectUntilIdle(t, events)
+
+	branch, err := a.Sessions().Branch(t.Context(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	texts := func(m message.Content) []string {
+		var out []string
+		for _, p := range m.Parts {
+			switch p := p.(type) {
+			case message.TextPart:
+				out = append(out, p.Text)
+			case message.FilePart:
+				out = append(out, "file "+p.Filename)
+			}
+		}
+		return out
+	}
+	var prompts [][]string
+	var ids []message.ID
+	for _, m := range branch {
+		if m.Role == message.RoleUser {
+			prompts = append(prompts, texts(m))
+			ids = append(ids, m.ID)
+		}
+	}
+	want := [][]string{
+		{"<note/>\n\ncheck main.go", "file a.txt", "Workspace: clean."},
+		{"plain", "Workspace: clean."},
+	}
+	if !slices.EqualFunc(prompts, want, slices.Equal) {
+		t.Errorf("stored prompts = %q, want %q", prompts, want)
+	}
+	if len(hook.asked) != 2 || hook.asked[0].Text != "/note check main.go" || hook.asked[0].MessageID != "u1" ||
+		len(ids) != 2 || hook.asked[1].MessageID != ids[1] {
+		t.Errorf("hook asked about %+v, want the two prompts as typed, by the IDs they are stored under, %v", hook.asked, ids)
+	}
+	if want := []string{"<note/>\n\ncheck main.go", "plain"}; !slices.Equal(told.texts, want) {
+		t.Errorf("prompt hook told of %q, want the prompts as expanded, %q", told.texts, want)
+	}
 }
 
 // TestRequests_AreTheStoredBranch checks that every request of a session is

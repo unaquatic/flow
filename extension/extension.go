@@ -7,7 +7,9 @@
 //     provider is to see them.
 //   - Behaviour: the hooks below: DialHook and LoginHook, whose providers
 //     and logins the app runs the model and authorizes its requests with,
-//     ToolHook, whose tools the app offers the model from the start, and the
+//     ToolHook, whose tools the app offers the model from the start,
+//     SystemHook, whose sections the system prompt of a new session holds,
+//     ExpandHook, whose text takes the place of a prompt's, and the
 //     hooks the app calls as a session runs, is titled, and moves through
 //     its history.
 //   - Terminal UI: the views that show its parts, which terminal/ui.Extension
@@ -106,6 +108,44 @@ type MoveResult struct {
 	// the hash of a workspace snapshot, or is empty when it checked out
 	// nothing.
 	Checkout string
+}
+
+// System is the system prompt of a new session, as the app writes it, before
+// it is stored.
+type System struct {
+	// SessionID is the session the system prompt opens.
+	SessionID message.SessionID
+	// Tools are the definitions of the tools the session opens with, which
+	// the system message holds after its text.
+	Tools []agent.ToolDefinition
+}
+
+// SystemHook adds a section to the system prompt of each new session: after
+// its files of instructions, such as AGENTS.md, and before the
+// configuration's agent.instructions, as app.SystemInstruction joins them.
+// The app asks the extensions that implement it, in the order it loaded
+// them, as it stores the session's system message with the session's first
+// prompt. A session keeps the system prompt it opened with, so what a hook
+// adds later reaches the sessions opened after it.
+type SystemHook interface {
+	Extension
+	// SystemPrompt returns the section the extension adds to the system
+	// prompt s, or "" for none. ctx is the session's.
+	SystemPrompt(ctx context.Context, s System) string
+}
+
+// ExpandHook expands a prompt's text into the text it stands for, as a
+// command the text holds asks, such as "/skill:review main.go" into the
+// skill's instructions. As a prompt is sent, before its text becomes its
+// text part, the app asks the extensions that implement it, in the order it
+// loaded them, and the text of the first that expands it takes the place of
+// what was typed, which is stored nowhere: the prompt is stored, shown, and
+// sent as the expanded text, and each PromptHook is told it.
+type ExpandHook interface {
+	Extension
+	// ExpandPrompt returns the text that takes the place of p's, and
+	// reports whether the extension expands it. ctx is the session's.
+	ExpandPrompt(ctx context.Context, p Prompt) (string, bool)
 }
 
 // PromptHook adds parts to each prompt, after its text, before the prompt is

@@ -50,6 +50,11 @@ type RunOptions struct {
 	// NoContextFiles leaves the AGENTS.md files out of the system prompt
 	// of the run's new session.
 	NoContextFiles bool
+	// NoSkills loads no skills, as --no-skills asks: the system prompt of
+	// the run's new session lists none, and a /skill:name prompt is sent as
+	// it is. Unlike the flags of a printed run, the terminal UI takes it
+	// too, and it goes with a stored session.
+	NoSkills bool
 	// Instructions is the text of the instructions section of the system
 	// prompt of the run's new session, in place of the configuration's
 	// agent.instructions, or empty to keep it.
@@ -79,12 +84,12 @@ func (o RunOptions) PrintOnly() bool {
 
 // AppOptions returns the options of the app the run starts on: in the
 // folder of the session that Session names, with the instructions, step
-// limit and tools that o's flags choose.
+// limit, tools and skills that o's flags choose.
 func (o RunOptions) AppOptions() app.Options {
 	sel := tools.Selection{Only: o.Tools, Exclude: o.ExcludeTools}
 	return app.Options{
 		Session:            message.SessionID(o.Session),
-		Extensions:         extensionsWith(sel.Load),
+		Extensions:         extensionsWith(sel.Load, o.NoSkills),
 		NoInstructionFiles: o.NoContextFiles,
 		Instructions:       o.Instructions,
 		MaxSteps:           o.MaxSteps,
@@ -151,6 +156,7 @@ var runCmd = &cmdline.Command[RunOptions]{
 		fs.BoolVar(&o.Continue, "c", false, continueUsage)
 		fs.StringVar(&o.Session, "session", "", "Send the prompt to the session with this `id`, in its own folder")
 		dirFlag(fs, &o.Dir)
+		noSkillsFlag(fs, &o.NoSkills)
 		printFlags(fs, o)
 	},
 	Exclusive: append([][]string{{"continue", "session"}, {"dir", "session"}}, printExclusive...),
