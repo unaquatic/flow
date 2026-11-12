@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html"
+	"html/template"
 	"io"
 	"log/slog"
 	"net"
@@ -16,7 +16,10 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/unaquatic/flow/product"
 )
 
 // PKCE is a proof key for an OAuth code exchange (RFC 7636).
@@ -128,30 +131,73 @@ func (c *OAuthCallback) deliver(r callbackResult) {
 	}
 }
 
-// callbackPage is the page shown after an OAuth redirect.
-const callbackPage = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Flow</title>
+// callbackPage is the page shown after an OAuth redirect. It looks like a
+// notice in the terminal's default theme, Dark Flow: the product icon on the
+// canvas, a blank row, then a "■" marker and the title in the text color,
+// with the text under it in the muted color, indented two columns. A failure
+// draws its marker and title in the danger color, as the terminal's error
+// indicator does.
+var callbackPage = template.Must(template.New("callback").Parse(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · {{.Product}}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%%;background:#0a0a0a;color:#e0e0e0;font-family:monospace}
-body{padding:1rem}
-.card{text-align:left;padding:1rem;border:1px solid #333;background:#111}
-h2{font-size:1rem;font-weight:600;margin-bottom:.25rem}
-p{font-size:1rem;color:#888}
-.error h2,.error p{color:#e05050}
+html{min-height:100%;background:#1a1a1a;color:#e6e6e6;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+body{padding:1.5em 2ch}
+svg{display:block;width:16ch;height:16ch;margin-bottom:1.5em}
+h1{font:inherit;white-space:pre}
+p{padding-left:2ch;color:#8a8a8a}
+.error h1{color:#ff7c78}
 </style></head>
-<body><div class="card %s"><h2>%s</h2><p>%s</p></div></body></html>`
+<body class="{{.Class}}">
+<svg viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="{{.Product}}"><rect width="16" height="16" fill="{{.IconBg}}"/><path d="{{.IconPath}}" fill="{{.IconFg}}"/></svg>
+<h1>■ {{.Title}}</h1>
+<p>{{.Text}}</p>
+</body></html>`))
+
+// iconPath is the SVG path data of the "ƒ" of product.Icon, one unit square
+// per pixel on its 16 by 16 grid.
+var iconPath = IconPath(product.Icon)
+
+// IconPath returns SVG path data that draws the pixels of icon, half-block
+// art such as product.Icon, one unit square each: every rune holds the pixel
+// at column x of rows 2y and 2y+1, where "▀" sets the top one, "▄" the
+// bottom one, and "█" both.
+func IconPath(icon string) string {
+	var b strings.Builder
+	pixel := func(x, y int) { fmt.Fprintf(&b, "M%d %dh1v1h-1z", x, y) }
+	for y, line := range strings.Split(icon, "\n") {
+		for x, r := range []rune(line) {
+			if r == '▀' || r == '█' {
+				pixel(x, 2*y)
+			}
+			if r == '▄' || r == '█' {
+				pixel(x, 2*y+1)
+			}
+		}
+	}
+	return b.String()
+}
 
 // writeCallbackPage writes the redirect page with status. An empty failure
 // reports success.
 func writeCallbackPage(w http.ResponseWriter, status int, failure string) {
-	class, title, text := "", "Login Successful", "You can close this window and return to your terminal."
+	page := struct {
+		Product, Class, Title, Text string
+		IconPath, IconFg, IconBg    string
+	}{
+		Product: product.Name, Title: "Login Successful", Text: "You can close this window and return to your terminal.",
+		IconPath: iconPath, IconFg: product.IconColor, IconBg: product.IconBgColor,
+	}
 	if failure != "" {
-		class, title, text = "error", "Authorization Failed", failure
+		page.Class, page.Title, page.Text = "error", "Authorization Failed", failure
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	fmt.Fprintf(w, callbackPage, class, title, html.EscapeString(text))
+	if err := callbackPage.Execute(w, page); err != nil {
+		slog.Warn("write OAuth redirect page", "err", err)
+	}
 }
 
 // OpenBrowser opens url in the default browser.

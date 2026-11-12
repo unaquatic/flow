@@ -96,6 +96,16 @@ func TestCallback(t *testing.T) {
 	}
 }
 
+func TestIconPath(t *testing.T) {
+	// "█" sets both pixels of its column, "▀" the top one, "▄" the bottom
+	// one, and a space neither.
+	got := IconPath("█ \n▀▄")
+	want := "M0 0h1v1h-1zM0 1h1v1h-1zM0 2h1v1h-1zM1 3h1v1h-1z"
+	if got != want {
+		t.Errorf("IconPath = %q, want %q", got, want)
+	}
+}
+
 func TestCallbackWaitHonorsContext(t *testing.T) {
 	cb, err := ListenOAuthCallback(0, "/cb", "s1")
 	if err != nil {
