@@ -173,6 +173,17 @@ func AssertSlashMenuFrames(t *testing.T, ui *UI, name, text string, w, h int) {
 	testutil.AssertGoldenFrames(t, name, renderFrames(w, h, ui.inputWrapper), surfaceNames(ui))
 }
 
+// AssertInputFrames draws the input box of ui, built with an input box, and
+// the banner it shows, w cells wide and h rows tall, and checks it against
+// the golden frames name, as TestInputFrames does.
+func AssertInputFrames(t *testing.T, ui *UI, name string, w, h int) {
+	t.Helper()
+	testutil.AssertGoldenFrames(t, name, renderFrames(w, h, ui.inputWrapper), surfaceNames(ui))
+}
+
+// InputText returns the text in the input box of ui.
+func (ui *UI) InputText() string { return ui.input.Text() }
+
 // Service returns the controller of ui.
 func (ui *UI) Service() *Service { return ui.service }
 

@@ -1,32 +1,30 @@
 === text ===
-|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
+|■ Skills [↑/↓ move] [esc cancel]                            |
 |                                                            |
-|■ Commands [↑/↓ move] [esc cancel]                          |
+|  review  Review the changes for bugs and style.            |
+|  deploy  Deploy the service to staging.                    |
 |                                                            |
-|  /skill:review             Review the changes for bugs an  |
-|  /skill:deploy             Deploy the service to staging.  |
+|■                                                           |
 |                                                            |
-|■ /skill                                                    |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === fg ===
-|A AAAAA BBBBBBB AAAAAAA AAAAAAA BB A BB A BBB AAAAAAA AAAA  |
+|A AAAAAA BBBB BBBBB BBBB BBBBBBB                            |
 |                                                            |
-|B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
+|  CCCCCC  CCCCCC CCC CCCCCCC CCC CCCC CCC CCCCCC            |
+|  AAAAAA  BBBBBB BBB BBBBBBB BB BBBBBBBB                    |
 |                                                            |
-|  CCCCCCCCCCCCC             CCCCCC CCC CCCCCCC CCC CCCC CC  |
-|  BBBBBBBBBBBBB             AAAAAA AAA AAAAAAA AA AAAAAAAA  |
+|A                                                           |
 |                                                            |
-|B BBBBBB                                                    |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
 === bg ===
-|                                                            |
-|                                                            |
 |                                                            |
 |                                                            |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
@@ -37,8 +35,10 @@
 |                                                            |
 |                                                            |
 |                                                            |
+|                                                            |
+|                                                            |
 === legend ===
-A #8a8a8a
-B #e6e6e6
+A #e6e6e6
+B #8a8a8a
 C #232323 BoxBg
 ░ #ff5f00

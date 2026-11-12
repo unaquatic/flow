@@ -93,10 +93,6 @@ type Skill struct {
 // relative to.
 func (s Skill) Dir() string { return filepath.Dir(s.Path) }
 
-// Command returns the prompt that invokes the skill, as in
-// "/skill:pdf-tools".
-func (s Skill) Command() string { return CommandPrefix + s.Name }
-
 // Roots returns the folders Find looks in for skills, in the order a name
 // found in an earlier one wins: Dir under home, and then Dir under each
 // folder of workingDir's project, nearest first, as project.Dirs yields

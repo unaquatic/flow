@@ -23,32 +23,64 @@ var review = skills.Skill{
 	Path:        "/home/u/.agents/skills/review/SKILL.md",
 }
 
-// TestSlashCommands checks that each skill has a command named as the prompt
-// that invokes it, described by the first paragraph of its description on
-// one line, which the UI finds by that name.
+// TestSlashCommands checks that the extension adds /skills alone, and no
+// command of each skill, which the UI finds by that name.
 func TestSlashCommands(t *testing.T) {
 	cmds := New(review).SlashCommands()
-	if len(cmds) != 1 {
-		t.Fatalf("commands = %+v, want one", cmds)
+	if len(cmds) != 1 || cmds[0].Name.String() != "/skills" {
+		t.Fatalf("commands = %+v, want /skills alone", cmds)
 	}
-	if c := cmds[0]; c.Name != "skill:review" || c.Name.String() != "/skill:review" || c.Desc != "Review code for bugs." {
-		t.Errorf("command = %q %q, want /skill:review described on one line", c.Name, c.Desc)
+	all := ui.CommandsWith([]ui.Extension{New(review)})
+	if _, ok := ui.LookupCommand(all, Command); !ok {
+		t.Error("the UI does not find /skills among its commands")
 	}
-	if _, ok := ui.LookupCommand(ui.CommandsWith([]ui.Extension{New(review)}), "skill:review"); !ok {
-		t.Error("the UI does not find /skill:review among its commands")
+	if _, ok := ui.LookupCommand(all, "skill:review"); ok {
+		t.Error("the UI has a command of the skill review, want /skills alone")
 	}
 }
 
-// TestCommandRun checks that a skill's command sends the prompt that invokes
-// the skill, through the queue as a typed prompt is sent.
-func TestCommandRun(t *testing.T) {
-	events := Command(review).Run(newTestService(t))
-	want := ui.EventQueueChanged{Prompts: []string{"/skill:review"}}
-	if !slices.ContainsFunc(events, func(e ui.UIEvent) bool {
-		q, ok := e.(ui.EventQueueChanged)
-		return ok && slices.Equal(q.Prompts, want.Prompts)
-	}) {
-		t.Errorf("events = %#v, want the prompt queued, %#v", events, want)
+// TestMenuItems checks that /skills lists each skill by its name and the
+// first paragraph of its description on one line; that choosing one closes
+// the list and fills the input with its instructions, without the
+// frontmatter, and a blank line for what to ask, sending nothing; and that
+// choosing one whose file is gone says so, and leaves the input as it is.
+func TestMenuItems(t *testing.T) {
+	s := newTestService(t)
+	path := filepath.Join(t.TempDir(), "review", skills.File)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("---\nname: review\ndescription: Review code.\n---\n\n# Review\n\nRead scripts/check.sh.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	found := review
+	found.Path = path
+	gone := skills.Skill{Name: "gone", Description: "Gone.", Path: filepath.Join(t.TempDir(), "gone", skills.File)}
+	items := New(found, gone).MenuItems(s)
+	if len(items) != 2 || items[0].Name != "review" || items[0].Desc != "Review code for bugs." || items[1].Name != "gone" {
+		t.Fatalf("rows = %+v, want review, described on one line, then gone", items)
+	}
+
+	events := items[0].Choose()
+	want := ui.EventInputSet{Text: "# Review\n\nRead scripts/check.sh.\n\n"}
+	if !slices.Contains(events, ui.UIEvent(want)) {
+		t.Errorf("choosing review = %#v, want the input set to %q", events, want.Text)
+	}
+	if slices.ContainsFunc(events, func(e ui.UIEvent) bool { _, ok := e.(ui.EventQueueChanged); return ok }) {
+		t.Errorf("choosing review = %#v, want nothing sent", events)
+	}
+
+	if events := items[1].Choose(); slices.ContainsFunc(events, func(e ui.UIEvent) bool { _, ok := e.(ui.EventInputSet); return ok }) {
+		t.Errorf("choosing a skill whose file is gone = %#v, want the input left as it is", events)
+	}
+}
+
+// TestShowMenuWithoutSkills checks that /skills with no skill found says so,
+// and opens no list.
+func TestShowMenuWithoutSkills(t *testing.T) {
+	events := New().ShowMenu(newTestService(t))
+	if len(events) == 0 || slices.ContainsFunc(events, func(e ui.UIEvent) bool { _, ok := e.(ui.EventBannerShow); return ok }) {
+		t.Errorf("/skills without skills = %#v, want a toast and no list", events)
 	}
 }
 
