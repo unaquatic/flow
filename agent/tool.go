@@ -1,48 +1,55 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"slices"
 
 	"github.com/unaquatic/flow/agent/message"
 )
 
-// ToolDefinition is a model-visible tool definition without a local executor,
-// as a provider sends it to the model.
-type ToolDefinition struct {
-	// Name identifies the tool.
-	Name string
-	// Description explains how the model should use the tool.
-	Description string
-	// InputSchema describes accepted arguments.
-	InputSchema InputSchema
+// ToolDefinition is a model-visible tool definition without a local
+// executor, as a provider sends it to the model and a message.ToolSetPart
+// stores it.
+type ToolDefinition = message.ToolDefinition
+
+// InputSchema describes a tool's JSON input, as message.InputSchema does.
+type InputSchema = message.InputSchema
+
+// PropertySchema describes a single parameter in the input schema, as
+// message.PropertySchema does.
+type PropertySchema = message.PropertySchema
+
+// ToolsIn returns the tools in force at the end of history, those of the
+// message.ToolSetPart of its last system message that holds one, and reports
+// whether one does. A system message without one, as one of text alone,
+// leaves the tools as they were.
+func ToolsIn(history []Message) ([]ToolDefinition, bool) {
+	for _, m := range slices.Backward(history) {
+		if m.Role != message.RoleSystem {
+			continue
+		}
+		if p, ok := message.LastPart[message.ToolSetPart](m.Content); ok {
+			return p.Tools, true
+		}
+	}
+	return nil, false
 }
 
-// InputSchema describes a tool's JSON input.
-type InputSchema struct {
-	// Type is the JSON Schema type.
-	Type string `json:"type"`
-	// Properties contains named argument schemas.
-	Properties map[string]PropertySchema `json:"properties,omitempty"`
-	// Required lists mandatory property names.
-	Required []string `json:"required,omitempty"`
-}
-
-// PropertySchema describes a single parameter in the input schema.
-type PropertySchema struct {
-	// Type is the JSON Schema type.
-	Type string `json:"type"`
-	// Description explains the property to the model.
-	Description string `json:"description,omitempty"`
-	// Enum restricts accepted string values.
-	Enum []string `json:"enum,omitempty"`
-	// Items describes array elements.
-	Items *PropertySchema `json:"items,omitempty"`
-	// Properties contains the named fields of an object, such as each
-	// element of an array of objects.
-	Properties map[string]PropertySchema `json:"properties,omitempty"`
-	// Required lists the mandatory fields of an object.
-	Required []string `json:"required,omitempty"`
+// SameTools reports whether a and b define the same tools, in the same
+// order, as a provider is sent them: a field one leaves empty and the other
+// sets to an empty list or map is the same.
+func SameTools(a, b []ToolDefinition) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	if len(a) == 0 {
+		return true
+	}
+	ja, errA := json.Marshal(a)
+	jb, errB := json.Marshal(b)
+	return errA == nil && errB == nil && bytes.Equal(ja, jb)
 }
 
 // Tool describes a model-visible tool and its local implementation.

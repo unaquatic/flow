@@ -16,6 +16,7 @@ import (
 	"github.com/unaquatic/flow/extension/protocol/adc"
 	"github.com/unaquatic/flow/extension/protocol/content"
 	"github.com/unaquatic/flow/extension/protocol/login/backendflow"
+	"github.com/unaquatic/flow/extension/protocol/messages"
 	"github.com/unaquatic/flow/extension/protocol/responses"
 )
 
@@ -220,6 +221,27 @@ func TestBackendURL(t *testing.T) {
 				t.Errorf("request to %s, want %s", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestCachesPrompts checks that the Messages requests to the format's own
+// API alone turn on automatic prompt caching: not those to a proxy the
+// configuration moves the endpoint to, a cloud's raw predict endpoint, or
+// an endpoint of another format.
+func TestCachesPrompts(t *testing.T) {
+	for _, tt := range []struct {
+		ep   gateway.Endpoint
+		want bool
+	}{
+		{gateway.Endpoint{Format: FormatMessages, API: messages.DefaultBaseURL}, true},
+		{gateway.Endpoint{Format: FormatMessages, API: messages.DefaultBaseURL + "/"}, true},
+		{gateway.Endpoint{Format: FormatMessages, API: "https://proxy.example/v1"}, false},
+		{gateway.Endpoint{Format: FormatMessagesRawPredict, API: messages.DefaultBaseURL}, false},
+		{gateway.Endpoint{Format: FormatResponses, API: messages.DefaultBaseURL}, false},
+	} {
+		if got := CachesPrompts(tt.ep); got != tt.want {
+			t.Errorf("CachesPrompts(%s at %s) = %v, want %v", tt.ep.Format, tt.ep.API, got, tt.want)
+		}
 	}
 }
 

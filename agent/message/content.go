@@ -28,12 +28,14 @@ const (
 	// TypeUsage identifies the token counts of the request that produced a
 	// message.
 	TypeUsage ContentType = "usage"
+	// TypeToolSet identifies the set of tools the model may call.
+	TypeToolSet ContentType = "toolset"
 )
 
 // builtinTypes lists the part types this package defines, which
 // RegisterPart refuses.
 var builtinTypes = []ContentType{
-	TypeText, TypeImage, TypeFile, TypeReasoning, TypeTool, TypeToolUse, TypeToolResult, TypeUsage,
+	TypeText, TypeImage, TypeFile, TypeReasoning, TypeTool, TypeToolUse, TypeToolResult, TypeUsage, TypeToolSet,
 }
 
 // ContentPart is one typed part of a message.
@@ -114,6 +116,60 @@ type ToolResultPart struct {
 
 func (ToolResultPart) PartType() ContentType { return TypeToolResult }
 func (p ToolResultPart) PartID() PartID      { return p.ID }
+
+// ToolSetPart is the whole set of tools the model may call from its system
+// message on, until a later system message holds another. A system message
+// holds at most one, and one that holds none, as a system message of text
+// alone, leaves the set as it was; an empty set leaves the model no tools.
+// The set is the one the session's run had, written whenever it changes:
+// the stored set follows the tools flow has, and never the other way round.
+type ToolSetPart struct {
+	// ID identifies the part.
+	ID PartID `json:"id,omitempty"`
+	// Tools are the tools, in the order the model is offered them.
+	Tools []ToolDefinition `json:"tools"`
+}
+
+func (ToolSetPart) PartType() ContentType { return TypeToolSet }
+func (p ToolSetPart) PartID() PartID      { return p.ID }
+
+// ToolDefinition is the definition of a tool the model may call, as a
+// provider sends it to the model.
+type ToolDefinition struct {
+	// Name identifies the tool.
+	Name string `json:"name"`
+	// Description explains when and how the model should use the tool.
+	Description string `json:"description,omitempty"`
+	// InputSchema describes the arguments the tool accepts.
+	InputSchema InputSchema `json:"input_schema"`
+}
+
+// InputSchema describes a tool's JSON input.
+type InputSchema struct {
+	// Type is the JSON Schema type.
+	Type string `json:"type"`
+	// Properties contains named argument schemas.
+	Properties map[string]PropertySchema `json:"properties,omitempty"`
+	// Required lists mandatory property names.
+	Required []string `json:"required,omitempty"`
+}
+
+// PropertySchema describes a single parameter in the input schema.
+type PropertySchema struct {
+	// Type is the JSON Schema type.
+	Type string `json:"type"`
+	// Description explains the property to the model.
+	Description string `json:"description,omitempty"`
+	// Enum restricts accepted string values.
+	Enum []string `json:"enum,omitempty"`
+	// Items describes array elements.
+	Items *PropertySchema `json:"items,omitempty"`
+	// Properties contains the named fields of an object, such as each
+	// element of an array of objects.
+	Properties map[string]PropertySchema `json:"properties,omitempty"`
+	// Required lists the mandatory fields of an object.
+	Required []string `json:"required,omitempty"`
+}
 
 // ImagePart is an image content part.
 type ImagePart struct {
@@ -214,6 +270,9 @@ type PartJSON struct {
 	Redacted bool `json:"redacted,omitempty"`
 	// Name identifies a tool.
 	Name string `json:"name,omitempty"`
+	// Tools are the tools of a toolset part, which an empty set writes as an
+	// empty list, and other parts leave out.
+	Tools *[]ToolDefinition `json:"tools,omitempty"`
 	// Input contains raw tool arguments.
 	Input json.RawMessage `json:"input,omitempty"`
 	// ToolUseID identifies a provider tool request.
@@ -292,6 +351,13 @@ func PartToJSON(p ContentPart) PartJSON {
 	case UsagePart:
 		j.PartID = ensurePartID(v.ID)
 		j.Usage = &v.Usage
+	case ToolSetPart:
+		j.PartID = ensurePartID(v.ID)
+		tools := v.Tools
+		if tools == nil {
+			tools = []ToolDefinition{}
+		}
+		j.Tools = &tools
 	default:
 		if c, ok := codecFor(p.PartType()); ok {
 			j.PartID = ensurePartID(p.PartID())
@@ -337,6 +403,12 @@ func PartFromJSON(j PartJSON) ContentPart {
 			u = *j.Usage
 		}
 		return UsagePart{ID: id, Usage: u}
+	case TypeToolSet:
+		var tools []ToolDefinition
+		if j.Tools != nil {
+			tools = *j.Tools
+		}
+		return ToolSetPart{ID: id, Tools: tools}
 	default:
 		return TextPart{ID: id, Text: j.Text}
 	}

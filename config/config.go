@@ -136,6 +136,14 @@ type Provider struct {
 
 	// Disabled prevents this provider from being registered.
 	Disabled bool `json:"disabled,omitempty"`
+
+	// ToolChanges sends a change of the tools a session offers where it
+	// happens in the conversation, rather than as a new list of tools at the
+	// start of every request after it, which keeps the provider's prompt
+	// cache of the conversation before it. Only the Messages format takes it,
+	// as its inline tools beta, and only on some of its models and clouds:
+	// turn it on for a provider whose models all take it. Off by default.
+	ToolChanges bool `json:"tool_changes,omitempty"`
 }
 
 // Agent holds agent behavior parameters.
@@ -424,6 +432,9 @@ func mergeFromFile(cfg *Config, f File) error {
 				}
 				if pc.Disabled {
 					existing.Disabled = true
+				}
+				if pc.ToolChanges {
+					existing.ToolChanges = true
 				}
 			} else {
 				cfg.Provider[name] = pc

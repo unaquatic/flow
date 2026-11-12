@@ -308,6 +308,33 @@ func TestStreamVariant(t *testing.T) {
 	}
 }
 
+// TestStreamToolChanges checks that the requests of a provider whose
+// settings turn ToolChanges on set it, and that those of another do not.
+func TestStreamToolChanges(t *testing.T) {
+	var got []agent.Request
+	store, _ := gatewaytest.Store(t, protocoltest.FromAPI(t, `{}`))
+	ps := agent.NewProviders(agent.ProviderOptions{
+		Catalog:  store,
+		Settings: func(t agent.ProviderID) agent.Settings { return agent.Settings{ToolChanges: t == providerB} },
+	}, requestRecorder{got: &got})
+	for _, pt := range []agent.ProviderID{providerB, providerA} {
+		if _, err := ps.WithProvider(namedRecorder{requestRecorder{got: &got}, pt}).Stream(t.Context(), agent.Variant{Provider: pt, Model: "model"}, agent.Request{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(got) != 2 || !got[0].ToolChanges || got[1].ToolChanges {
+		t.Errorf("requests = %+v, want ToolChanges on the first alone", got)
+	}
+}
+
+// namedRecorder is a requestRecorder named name.
+type namedRecorder struct {
+	requestRecorder
+	name agent.ProviderID
+}
+
+func (p namedRecorder) Name() string { return string(p.name) }
+
 // TestStreamDropsOthersReasoning checks that the reasoning of messages
 // another model wrote does not reach the model, while its own and that of
 // messages whose writer is not known do.

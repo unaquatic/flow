@@ -119,6 +119,12 @@ func (m *model) stream(ctx context.Context, token string, req agent.Request, bac
 	if !backend && req.MaxTokens > 0 {
 		body["max_output_tokens"] = req.MaxTokens
 	}
+	// The tools in force, whatever req.ToolChanges asks: the API has no way
+	// to change them partway through the input, so a request after a change
+	// of tools misses the prompt cache of the conversation before it, which
+	// flow accepts. Should the API come to take tool changes in the input,
+	// as the Messages format's system messages do, send them here as package
+	// messages' ToolChangeMessages does, and keep the opening tools.
 	if t := toTools(req.Tools); t != nil {
 		body["tools"] = t
 	}
@@ -622,7 +628,10 @@ func ToInput(msgs []agent.Message) (instructions string, input []any) {
 	var system []string
 	for _, m := range msgs {
 		if m.Role == message.RoleSystem {
-			system = append(system, m.TextContent())
+			// A system message may hold tools alone, and no text.
+			if text := m.TextContent(); text != "" {
+				system = append(system, text)
+			}
 			continue
 		}
 

@@ -323,15 +323,18 @@ const backend = "https://backend.test/api"
 
 // TestStream_Request checks where the Responses API takes a request's
 // system messages, output limit and message roles: as instructions, the
-// system texts joined, and as max_output_tokens, which the backend,
-// which an OAuth token reaches, does not take.
+// system texts joined, leaving out a system message that holds tools alone,
+// and as max_output_tokens, which the backend, which an OAuth token reaches,
+// does not take; and that it offers the tools in force, though the request
+// asks for tool changes, which the API cannot take.
 func TestStream_Request(t *testing.T) {
 	req := agent.Request{Messages: []agent.Message{
 		agent.NewSystemMessage("Be brief."),
+		{Role: message.RoleSystem, Content: []message.ContentPart{message.ToolSetPart{Tools: []message.ToolDefinition{{Name: "read"}}}}},
 		agent.NewSystemMessage("Use Go."),
 		agent.NewUserMessage("hi"),
 		agent.NewAgentMessage("hello"),
-	}, MaxTokens: 64000}
+	}, MaxTokens: 64000, Tools: []agent.ToolDefinition{{Name: "grep"}}, ToolChanges: true}
 	tests := []struct {
 		name     string
 		kind     agent.CredentialKind
@@ -377,6 +380,9 @@ func TestStream_Request(t *testing.T) {
 			}
 			if want := []any{"user", "assistant"}; !reflect.DeepEqual(roles, want) {
 				t.Errorf("roles = %v, want %v", roles, want)
+			}
+			if tools, _ := body["tools"].([]any); len(tools) != 1 || tools[0].(map[string]any)["name"] != "grep" {
+				t.Errorf("tools = %v, want the tools in force", body["tools"])
 			}
 		})
 	}

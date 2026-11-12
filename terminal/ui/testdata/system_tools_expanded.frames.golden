@@ -1,0 +1,40 @@
+=== text ===
+|■ Context [4 lines]                     |
+|                                        |
+|  # Calc                                |
+|                                        |
+|  - Run the tests before every commit   |
+|  you make.                             |
+|  - Use tabs.                           |
+|                                        |
+|■ Run the tests                         |
+|                                        |
+|■ All tests pass.                       |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A AAAAAAA AA AAAAAA                     |
+|                                        |
+|  B BBBB                                |
+|                                        |
+|  B BBB BBB BBBBB BBBBBB BBBBB BBBBBB   |
+|  BBB BBBBB                             |
+|  B BBB BBBBB                           |
+|                                        |
+|B BBB BBB BBBBB                         |
+|                                        |
+|C BBB BBBBB BBBBB                       |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #eb7513

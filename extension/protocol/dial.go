@@ -88,7 +88,8 @@ func Dialer(opts Options) agent.Dialer {
 		var p agent.Provider
 		switch ep.Format {
 		case FormatMessages, FormatMessagesRawPredict:
-			p = messages.New(messages.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, RawPredict: ep.Format == FormatMessagesRawPredict, HTTPClient: client})
+			p = messages.New(messages.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, RawPredict: ep.Format == FormatMessagesRawPredict,
+				Cache: CachesPrompts(ep), HTTPClient: client})
 		case FormatResponses:
 			init := responses.Init{Name: name, Auth: az, Key: ep.Auth, BaseURL: ep.API, HTTPClient: client}
 			if t == backendflow.ProviderID {
@@ -107,6 +108,14 @@ func Dialer(opts Options) agent.Dialer {
 		}
 		return Provider{Provider: p, Ambient: ambient}, true
 	}
+}
+
+// CachesPrompts reports whether the Messages requests to ep turn on the
+// API's automatic prompt caching, as messages.Init.Cache does: those to the
+// format's own API alone, at its base URL, since a cloud's raw predict
+// endpoint and a gateway may refuse the field.
+func CachesPrompts(ep gateway.Endpoint) bool {
+	return ep.Format == FormatMessages && strings.TrimSuffix(ep.API, "/") == messages.DefaultBaseURL
 }
 
 // BackendURL returns the base URL that the requests of backendflow's login

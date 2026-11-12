@@ -292,6 +292,10 @@ func (m *model) stream(ctx context.Context, token string, req agent.Request) (ag
 	if req.MaxTokens > 0 {
 		body["max_completion_tokens"] = req.MaxTokens
 	}
+	// The tools in force, whatever req.ToolChanges asks: the API cannot
+	// change them partway through the messages, so a request after a change
+	// of tools misses the prompt cache, which flow accepts. Should it come to,
+	// send the changes as package messages' ToolChangeMessages does.
 	if t := toTools(req.Tools); t != nil {
 		body["tools"] = t
 	}

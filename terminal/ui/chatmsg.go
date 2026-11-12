@@ -427,11 +427,12 @@ func ChatMessageContainer() (*widget.Box, *widget.Box) {
 // nothing stacks under a footer. An agent segment with nothing to show takes
 // no rows, and a bubble that shows none takes no rows at all, its blank row
 // below too, which the last segment it shows takes when its segments are rows
-// of their own, as SegmentRows says. Other roles always show their segments,
-// and the blank row below them; a prompt's TailRow shows its blank row only
-// while it shows a part, as SyncTail says.
+// of their own, as SegmentRows says. A system message does the same, as one
+// that holds tools alone shows nothing. A prompt always shows its segments,
+// and the blank row below them; its TailRow shows its blank row only while
+// it shows a part, as SyncTail says.
 func (cm *ChatMessageBox) SyncRows() {
-	agent := cm.role == message.RoleAgent
+	collapses := cm.role == message.RoleAgent || cm.role == message.RoleSystem
 	shown := 0
 	// lastShown is the last segment shown so far, and above the kind of its
 	// last row.
@@ -439,7 +440,7 @@ func (cm *ChatMessageBox) SyncRows() {
 	above := KindBlock
 	for _, seg := range cm.segments {
 		rows := seg.Flow()
-		show := !agent || len(rows) > 0
+		show := !collapses || len(rows) > 0
 		if seg.Box.Visible() != show {
 			seg.Box.SetGone(!show)
 		}
@@ -469,6 +470,8 @@ func (cm *ChatMessageBox) SyncRows() {
 			}
 			SetEdge(seg.Box, &seg.Box.LayoutNode().MarginBottom, blank)
 		}
+	} else if collapses && cm.Box != nil && cm.Box.Visible() != (shown > 0) {
+		cm.Box.SetGone(shown == 0)
 	}
 	cm.SyncTail()
 }
@@ -775,7 +778,8 @@ func (cm *ChatMessageBox) UpsertContentPart(seg *MessageSegment, id string, part
 const proseBlockPaddingY = 1
 
 // NewContentPart creates the widget for a content part. The text of a system
-// message shows in a SystemBox, collapsed as a tool call is.
+// message shows in a SystemBox, collapsed as a tool call is, and its tool
+// definitions not at all.
 func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Renderable {
 	if p, ok := part.(message.TextPart); ok && cm.role == message.RoleSystem {
 		box := NewSystemBox(p, cm.theme, cm.fg)
@@ -802,9 +806,10 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		}
 		return view
 	}
-	if _, ok := part.(message.Metadata); ok {
+	if _, ok := part.(message.Metadata); ok || part.PartType() == message.TypeToolSet {
 		// Metadata that no extension shows keeps its place among the parts,
-		// unseen.
+		// unseen, as do the tools a system message holds, which the model
+		// is sent apart from the text.
 		hidden := widget.NewBox()
 		hidden.SetGone(true)
 		return hidden

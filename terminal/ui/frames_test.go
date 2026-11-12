@@ -104,6 +104,20 @@ func systemTurn(ui *UI) {
 	ui.AddMessage(agentText("a1", "All tests pass."))
 }
 
+// systemToolsTurn adds the turn systemTurn adds, its system message holding
+// the session's tools after its text.
+func systemToolsTurn(ui *UI) {
+	msg := systemText("s1", "# Calc\n\n- Run the tests before every commit you make.\n- Use tabs.")
+	msg.Parts = append(msg.Parts, message.ToolSetPart{ID: "s1-tools", Tools: []message.ToolDefinition{
+		{Name: "bash", Description: "Run a command.", InputSchema: message.InputSchema{
+			Type: "object", Properties: map[string]message.PropertySchema{"command": {Type: "string"}}, Required: []string{"command"},
+		}},
+	}})
+	ui.AddMessage(msg)
+	ui.AddMessage(userText("u1", "Run the tests"))
+	ui.AddMessage(agentText("a1", "All tests pass."))
+}
+
 // clickSystem clicks the header of the system box of the bubble that holds
 // message id, as a click that expands or collapses it does.
 func clickSystem(ui *UI, id message.ID) {
@@ -368,6 +382,26 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "system_expanded_plain_marker", h: 15, add: func(ui *UI) {
 			systemTurn(ui)
 			expandTools(ui)
+		}},
+		// The tools a system message holds do not show: one that opens the
+		// session with them shows its text alone, expanded too, and one
+		// that a change of tools stores later, holding tools alone, takes
+		// no row between the turns.
+		{name: "system_tools_expanded", h: 17, add: func(ui *UI) {
+			systemToolsTurn(ui)
+			clickSystem(ui, "s1")
+		}},
+		{name: "system_tools_changed", h: 14, add: func(ui *UI) {
+			systemToolsTurn(ui)
+			changed := ChatMessage{ID: "s2", ParentID: "s2", Role: message.RoleSystem, Parts: []message.ContentPart{
+				message.ToolSetPart{ID: "s2-tools", Tools: []message.ToolDefinition{
+					{Name: "bash", InputSchema: message.InputSchema{Type: "object"}},
+					{Name: "grep", InputSchema: message.InputSchema{Type: "object"}},
+				}},
+			}}
+			ui.AddMessage(changed)
+			ui.AddMessage(userText("u2", "Search for Divide"))
+			ui.AddMessage(agentText("a2", "Found it in calc.go."))
 		}},
 		// Tool calls start collapsed to their header, and Ctrl+O expands them.
 		{name: "agent_tool_streamed", h: 12, add: streamToolTurn},
@@ -1832,6 +1866,20 @@ func TestMenuFrames(t *testing.T) {
 				treeMsg("s1", "", message.RoleSystem, "# Calc\n\nUse tabs."),
 				treeMsg("u1", "s1", message.RoleUser, "Run the tests"),
 				treeMsg("a1", "u1", message.RoleAgent, "All tests pass."),
+			}}))
+		}},
+		// A system message that a change of tools stores, holding tools
+		// alone, is named as the one the session opens with, and counts
+		// its tools.
+		{name: "tree_panel_system_tools", h: 11, open: func(ui *UI) {
+			ui.Apply(ui.service.OpenTree(app.Tree{Head: "a2", Messages: []message.Content{
+				treeMsg("s1", "", message.RoleSystem, "# Calc\n\nUse tabs."),
+				treeMsg("u1", "s1", message.RoleUser, "Run the tests"),
+				treeMsg("a1", "u1", message.RoleAgent, "All tests pass."),
+				treeMsg("s2", "a1", message.RoleSystem, "",
+					message.ToolSetPart{ID: "s2-tools", Tools: []message.ToolDefinition{{Name: "bash"}, {Name: "grep"}}}),
+				treeMsg("u2", "s2", message.RoleUser, "Search for Divide"),
+				treeMsg("a2", "u2", message.RoleAgent, "Found it in calc.go."),
 			}}))
 		}},
 		{name: "tree_panel_user_only", h: 12, open: func(ui *UI) {
