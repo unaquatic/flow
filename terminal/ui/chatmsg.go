@@ -352,13 +352,14 @@ func (cm *ChatMessageBox) ClearPinned(buf *buffer.Buffer, _ time.Duration) {
 // container, from its top down to the blank row that ends it, which is the
 // container's padding and so outside the bar, in the padding before its
 // prose. It is laid out apart from the bubble's rows, so it moves none of
-// them. Each of its rows shows Shape in Color, the marker shape /config
-// sets, and for a filled shape the column is filled with Color.
+// them. Its first row shows Shape in Color, the marker shape /config sets,
+// filled with Color for a filled shape, and its other rows show nothing, so
+// that a prompt of many rows has one marker, as a one-row prompt has.
 type PromptRail struct {
 	*widget.Box
 	// Color is the bar's color.
 	Color style.Color
-	// Shape is the marker shape each of its rows shows.
+	// Shape is the marker shape its first row shows.
 	Shape MarkerShape
 }
 
@@ -374,24 +375,26 @@ func NewPromptRail(c style.Color, shape MarkerShape) *PromptRail {
 	return b
 }
 
-// SetShape shows shape on each row of the bar.
+// SetShape shows shape on the first row of the bar.
 func (b *PromptRail) SetShape(shape MarkerShape) {
 	b.Shape = shape
 	b.MarkDirty()
 }
 
-// Draw draws Shape in Color on each row of the bar, on the background under
-// it, or a space filled with Color for a filled shape.
+// Draw draws Shape in Color on the first row of the bar, on the background
+// under it, or a space filled with Color for a filled shape, and nothing on
+// its other rows.
 func (b *PromptRail) Draw(buf *buffer.Buffer, _ time.Duration) {
-	glyph := []rune(b.Shape.Glyph())[0]
-	x := b.X()
-	for y := b.Y(); y < b.Y()+b.Height(); y++ {
-		bg := buf.Cell(x, y).Bg
-		if b.Shape.Filled() {
-			bg = b.Color
-		}
-		buf.SetCell(x, y, glyph, b.Color, bg, 0)
+	if b.Height() <= 0 {
+		return
 	}
+	glyph := []rune(b.Shape.Glyph())[0]
+	x, y := b.X(), b.Y()
+	bg := buf.Cell(x, y).Bg
+	if b.Shape.Filled() {
+		bg = b.Color
+	}
+	buf.SetCell(x, y, glyph, b.Color, bg, 0)
 }
 
 // ChatMessageContainer returns the outer container, which pads its segment

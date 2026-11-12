@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"errors"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 )
 
@@ -89,6 +92,50 @@ func TestCompleteUndoRedo(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestUndoPutsPromptBack checks that an undo puts the text of the latest
+// prompt, which it moves back over, in the input once it succeeds, its text
+// parts a blank line apart and without its files, passing over the reply and
+// the notices after it; that a failed undo leaves the input as it is; and
+// that an undo with no prompt to take back sets none.
+func TestUndoPutsPromptBack(t *testing.T) {
+	prompt := userText("u2", "fix the tests")
+	prompt.Parts = append(prompt.Parts,
+		message.FilePart{ID: "u2-file", MediaType: "text/plain", Filename: "a.txt"},
+		message.TextPart{ID: "u2-more", Text: "and run them"})
+	msgs := []ChatMessage{
+		userText("u1", "first"), agentText("a1", "done"),
+		prompt, agentText("a2", "fixed"),
+		{ID: "n1", Notice: &Notice{Text: "a notice"}},
+	}
+	moved := app.MoveResult{}
+	s := &Service{state: &UIState{Messages: msgs}}
+
+	if out := s.HandleUndo(); !slices.Contains(out, UIEvent(EventUndoRequested{})) {
+		t.Fatalf("/undo = %#v, want a move back", out)
+	}
+	want := EventInputSet{Text: "fix the tests\n\nand run them"}
+	if out := s.CompleteUndo(moved, nil); !slices.Contains(out, UIEvent(want)) {
+		t.Errorf("undo done = %#v, want the prompt back in the input, %q", out, want.Text)
+	}
+
+	s.HandleUndo()
+	if out := s.CompleteUndo(moved, errors.New("session busy")); slices.ContainsFunc(out, isInputSet) {
+		t.Errorf("failed undo = %#v, want the input left as it is", out)
+	}
+
+	s = &Service{state: &UIState{Messages: []ChatMessage{agentText("a1", "hello")}}}
+	s.HandleUndo()
+	if out := s.CompleteUndo(moved, nil); slices.ContainsFunc(out, isInputSet) {
+		t.Errorf("undo without a prompt = %#v, want the input left as it is", out)
+	}
+}
+
+// isInputSet reports whether e sets the input's text.
+func isInputSet(e UIEvent) bool {
+	_, ok := e.(EventInputSet)
+	return ok
 }
 
 // TestCheckoutTitle checks that a history move's notice names what it

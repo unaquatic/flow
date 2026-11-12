@@ -332,6 +332,35 @@ func TestCtrlCClosesSlashMenu(t *testing.T) {
 	}
 }
 
+// TestTabCompletesSlashCommand checks that Tab puts the selected command in
+// the input with a space after it, ready for what it is given; that the menu
+// still offers the command, the space left out of the match; and that it
+// closes once something follows the space.
+func TestTabCompletesSlashCommand(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.input.InsertText("/hel")
+	if !ui.service.state.SlashMenuVisible {
+		t.Fatal("typing /hel did not open the slash menu")
+	}
+
+	ui.HandleKey(&input.KeyEvent{Name: input.KeyTab})
+
+	if got := ui.input.Text(); got != "/help " {
+		t.Errorf("input = %q, want %q", got, "/help ")
+	}
+	if !ui.service.state.SlashMenuVisible || ui.slashMenuRow.Parent() == nil {
+		t.Fatal("the slash menu closed when Tab completed a command, want it to offer the command still")
+	}
+	if item := ui.slashMenu.SelectedItem(); item == nil || item.Value.(Command) != CommandHelp {
+		t.Errorf("selected = %v, want /help", item)
+	}
+
+	ui.input.InsertText("me")
+	if ui.service.state.SlashMenuVisible || ui.slashMenuRow.Parent() != nil {
+		t.Error("the slash menu is still open with text after the command")
+	}
+}
+
 // TestSlashStatusRow checks that the slash menu shows a status row above its
 // title, and keeps it up to date while it is open: the model, the token use,
 // and the session's worked time, which counts the turn in progress as it

@@ -170,9 +170,12 @@ func (s *Service) ShownCommands() []SlashCommand {
 // MatchSlashCommands ranks them. Each item's value is its Command. An empty
 // query lists every one, group after group, with no blank row between them.
 // A command found by an alias shows as it always does: its description
-// holds the alias. A query containing whitespace matches nothing, since no
-// command takes arguments.
+// holds the alias. Whitespace that ends the query is left out, as Tab leaves
+// a space after the command it completes; a query with whitespace before
+// its end matches nothing, since what follows a command is what it is
+// given, as in "/skill:review main.go".
 func (s *Service) SlashMenuItems(query string) []widget.SelectItem {
+	query = strings.TrimRightFunc(query, unicode.IsSpace)
 	if strings.ContainsFunc(query, unicode.IsSpace) {
 		return nil
 	}

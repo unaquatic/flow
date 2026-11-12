@@ -18,6 +18,7 @@ import (
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension/protocol/protocoltest"
+	"github.com/unaquatic/flow/extension/skills"
 )
 
 // TestPromptText checks that the prompt is the arguments, joined by spaces,
@@ -221,6 +222,67 @@ func newRunTestAppWith(t *testing.T, answer, settings string, opts app.Options) 
 	return a, gw, home
 }
 
+// skillRun sends prompt in a printed run with options o, in a project whose
+// .agents/skills holds review, and a home directory that holds no skills,
+// and returns the system message and the prompt of the request the gateway
+// saw, and the path of review's SKILL.md.
+func skillRun(t *testing.T, o RunOptions, prompt string) (system, sent agent.Message, path string) {
+	t.Helper()
+	user := t.TempDir()
+	t.Setenv("HOME", user)
+	t.Setenv("USERPROFILE", user)
+	settings := `{"default_provider":"mock","default_model":"test-model","catalog_source":"http://127.0.0.1:1",` +
+		`"extensions":{"snapshot":{"enabled":false},"titling":{"enabled":false}}}`
+	a, gw, _ := newRunTestAppWith(t, "Reviewed.", settings, o.AppOptions())
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	path = filepath.Join(wd, skills.Dir, "review", skills.File)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("---\nname: review\ndescription: Review code.\n---\n\nRun scripts/check.sh.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out strings.Builder
+	if err := runPrompt(t.Context(), &out, a, o, prompt); err != nil {
+		t.Fatal(err)
+	}
+	if len(gw.StreamCalls) != 1 || len(gw.StreamCalls[0]) != 2 {
+		t.Fatalf("gateway saw %+v, want one request of the system message and the prompt", gw.StreamCalls)
+	}
+	return gw.StreamCalls[0][0], gw.StreamCalls[0][1], path
+}
+
+// TestRunSkill checks that a printed run lists the project's skills in the
+// system prompt of its new session, and that a prompt that invokes one sends
+// the model one text of its instructions in the command's place and then
+// what the prompt asks.
+func TestRunSkill(t *testing.T) {
+	system, prompt, path := skillRun(t, RunOptions{Format: OutputText}, "/skill:review check main.go")
+	if !strings.Contains(system.TextContent(), "<location>"+path+"</location>") {
+		t.Errorf("system message = %q, want it to list review", system.TextContent())
+	}
+	want := skills.Block{Body: "Run scripts/check.sh.", Args: "check main.go"}.Text()
+	if len(prompt.Content) != 1 || prompt.TextContent() != want {
+		t.Errorf("prompt sent = %+v, want one text, %q", prompt.Content, want)
+	}
+}
+
+// TestRunNoSkills checks that with --no-skills a printed run lists no skills
+// in the system prompt of its new session, and sends a prompt that would
+// invoke one as it is typed, without the skill's instructions.
+func TestRunNoSkills(t *testing.T) {
+	system, prompt, _ := skillRun(t, RunOptions{Format: OutputText, NoSkills: true}, "/skill:review check main.go")
+	if text := system.TextContent(); strings.Contains(text, skills.AvailableTag) {
+		t.Errorf("system message = %q, want no skills listed", text)
+	}
+	if len(prompt.Content) != 1 || prompt.Content[0].(message.TextPart).Text != "/skill:review check main.go" {
+		t.Errorf("prompt sent = %+v, want its text alone", prompt.Content)
+	}
+}
+
 // TestRunAppOptions checks that the app a printed run starts on, with the
 // options its flags give, leaves the AGENTS.md files out of a new session's
 // system prompt with --no-context-files, holds --instructions's text in
@@ -234,7 +296,7 @@ func TestRunAppOptions(t *testing.T) {
 		Tools: []string{"read", "grep", "bash"}, ExcludeTools: []string{"bash"},
 	}
 	settings := `{"default_provider":"mock","default_model":"test-model","catalog_source":"http://127.0.0.1:1",` +
-		`"extensions":{"snapshot":{"enabled":false},"titling":{"enabled":false}}}`
+		`"extensions":{"snapshot":{"enabled":false},"titling":{"enabled":false},"skills":{"enabled":false}}}`
 	a, gw, home := newRunTestAppWith(t, "", settings, o.AppOptions())
 	if err := os.WriteFile(filepath.Join(home, app.InstructionsFile), []byte("Call me Sam."), 0o644); err != nil {
 		t.Fatal(err)

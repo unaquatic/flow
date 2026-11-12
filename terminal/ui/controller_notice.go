@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,7 +18,9 @@ import (
 
 // HandleUndo takes back the prompt queued last, as UnqueueLast does, while
 // any is queued. Otherwise it stops the active run and requests a move back
-// to the state before the latest turn.
+// to the state before the latest turn, whose prompt's text, as LastPrompt
+// finds it, CompleteUndo puts back in the input once the move succeeds, as
+// UnqueueLast puts back a queued one.
 //
 // The move itself is not performed here, because it waits for the stopped run
 // to release the session, and a run releases it only after the UI drains its
@@ -28,7 +31,21 @@ func (s *Service) HandleUndo() []UIEvent {
 		return s.UnqueueLast()
 	}
 	s.Stop()
+	s.state.UndonePrompt = LastPrompt(s.state.Messages)
 	return []UIEvent{EventUndoRequested{}}
+}
+
+// LastPrompt returns the text of the latest prompt among msgs, the one an
+// undo moves back over, as PartsText joins its text parts, or "" when msgs
+// hold no prompt. The files a prompt attached are not text, and are left
+// out.
+func LastPrompt(msgs []ChatMessage) string {
+	for _, m := range slices.Backward(msgs) {
+		if m.Notice == nil && m.Role == message.RoleUser {
+			return PartsText(m.Parts)
+		}
+	}
+	return ""
 }
 
 // HandleRedo stops the active run and requests a move forward one turn,
@@ -38,12 +55,20 @@ func (s *Service) HandleRedo() []UIEvent {
 	return []UIEvent{EventRedoRequested{}}
 }
 
-// CompleteUndo reports what a finished undo checked out and changed.
+// CompleteUndo reports what a finished undo checked out and changed, and
+// puts the text of the prompt it moved back over, as HandleUndo found it, in
+// the input, to edit and send again. A failed undo leaves the input as it is.
 func (s *Service) CompleteUndo(moved app.MoveResult, err error) []UIEvent {
+	prompt := s.state.UndonePrompt
+	s.state.UndonePrompt = ""
 	if err != nil {
 		return s.ShowToast(UndoErrorMessage(err))
 	}
-	return s.ShowDiffToast(moved)
+	out := s.ShowDiffToast(moved)
+	if prompt != "" {
+		out = append(out, s.SetInput(prompt)...)
+	}
+	return out
 }
 
 // CompleteRedo reports what a finished redo checked out and changed.

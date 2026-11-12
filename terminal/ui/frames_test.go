@@ -456,7 +456,7 @@ func TestTranscriptFrames(t *testing.T) {
 		}},
 		// With the prompt style a bar, the default, a prompt sits on the
 		// canvas with the marker shape in the primary color at the left edge
-		// of each of its rows, ■ by default.
+		// of its first row alone, ■ by default, however many rows it takes.
 		{name: "prompt_bar", h: 10, add: func(ui *UI) {
 			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
@@ -468,7 +468,7 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
 		}},
-		// The block shape fills the bar's cells, and a shape set later
+		// The block shape fills the bar's first cell, and a shape set later
 		// reaches a prompt already shown.
 		{name: "prompt_bar_block", h: 10, add: func(ui *UI) {
 			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))

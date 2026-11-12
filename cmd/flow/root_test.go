@@ -96,7 +96,7 @@ func TestRootPrintFlags(t *testing.T) {
 	rootCmd.Flags(fs, &o)
 	args := []string{
 		"-p", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "--no-session", "--dir", "sub",
-		"--no-context-files", "--instructions", "Be brief.", "--max-steps", "4", "--tools", "read,grep", "--exclude-tools", "grep",
+		"--no-context-files", "--no-skills", "--instructions", "Be brief.", "--max-steps", "4", "--tools", "read,grep", "--exclude-tools", "grep",
 		"-f", "a.png", "--file", "b, c.txt", "fix it",
 	}
 	if err := fs.Parse(args); err != nil {
@@ -104,7 +104,7 @@ func TestRootPrintFlags(t *testing.T) {
 	}
 	want := RunOptions{
 		modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Format: OutputJSON, Output: "answer.md", NoSession: true, Dir: "sub",
-		NoContextFiles: true, Instructions: "Be brief.", MaxSteps: 4, Tools: []string{"read", "grep"}, ExcludeTools: []string{"grep"},
+		NoContextFiles: true, NoSkills: true, Instructions: "Be brief.", MaxSteps: 4, Tools: []string{"read", "grep"}, ExcludeTools: []string{"grep"},
 		Files: []string{"a.png", "b, c.txt"},
 	}
 	if !o.print || !reflect.DeepEqual(o.runOptions(), want) || !slices.Equal(fs.Args(), []string{"fix it"}) {
@@ -144,9 +144,10 @@ func TestRootPrintMisuse(t *testing.T) {
 }
 
 // TestRelaunchArgs checks the arguments that start flow again on a session
-// of another folder: the session, which --session opens in its folder, and
-// the color mode only when --color chose one, not the session flags that
-// chose the session left, and that the root command reads them back.
+// of another folder: the session, which --session opens in its folder, the
+// color mode only when --color chose one, and --no-skills when it was
+// given, not the session flags that chose the session left, and that the
+// root command reads them back.
 func TestRelaunchArgs(t *testing.T) {
 	tests := []struct {
 		name string
@@ -157,6 +158,7 @@ func TestRelaunchArgs(t *testing.T) {
 		{name: "auto color", args: []string{"--color", "auto"}, want: []string{"--session", "ses_2"}},
 		{name: "chosen color", args: []string{"--color", "256"}, want: []string{"--session", "ses_2", "--color", "256"}},
 		{name: "from the list", args: []string{"-r"}, want: []string{"--session", "ses_2"}},
+		{name: "no skills", args: []string{"-c", "--no-skills"}, want: []string{"--session", "ses_2", "--no-skills"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,6 +167,7 @@ func TestRelaunchArgs(t *testing.T) {
 			fs.SetOutput(io.Discard)
 			colorFlags(fs, &o.color)
 			sessionFlags(fs, &o)
+			noSkillsFlag(fs, &o.noSkills)
 			if err := fs.Parse(tt.args); err != nil {
 				t.Fatalf("parse %q: %v", tt.args, err)
 			}
@@ -178,8 +181,12 @@ func TestRelaunchArgs(t *testing.T) {
 			fs.SetOutput(io.Discard)
 			colorFlags(fs, &again.color)
 			sessionFlags(fs, &again)
+			noSkillsFlag(fs, &again.noSkills)
 			if err := fs.Parse(got); err != nil {
 				t.Fatalf("parse the relaunch args %q: %v", got, err)
+			}
+			if again.noSkills != o.noSkills {
+				t.Errorf("relaunched --no-skills = %v, want %v", again.noSkills, o.noSkills)
 			}
 			if start := again.start(); start.Mode != terminal.StartID || start.ID != "ses_2" {
 				t.Errorf("relaunched start = %+v, want session ses_2", start)

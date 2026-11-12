@@ -423,8 +423,8 @@ type PromptStyle int
 
 const (
 	// PromptBar shows a prompt on the canvas, with the marker shape in the
-	// product's primary color at the left edge of each of its rows, or for
-	// the block shape a cell filled with it. It is the default.
+	// product's primary color at the left edge of its first row, or for the
+	// block shape a cell filled with it. It is the default.
 	PromptBar PromptStyle = iota
 	// PromptFilled shows a prompt as a block on the box background, padded
 	// by a row above and below.
@@ -592,6 +592,10 @@ type UIState struct {
 	// MovesPending counts the history moves in progress, which hold the
 	// queue until they finish.
 	MovesPending int
+	// UndonePrompt is the text of the prompt that the undo in progress moves
+	// back over, which the input gets once the undo succeeds, or empty when
+	// no undo is in progress or the prompt holds no text.
+	UndonePrompt string
 	// TurnStart is when the turn in progress began: when its run started,
 	// or when the prompt that opened it did. It is zero while no turn of the
 	// active session is in progress.
