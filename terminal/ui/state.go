@@ -423,8 +423,8 @@ type PromptStyle int
 
 const (
 	// PromptBar shows a prompt on the canvas, with the marker shape in the
-	// product's primary color at the left edge of each of its rows, or for
-	// the block shape a cell filled with it. It is the default.
+	// product's primary color at the left edge of its first row, or for the
+	// block shape a cell filled with it. It is the default.
 	PromptBar PromptStyle = iota
 	// PromptFilled shows a prompt as a block on the box background, padded
 	// by a row above and below.

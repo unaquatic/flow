@@ -1,6 +1,6 @@
 === text ===
 |■ fix the divide test, then run the     |
-|■ calculator tests again                |
+|  calculator tests again                |
 |                                        |
 |■ Fixed the divide-by-zero check.       |
 |                                        |
@@ -11,7 +11,7 @@
 |                                        |
 === fg ===
 |A AAA AAA AAAAAA AAAAA AAAA AAA AAA     |
-|A AAAAAAAAAA AAAAA AAAAA                |
+|  AAAAAAAAAA AAAAA AAAAA                |
 |                                        |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA       |
 |                                        |
