@@ -72,6 +72,11 @@ type TreeEntry struct {
 	Text string
 	// Tools are the message's tool calls, in order.
 	Tools []TreeTool
+	// SetsTools reports whether the message is a system message that holds
+	// a set of tools, the tools in force from it on, of ToolSet tools.
+	SetsTools bool
+	// ToolSet is the number of tools of the set, when SetsTools.
+	ToolSet int
 	// Prompt is the whole text of a user message, which choosing the message
 	// puts in the input to edit and send again. It is empty for other
 	// messages.
@@ -96,6 +101,8 @@ func NewTreeEntry(m message.Content) TreeEntry {
 			}
 		case message.ToolPart:
 			e.Tools = append(e.Tools, NewTreeTool(p))
+		case message.ToolSetPart:
+			e.SetsTools, e.ToolSet = true, len(p.Tools)
 		}
 	}
 	text := strings.Join(texts, "\n")

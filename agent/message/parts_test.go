@@ -57,6 +57,9 @@ func stripPartIDs(parts []ContentPart) []ContentPart {
 		case UsagePart:
 			v.ID = ""
 			out[i] = v
+		case ToolSetPart:
+			v.ID = ""
+			out[i] = v
 		default:
 			out[i] = p
 		}
@@ -182,6 +185,49 @@ func TestUsagePart_JSONRoundtrip(t *testing.T) {
 	}
 	if strings.Count(string(data), `"output_tokens"`) != 1 {
 		t.Errorf("stored form %s, want zero counts left out", data)
+	}
+}
+
+// TestToolSetPart_JSONRoundtrip checks that a set of tools keeps each tool's
+// name, description and whole input schema, in order, through the stored
+// form, and that an empty set reads back as an empty set, written as an
+// empty list.
+func TestToolSetPart_JSONRoundtrip(t *testing.T) {
+	parts := []ContentPart{
+		ToolSetPart{Tools: []ToolDefinition{
+			{Name: "edit", Description: "Edit a file.", InputSchema: InputSchema{
+				Type: "object",
+				Properties: map[string]PropertySchema{
+					"path": {Type: "string", Description: "File to edit."},
+					"mode": {Type: "string", Enum: []string{"replace", "append"}},
+					"edits": {Type: "array", Items: &PropertySchema{
+						Type:       "object",
+						Properties: map[string]PropertySchema{"old": {Type: "string"}, "new": {Type: "string"}},
+						Required:   []string{"old", "new"},
+					}},
+				},
+				Required: []string{"path", "edits"},
+			}},
+			{Name: "noop", InputSchema: InputSchema{Type: "object"}},
+		}},
+		ToolSetPart{Tools: []ToolDefinition{}},
+	}
+	data, err := MarshalParts(parts)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	got, err := UnmarshalParts(data)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(stripPartIDs(got), parts) {
+		t.Fatalf("round-trip lost data: got %+v want %+v", got, parts)
+	}
+	if !strings.Contains(string(data), `"tools":[]`) {
+		t.Errorf("stored form %s, want the empty set as an empty list", data)
+	}
+	if _, ok := got[0].(Metadata); ok {
+		t.Error("ToolSetPart is Metadata, but providers are sent it")
 	}
 }
 

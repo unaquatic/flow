@@ -86,7 +86,7 @@ func providerSettings(conf *config.Service) func(agent.ProviderID) agent.Setting
 		if pc == nil {
 			return agent.Settings{}
 		}
-		return agent.Settings{Disabled: pc.Disabled, BaseURL: pc.BaseURL}
+		return agent.Settings{Disabled: pc.Disabled, BaseURL: pc.BaseURL, ToolChanges: pc.ToolChanges}
 	}
 }
 

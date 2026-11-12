@@ -19,8 +19,17 @@ type Request struct {
 	// as the Messages and Responses formats do, gather them from
 	// wherever they are.
 	Messages []Message
-	// Tools are the tools the model may call.
+	// Tools are the tools the model may call: those in force at the end of
+	// Messages, as ToolsIn finds them.
 	Tools []ToolDefinition
+	// ToolChanges lets a format that can do so send each change of the
+	// tools where it happens in Messages, at the system message that holds
+	// the new set, offering the tools of the first set at the start of the
+	// request, rather than offering Tools there. The start of a session's
+	// requests then stays the same when its tools change, as a prompt
+	// cache needs. A format that cannot, or a request whose changes it
+	// cannot place, offers Tools.
+	ToolChanges bool
 	// MaxTokens limits the output tokens of the response. Zero sends no
 	// limit, which the Messages format rejects.
 	MaxTokens int

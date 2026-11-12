@@ -24,6 +24,8 @@ type Settings struct {
 	// a base URL with a path, such as https://proxy.example/provider-a/v1,
 	// replaces the provider's own.
 	BaseURL string
+	// ToolChanges sets Request.ToolChanges on the provider's requests.
+	ToolChanges bool
 }
 
 // Dialer returns the provider that sends provider t's requests to endpoint
@@ -272,8 +274,12 @@ func (s *Providers) RefreshModels(ctx context.Context) error {
 // endpoint flow does not speak with ErrFormatNotSupported.
 //
 // The reasoning of messages that another model wrote is dropped, as
-// OwnReasoning drops it.
+// OwnReasoning drops it. A provider whose Settings set ToolChanges gets
+// requests that set it too.
 func (s *Providers) Stream(ctx context.Context, v Variant, req Request) (StreamResponse, error) {
+	if s.settings(v.Provider).ToolChanges {
+		req.ToolChanges = true
+	}
 	cat := s.Catalog()
 	r, resolved := cat.Resolve(v.Provider, v.ID())
 	off, listed := Lookup(cat, v)

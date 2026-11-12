@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -175,6 +176,68 @@ func TestAppendMessage_StoresTypeAndIDInColumns(t *testing.T) {
 	}
 	if empty, ok := msg.Parts[1].(message.TextPart); !ok || empty.Text != "" {
 		t.Errorf("part without other fields = %#v, want an empty TextPart", msg.Parts[1])
+	}
+}
+
+// TestAppendMessage_StoresTools checks that a system message keeps its text
+// and then its set of tools in one row, which holds each tool's name,
+// description and input schema in order, and an empty set as an empty list,
+// and reads back with them.
+func TestAppendMessage_StoresTools(t *testing.T) {
+	store := newTestStore(t)
+	ctx := t.Context()
+	tools := message.ToolSetPart{ID: "prt_tools", Tools: []message.ToolDefinition{
+		{Name: "noop", InputSchema: message.InputSchema{Type: "object"}},
+		{Name: "read", Description: "Read a file.", InputSchema: message.InputSchema{
+			Type:       "object",
+			Properties: map[string]message.PropertySchema{"path": {Type: "string"}},
+			Required:   []string{"path"},
+		}},
+	}}
+	none := message.ToolSetPart{ID: "prt_none", Tools: []message.ToolDefinition{}}
+	for _, msg := range []message.Content{
+		{ID: "msg_1", Role: message.RoleSystem, Parts: []message.ContentPart{message.TextPart{ID: "prt_text", Text: "Be brief."}, tools}},
+		{ID: "msg_2", Role: message.RoleSystem, Parts: []message.ContentPart{none}},
+	} {
+		if err := store.AppendMessage(ctx, "ses_tools", &msg); err != nil {
+			t.Fatalf("append: %v", err)
+		}
+	}
+
+	rows, err := store.db.QueryContext(ctx, `SELECT id, type, data FROM message_parts ORDER BY seq`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	type row struct{ ID, Type, Data string }
+	var got []row
+	for rows.Next() {
+		var r row
+		if err := rows.Scan(&r.ID, &r.Type, &r.Data); err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, r)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	want := []row{
+		{"prt_text", "text", `{"text":"Be brief."}`},
+		{"prt_tools", "toolset", `{"tools":[{"name":"noop","input_schema":{"type":"object"}},{"name":"read","description":"Read a file.","input_schema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}]}`},
+		{"prt_none", "toolset", `{"tools":[]}`},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("rows =\n%v\nwant\n%v", got, want)
+	}
+
+	for id, want := range map[message.ID]message.ToolSetPart{"msg_1": tools, "msg_2": none} {
+		back, err := store.Message(ctx, "ses_tools", id)
+		if err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		if got, ok := message.LastPart[message.ToolSetPart](back.Parts); !ok || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s tools = %#v, want %#v", id, got, want)
+		}
 	}
 }
 

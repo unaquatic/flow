@@ -141,6 +141,10 @@ func TreeLines(v TreeView, theme *style.Theme) []style.StyledText {
 		switch {
 		case e.Role == message.RoleUser:
 			chunks = append(chunks, user("User "), text(e.Text))
+		case e.Role == message.RoleSystem && e.Text == "" && e.SetsTools:
+			// A system message that holds tools alone, as a change of tools
+			// stores it, counts them.
+			chunks = append(chunks, muted(ContextLabel+" "), muted(ToolCount(e.ToolSet)))
 		case e.Role == message.RoleSystem:
 			chunks = append(chunks, muted(ContextLabel+" "), muted(e.Text))
 		case e.ToolsOnly():

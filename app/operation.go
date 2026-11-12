@@ -469,31 +469,32 @@ func (s Session) emitSessionLoaded() error {
 	return nil
 }
 
-// processSend persists a prompt and runs the agent against rebuilt history
-// until ctx, the run's context, ends. Cancellation settles without an error,
-// unless it left a message unstored.
+// processSend persists a prompt and runs the agent against the history
+// rebuilt from the store once the prompt is stored, until ctx, the run's
+// context, ends. Cancellation settles without an error, unless it left a
+// message unstored.
 //
 // A prompt sent while the head sits behind its branch forks the history: the
 // prompt is stored below the head, and the messages that previously followed
 // it stay on the branch left behind. A prompt that would open the history
-// is stored below the system message emitSystem stores first.
+// is stored below the system message emitSystem stores first, and one sent
+// with tools that differ from those in force below the system message that
+// holds them.
 func (s Session) processSend(ctx context.Context, snd SendInput) error {
 	v, err := s.app.Models().Resolve(snd.Model)
 	if err != nil {
 		return err
 	}
-	if err := s.emitSystem(); err != nil {
+	if err := s.emitSystem(s.app.tools.WireTools()); err != nil {
 		return err
 	}
+	if err := s.emitPrompt(snd, snd.content(), v, s.app.extensions); err != nil {
+		return err
+	}
+	// The request is the stored branch, the prompt as stored too, with the
+	// parts its hooks added.
 	history, err := s.historyFromLog()
 	if err != nil {
-		return err
-	}
-	// The prompt sent and the one stored share their parts, part IDs too.
-	parts := snd.content()
-	history = append(history, agent.Message{Role: message.RoleUser, Content: parts})
-
-	if err := s.emitPrompt(snd, parts, v, s.app.extensions); err != nil {
 		return err
 	}
 	return s.answer(ctx, history, v)
@@ -503,6 +504,8 @@ func (s Session) processSend(ctx context.Context, snd SendInput) error {
 // prompt, until ctx, the run's context, ends, settling as processSend does.
 // It checks the history again, since it may have changed before the run held
 // the session. A history of system messages alone has nothing to continue.
+// Tools that differ from those in force are stored first, as emitTools
+// stores them, so that the history the run sends holds them.
 func (s Session) processContinue(ctx context.Context, model string) error {
 	history, err := s.historyFromLog()
 	if err != nil {
@@ -513,6 +516,12 @@ func (s Session) processContinue(ctx context.Context, model string) error {
 	}
 	v, err := s.app.Models().Resolve(model)
 	if err != nil {
+		return err
+	}
+	if err := s.emitTools(s.app.tools.WireTools()); err != nil {
+		return err
+	}
+	if history, err = s.historyFromLog(); err != nil {
 		return err
 	}
 	return s.answer(ctx, history, v)
@@ -604,18 +613,21 @@ func (s Session) emitPrompt(snd SendInput, parts []message.ContentPart, v agent.
 
 // runAgent runs the model and tool loop, with the retry settings the config
 // file has as it starts, and fails when the file cannot be read. The agent
-// stores each agent message when its turn ends.
+// stores each agent message when its turn ends. The model is offered the
+// tools in force in history, as agent.ToolsIn finds them, which the app's
+// tools then run by name.
 func (s Session) runAgent(ctx context.Context, history []agent.Message, v agent.Variant) error {
 	cfg, err := s.app.config.Get()
 	if err != nil {
 		return err
 	}
+	tools, _ := agent.ToolsIn(history)
 	run := &agent.Agent{
 		Providers:       s.app.providers,
 		Tools:           s.app.tools,
 		Variant:         v,
 		Messages:        history,
-		ToolDefinitions: s.app.tools.WireTools(),
+		ToolDefinitions: tools,
 		MaxSteps:        s.app.maxSteps,
 		TurnHooks:       turnHooks(s.app.extensions),
 		SessionID:       s.id,

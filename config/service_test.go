@@ -67,14 +67,14 @@ func TestServiceGetReadsEverySetting(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEBUG", "")
 	write(t, dir, `{"default_model":"lab-a/model-a","default_provider":"provider-a","log_level":"warn","extensions":{"snapshot":{"enabled":false}},"catalog_source":"http://catalog.test",
-		"provider":{"provider-b":{"base_url":"http://provider-b.test"}},"agent":{"retry_max_attempts":2,"retry_delay":"1s"},
+		"provider":{"provider-b":{"base_url":"http://provider-b.test","tool_changes":true}},"agent":{"retry_max_attempts":2,"retry_delay":"1s"},
 		"debug":true,"terminal":{"fullscreen":true}}`)
 	cfg, err := NewService(dir).Get()
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
 	if cfg.DefaultModel != "lab-a/model-a" || cfg.DefaultProvider != "provider-a" || cfg.LogLevel != LogWarn || string(cfg.Extensions["snapshot"]) != `{"enabled":false}` || cfg.CatalogSource != "http://catalog.test" ||
-		cfg.Provider["provider-b"].BaseURL != "http://provider-b.test" || cfg.Agent.RetryMaxAttempts != 2 || cfg.Agent.RetryDelay.Seconds() != 1 ||
+		cfg.Provider["provider-b"].BaseURL != "http://provider-b.test" || !cfg.Provider["provider-b"].ToolChanges || cfg.Agent.RetryMaxAttempts != 2 || cfg.Agent.RetryDelay.Seconds() != 1 ||
 		!cfg.Debug || !cfg.Terminal.Fullscreen {
 		t.Errorf("config = %+v, want every setting of the file", cfg)
 	}

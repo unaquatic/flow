@@ -219,6 +219,192 @@ func TestStream_Request(t *testing.T) {
 	}
 }
 
+// toolsMessage returns a system message holding text, when not empty, and
+// then defs, the whole set of tools from it on.
+func toolsMessage(text string, defs ...agent.ToolDefinition) agent.Message {
+	m := agent.Message{Role: message.RoleSystem}
+	if text != "" {
+		m.Content = append(m.Content, message.TextPart{Text: text})
+	}
+	m.Content = append(m.Content, message.ToolSetPart{Tools: defs})
+	return m
+}
+
+// Tool definitions of the tool change tests.
+var (
+	readTool    = agent.ToolDefinition{Name: "read", Description: "Read a file.", InputSchema: agent.InputSchema{Type: "object"}}
+	readToolNew = agent.ToolDefinition{Name: "read", Description: "Read a file or a folder.", InputSchema: agent.InputSchema{Type: "object"}}
+	bashTool    = agent.ToolDefinition{Name: "bash", InputSchema: agent.InputSchema{Type: "object"}}
+	grepTool    = agent.ToolDefinition{Name: "grep", InputSchema: agent.InputSchema{Type: "object"}}
+)
+
+// changedHistory returns a session whose tools change before its second
+// prompt, as the app stores the change: read changes, bash goes and grep
+// comes.
+func changedHistory() []agent.Message {
+	return []agent.Message{
+		toolsMessage("Be brief.", bashTool, readTool),
+		agent.NewUserMessage("hi"),
+		agent.NewAgentMessage("hello"),
+		toolsMessage("", grepTool, readToolNew),
+		agent.NewUserMessage("again"),
+		agent.NewAgentMessage("done"),
+	}
+}
+
+// TestToolChangeMessages checks that the first set of tools is the
+// request's, that a later set becomes a system message after the user turn
+// that follows it, defining each tool that is new or changed and removing
+// each that is gone, and that the request before the reply ends with that
+// message and opens the request after it, so the prefix stays the same.
+func TestToolChangeMessages(t *testing.T) {
+	msgs := changedHistory()
+	system, out, tools, changed, ok := ToolChangeMessages(msgs)
+	if !ok || !changed {
+		t.Fatalf("changed, ok = %v, %v; want both", changed, ok)
+	}
+	if len(system) != 1 || system[0].Text != "Be brief." {
+		t.Errorf("system = %+v, want the opening text alone", system)
+	}
+	if !agent.SameTools(tools, []agent.ToolDefinition{bashTool, readTool}) {
+		t.Errorf("tools = %+v, want the opening set", tools)
+	}
+	var roles []string
+	for _, m := range out {
+		roles = append(roles, m.Role)
+	}
+	if want := []string{"user", "assistant", "user", "system", "assistant"}; !reflect.DeepEqual(roles, want) {
+		t.Fatalf("roles = %v, want %v", roles, want)
+	}
+	newRead, grep := toToolDefs([]agent.ToolDefinition{readToolNew})[0], toToolDefs([]agent.ToolDefinition{grepTool})[0]
+	want := []ContentBlock{
+		{Type: "tool_addition", Tool: &ToolTarget{Type: "tool_definition", Definition: &grep}},
+		{Type: "tool_addition", Tool: &ToolTarget{Type: "tool_definition", Definition: &newRead}},
+		{Type: "tool_removal", Tool: &ToolTarget{Type: "tool_reference", Name: "bash"}},
+	}
+	if got := out[3].Content; !reflect.DeepEqual(got, want) {
+		t.Errorf("change = %+v, want %+v", got, want)
+	}
+	data, err := json.Marshal(out[3])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `{"type":"tool_removal","tool":{"type":"tool_reference","name":"bash"}}`) {
+		t.Errorf("change sent as %s, want the removal by reference", data)
+	}
+
+	_, before, _, _, ok := ToolChangeMessages(msgs[:len(msgs)-1])
+	if !ok || !reflect.DeepEqual(before, out[:len(before)]) || len(before) != len(out)-1 {
+		t.Errorf("request before the reply = %+v, want all but the reply of %+v", before, out)
+	}
+}
+
+// TestToolChangeMessages_Unplaced checks the changes a request cannot send
+// where they happen: one only an assistant turn comes before, and the
+// removal of a tool that the request's tools do not declare, and that a
+// session whose tools never change sends none.
+func TestToolChangeMessages_Unplaced(t *testing.T) {
+	afterReply := []agent.Message{
+		toolsMessage("", readTool), agent.NewUserMessage("hi"), agent.NewAgentMessage("hello"), toolsMessage("", grepTool, readTool),
+	}
+	if _, _, _, _, ok := ToolChangeMessages(afterReply); ok {
+		t.Error("placed a change that only a reply comes before")
+	}
+	added := []agent.Message{
+		toolsMessage("", readTool), agent.NewUserMessage("hi"), agent.NewAgentMessage("hello"),
+		toolsMessage("", grepTool, readTool), agent.NewUserMessage("again"), agent.NewAgentMessage("done"),
+		toolsMessage("", readTool), agent.NewUserMessage("third"),
+	}
+	if _, _, _, _, ok := ToolChangeMessages(added); ok {
+		t.Error("removed by reference a tool that a change defined")
+	}
+	same := []agent.Message{
+		toolsMessage("Be brief.", readTool), agent.NewUserMessage("hi"), agent.NewAgentMessage("hello"),
+		agent.NewSystemMessage("Be terse."), agent.NewUserMessage("again"),
+	}
+	if _, _, tools, changed, ok := ToolChangeMessages(same); !ok || changed || len(tools) != 1 {
+		t.Errorf("text alone: tools, changed, ok = %v, %v, %v; want read, false, true", tools, changed, ok)
+	}
+}
+
+// TestToolChangeMessages_Emptied checks that an empty set withdraws every
+// tool the set before it offered.
+func TestToolChangeMessages_Emptied(t *testing.T) {
+	_, out, _, changed, ok := ToolChangeMessages([]agent.Message{
+		toolsMessage("", bashTool, readTool), agent.NewUserMessage("hi"), agent.NewAgentMessage("hello"),
+		toolsMessage(""), agent.NewUserMessage("again"),
+	})
+	if !ok || !changed {
+		t.Fatalf("changed, ok = %v, %v; want both", changed, ok)
+	}
+	want := []ContentBlock{
+		{Type: "tool_removal", Tool: &ToolTarget{Type: "tool_reference", Name: "bash"}},
+		{Type: "tool_removal", Tool: &ToolTarget{Type: "tool_reference", Name: "read"}},
+	}
+	if last := out[len(out)-1]; last.Role != "system" || !reflect.DeepEqual(last.Content, want) {
+		t.Errorf("last message = %+v, want both tools withdrawn", last)
+	}
+}
+
+// TestStream_ToolChanges checks that a request that sets ToolChanges sends
+// the change in the conversation, the opening tools at its start and the
+// beta, that one that does not offers the tools in force there, and that a
+// client that caches turns on automatic caching.
+func TestStream_ToolChanges(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		toolChanges bool
+		cache       bool
+		wantTools   []string
+		wantBeta    bool
+		wantRoles   []any
+	}{
+		{"changes", true, true, []string{"bash", "read"}, true, []any{"user", "assistant", "user", "system", "assistant"}},
+		{"tools in force", false, false, []string{"grep", "read"}, false, []any{"user", "assistant", "user", "assistant"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var body map[string]any
+			var beta string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				beta = r.Header.Get(BetaHeader)
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Errorf("decode request: %v", err)
+				}
+			}))
+			defer srv.Close()
+
+			p := New(Init{Auth: staticAuth{Kind: agent.CredentialAPIKey, Token: "key"}, BaseURL: srv.URL, Cache: tt.cache})
+			stream, err := p.Model("model-x").Stream(t.Context(), agent.Request{
+				Messages: changedHistory(), Tools: []agent.ToolDefinition{grepTool, readToolNew},
+				MaxTokens: 1000, ToolChanges: tt.toolChanges,
+			})
+			if err != nil {
+				t.Fatalf("Stream: %v", err)
+			}
+			for range stream {
+			}
+
+			var names []string
+			for _, d := range body["tools"].([]any) {
+				names = append(names, d.(map[string]any)["name"].(string))
+			}
+			var roles []any
+			for _, m := range body["messages"].([]any) {
+				roles = append(roles, m.(map[string]any)["role"])
+			}
+			if !reflect.DeepEqual(names, tt.wantTools) || !reflect.DeepEqual(roles, tt.wantRoles) {
+				t.Errorf("tools, roles = %v, %v; want %v, %v", names, roles, tt.wantTools, tt.wantRoles)
+			}
+			if got := strings.Contains(beta, InlineToolsBeta); got != tt.wantBeta {
+				t.Errorf("beta header %q, want the inline tools beta: %v", beta, tt.wantBeta)
+			}
+			if _, got := body["cache_control"]; got != tt.cache {
+				t.Errorf("cache_control = %v, want it set: %v", body["cache_control"], tt.cache)
+			}
+		})
+	}
+}
+
 // controls returns reasoning controls with an effort control listing
 // levels, and a token budget of at least lo tokens when lo is positive.
 func controls(lo int, levels ...string) gateway.Reasoning {

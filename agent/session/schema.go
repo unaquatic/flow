@@ -9,7 +9,20 @@ package session
 var Migrations = []string{
 	migrationV1,
 	migrationV2,
+	migrationV3,
 }
+
+// migrationV3 changes no table: it gives system messages a meaning they did
+// not have. A system message's message_parts row of type 'toolset' is the
+// whole set of tools the model may call from that message on, its data the
+// tools in order, as {"tools":[{"name":...,"description":...,
+// "input_schema":...}]}; an empty list leaves no tools, and a system message
+// without such a row, as one of text alone, leaves the tools in force as
+// they were. The set is the one flow's run had, and a run whose tools differ
+// from those in force stores a system message with its own, so that the
+// stored sets follow flow's tools. An older build reads such a part as empty
+// text and stores no sets, so the step stops it from using the tables.
+const migrationV3 = ``
 
 // migrationV2 stores a message's provider apart from its model, in a
 // provider column, and its model without it, in "model:option:effort" form

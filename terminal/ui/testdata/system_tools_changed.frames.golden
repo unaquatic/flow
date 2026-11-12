@@ -1,0 +1,34 @@
+=== text ===
+|■ Context [4 lines]                     |
+|                                        |
+|■ Run the tests                         |
+|                                        |
+|■ All tests pass.                       |
+|                                        |
+|■ Search for Divide                     |
+|                                        |
+|■ Found it in calc.go.                  |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A AAAAAAA AA AAAAAA                     |
+|                                        |
+|B BBB BBB BBBBB                         |
+|                                        |
+|C BBB BBBBB BBBBB                       |
+|                                        |
+|B BBBBBB BBB BBBBBB                     |
+|                                        |
+|C BBBBB BB BB BBBBBBBB                  |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #eb7513

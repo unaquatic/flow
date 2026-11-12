@@ -108,9 +108,10 @@ func (s Session) fork(p extension.Prompt, history []agent.Message) extension.For
 		if err != nil {
 			return nil, err
 		}
+		tools, _ := agent.ToolsIn(history)
 		resp, err := s.app.providers.Generate(ctx, v, agent.Request{
 			Messages: slices.Concat(history, msgs),
-			Tools:    s.app.tools.WireTools(),
+			Tools:    tools,
 			CacheKey: string(s.id),
 		})
 		if err != nil {

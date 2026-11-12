@@ -51,6 +51,7 @@ type Client struct {
 	key        gateway.Auth
 	baseURL    string
 	rawPredict bool
+	cache      bool
 	httpClient *http.Client
 }
 
@@ -71,6 +72,12 @@ type Init struct {
 	// them: to "{BaseURL}/{model}:streamRawPredict", the model in the URL
 	// and not the body, which names RawPredictVersion instead.
 	RawPredict bool
+	// Cache turns on the API's automatic prompt caching, which caches each
+	// request's prefix through its last block, so that the next request of
+	// the conversation reads it back. Not every API that takes the format
+	// takes the field: a cloud's raw predict endpoint or a gateway may refuse
+	// it.
+	Cache bool
 	// HTTPClient sends the requests. Nil is a new HTTP client.
 	HTTPClient *http.Client
 }
@@ -83,6 +90,7 @@ func New(init Init) *Client {
 		key:        init.Key,
 		baseURL:    strings.TrimSuffix(cmp.Or(init.BaseURL, DefaultBaseURL), "/"),
 		rawPredict: init.RawPredict,
+		cache:      init.Cache,
 		httpClient: cmp.Or(init.HTTPClient, &http.Client{}),
 	}
 }
@@ -103,8 +111,18 @@ type model struct {
 
 // Stream sends req. The API requires an output limit, so a request without
 // MaxTokens, which agent.Providers sets for a model the catalog lists, fails.
+// A request that sets ToolChanges sends them as ToolChangeMessages converts
+// them, under InlineToolsBeta, when it holds any it can place; any other
+// request offers req.Tools.
 func (m *model) Stream(ctx context.Context, req agent.Request) (agent.StreamResponse, error) {
 	system, messages := ToMessages(req.Messages)
+	tools, extra := req.Tools, map[string]string(nil)
+	if req.ToolChanges {
+		if s, msgs, first, changed, ok := ToolChangeMessages(req.Messages); ok && changed {
+			system, messages, tools = s, msgs, first
+			extra = map[string]string{BetaHeader: InlineToolsBeta}
+		}
+	}
 	body := map[string]any{
 		"model":    m.name,
 		"messages": messages,
@@ -116,8 +134,11 @@ func (m *model) Stream(ctx context.Context, req agent.Request) (agent.StreamResp
 	if len(system) > 0 {
 		body["system"] = system
 	}
-	if t := toToolDefs(req.Tools); t != nil {
+	if t := toToolDefs(tools); t != nil {
 		body["tools"] = t
+	}
+	if m.c.cache {
+		body["cache_control"] = map[string]any{"type": "ephemeral"}
 	}
 	thinkingHeaders := SetReasoning(body, req.Reasoning, req.MaxTokens)
 	body = request.MergeBody(body, req.Body)
@@ -134,6 +155,7 @@ func (m *model) Stream(ctx context.Context, req agent.Request) (agent.StreamResp
 			h.Del(VersionHeader)
 		}
 		request.AddHeaders(h, thinkingHeaders)
+		request.AddHeaders(h, extra)
 		request.AddHeaders(h, req.Headers)
 		resp, err := post.JSON(ctx, m.c.httpClient, m.c.Name(), url, h, body)
 		if err != nil {
@@ -279,6 +301,10 @@ type ContentBlock struct {
 	ResultContent any `json:"content,omitempty"`
 	// IsError marks failed tool output.
 	IsError bool `json:"is_error,omitempty"`
+
+	// Tool is the tool a tool_addition block offers or a tool_removal
+	// block withdraws.
+	Tool *ToolTarget `json:"tool,omitempty"`
 
 	// CacheControl contains prompt-cache hints.
 	CacheControl *message.CacheControl `json:"cache_control,omitempty"`
@@ -679,29 +705,148 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 	return true
 }
 
-// toolDef is a tool definition of a request.
-type toolDef struct {
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
+// ToolDef is a tool definition of a request.
+type ToolDef struct {
+	// Name identifies the tool.
+	Name string `json:"name"`
+	// Description explains the tool to the model.
+	Description string `json:"description,omitempty"`
+	// InputSchema describes the tool's arguments.
 	InputSchema agent.InputSchema `json:"input_schema"`
 }
 
 // toToolDefs converts tools to the definitions of a request.
-func toToolDefs(tools []agent.ToolDefinition) []toolDef {
+func toToolDefs(tools []agent.ToolDefinition) []ToolDef {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]toolDef, 0, len(tools))
+	out := make([]ToolDef, 0, len(tools))
 	for _, t := range tools {
 		schema := t.InputSchema
 		if schema.Type == "" {
 			schema.Type = "object"
 		}
-		out = append(out, toolDef{
+		out = append(out, ToolDef{
 			Name:        t.Name,
 			Description: t.Description,
 			InputSchema: schema,
 		})
 	}
 	return out
+}
+
+// InlineToolsBeta is the beta that lets a system message of the
+// conversation offer a tool, by its definition, and withdraw one, as
+// ToolChangeMessages sends them.
+const InlineToolsBeta = "inline-tools-2026-09-15"
+
+// ToolTarget is the tool of a tool_addition or tool_removal block: a tool
+// by its Definition, of type "tool_definition", or by the Name of a tool the
+// request's tools declare, of type "tool_reference".
+type ToolTarget struct {
+	// Type is "tool_definition" or "tool_reference".
+	Type string `json:"type"`
+	// Name names a tool the request's tools declare, by reference.
+	Name string `json:"name,omitempty"`
+	// Definition defines the tool, by value.
+	Definition *ToolDef `json:"definition,omitempty"`
+}
+
+// ToolChangeMessages converts msgs as ToMessages does, but sends each
+// change of tools where it happens, as agent.Request.ToolChanges asks. The
+// tools of the first system message that holds a message.ToolSetPart, which
+// agent.ToolsIn reads, are tools, the tools the request declares at its
+// start. Each later set, a system message's whole new set, is sent by a
+// system message of the request as the change from the set before it: a
+// tool_addition block that defines each tool that is new or whose definition
+// changed, and a tool_removal block that withdraws each tool the new set
+// leaves out, in that order. A system message of text alone changes nothing.
+//
+// The API takes such a message only right after a user turn and before an
+// assistant turn, or at the end, while the stored set sits where the run
+// that changed the tools started: before the prompt it sends. So the change
+// goes after the user turn that follows it, before the reply, which the new
+// set offered the tools to, and changes that meet there go in one message.
+// It reports changed when it sends any, and ok false when it cannot send
+// them all: one that only an assistant turn comes before, as a continue of a
+// reply stores, or the removal of a tool the request does not declare, which
+// a reference cannot name. The caller then sends msgs as ToMessages does,
+// with the tools in force at their end.
+func ToolChangeMessages(msgs []agent.Message) (system []ContentBlock, out []Message, tools []agent.ToolDefinition, changed, ok bool) {
+	var current []agent.ToolDefinition
+	var declared []string
+	var pending []ContentBlock
+	seen := false
+	// place sends the pending change at the end of out, where a user turn
+	// must be.
+	place := func() bool {
+		if len(pending) == 0 {
+			return true
+		}
+		if len(out) == 0 || out[len(out)-1].Role != Role(message.RoleUser) {
+			return false
+		}
+		out = append(out, Message{Role: Role(message.RoleSystem), Content: pending})
+		pending, changed = nil, true
+		return true
+	}
+	for _, m := range msgs {
+		if m.Role == message.RoleSystem {
+			text, _ := ToMessages([]agent.Message{m})
+			system = append(system, text...)
+			next, ok := agent.ToolsIn([]agent.Message{m})
+			if !ok {
+				// Text alone leaves the tools as they were.
+				continue
+			}
+			if !seen {
+				seen, tools, current = true, next, next
+				for _, d := range next {
+					declared = append(declared, d.Name)
+				}
+				continue
+			}
+			blocks, ok := ToolChangeBlocks(current, next, declared)
+			if !ok {
+				return nil, nil, nil, false, false
+			}
+			pending, current = append(pending, blocks...), next
+			continue
+		}
+		_, conv := ToMessages([]agent.Message{m})
+		if len(conv) > 0 && conv[0].Role == Role(message.RoleAgent) && !place() {
+			return nil, nil, nil, false, false
+		}
+		out = append(out, conv...)
+	}
+	if !place() {
+		return nil, nil, nil, false, false
+	}
+	return system, out, tools, changed, true
+}
+
+// ToolChangeBlocks returns the blocks that change the tools from prev to
+// next, as ToolChangeMessages sends them, and reports false when next
+// leaves out a tool that declared, the tools the request declares, does not
+// name, which a tool_removal block cannot reference.
+func ToolChangeBlocks(prev, next []agent.ToolDefinition, declared []string) ([]ContentBlock, bool) {
+	var blocks []ContentBlock
+	for _, d := range next {
+		i := slices.IndexFunc(prev, func(p agent.ToolDefinition) bool { return p.Name == d.Name })
+		if i >= 0 && agent.SameTools(prev[i:i+1], []agent.ToolDefinition{d}) {
+			continue
+		}
+		def := toToolDefs([]agent.ToolDefinition{d})[0]
+		blocks = append(blocks, ContentBlock{Type: "tool_addition", Tool: &ToolTarget{Type: "tool_definition", Definition: &def}})
+	}
+	for _, p := range prev {
+		if slices.ContainsFunc(next, func(d agent.ToolDefinition) bool { return d.Name == p.Name }) {
+			continue
+		}
+		if !slices.Contains(declared, p.Name) {
+			return nil, false
+		}
+		blocks = append(blocks, ContentBlock{Type: "tool_removal", Tool: &ToolTarget{Type: "tool_reference", Name: p.Name}})
+	}
+	return blocks, true
 }

@@ -312,6 +312,242 @@ func TestSend_SystemPromptOptions(t *testing.T) {
 	}
 }
 
+// toolsOf returns the tool definitions msg holds, in order.
+func toolsOf(msg message.Content) []agent.ToolDefinition {
+	p, _ := message.LastPart[message.ToolSetPart](msg.Parts)
+	return p.Tools
+}
+
+// systemsOf returns the system messages of branch, in order.
+func systemsOf(branch []message.Content) []message.Content {
+	return slices.DeleteFunc(slices.Clone(branch), func(m message.Content) bool { return m.Role != message.RoleSystem })
+}
+
+// TestSend_StoresTheTools checks that a new session's system message holds
+// the app's tools after its text, sorted by name, that a prompt sent with the
+// same tools stores no other, and that one sent once they changed stores a
+// system message holding the whole new set and no text, below the reply
+// before it, which the request then sends: the stored tools follow the
+// app's.
+func TestSend_StoresTheTools(t *testing.T) {
+	a, gw := newActorTestApp(t, "reply")
+	read := agent.Tool{Name: "read", Description: "Read a file.", Schema: agent.InputSchema{
+		Type: "object", Properties: map[string]agent.PropertySchema{"path": {Type: "string"}}, Required: []string{"path"},
+	}}
+	bash := agent.Tool{Name: "bash", Description: "Run a command.", Schema: agent.InputSchema{Type: "object"}}
+	a.tools = newTools(read, bash)
+	const id = "ses_tools"
+	events := a.Subscribe(t.Context())
+	for _, text := range []string{"hi", "again"} {
+		send(t, a, id, SendInput{Text: text})
+		collectUntilIdle(t, events)
+	}
+
+	systems := systemsOf(branchOf(t, a.Sessions(), id))
+	if len(systems) != 1 {
+		t.Fatalf("stored %d system messages, want 1", len(systems))
+	}
+	root := systems[0]
+	if text, ok := root.Parts[0].(message.TextPart); !ok || text.Text != testInstructions {
+		t.Errorf("system message opens with %+v, want the instructions", root.Parts[0])
+	}
+	if got := toolsOf(root); !agent.SameTools(got, a.tools.WireTools()) || got[0].Name != "bash" {
+		t.Errorf("system message tools = %+v, want bash and then read", got)
+	}
+
+	a.tools.Register(agent.Tool{Name: "grep", Schema: agent.InputSchema{Type: "object"}})
+	send(t, a, id, SendInput{Text: "third"})
+	collectUntilIdle(t, events)
+
+	branch := branchOf(t, a.Sessions(), id)
+	systems = systemsOf(branch)
+	if len(systems) != 2 {
+		t.Fatalf("stored %d system messages, want the one the session opened with and the new set", len(systems))
+	}
+	changed := systems[1]
+	if got := toolsOf(changed); !agent.SameTools(got, a.tools.WireTools()) || len(got) != 3 || len(changed.Parts) != 1 {
+		t.Errorf("new set = %+v, want one part of the three tools alone", changed.Parts)
+	}
+	if len(root.Parts) != 2 {
+		t.Errorf("system message = %+v, want its text and one part of its tools", root.Parts)
+	}
+	if i := slices.IndexFunc(branch, func(m message.Content) bool { return m.ID == changed.ID }); i != len(branch)-3 || branch[i-1].Role != message.RoleAgent {
+		t.Errorf("new set at %d of %d, want it below the second reply, above the third prompt", i, len(branch))
+	}
+	last := gw.StreamCalls[len(gw.StreamCalls)-1]
+	if got, ok := agent.ToolsIn(last); !ok || !agent.SameTools(got, a.tools.WireTools()) {
+		t.Errorf("tools in force in the last request = %+v, %v; want the new set", got, ok)
+	}
+	if last[0].TextContent() != testInstructions {
+		t.Errorf("last request opens with %+v, want the system prompt the session opened with", last[0])
+	}
+
+	// An app left with no tools stores an empty set, which leaves none.
+	a.tools = agent.NewTools()
+	send(t, a, id, SendInput{Text: "fourth"})
+	collectUntilIdle(t, events)
+	systems = systemsOf(branchOf(t, a.Sessions(), id))
+	if len(systems) != 3 {
+		t.Fatalf("stored %d system messages, want a third, emptying the set", len(systems))
+	}
+	if p, ok := message.LastPart[message.ToolSetPart](systems[2].Parts); !ok || len(p.Tools) != 0 {
+		t.Errorf("emptied set = %+v, want an empty set", systems[2].Parts)
+	}
+	if got, ok := agent.ToolsIn(gw.StreamCalls[len(gw.StreamCalls)-1]); !ok || len(got) != 0 {
+		t.Errorf("tools in force in the last request = %+v, %v; want none", got, ok)
+	}
+}
+
+// TestSend_StoresTheToolsOfAnOlderSession checks that a session stored
+// before tools were, whose system message holds text alone, gets the app's
+// tools in a system message below its head with the next prompt, and that
+// one with no system message gets none while the app has no tools.
+func TestSend_StoresTheToolsOfAnOlderSession(t *testing.T) {
+	a, _ := newActorTestApp(t, "reply")
+	const older, bare = "ses_older", "ses_bare_older"
+	for _, m := range []message.Content{
+		{ID: "msg_s", Role: message.RoleSystem, Parts: []message.ContentPart{message.TextPart{Text: testInstructions}}},
+		{ID: "msg_u", Role: message.RoleUser, Parts: []message.ContentPart{message.TextPart{Text: "earlier"}}},
+		{ID: "msg_a", Role: message.RoleAgent, Parts: []message.ContentPart{message.TextPart{Text: "answer"}}},
+	} {
+		appendMessage(t, a.sessions, older, &m)
+	}
+	appendMessage(t, a.sessions, bare, &message.Content{ID: "msg_b", Role: message.RoleUser, Parts: []message.ContentPart{message.TextPart{Text: "earlier"}}})
+	events := a.Subscribe(t.Context())
+	send(t, a, bare, SendInput{Text: "next"})
+	collectUntilIdle(t, events)
+	if systems := systemsOf(branchOf(t, a.Sessions(), bare)); len(systems) != 0 {
+		t.Errorf("session without tools stored %d system messages, want none", len(systems))
+	}
+
+	a.tools = newTools(agent.Tool{Name: "read", Schema: agent.InputSchema{Type: "object"}})
+	send(t, a, older, SendInput{Text: "next"})
+	collectUntilIdle(t, events)
+	branch := branchOf(t, a.Sessions(), older)
+	if len(branch) != 6 || branch[3].Role != message.RoleSystem || branch[3].ParentID == nil || *branch[3].ParentID != "msg_a" {
+		t.Fatalf("branch = %+v, want the older turn, the tools, the prompt and its reply", branch)
+	}
+	if got := toolsOf(branch[3]); !agent.SameTools(got, a.tools.WireTools()) {
+		t.Errorf("stored tools = %+v, want the app's", got)
+	}
+}
+
+// TestContinue_StoresChangedTools checks that a continue run stores tools
+// that differ from those in force before it sends the history.
+func TestContinue_StoresChangedTools(t *testing.T) {
+	a, gw := newActorTestApp(t, "reply")
+	const id = "ses_continue_tools"
+	events := a.Subscribe(t.Context())
+	send(t, a, id, SendInput{Text: "hi"})
+	collectUntilIdle(t, events)
+
+	a.tools = newTools(agent.Tool{Name: "read", Schema: agent.InputSchema{Type: "object"}})
+	if err := a.Session(id).Continue(""); err != nil {
+		t.Fatalf("continue: %v", err)
+	}
+	collectUntilIdle(t, events)
+	if systems := systemsOf(branchOf(t, a.Sessions(), id)); len(systems) != 2 || !agent.SameTools(toolsOf(systems[1]), a.tools.WireTools()) {
+		t.Errorf("system messages = %+v, want the opening one and the new tools", systems)
+	}
+	if got, ok := agent.ToolsIn(gw.StreamCalls[len(gw.StreamCalls)-1]); !ok || len(got) != 1 {
+		t.Errorf("tools in force in the continue request = %+v, %v; want read", got, ok)
+	}
+}
+
+// noter is an extension that adds a text part to each prompt and to each
+// reply, as an extension may, which the model is sent.
+type noter struct{}
+
+func (noter) Name() string { return "noter" }
+
+func (noter) OnPrompt(_ context.Context, _ extension.Prompt, sink agent.PartSink) {
+	part := message.TextPart{ID: message.NewPartID(), Text: "Workspace: clean."}
+	sink.Start(part)
+	sink.End(part)
+}
+
+func (noter) OnTurnEnd(_ context.Context, _ agent.Turn, sink agent.PartSink) {
+	part := message.TextPart{ID: message.NewPartID(), Text: "Turn noted."}
+	sink.Start(part)
+	sink.End(part)
+}
+
+// TestRequests_AreTheStoredBranch checks that every request of a session is
+// the session's stored branch through the message the request answers, as
+// the provider is sent it, with the tools in force in it: a turn's tool call
+// and its result, the parts extensions add to prompts and replies, a change
+// of tools and a continue alike. So each request opens with the whole of the
+// one before it, and the prefix a provider caches only grows.
+func TestRequests_AreTheStoredBranch(t *testing.T) {
+	a, gw := newActorTestApp(t, "")
+	responses := []agent.StreamResponse{
+		agenttest.ToolCallResponse("call_1", "read", `{"path":"a.txt"}`),
+		agenttest.TextResponse("Read it."),
+		agenttest.TextResponse("Again."),
+		agenttest.TextResponse("With grep."),
+		agenttest.TextResponse("Continued."),
+	}
+	var calls int
+	gw.StreamFunc = func() (agent.StreamResponse, error) {
+		if calls >= len(responses) {
+			return nil, errors.New("no response left")
+		}
+		calls++
+		return responses[calls-1], nil
+	}
+	read := agent.Tool{Name: "read", Description: "Read a file.", Schema: agent.InputSchema{Type: "object"},
+		Execute: func(context.Context, map[string]any) (agent.ToolOutput, error) {
+			return agent.ToolOutput{Text: "contents"}, nil
+		}}
+	a.tools = newTools(read)
+	a.extensions = []extension.Extension{noter{}}
+	const id = "ses_requests"
+	events := a.Subscribe(t.Context())
+	for _, text := range []string{"hi", "again"} {
+		send(t, a, id, SendInput{Text: text})
+		collectUntilIdle(t, events)
+	}
+	a.tools.Register(agent.Tool{Name: "grep", Schema: agent.InputSchema{Type: "object"}})
+	send(t, a, id, SendInput{Text: "third"})
+	collectUntilIdle(t, events)
+	if err := a.Session(id).Continue(""); err != nil {
+		t.Fatalf("continue: %v", err)
+	}
+	collectUntilIdle(t, events)
+
+	if len(gw.StreamCalls) != len(responses) {
+		t.Fatalf("sent %d requests, want %d", len(gw.StreamCalls), len(responses))
+	}
+	history, err := a.Session(id).historyFromLog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := agent.ExpandToolParts(agent.OwnReasoning(history, "mock", "test-model"))
+	before := 0
+	for i, call := range gw.StreamCalls {
+		if len(call) <= before || len(call) > len(stored) {
+			t.Fatalf("request %d sends %d messages, want more than the %d before it, and at most the %d stored", i, len(call), before, len(stored))
+		}
+		if !reflect.DeepEqual(call, stored[:len(call)]) {
+			t.Errorf("request %d =\n%+v\nwant the stored branch\n%+v", i, call, stored[:len(call)])
+		}
+		inForce, ok := agent.ToolsIn(call)
+		if !ok || len(inForce) == 0 || !agent.SameTools(gw.StreamTools[i], inForce) {
+			t.Errorf("request %d offers %+v, want the tools in force in it, %+v", i, gw.StreamTools[i], inForce)
+		}
+		before = len(call)
+	}
+	if prompt := gw.StreamCalls[0][1]; !slices.ContainsFunc(prompt.Content, func(p message.ContentPart) bool {
+		text, ok := p.(message.TextPart)
+		return ok && text.Text == "Workspace: clean."
+	}) {
+		t.Errorf("first prompt sent = %+v, want the part the prompt hook added", prompt)
+	}
+	if got := gw.StreamTools[len(gw.StreamTools)-1]; len(got) != 2 {
+		t.Errorf("last request offers %+v, want read and grep", got)
+	}
+}
+
 // TestSend_Parts checks that a prompt's Parts follow its text, in the
 // request and in the stored prompt.
 func TestSend_Parts(t *testing.T) {

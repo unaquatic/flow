@@ -38,8 +38,9 @@ func (s Session) Play(script Script) error {
 
 // processScript runs script until ctx, the run's context, ends, or the
 // script has no more prompts: turns that each open with the prompt Next
-// gives, which the agent loop answers against the session's history. A stop
-// settles as a run's does.
+// gives, which the agent loop answers against the session's history, as the
+// store holds it once the prompt is stored, and the tools in force in it. A
+// stop settles as a run's does.
 func (s Session) processScript(ctx context.Context, script Script) error {
 	providers := s.app.providers.WithProvider(script.Provider)
 	for i := 0; ctx.Err() == nil; i++ {
@@ -47,23 +48,24 @@ func (s Session) processScript(ctx context.Context, script Script) error {
 		if !ok {
 			return nil
 		}
-		if err := s.emitSystem(); err != nil {
-			return err
-		}
-		history, err := s.historyFromLog()
-		if err != nil {
+		if err := s.emitSystem(script.Tools.WireTools()); err != nil {
 			return err
 		}
 		snd := SendInput{Text: text}
 		if err := s.emitPrompt(snd, snd.content(), script.Variant, nil); err != nil {
 			return err
 		}
+		history, err := s.historyFromLog()
+		if err != nil {
+			return err
+		}
+		tools, _ := agent.ToolsIn(history)
 		run := &agent.Agent{
 			Providers:       providers,
 			Tools:           script.Tools,
 			Variant:         script.Variant,
-			Messages:        append(history, agent.NewUserMessage(snd.Text)),
-			ToolDefinitions: script.Tools.WireTools(),
+			Messages:        history,
+			ToolDefinitions: tools,
 			MaxSteps:        script.MaxSteps,
 			SessionID:       s.id,
 			OnEvent:         s.publishAgent,

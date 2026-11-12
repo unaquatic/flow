@@ -76,3 +76,12 @@ func LineCount(text string) string {
 	}
 	return "[" + strconv.Itoa(n) + " lines]"
 }
+
+// ToolCount returns the number of tools a system message holds, as
+// "[12 tools]" or "[1 tool]".
+func ToolCount(n int) string {
+	if n == 1 {
+		return "[1 tool]"
+	}
+	return "[" + strconv.Itoa(n) + " tools]"
+}

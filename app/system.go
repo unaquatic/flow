@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 )
 
@@ -17,7 +18,8 @@ import (
 // the InstructionsFile files and the configuration's agent.system_prompt, as
 // SystemPrompt joins them. It is empty: a session's system prompt is what
 // those files and the configuration say, and nothing of flow's own. The
-// tools the model may call are sent apart from it, with each request.
+// tools the model may call are stored beside it, in the same system
+// message, as emitSystem stores them.
 var DefaultSystemPrompt = ""
 
 // InstructionsFile is the name of the file of instructions that the system
@@ -131,20 +133,27 @@ func ProjectDirs(workingDir string) iter.Seq[string] {
 // so that the next prompt would open the history: a new session's first
 // prompt, or one sent after a checkout of the first message. Stored at the
 // root, the message is the first of the history every run of the branch
-// sends, as the transcript shows it. A session whose head rests on a
-// message already has its history, with or without a system message, and
-// gets none. The system message is the first message of a new session, so
-// it stores the session too, which it then publishes as
-// EventSessionUpdated. Its text is SystemPrompt's, of the InstructionsFile
-// files FindInstructions finds, in flow's data directory and the project,
-// unless the app's Options.NoInstructions leaves them out, and the
-// configuration's agent.system_prompt, or the app's Options.SystemPrompt in
-// its place; when that is empty, there is nothing to send, and it stores
-// none. It fails when the config file cannot be read.
-func (s Session) emitSystem() error {
+// sends, as the transcript shows it. The system message is the first
+// message of a new session, so it stores the session too, which it then
+// publishes as EventSessionUpdated. Its text is SystemPrompt's, of the
+// InstructionsFile files FindInstructions finds, in flow's data directory
+// and the project, unless the app's Options.NoInstructions leaves them out,
+// and the configuration's agent.system_prompt, or the app's
+// Options.SystemPrompt in its place. Its message.ToolSetPart, after the text,
+// holds tools, the definitions the run sends, when there are any. When
+// there is neither, there is nothing to send, and it stores none. It fails
+// when the config file cannot be read.
+//
+// A session whose head rests on a message already has its history, and its
+// system prompt; emitSystem then stores tools as emitTools does, when they
+// differ from those in force.
+func (s Session) emitSystem(tools []agent.ToolDefinition) error {
 	h, err := s.head()
-	if err != nil || h.ID != "" {
+	if err != nil {
 		return err
+	}
+	if h.ID != "" {
+		return s.emitTools(tools)
 	}
 	cfg, err := s.app.config.Get()
 	if err != nil {
@@ -159,14 +168,52 @@ func (s Session) emitSystem() error {
 		extra = s.app.systemPrompt
 	}
 	text := SystemPrompt(instructions, extra)
-	if text == "" {
+	if text == "" && len(tools) == 0 {
 		return nil
 	}
-	msg := message.Content{
-		ID:    message.NewID(),
-		Role:  message.RoleSystem,
-		Parts: []message.ContentPart{message.TextPart{ID: message.NewPartID(), Text: text}},
+	var parts []message.ContentPart
+	if text != "" {
+		parts = append(parts, message.TextPart{ID: message.NewPartID(), Text: text})
 	}
+	if len(tools) > 0 {
+		parts = append(parts, toolSetPart(tools))
+	}
+	return s.storeSystem(parts, "instructions", len(instructions), "tools", len(tools))
+}
+
+// emitTools stores tools, the definitions a run sends, as a system message
+// below the session's head, and publishes it as emitSystem does, when they
+// differ from those in force at the head, as agent.ToolsIn finds them, so
+// that the stored tools follow the run's: a set of tools that changed, as a
+// build, an extension or a --tools flag changes it, and the first set of a
+// session stored before tools were. The message holds the new set alone, an
+// empty one when the run has no tools left, and no text: the system prompt
+// stays the one the session opened with. A session that holds no set and
+// whose run has no tools stores none.
+func (s Session) emitTools(tools []agent.ToolDefinition) error {
+	history, err := s.historyFromLog()
+	if err != nil {
+		return err
+	}
+	inForce, ok := agent.ToolsIn(history)
+	if (ok && agent.SameTools(inForce, tools)) || (!ok && len(tools) == 0) {
+		return nil
+	}
+	return s.storeSystem([]message.ContentPart{toolSetPart(tools)}, "tools", len(tools), "replaced", len(inForce))
+}
+
+// toolSetPart returns tools as the part of a system message that holds them,
+// in their order.
+func toolSetPart(tools []agent.ToolDefinition) message.ToolSetPart {
+	return message.ToolSetPart{ID: message.NewPartID(), Tools: slices.Clone(tools)}
+}
+
+// storeSystem stores a system message of parts below the session's head,
+// logged with attrs, and publishes it as a prompt is published. A session
+// the store did not hold, as a new one, is stored with it, and published as
+// EventSessionUpdated.
+func (s Session) storeSystem(parts []message.ContentPart, attrs ...any) error {
+	msg := message.Content{ID: message.NewID(), Role: message.RoleSystem, Parts: parts}
 	stored, err := s.app.sessions.Stored(s.ctx, s.id)
 	if err != nil {
 		return err
@@ -174,7 +221,7 @@ func (s Session) emitSystem() error {
 	if err := s.app.sessions.AppendMessage(s.ctx, s.id, &msg); err != nil {
 		return err
 	}
-	s.Logger().Info("system message stored", "message", msg.ID, "instructions", len(instructions))
+	s.Logger().Info("system message stored", append([]any{"message", msg.ID}, attrs...)...)
 	at, err := s.branchPositions([]message.Content{msg})
 	if err != nil {
 		return err
