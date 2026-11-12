@@ -7,22 +7,91 @@ import (
 	"testing"
 )
 
-// TestSystemPrompt checks that the system prompt holds the text of each
-// instruction file as it is, and then the configured text when it is not
-// blank, a blank line apart, and nothing else: no default text, no
-// environment, no header naming a file, and nothing at all when there is
-// neither.
-func TestSystemPrompt(t *testing.T) {
-	if got := SystemPrompt(nil, " \n"); got != "" {
-		t.Errorf("SystemPrompt of nothing = %q, want empty", got)
+// TestSystemInstruction checks that the system prompt holds each
+// instruction file in an instructions tag naming its path, and then the
+// configured text, when it is not blank, in an instructions tag without one,
+// a blank line apart, and nothing else: no default text, no environment, no
+// empty tag, and nothing at all when there is neither.
+func TestSystemInstruction(t *testing.T) {
+	if got := SystemInstruction([]Instruction{{Path: "/home/a/AGENTS.md", Text: " \n"}}, " \n"); got != "" {
+		t.Errorf("SystemInstruction of nothing = %q, want empty", got)
 	}
-	if got := SystemPrompt(nil, "\nBe brief.\n"); got != "Be brief." {
-		t.Errorf("SystemPrompt of the configured text = %q, want it alone", got)
+	if got, want := SystemInstruction(nil, "\nBe brief.\n"), "<instructions>\nBe brief.\n</instructions>"; got != want {
+		t.Errorf("SystemInstruction of the configured text = %q, want %q", got, want)
 	}
 	instructions := []Instruction{{Path: "/home/a/AGENTS.md", Text: "Call me Sam."}, {Path: "/work/project/AGENTS.md", Text: "# Project\n\nUse tabs."}}
-	want := "Call me Sam.\n\n# Project\n\nUse tabs.\n\nBe brief."
-	if got := SystemPrompt(instructions, "Be brief."); got != want {
-		t.Errorf("SystemPrompt with instructions = %q, want %q", got, want)
+	want := `<instructions path="/home/a/AGENTS.md">
+Call me Sam.
+</instructions>
+
+<instructions path="/work/project/AGENTS.md">
+# Project
+
+Use tabs.
+</instructions>
+
+<instructions>
+Be brief.
+</instructions>`
+	if got := SystemInstruction(instructions, "Be brief."); got != want {
+		t.Errorf("SystemInstruction with instructions = %q, want %q", got, want)
+	}
+	want = "<instructions path=\"/home/a/AGENTS.md\">\nCall me Sam.\n</instructions>"
+	if got := SystemInstruction(instructions[:1], ""); got != want {
+		t.Errorf("SystemInstruction without configured text = %q, want %q", got, want)
+	}
+}
+
+// TestInstructionTagged checks that a path that holds a quote or an
+// ampersand is escaped in the path attribute, so that it cannot end the tag.
+func TestInstructionTagged(t *testing.T) {
+	got := Instruction{Path: `/work/a "b" & c/AGENTS.md`, Text: "Use tabs."}.Tagged()
+	want := "<instructions path=\"/work/a &#34;b&#34; &amp; c/AGENTS.md\">\nUse tabs.\n</instructions>"
+	if got != want {
+		t.Errorf("Tagged = %q, want %q", got, want)
+	}
+}
+
+// TestFindInstructionsNames checks that an AGENTS.override.md takes the
+// place of the AGENTS.md of its own folder, in the data directory and the
+// project alike, but of no other folder's; that a blank one is passed over
+// for the folder's AGENTS.md.
+func TestFindInstructionsNames(t *testing.T) {
+	root := t.TempDir()
+	data := filepath.Join(root, "data")
+	repo := filepath.Join(root, "repo")
+	sub := filepath.Join(repo, "sub")
+	write(t, filepath.Join(repo, ".git", "HEAD"), "ref: refs/heads/main\n")
+	write(t, filepath.Join(data, InstructionsFile), "User rules.")
+	write(t, filepath.Join(data, InstructionsOverrideFile), "User override.")
+	write(t, filepath.Join(repo, InstructionsFile), "Repo rules.")
+	write(t, filepath.Join(repo, InstructionsOverrideFile), "Repo override.")
+	if err := os.MkdirAll(sub, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	texts := func(ins []Instruction) []string {
+		var out []string
+		for _, in := range ins {
+			out = append(out, in.Text)
+		}
+		return out
+	}
+	if got, want := texts(FindInstructions(data, sub)), []string{"User override.", "Repo override."}; !slices.Equal(got, want) {
+		t.Errorf("FindInstructions with overrides = %q, want %q", got, want)
+	}
+
+	// An override in a folder below takes the place of nothing above it:
+	// the nearest folder with a file of instructions is the project's.
+	write(t, filepath.Join(sub, InstructionsOverrideFile), "Sub override.")
+	if got, want := texts(FindInstructions("", sub)), []string{"Sub override."}; !slices.Equal(got, want) {
+		t.Errorf("FindInstructions below the repository's root = %q, want %q", got, want)
+	}
+
+	// A blank override is passed over for the AGENTS.md beside it.
+	write(t, filepath.Join(repo, InstructionsOverrideFile), " \n")
+	if got, want := FindInstructions("", repo), []Instruction{{Path: filepath.Join(repo, InstructionsFile), Text: "Repo rules."}}; !slices.Equal(got, want) {
+		t.Errorf("FindInstructions past a blank override = %+v, want %+v", got, want)
 	}
 }
 

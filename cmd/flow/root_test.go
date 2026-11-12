@@ -96,7 +96,7 @@ func TestRootPrintFlags(t *testing.T) {
 	rootCmd.Flags(fs, &o)
 	args := []string{
 		"-p", "-m", "model-a", "--provider", "provider-a", "--format", "json", "-o", "answer.md", "--no-session", "--dir", "sub",
-		"--no-context-files", "--system-prompt", "Be brief.", "--max-steps", "4", "--tools", "read,grep", "--exclude-tools", "grep",
+		"--no-context-files", "--instructions", "Be brief.", "--max-steps", "4", "--tools", "read,grep", "--exclude-tools", "grep",
 		"-f", "a.png", "--file", "b, c.txt", "fix it",
 	}
 	if err := fs.Parse(args); err != nil {
@@ -104,7 +104,7 @@ func TestRootPrintFlags(t *testing.T) {
 	}
 	want := RunOptions{
 		modelOptions: modelOptions{provider: "provider-a", model: "model-a"}, Format: OutputJSON, Output: "answer.md", NoSession: true, Dir: "sub",
-		NoContextFiles: true, SystemPrompt: "Be brief.", MaxSteps: 4, Tools: []string{"read", "grep"}, ExcludeTools: []string{"grep"},
+		NoContextFiles: true, Instructions: "Be brief.", MaxSteps: 4, Tools: []string{"read", "grep"}, ExcludeTools: []string{"grep"},
 		Files: []string{"a.png", "b, c.txt"},
 	}
 	if !o.print || !reflect.DeepEqual(o.runOptions(), want) || !slices.Equal(fs.Args(), []string{"fix it"}) {
@@ -119,7 +119,7 @@ func TestRootPrintFlags(t *testing.T) {
 func TestRootPrintMisuse(t *testing.T) {
 	for _, args := range [][]string{
 		{"--format", "json"}, {"-o", "answer.md", "hi"}, {"--no-session", "hi"}, {"--tools", "", "hi"},
-		{"--exclude-tools", "bash"}, {"-f", "a.png"}, {"--max-steps", "2"}, {"--system-prompt", "x"}, {"--no-context-files"},
+		{"--exclude-tools", "bash"}, {"-f", "a.png"}, {"--max-steps", "2"}, {"--instructions", "x"}, {"--no-context-files"},
 	} {
 		if err := rootCmd.Execute(t.Context(), args); !errors.Is(err, errNeedsPrint) {
 			t.Errorf("execute %q: err = %v, want %v", args, err, errNeedsPrint)
@@ -133,7 +133,7 @@ func TestRootPrintMisuse(t *testing.T) {
 		{[]string{"-p", "--no-session", "-c", "hi"}, "--no-session and --continue"},
 		{[]string{"-p", "--no-session", "--session", "ses_1", "hi"}, "--no-session and --session"},
 		{[]string{"--dir", "..", "--session", "ses_1"}, "--dir and --session"},
-		{[]string{"-p", "--system-prompt", "x", "-c", "hi"}, "--system-prompt and --continue"},
+		{[]string{"-p", "--instructions", "x", "-c", "hi"}, "--instructions and --continue"},
 		{[]string{"-p", "--no-context-files", "--session", "ses_1", "hi"}, "--no-context-files and --session"},
 	} {
 		want := "flow: use only one of " + tt.want
