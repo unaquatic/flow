@@ -220,9 +220,12 @@ func (s *Store) AppendMessage(ctx context.Context, sessionID message.SessionID, 
 // it is for: the head does not move onto it, the session's update time
 // stays, and the reads of the conversation leave it out, as Branch,
 // Children, Forks, Leaf, Messages and Size do. ForkChildren and Path read
-// it. Deleting parent deletes it too. It fails with [ErrMessageType] when a
-// message of msgs is chat, and with [ErrMessageNotFound] when the session
-// holds no parent, as one not stored, or deleted, holds none.
+// it. Deleting parent deletes it too. An empty parent stores the fork as a
+// root of its own, linked to no message of the conversation, which only
+// deleting the session deletes. It fails with [ErrMessageType] when a
+// message of msgs is chat, with [ErrMessageNotFound] when the session holds
+// no parent, as one not stored, or deleted, holds none, and, for a root,
+// with an error wrapping [fs.ErrNotExist] when the session is not stored.
 func (s *Store) AppendFork(ctx context.Context, sessionID message.SessionID, parent message.ID, msgs ...*message.Content) error {
 	for _, msg := range msgs {
 		if msg.Type.IsChat() {
@@ -236,12 +239,21 @@ func (s *Store) AppendFork(ctx context.Context, sessionID message.SessionID, par
 	defer tx.Rollback()
 
 	var found bool
-	if err := tx.QueryRowContext(ctx, `
-		SELECT EXISTS (SELECT 1 FROM messages WHERE session_id = ? AND id = ?)`,
-		sessionID, string(parent)).Scan(&found); err != nil {
+	if parent == "" {
+		err = tx.QueryRowContext(ctx, `
+			SELECT EXISTS (SELECT 1 FROM sessions WHERE id = ?)`, sessionID).Scan(&found)
+	} else {
+		err = tx.QueryRowContext(ctx, `
+			SELECT EXISTS (SELECT 1 FROM messages WHERE session_id = ? AND id = ?)`,
+			sessionID, string(parent)).Scan(&found)
+	}
+	if err != nil {
 		return err
 	}
-	if !found {
+	switch {
+	case !found && parent == "":
+		return fmt.Errorf("session %s: %w", sessionID, fs.ErrNotExist)
+	case !found:
 		return ErrMessageNotFound
 	}
 	stored := make([]message.Content, len(msgs))

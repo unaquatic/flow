@@ -11,7 +11,6 @@ import (
 	"unicode"
 
 	"github.com/unaquatic/flow/agent"
-	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/config"
 	"github.com/unaquatic/flow/extension"
 )
@@ -31,31 +30,31 @@ func load(t *testing.T, settings string) extension.Extension {
 	return e
 }
 
-// fork is a fake extension.Fork that replies with reply, or fails with err,
-// and records the model and messages of each call.
-type fork struct {
-	reply  string
-	err    error
-	models []string
-	asks   [][]agent.Message
+// replier is a fake extension.Reply that replies with reply, or fails with
+// err, and records the model and system message of each call.
+type replier struct {
+	reply   string
+	err     error
+	models  []string
+	systems []string
 }
 
-func (f *fork) Fork(_ context.Context, model string, msgs ...agent.Message) (*agent.Response, error) {
-	f.models = append(f.models, model)
-	f.asks = append(f.asks, msgs)
-	if f.err != nil {
-		return nil, f.err
+func (r *replier) Reply(_ context.Context, model, system string) (*agent.Response, error) {
+	r.models = append(r.models, model)
+	r.systems = append(r.systems, system)
+	if r.err != nil {
+		return nil, r.err
 	}
-	return &agent.Response{Message: agent.NewAgentMessage(f.reply)}, nil
+	return &agent.Response{Message: agent.NewAgentMessage(r.reply)}, nil
 }
 
-// titling returns the titling of a session titled title, forked with f.
-func titling(f *fork, title string) extension.Titling {
+// titling returns the titling of a session titled title, replied to by r.
+func titling(r *replier, title string) extension.Titling {
 	return extension.Titling{
 		Prompt:  extension.Prompt{SessionID: "ses_a", MessageID: "msg_a", Text: "fix the login loop", Model: "provider-a/lab-a/model-a:high"},
-		History: []agent.Message{agent.NewUserMessage("fix the login loop")},
+		Prompts: []string{"fix the login loop"},
 		Title:   title,
-		Fork:    f.Fork,
+		Reply:   r.Reply,
 	}
 }
 
@@ -71,55 +70,45 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-// TestTitle checks that the extension forks the session with Ask, to the
-// prompt's model or the one its settings name, and returns the reply as the
-// model wrote it, without the spaces around it.
+// TestTitle checks that the extension asks for the thread's reply with
+// Instructions as its system message, from the prompt's model or the one
+// its settings name, and returns the reply as the model wrote it, without
+// the spaces around it.
 func TestTitle(t *testing.T) {
 	ctx := t.Context()
 	e := load(t, "").(*Extension)
-	f := &fork{reply: "\n  Fix the login loop!  \n"}
+	r := &replier{reply: "\n  Fix the login loop!  \n"}
 
-	title, err := e.Title(ctx, titling(f, "Login bug"))
+	title, err := e.Title(ctx, titling(r, "Login bug"))
 	if err != nil || title != "Fix the login loop!" {
 		t.Fatalf("Title = %q, %v; want the reply as the model wrote it, without the spaces around it", title, err)
 	}
-	if !slices.Equal(f.models, []string{""}) {
-		t.Errorf("forked to %q, want the prompt's model, named by none", f.models)
+	if !slices.Equal(r.models, []string{""}) {
+		t.Errorf("asked %q, want the prompt's model, named by none", r.models)
 	}
-	if len(f.asks) != 1 || len(f.asks[0]) != 1 || f.asks[0][0].TextContent() != Ask("Login bug").TextContent() {
-		t.Errorf("forked with %+v, want Ask of the current title", f.asks)
+	if !slices.Equal(r.systems, []string{Instructions}) {
+		t.Errorf("asked with system %q, want Instructions", r.systems)
 	}
 
 	e.Model = "provider-a/lab-a/model-small"
-	if _, err := e.Title(ctx, titling(f, "")); err != nil {
+	if _, err := e.Title(ctx, titling(r, "")); err != nil {
 		t.Fatal(err)
 	}
-	if got := f.models[1]; got != "provider-a/lab-a/model-small" {
-		t.Errorf("forked to %q, want the model the settings name", got)
+	if got := r.models[1]; got != "provider-a/lab-a/model-small" {
+		t.Errorf("asked %q, want the model the settings name", got)
 	}
 }
 
-// TestTitleFails checks that a failed fork fails, as does a blank reply.
+// TestTitleFails checks that a failed reply fails, as does a blank one.
 func TestTitleFails(t *testing.T) {
 	ctx := t.Context()
 	e := load(t, "").(*Extension)
 	errDown := errors.New("down")
-	if _, err := e.Title(ctx, titling(&fork{err: errDown}, "")); !errors.Is(err, errDown) {
-		t.Errorf("failed fork = %v, want %v", err, errDown)
+	if _, err := e.Title(ctx, titling(&replier{err: errDown}, "")); !errors.Is(err, errDown) {
+		t.Errorf("failed reply = %v, want %v", err, errDown)
 	}
-	if _, err := e.Title(ctx, titling(&fork{reply: " \n\t\n"}, "")); !errors.Is(err, ErrNoTitle) {
+	if _, err := e.Title(ctx, titling(&replier{reply: " \n\t\n"}, "")); !errors.Is(err, ErrNoTitle) {
 		t.Errorf("blank reply = %v, want ErrNoTitle", err)
-	}
-}
-
-// TestAsk checks that the message is the user's, with the instructions and
-// then the current title, or the instructions alone when there is none.
-func TestAsk(t *testing.T) {
-	if m := Ask(""); m.Role != message.RoleUser || m.TextContent() != Instructions {
-		t.Errorf("Ask(\"\") = %+v, want the instructions alone, from the user", m)
-	}
-	if got, want := Ask("Fix the login loop").TextContent(), Instructions+"\n\nCurrent summary: Fix the login loop"; got != want {
-		t.Errorf("Ask = %q, want %q", got, want)
 	}
 }
 

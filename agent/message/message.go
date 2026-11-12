@@ -171,9 +171,15 @@ const (
 	// transcript shows and its runs send. A message of the zero Type is
 	// one.
 	TypeChat Type = "chat"
-	// TypeTitle marks a message of the exchange that titled a session,
-	// which forks off its conversation.
+	// TypeTitle marks a message of the forks that older builds stored below
+	// each prompt to title a session. Nothing stores them now; the stores
+	// of those builds still hold them.
 	TypeTitle Type = "title"
+	// TypeTitling marks a message of one titling of a session: a chain of
+	// its own, linked to no message of the conversation nor to any other
+	// titling, which holds the titling's system message, the user's
+	// prompts, and the title the model wrote.
+	TypeTitling Type = "titling"
 )
 
 // IsChat reports whether t is TypeChat, as the zero Type is.

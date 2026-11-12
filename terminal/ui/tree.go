@@ -63,7 +63,7 @@ type TreeEntry struct {
 	// Role is the message's author.
 	Role message.Role
 	// Type is what the message is for: empty for the conversation, or the
-	// type of the fork it belongs to, such as message.TypeTitle, which the
+	// type of the fork it belongs to, such as message.TypeTitling, which the
 	// tree hides until ShowHidden.
 	Type message.Type
 	// Text is the message's text on one line, the Markdown in it shown as

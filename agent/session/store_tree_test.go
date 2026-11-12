@@ -484,3 +484,47 @@ func TestAppendFork(t *testing.T) {
 		t.Errorf("path to the reply after deleting its parent = %v, %v; want none", ids(path), err)
 	}
 }
+
+// TestAppendForkRoot checks that a fork with no parent is stored as a root
+// of its own, linked to no message of the conversation, which every read
+// of the conversation leaves out and ForkChildren of the roots reads; that
+// deleting the conversation's messages keeps it; and that a root fork of a
+// session not stored fails with fs.ErrNotExist.
+func TestAppendForkRoot(t *testing.T) {
+	ctx := t.Context()
+	store := newTestStore(t)
+	const id = "ses_root"
+	appendAt(t, store, id, "", "msg_1")
+
+	sys := message.Content{ID: "msg_sys", Role: message.RoleSystem, Type: message.TypeTitling, Parts: []message.ContentPart{message.TextPart{Text: "summarize"}}}
+	reply := message.Content{ID: "msg_reply", Role: message.RoleAgent, Type: message.TypeTitling, Parts: []message.ContentPart{message.TextPart{Text: "A title"}}}
+	if err := store.AppendFork(ctx, id, "", &sys, &reply); err != nil {
+		t.Fatal(err)
+	}
+	if sys.ParentID != nil || reply.ParentID == nil || *reply.ParentID != "msg_sys" {
+		t.Errorf("parents = %v, %v; want none, then msg_sys", sys.ParentID, reply.ParentID)
+	}
+	if roots, err := store.Children(ctx, id, ""); err != nil || !equal(ids(roots), []message.ID{"msg_1"}) {
+		t.Errorf("conversation roots = %v, %v; want msg_1 alone", ids(roots), err)
+	}
+	if forks, err := store.Forks(ctx, id); err != nil || len(forks) != 0 {
+		t.Errorf("forks = %v, %v; want none", forks, err)
+	}
+	if branch, err := store.Branch(ctx, id); err != nil || !equal(ids(branch), []message.ID{"msg_1"}) {
+		t.Errorf("branch = %v, %v; want msg_1", ids(branch), err)
+	}
+	if roots, err := store.ForkChildren(ctx, id, "", message.TypeTitling); err != nil || !equal(ids(roots), []message.ID{"msg_sys"}) {
+		t.Errorf("titling roots = %v, %v; want msg_sys", ids(roots), err)
+	}
+
+	if err := store.DeleteMessage(ctx, id, "msg_1"); err != nil {
+		t.Fatal(err)
+	}
+	if all, err := store.ForkMessages(ctx, id); err != nil || !equal(ids(all), []message.ID{"msg_sys", "msg_reply"}) {
+		t.Errorf("fork messages after deleting the conversation = %v, %v; want the root fork's", ids(all), err)
+	}
+
+	if err := store.AppendFork(ctx, "ses_missing", "", &message.Content{ID: "msg_x", Role: message.RoleSystem, Type: message.TypeTitling}); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("root fork of a session not stored = %v, want fs.ErrNotExist", err)
+	}
+}

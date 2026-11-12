@@ -211,32 +211,36 @@ type LoginHook interface {
 	LoginFlows() map[agent.ProviderID]agent.LoginFlow
 }
 
-// Fork asks a model on from a point of a session, as a branch of it that
-// the session does not follow: it sends the session's history up to that
-// point followed by msgs, as a run sends its requests, with the session's
-// tools and prompt cache, to model, a variant in
-// "provider/model:option:effort" form, or to the model of the message the
-// fork starts from when model is empty. It returns the whole response, and
-// stores msgs and the reply in the session, as a fork below that message of
-// the type of what asked, such as message.TypeTitle, which no transcript,
-// tree, or later run of the session shows.
-// A fork whose response cannot be stored is logged, and still returned.
-type Fork func(ctx context.Context, model string, msgs ...agent.Message) (*agent.Response, error)
+// Reply asks a model, afresh, to title a session after a prompt: it sends
+// a system message of system, in an instructions section, as the
+// conversation's system message holds the configured instructions, and of
+// an empty tool set, and one user message of the session's prompts, as
+// Titling.Prompts holds them, separated by blank lines, with none of the
+// session's conversation and no tools, to model, a variant in "provider/model:option:effort" form, or to
+// the model the prompt was sent to when model is empty. It returns the
+// whole response, and stores the request's messages and the reply in the
+// session as a chain of message.TypeTitling of their own, linked to no
+// message of the conversation nor to any other titling, which no
+// transcript or later run of the session shows. A reply that cannot be
+// stored is logged, and still returned.
+type Reply func(ctx context.Context, model, system string) (*agent.Response, error)
 
 // Titling is a session to title, as a prompt sent to it has just been
 // stored.
 type Titling struct {
 	// Prompt is the prompt just stored.
 	Prompt
-	// History is the session's branch from its root to Prompt, as a run
-	// sends it to the model.
-	History []agent.Message
+	// Prompts are the text of each prompt on the session's branch through
+	// Prompt, oldest first, Prompt's last: what the user wrote, with none
+	// of the session's replies, tool calls or attachments. Prompts with no
+	// text are left out.
+	Prompts []string
 	// Title is the session's title as the prompt was stored, or empty when
 	// it has none, such as when the prompt is its first.
 	Title string
-	// Fork asks a model on from Prompt, after History, for the hook to
-	// write a title with.
-	Fork Fork
+	// Reply asks a model to title the session from Prompts, for the hook
+	// to write a title with.
+	Reply Reply
 }
 
 // TitleHook titles sessions as they run. Each time a prompt sent to a
