@@ -18,6 +18,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/agent/session"
 	"github.com/unaquatic/flow/app"
+	"github.com/unaquatic/flow/product"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
@@ -39,10 +40,9 @@ type StatusInfo struct {
 	Session string
 	// Title is the session's title, or empty when it has none.
 	Title string
-	// Account names the provider of the terminal's model and the kind of
-	// its active account, as AccountName names them, such as "Provider A
-	// OAuth", or is empty when the model names no provider.
-	Account string
+	// Provider is the catalog ID of the provider of the terminal's model,
+	// such as "provider-a", or empty when the model names no provider.
+	Provider agent.ProviderID
 	// Model is the terminal's model variant as DisplayName names it, such
 	// as "Model A Fast High", or empty when no model is set.
 	Model string
@@ -96,8 +96,7 @@ func GitBranch(dir string) string {
 // statusLabelWidth is the width of the session info's label column.
 const statusLabelWidth = 10
 
-// StatusNone stands in the session info for an account or model that is
-// not set.
+// StatusNone stands in the session info for a model that is not set.
 const StatusNone = "None"
 
 // StatusUnknown names, in the session info and the Usage box, a provider,
@@ -114,8 +113,8 @@ func Unknown(id string) string {
 // tagPattern matches a bracketed ID, such as the "[model-x]" Unknown writes.
 var tagPattern = regexp.MustCompile(`\[[^\]]*\]`)
 
-// TagChunks returns name, as DisplayName or AccountName writes it, in text,
-// and each bracketed ID in it, such as "[model-x]", in dim.
+// TagChunks returns name, as DisplayName writes it, in text, and each
+// bracketed ID in it, such as "[model-x]", in dim.
 func TagChunks(name string, text, dim func(string) style.TextChunk) []style.TextChunk {
 	var chunks []style.TextChunk
 	last := 0
@@ -135,12 +134,10 @@ func TagChunks(name string, text, dim func(string) style.TextChunk) []style.Text
 // StatusLines returns the rows of the session info, each a dim label and its
 // value: the session's title, as SessionTitle names it, with its ID after
 // it, as ShortSessionID cuts it, dim and bracketed, such as "Fix the login
-// [4229c726c313]", the context, the model, the model's provider and
-// account, and the working directory, as SessionDir writes it, with its git
-// branch after it, dim and bracketed, such as "~/work/project [main]". An
-// account or model that is not set reads as StatusNone, dim as the labels
-// are, as is the bracketed ID of one the catalog does not list, as
-// TagChunks dims it. The context reads as the tokens of the latest request,
+// [4229c726c313]", the context, the model, as ModelValue shows it, and the
+// working directory, as SessionDir writes it, with its git branch after it,
+// dim and bracketed, such as "~/work/project [main]". The context reads as
+// the tokens of the latest request,
 // the model's window and the share of it they fill, such as "18K / 400K
 // 5%", or the tokens alone when the window is not known, in th's warning or
 // danger color once they fill most of the window, as the slash menu's
@@ -148,22 +145,67 @@ func TagChunks(name string, text, dim func(string) style.TextChunk) []style.Text
 // the default theme.
 func StatusLines(info StatusInfo, th *style.Theme) []style.StyledText {
 	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
-	orNone := func(value string) []style.TextChunk {
-		if value == "" {
-			return []style.TextChunk{dim(StatusNone)}
-		}
-		return TagChunks(value, style.Plain, dim)
-	}
-	directory := []style.TextChunk{style.Plain(SessionDir(info.Directory))}
-	if info.Branch != "" {
-		directory = append(directory, style.Plain(" "), dim(Tag(info.Branch)))
-	}
 	return LabeledLines([]LabeledRow{
 		{"Session", []style.TextChunk{style.Plain(SessionTitle(info.Title) + " "), dim(Tag(ShortSessionID(info.Session)))}},
 		{"Context", []style.TextChunk{ContextValue(info.Usage, th)}},
-		{"Model", orNone(info.Model)},
-		{"Account", orNone(info.Account)},
-		{"Directory", directory},
+		{"Model", ModelValue(info, th)},
+		{"Directory", DirectoryValue(info, th)},
+	}, statusLabelWidth, th)
+}
+
+// ModelValue returns the model of info as the session info shows it: its
+// DisplayName, the bracketed ID of a model the catalog does not list dim,
+// as TagChunks dims it, and then the provider's ID, dim and bracketed, such
+// as "Model A Fast High [provider-a]", or the model alone when it names no
+// provider. A model that is not set reads as StatusNone, dim as the labels
+// are. A nil th uses the default theme.
+func ModelValue(info StatusInfo, th *style.Theme) []style.TextChunk {
+	dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
+	if info.Model == "" {
+		return []style.TextChunk{dim(StatusNone)}
+	}
+	model := TagChunks(info.Model, style.Plain, dim)
+	if info.Provider != "" {
+		model = append(model, style.Plain(" "), dim(Tag(string(info.Provider))))
+	}
+	return model
+}
+
+// DirectoryValue returns the working directory of info as the session info
+// shows it: as SessionDir writes it, with its git branch after it, dim and
+// bracketed, such as "~/work/project [main]". A nil th uses the default
+// theme.
+func DirectoryValue(info StatusInfo, th *style.Theme) []style.TextChunk {
+	directory := []style.TextChunk{style.Plain(SessionDir(info.Directory))}
+	if info.Branch != "" {
+		dim := style.New().WithFg(themeOrDefault(th).TextMuted).Func()
+		directory = append(directory, style.Plain(" "), dim(Tag(info.Branch)))
+	}
+	return directory
+}
+
+// StartTitle returns the title of the notice that heads the transcript at
+// startup: the product's DisplayName and version, a release as
+// product.Version names it, without its leading v, such as "Flow 1.2.3".
+func StartTitle(version string) string {
+	return product.DisplayName + " " + strings.TrimPrefix(version, "v")
+}
+
+// StartNotice returns the notice that heads the transcript at startup:
+// lines, as StartLines lays them out, on the system surface, as the session
+// info is, titled StartTitle of version.
+func StartNotice(version string, lines []style.StyledText) Notice {
+	return Notice{Lines: lines, Surface: NoticeSystem, Title: StartTitle(version)}
+}
+
+// StartLines returns the rows of the notice that heads the transcript at
+// startup, laid out as StatusLines lays out the session info: the model, as
+// ModelValue shows it, and the working directory, as DirectoryValue writes
+// it. A nil th uses the default theme.
+func StartLines(info StatusInfo, th *style.Theme) []style.StyledText {
+	return LabeledLines([]LabeledRow{
+		{"Model", ModelValue(info, th)},
+		{"Directory", DirectoryValue(info, th)},
 	}, statusLabelWidth, th)
 }
 
@@ -216,20 +258,33 @@ func (s *Service) ShowInfo() []UIEvent {
 		return s.ShowToast(fmt.Sprintf("Loading session failed: %v", err))
 	}
 
+	info := s.SessionInfo()
+	if stored != nil {
+		info.Title = stored.Title
+	}
+	return s.AddNotice(StatusNotice(StatusLines(info, nil)))
+}
+
+// ShowStart heads the transcript as flow starts: it reports the release
+// running, product.Version, the terminal's model and the working directory,
+// as StartLines lays them out and StartNotice shows them.
+func (s *Service) ShowStart() []UIEvent {
+	return s.AddNotice(StartNotice(product.Version(), StartLines(s.SessionInfo(), nil)))
+}
+
+// SessionInfo returns the facts the session info shows of the active
+// session and the terminal, all but the session's title, which the store
+// holds.
+func (s *Service) SessionInfo() StatusInfo {
 	info := StatusInfo{
-		Session:   string(id),
+		Session:   string(s.SessionID()),
 		Model:     s.ModelDisplayName(s.state.Model),
 		Usage:     s.SessionUsage(),
 		Directory: s.app.WorkingDir(),
 		Branch:    GitBranch(s.app.WorkingDir()),
 	}
-	if provider, _ := agent.ParseModel(s.state.Model); provider != "" {
-		info.Account = s.AccountName(provider)
-	}
-	if stored != nil {
-		info.Title = stored.Title
-	}
-	return s.AddNotice(StatusNotice(StatusLines(info, nil)))
+	info.Provider, _ = agent.ParseModel(s.state.Model)
+	return info
 }
 
 // HandleSessionList displays the stored sessions of every folder, one row
@@ -569,9 +624,9 @@ func ChatMessageOf(m message.Content) ChatMessage {
 }
 
 // InitSession opens the initial session, the stored session id or a new one
-// when id is empty, and returns the load of its transcript, the session info
-// /status shows, as ShowInfo shows it, followed by its messages, and its
-// terminal title. A stored session takes the model
+// when id is empty, and returns the load of its transcript, the release,
+// model and directory, as ShowStart shows them, followed by its messages,
+// and its terminal title. A stored session takes the model
 // variant its messages last ran, unless state.KeepModel keeps the
 // terminal's. A stored session that fails to load leaves the new session
 // active, and says so under the session info.
@@ -591,13 +646,13 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 			restored = s.RestoreSessionModel()
 		}
 	}
-	// The product icon and the session info under it head the transcript,
-	// above the messages they follow in. The info shows once the session
-	// and its model are set, so that it reads them. The update that started
-	// this release shows under it.
+	// The product icon and the start notice under it head the transcript,
+	// above the messages they follow in. The notice shows once the model is
+	// set, so that it reads it. The update that started this release shows
+	// under it.
 	loaded := len(s.state.Messages)
 	s.AddNotice(IconNotice())
-	s.ShowInfo()
+	s.ShowStart()
 	if s.Updated != "" {
 		s.ShowUpdated(s.Updated)
 		s.Updated = ""
@@ -608,7 +663,7 @@ func (s *Service) InitSession(_ context.Context, id message.SessionID) []UIEvent
 
 // ClearMessages stops the active run, empties the chat, and starts a fresh
 // session on the terminal's DefaultModel, not the model of the session left,
-// whose /status notice then heads the transcript as at startup. Prompts
+// whose /status notice then heads the transcript. Prompts
 // queued in the session left are dropped.
 func (s *Service) ClearMessages() []UIEvent {
 	s.Stop()

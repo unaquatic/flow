@@ -2,20 +2,17 @@
 |                                        |
 |  Session   Fix the login [4229c726c31  |
 |  Context   20K / 400K 5%               |
-|  Model     Model A Fast High           |
-|  Account   Provider A OAuth            |
+|  Model     Model A Fast High [provide  |
 |  Directory /work/project [main]        |
 |                                        |
 === fg ===
 |                                        |
 |  AAAAAAA   BBB BBB BBBBB AAAAAAAAAAAA  |
 |  AAAAAAA   BBB B BBBB BB               |
-|  AAAAA     BBBBB B BBBB BBBB           |
-|  AAAAAAA   BBBBBBBB B BBBBB            |
+|  AAAAA     BBBBB B BBBB BBBB AAAAAAAA  |
 |  AAAAAAAAA BBBBBBBBBBBBB AAAAAA        |
 |                                        |
 === bg ===
-|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|

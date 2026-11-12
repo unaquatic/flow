@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -424,9 +425,8 @@ func TestAccountMenu(t *testing.T) {
 }
 
 // TestModelLabel checks that the label under the input shows the model
-// alone, whatever account is active, and that /status shows the model, and
-// then the provider, by its catalog name, with the kind of its active
-// account.
+// alone, whatever account is active, and that /status shows the model with
+// its provider's ID after it, and no account.
 func TestModelLabel(t *testing.T) {
 	s, a := newTestService(t)
 	s.InitSession(t.Context(), "")
@@ -440,8 +440,8 @@ func TestModelLabel(t *testing.T) {
 	row := func(text string) int {
 		return slices.IndexFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == text })
 	}
-	if m, p := row("Model     Unknown [model]"), row("Account   Provider A API Key"); m < 0 || p != m+1 {
-		t.Errorf("/status lines = %+v, want the model row and then the account", status.Lines)
+	if row("Model     Unknown [model] [provider-a]") < 0 || slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return strings.HasPrefix(l.PlainText(), "Account") }) {
+		t.Errorf("/status lines = %q, want the model with its provider and no account", plainLines(status.Lines))
 	}
 
 	out := s.ApplyAgentEvent(app.EventAccountsChanged{Provider: providerA, Active: id})

@@ -242,14 +242,17 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 			if !slices.Equal(got, tt.want) {
 				t.Fatalf("loaded transcript = %q, want %q", got, tt.want)
 			}
-			// The icon draws product.Icon, and the /status notice reads the
-			// session opened.
+			// The icon draws product.Icon, and the start notice under it
+			// names the release, the model and the directory alone.
 			if got := JoinStyledLines(loads[0].Messages[0].Notice.Lines).PlainText(); got != product.Icon {
 				t.Errorf("icon notice =\n%s\nwant\n%s", got, product.Icon)
 			}
-			status := loads[0].Messages[1].Notice
-			if want := fmt.Sprintf("%-10s%s [%s]", "Session", UntitledName, ShortSessionID(string(s.SessionID()))); !slices.ContainsFunc(status.Lines, func(l style.StyledText) bool { return l.PlainText() == want }) {
-				t.Errorf("/status notice = %+v, want the row %q", status.Lines, want)
+			start := loads[0].Messages[1].Notice
+			if want := StartTitle(product.Version()); start.Title != want || start.Surface != NoticeSystem {
+				t.Errorf("start notice title, surface = %q, %v; want %q, the system surface", start.Title, start.Surface, want)
+			}
+			if got := plainLines(start.Lines); len(got) != 2 || !strings.HasPrefix(got[0], "Model ") || !strings.HasPrefix(got[1], "Directory ") {
+				t.Errorf("start notice = %q, want the model and then the directory", got)
 			}
 			// A transcript built again from the state shows them in order too.
 			messages := false

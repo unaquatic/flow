@@ -1,60 +1,51 @@
 === text ===
-|        ▄▄▄                             |
-|       ██▀▀                             |
-|     ▄▄██▄▄                             |
-|     ▀▀██▀▀                             |
-|       ██                               |
-|       ██                               |
-|    ██▄██                               |
-|     ▀▀▀                                |
-|                                        |
-|■ Status                                |
-|  Session   Fix the login [4229c726c31  |
-|  Context   20K / 400K 5%               |
-|  Model     Model A Fast High           |
-|  Account   Provider A OAuth            |
-|  Directory /work/project [main]        |
-|                                        |
-|                                        |
-|                                        |
+|        ▄▄▄                                         |
+|       ██▀▀                                         |
+|     ▄▄██▄▄                                         |
+|     ▀▀██▀▀                                         |
+|       ██                                           |
+|       ██                                           |
+|    ██▄██                                           |
+|     ▀▀▀                                            |
+|                                                    |
+|■ Flow 1.2.3                                        |
+|  Model     Model A Fast High [provider-a]          |
+|  Directory /work/project [main]                    |
+|                                                    |
+|                                                    |
+|                                                    |
 === fg ===
-|        AAA                             |
-|       AAAA                             |
-|     AAAAAA                             |
-|     AAAAAA                             |
-|       AA                               |
-|       AA                               |
-|    AAAAA                               |
-|     AAA                                |
-|                                        |
-|B BBBBBB                                |
-|  CCCCCCC   BBB BBB BBBBB CCCCCCCCCCCC  |
-|  CCCCCCC   BBB B BBBB BB               |
-|  CCCCC     BBBBB B BBBB BBBB           |
-|  CCCCCCC   BBBBBBBB B BBBBB            |
-|  CCCCCCCCC BBBBBBBBBBBBB CCCCCC        |
-|                                        |
-|                                        |
-|                                        |
+|        AAA                                         |
+|       AAAA                                         |
+|     AAAAAA                                         |
+|     AAAAAA                                         |
+|       AA                                           |
+|       AA                                           |
+|    AAAAA                                           |
+|     AAA                                            |
+|                                                    |
+|B BBBB BBBBB                                        |
+|  CCCCC     BBBBB B BBBB BBBB CCCCCCCCCCCC          |
+|  CCCCCCCCC BBBBBBBBBBBBB CCCCCC                    |
+|                                                    |
+|                                                    |
+|                                                    |
 === bg ===
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|░░░░░░░░░░░░░░░░                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|░░░░░░░░░░░░░░░░                                    |
+|                                                    |
+|                                                    |
+|                                                    |
+|                                                    |
+|                                                    |
+|                                                    |
+|                                                    |
 === legend ===
 A #111111
 B #e6e6e6

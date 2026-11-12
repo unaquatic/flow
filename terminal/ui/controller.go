@@ -38,8 +38,8 @@ type Service struct {
 	// SlashCommands alone.
 	Commands []SlashCommand
 	// Updated is the release of flow that an update installed, when this
-	// is its first start, which InitSession tells of under the session
-	// info, as ShowUpdated words it, and then clears. Empty tells of none.
+	// is its first start, which InitSession tells of under the start
+	// notice, as ShowUpdated words it, and then clears. Empty tells of none.
 	Updated string
 }
 
