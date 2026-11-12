@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/unaquatic/flow/agent"
+	"github.com/unaquatic/flow/agent/agenttest"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/extension"
 )
 
-// titleAsk is the message a titler forks the session with.
-var titleAsk = agent.NewUserMessage("title this")
+// titleSystem is the system message a titler asks for its reply with.
+const titleSystem = "title this"
 
 // titler is an extension that titles sessions with title, or with what the
 // model replies when title is empty, and records the titlings it is asked
@@ -57,7 +58,7 @@ func (t *titler) Title(ctx context.Context, tt extension.Titling) (string, error
 	if t.err != nil || t.title != "" {
 		return t.title, t.err
 	}
-	resp, err := tt.Fork(ctx, "", titleAsk)
+	resp, err := tt.Reply(ctx, "", titleSystem)
 	if err != nil {
 		return "", err
 	}
@@ -78,16 +79,6 @@ func texts(msgs []agent.Message) []string {
 		out[i] = m.TextContent()
 	}
 	return out
-}
-
-// chatTexts returns the text of each message of msgs after the system
-// message they open with, which a session's first prompt stores, or nil
-// when they open with none, which no conversation sent from the app does.
-func chatTexts(msgs []agent.Message) []string {
-	if len(msgs) == 0 || msgs[0].Role != message.RoleSystem {
-		return nil
-	}
-	return texts(msgs[1:])
 }
 
 // titleOf returns the stored title of session id.
@@ -115,9 +106,9 @@ func sendAndSettle(t *testing.T, a *App, events <-chan Event, id message.Session
 
 // TestTitling_TitlesAfterEachPrompt checks that each prompt has the title
 // hooks asked, in order, past those that fail or return no title, with the
-// prompt, the history through it, the title as it stands, and a Fork that
-// reaches the app's models; that the first title is set and published; and
-// that a title the session has already is not set again.
+// prompt, the title thread through it, the title as it stands, and a Reply
+// that reaches the app's models; that the first title is set and published;
+// and that a title the session has already is not set again.
 func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 	a, _ := newActorTestApp(t, "Greeting the agent")
 	failing := &titler{name: "failing", err: errors.New("no model")}
@@ -142,7 +133,7 @@ func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 		}
 		tt := asks[0]
 		if tt.SessionID != id || tt.MessageID != "msg_first" || tt.Text != "hi" || tt.Model == "" ||
-			!slices.Equal(chatTexts(tt.History), []string{"hi"}) || tt.Title != "" {
+			!slices.Equal(tt.Prompts, []string{"hi"}) || tt.Title != "" {
 			t.Errorf("%s was asked for %+v, want the first prompt of an untitled session", h.name, tt)
 		}
 	}
@@ -155,8 +146,8 @@ func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 	if len(asks) != 2 {
 		t.Fatalf("the generating hook was asked %d times over two prompts, want twice", len(asks))
 	}
-	if tt := asks[1]; tt.Text != "again" || !slices.Equal(chatTexts(tt.History), []string{"hi", "Greeting the agent", "again"}) || tt.Title != "Greeting the agent" {
-		t.Errorf("second titling = %+v, want the history through the second prompt and the current title", tt)
+	if tt := asks[1]; tt.Text != "again" || !slices.Equal(tt.Prompts, []string{"hi", "again"}) || tt.Title != "Greeting the agent" {
+		t.Errorf("second titling = %+v, want both prompts and the current title", tt)
 	}
 	if n := len(eventsOfType[EventSessionUpdated](second)); n != 0 {
 		t.Errorf("the same title was published again %d times, want none", n)
@@ -164,7 +155,8 @@ func TestTitling_TitlesAfterEachPrompt(t *testing.T) {
 }
 
 // TestTitling_LaterPromptSupersedes checks that a prompt cancels the
-// titling an earlier prompt to the session started, whose title is not set.
+// titling an earlier prompt to the session started, whose title is not set,
+// and that the later titling still reads the earlier prompt.
 func TestTitling_LaterPromptSupersedes(t *testing.T) {
 	a, _ := newActorTestApp(t, "hello")
 	slow := &titler{name: "slow", title: "from the hook", wait: make(chan struct{}), asking: make(chan struct{}, 2)}
@@ -195,6 +187,9 @@ func TestTitling_LaterPromptSupersedes(t *testing.T) {
 	if got := titleOf(t, a, id); got != "from the hook" {
 		t.Errorf("title = %q, want the second titling's", got)
 	}
+	if asks := slow.asked(); len(asks) != 2 || !slices.Equal(asks[1].Prompts, []string{"first", "second"}) {
+		t.Errorf("titlings = %+v, want the second of both prompts", asks)
+	}
 }
 
 // TestTitling_SetsOverATitleSetMeanwhile checks that a hook's title is set
@@ -219,62 +214,170 @@ func TestTitling_SetsOverATitleSetMeanwhile(t *testing.T) {
 	}
 }
 
-// TestTitling_ForksTheSession checks that a hook's fork sends the history
-// through the prompt and then its own messages, with the session's cache
-// key, as a run sends its requests, and that it stores them and the reply
-// as a title fork below the prompt, which the session's branch and tree
-// leave out.
-func TestTitling_ForksTheSession(t *testing.T) {
-	a, gw := newActorTestApp(t, "Greeting the agent")
-	a.extensions = append(a.extensions, &titler{name: "forking"})
-	events := a.Subscribe(t.Context())
-
-	const id = "ses_fork"
-	sendAndSettle(t, a, events, id, SendInput{Text: "hi", MessageID: "msg_first"})
-
-	var forked []agent.Message
+// titleCalls returns the requests a titler's Reply sent, which open with
+// its system message in an instructions section, and their cache keys and tools.
+func titleCalls(gw *agenttest.Gateway) (calls [][]agent.Message, keys []string, tools [][]agent.ToolDefinition) {
 	for i, call := range gw.StreamCalls {
-		if last := call[len(call)-1]; last.TextContent() == titleAsk.TextContent() {
-			forked = call
-			if key := gw.StreamCacheKeys[i]; key != id {
-				t.Errorf("fork cache key = %q, want the session's", key)
-			}
+		if len(call) > 0 && call[0].Role == message.RoleSystem && call[0].TextContent() == Section(InstructionsTag, titleSystem) {
+			calls = append(calls, call)
+			keys = append(keys, gw.StreamCacheKeys[i])
+			tools = append(tools, gw.StreamTools[i])
 		}
 	}
-	if !slices.Equal(chatTexts(forked), []string{"hi", "title this"}) {
-		t.Errorf("fork sent %q, want the system message, the prompt and the hook's message", texts(forked))
+	return calls, keys, tools
+}
+
+// roles returns the role of each of msgs.
+func roles(msgs []message.Content) []message.Role {
+	out := make([]message.Role, len(msgs))
+	for i, m := range msgs {
+		out[i] = m.Role
+	}
+	return out
+}
+
+// titlings returns each titling stored in session sid, a chain of its own
+// from a root of message.TypeTitling, in the order they were stored,
+// failing when one branches.
+func titlings(t *testing.T, a *App, sid message.SessionID) [][]message.Content {
+	t.Helper()
+	roots, err := a.Sessions().ForkChildren(t.Context(), sid, "", message.TypeTitling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := make([][]message.Content, len(roots))
+	for i, m := range roots {
+		for {
+			out[i] = append(out[i], m)
+			kids, err := a.Sessions().ForkChildren(t.Context(), sid, m.ID, message.TypeTitling)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(kids) == 0 {
+				break
+			}
+			if len(kids) > 1 {
+				t.Fatalf("%d titling messages below %s, want one", len(kids), m.ID)
+			}
+			m = kids[0]
+		}
+	}
+	return out
+}
+
+// TestTitling_AsksAfreshEachTime checks that each prompt's titling sends a
+// request of its own: the hook's system message and one user message of
+// the prompts on the branch, with no tools, no earlier titling, and the
+// session's cache key; that each is stored as a chain of its own, its
+// system message, user message and reply, from a root linked to no
+// message of the conversation; and that the session's branch leaves them
+// out, while its tree reads them.
+func TestTitling_AsksAfreshEachTime(t *testing.T) {
+	a, gw := newActorTestApp(t, "Greeting the agent")
+	a.extensions = append(a.extensions, &titler{name: "replying"})
+	events := a.Subscribe(t.Context())
+
+	const id = "ses_fresh"
+	sendAndSettle(t, a, events, id, SendInput{Text: "hi", MessageID: "msg_first"})
+	sendAndSettle(t, a, events, id, SendInput{Text: "again", MessageID: "msg_second"})
+
+	calls, keys, tools := titleCalls(gw)
+	if len(calls) != 2 {
+		t.Fatalf("titling sent %d requests, want one for each prompt", len(calls))
+	}
+	tagged := Section(InstructionsTag, titleSystem)
+	if got := texts(calls[0]); !slices.Equal(got, []string{tagged, "hi"}) {
+		t.Errorf("first titling sent %q, want the system message and the prompt", got)
+	}
+	if got := texts(calls[1]); !slices.Equal(got, []string{tagged, "hi\n\nagain"}) {
+		t.Errorf("second titling sent %q, want the system message and both prompts, and no earlier title", got)
+	}
+	for i := range calls {
+		if keys[i] != id {
+			t.Errorf("titling cache key = %q, want the session's", keys[i])
+		}
+		if len(tools[i]) != 0 {
+			t.Errorf("titling offered tools %+v, want none", tools[i])
+		}
+		if set, ok := message.LastPart[message.ToolSetPart](calls[i][0].Content); !ok || len(set.Tools) != 0 {
+			t.Errorf("titling sent system parts %+v, want an empty tool set among them", calls[i][0].Content)
+		}
+	}
+
+	stored := titlings(t, a, id)
+	if len(stored) != 2 {
+		t.Fatalf("session holds %d titlings, want one for each prompt", len(stored))
+	}
+	var ids []message.ID
+	for i, chain := range stored {
+		if got, want := roles(chain), []message.Role{message.RoleSystem, message.RoleUser, message.RoleAgent}; !slices.Equal(got, want) {
+			t.Fatalf("titling %d = %v, want %v", i, got, want)
+		}
+		if chain[0].ParentID != nil {
+			t.Errorf("titling %d hangs below %s, want a root of its own", i, *chain[0].ParentID)
+		}
+		sent := make([]agent.Message, len(chain))
+		for j, m := range chain {
+			sent[j] = agent.Message{Role: m.Role, Content: m.Parts}
+			ids = append(ids, m.ID)
+		}
+		if got, want := texts(sent), append(texts(calls[i]), "Greeting the agent"); !slices.Equal(got, want) {
+			t.Errorf("titling %d stored %q, want %q", i, got, want)
+		}
+		if chain[2].Model == "" || chain[1].Model != chain[2].Model || chain[1].Provider != chain[2].Provider {
+			t.Errorf("titling %d stored models %s/%q and %s/%q, want the prompt and reply of the model that wrote it", i, chain[1].Provider, chain[1].Model, chain[2].Provider, chain[2].Model)
+		}
+		if chain[0].Model != "" {
+			t.Errorf("titling %d stored a system message of model %q, want none, as the conversation's", i, chain[0].Model)
+		}
+		set, ok := message.LastPart[message.ToolSetPart](chain[0].Parts)
+		if len(chain[0].Parts) != 2 || !ok || set.Tools == nil || len(set.Tools) != 0 {
+			t.Errorf("titling %d stored system parts %+v, want its text and an empty tool set", i, chain[0].Parts)
+		}
+	}
+	for _, prompt := range []message.ID{"msg_first", "msg_second"} {
+		if below, err := a.Sessions().ForkChildren(t.Context(), id, prompt, message.TypeTitling); err != nil || len(below) != 0 {
+			t.Errorf("titling messages below %s = %d, %v; want none", prompt, len(below), err)
+		}
 	}
 
 	whole, err := a.Sessions().Branch(t.Context(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if branch := conversation(t, whole); len(branch) != 2 || branch[0].ID != "msg_first" || branch[1].Role != message.RoleAgent {
-		t.Fatalf("branch = %+v; want the system message, the prompt and its reply alone", whole)
+	if branch := conversation(t, whole); len(branch) != 4 {
+		t.Errorf("branch = %+v; want the prompts and their replies alone", whole)
 	}
-	asked, err := a.Sessions().ForkChildren(t.Context(), id, "msg_first", message.TypeTitle)
-	if err != nil || len(asked) != 1 || asked[0].Role != message.RoleUser || asked[0].Type != message.TypeTitle {
-		t.Fatalf("title forks below the prompt = %+v, %v; want one", asked, err)
-	}
-	if got := (agent.Message{Content: asked[0].Parts}).TextContent(); got != titleAsk.TextContent() || asked[0].Model == "" {
-		t.Errorf("fork's first message = %q of %q, want the hook's message, of the prompt's model", got, asked[0].Model)
-	}
-	replied, err := a.Sessions().ForkChildren(t.Context(), id, asked[0].ID, message.TypeTitle)
-	if err != nil || len(replied) != 1 || replied[0].Role != message.RoleAgent || replied[0].Type != message.TypeTitle {
-		t.Fatalf("reply below the fork's message = %+v, %v; want the agent's", replied, err)
-	}
-	if got := (agent.Message{Content: replied[0].Parts}).TextContent(); got != "Greeting the agent" {
-		t.Errorf("fork's reply = %q, want the model's", got)
-	}
-	all, err := a.Sessions().Messages(t.Context(), id)
-	if err != nil || len(all) != 3 {
-		t.Errorf("tree holds %d messages, %v; want the branch's three", len(all), err)
+	if kids, err := a.Sessions().Children(t.Context(), id, ""); err != nil || len(kids) != 1 {
+		t.Errorf("conversation roots = %d, %v; want one, with no titling among them", len(kids), err)
 	}
 	tree, err := a.Session(id).Tree()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(tree.Messages) != 3 || len(tree.Forks) != 2 || tree.Forks[0].ID != asked[0].ID || tree.Forks[1].ID != replied[0].ID {
-		t.Errorf("tree = %d messages and forks %+v; want the branch's three, and the fork's request and reply", len(tree.Messages), tree.Forks)
+	treeForks := make([]message.ID, len(tree.Forks))
+	for i, m := range tree.Forks {
+		treeForks[i] = m.ID
+	}
+	if !slices.Equal(treeForks, ids) {
+		t.Errorf("tree forks = %v, want the two titlings %v", treeForks, ids)
+	}
+}
+
+// TestTitling_SkipsPromptsWithoutText checks that a branch whose prompts
+// hold no text asks no hook and stores no titling.
+func TestTitling_SkipsPromptsWithoutText(t *testing.T) {
+	a, _ := newActorTestApp(t, "Greeting the agent")
+	h := &titler{name: "replying"}
+	a.extensions = append(a.extensions, h)
+	events := a.Subscribe(t.Context())
+
+	const id = "ses_blank"
+	sendAndSettle(t, a, events, id, SendInput{Text: "  "})
+	if n := len(h.asked()); n != 0 {
+		t.Errorf("hook asked %d times, want none", n)
+	}
+	if stored := titlings(t, a, id); len(stored) != 0 {
+		t.Errorf("session holds %d titlings, want none", len(stored))
 	}
 }
