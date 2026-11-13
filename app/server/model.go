@@ -62,12 +62,12 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		s.streamGenerate(w, r, body.Model, req)
 		return
 	}
-	resp, model, err := s.app.Models().Generate(r.Context(), body.Model, req)
+	resp, v, err := s.app.Models().Generate(r.Context(), body.Model, req)
 	if err != nil {
 		respondErr(w, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, generateResponse(model, resp))
+	respondJSON(w, http.StatusOK, generateResponse(v, resp))
 }
 
 // streamGenerate answers req with server-sent events: a delta for each chunk
@@ -80,7 +80,7 @@ func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model st
 		respondErr(w, errStreamingUnsupported)
 		return
 	}
-	stream, name, err := s.app.Models().GenerateStream(r.Context(), model, req)
+	stream, v, err := s.app.Models().GenerateStream(r.Context(), model, req)
 	if err != nil {
 		respondErr(w, err)
 		return
@@ -107,7 +107,7 @@ func (s *Server) streamGenerate(w http.ResponseWriter, r *http.Request, model st
 	if err != nil {
 		out.Send(EventGenerateFailed, GenerateFailed{Error: app.ErrorOf(err)})
 	} else {
-		out.Send(EventGenerateEnded, generateResponse(name, resp))
+		out.Send(EventGenerateEnded, generateResponse(v, resp))
 	}
 }
 
@@ -122,12 +122,17 @@ func sendDelta(out *EventStream, part agent.StreamPart) error {
 	return nil
 }
 
-// generateResponse returns the wire form of resp, a reply of model.
-func generateResponse(model string, resp *agent.Response) GenerateResponse {
+// generateResponse returns the wire form of resp, a reply of variant v,
+// with its message marked as written by v's provider and model, as
+// agent.Message names its writer.
+func generateResponse(v agent.Variant, resp *agent.Response) GenerateResponse {
+	msg := resp.Message
+	msg.Provider, msg.Model = v.Provider, v.Model
 	return GenerateResponse{
-		Model:      model,
+		Provider:   v.Provider,
+		Model:      v.Ref(),
 		Text:       resp.Message.TextContent(),
-		Message:    resp.Message,
+		Message:    msg,
 		StopReason: resp.StopReason,
 		Usage:      agent.UsageFrom(resp.Usage),
 	}
@@ -162,8 +167,11 @@ type GenerateMessage struct {
 // GenerateResponse is the answer of POST /generate, and the data of its
 // generate.ended event.
 type GenerateResponse struct {
-	// Model is the model asked, in the format of SendRequest.Model, at the
-	// reasoning effort it ran at.
+	// Provider is the provider of the model asked, such as "provider-a".
+	Provider agent.ProviderID `json:"provider"`
+	// Model is the model asked, without its provider, in
+	// "model:option:effort" form, as agent.Variant.Ref writes it, at the
+	// reasoning effort it ran at, such as "lab-a/model-a:fast:high".
 	Model string `json:"model"`
 	// Text is the text of the reply.
 	Text string `json:"text"`
