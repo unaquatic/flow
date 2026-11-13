@@ -1,0 +1,20 @@
+=== text ===
+|■ Run the tests                         |
+|                                        |
+|■ Undo [31611124]                       |
+|  2 files  +3 -1                        |
+|  /work/calc/calc.go  +1 -0             |
+|  /work/calc/calc_test.go  +2 -1        |
+|                                        |
+=== fg ===
+|A AAA AAA AAAAA                         |
+|                                        |
+|A AAAA AAAAAAAAAA                       |
+|  A AAAAA  BB CC                        |
+|  AAAAAAAAAAAAAAAAAA  BB CC             |
+|  AAAAAAAAAAAAAAAAAAAAAAA  BB CC        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #5fc882
+C #dc646e

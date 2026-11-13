@@ -64,7 +64,7 @@ func (s *Service) CompleteUndo(moved app.MoveResult, err error) []UIEvent {
 	if err != nil {
 		return s.ShowToast(UndoErrorMessage(err))
 	}
-	out := s.ShowDiffToast(moved)
+	out := s.ShowMoveNotice(UndoVerb, moved)
 	if prompt != "" {
 		out = append(out, s.SetInput(prompt)...)
 	}
@@ -76,7 +76,7 @@ func (s *Service) CompleteRedo(moved app.MoveResult, err error) []UIEvent {
 	if err != nil {
 		return s.ShowToast(RedoErrorMessage(err))
 	}
-	return s.ShowDiffToast(moved)
+	return s.ShowMoveNotice(RedoVerb, moved)
 }
 
 // UndoErrorMessage returns the toast text of a failed undo.
@@ -157,26 +157,41 @@ const NoFileChangesText = "No file changes"
 const ChangesTitle = "Changes"
 
 // ShortRefLen is how many characters of what a history move checked out,
-// such as a snapshot's hash, CheckoutTitle shows.
+// such as a snapshot's hash, MoveTitle shows.
 const ShortRefLen = 8
 
-// CheckoutTitle returns the title of the notice of a history move that
-// checked out ref, the first ShortRefLen characters of it in brackets after
-// "Checkout", such as "Checkout [c1d2e3f4]", or ChangesTitle when ref is
-// empty.
-func CheckoutTitle(ref string) string {
+// The words that name a history move in the title of its notice, as
+// MoveTitle puts them: UndoVerb for /undo, RedoVerb for /redo, and
+// CheckoutVerb for a move to a message chosen in the session tree.
+const (
+	UndoVerb     = "Undo"
+	RedoVerb     = "Redo"
+	CheckoutVerb = "Checkout"
+)
+
+// MoveTitle returns the title of the notice of a history move that verb
+// names and that checked out ref: the first ShortRefLen characters of ref in
+// brackets after verb, such as "Undo [c1d2e3f4]", or ChangesTitle when ref
+// is empty.
+func MoveTitle(verb, ref string) string {
 	if ref == "" {
 		return ChangesTitle
 	}
-	return "Checkout [" + ref[:min(len(ref), ShortRefLen)] + "]"
+	return verb + " [" + ref[:min(len(ref), ShortRefLen)] + "]"
 }
 
-// ShowDiffToast returns a transcript notice summarizing the files a history
-// move changed, titled CheckoutTitle of what it checked out, or saying that
-// it changed none: a single line when it checked nothing out either, and
-// under the title otherwise.
+// ShowDiffToast returns the notice of a move to a message chosen in the
+// session tree, as ShowMoveNotice shows it under CheckoutVerb.
 func (s *Service) ShowDiffToast(moved app.MoveResult) []UIEvent {
-	title := CheckoutTitle(moved.Checkout)
+	return s.ShowMoveNotice(CheckoutVerb, moved)
+}
+
+// ShowMoveNotice returns a transcript notice summarizing the files a history
+// move changed, titled MoveTitle of verb, which names the move, and of what
+// it checked out, or saying that it changed none: a single line when it
+// checked nothing out either, and under the title otherwise.
+func (s *Service) ShowMoveNotice(verb string, moved app.MoveResult) []UIEvent {
+	title := MoveTitle(verb, moved.Checkout)
 	switch {
 	case len(moved.Files) > 0:
 		return s.AddNotice(Notice{Lines: BuildDiffToastLines(moved.Files), Title: title})
