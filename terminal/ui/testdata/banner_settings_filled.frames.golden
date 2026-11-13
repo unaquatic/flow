@@ -3,16 +3,16 @@
 |  Settings [↑/↓ move] [←/→ change] [esc cancel]                         |
 |                                                                        |
 |  Fullscreen              On                                            |
+|  Snapshots               Off                                           |
 |  Debug                   Off                                           |
-|                                                                        |
 |                                                                        |
 === fg ===
 |                                                                        |
 |  AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
 |                                                                        |
 |  CCCCCCCCCC              CC                                            |
+|  AAAAAAAAA               BBB                                           |
 |  AAAAA                   BBB                                           |
-|                                                                        |
 |                                                                        |
 === bg ===
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|

@@ -23,11 +23,12 @@ const SnapshotLabel = "Snapshot"
 // SnapshotBox is the ui.PartBox of a snapshot part. While the part is
 // pending, it is a row like a collapsed tool call's, "Snapshot [indexing]",
 // so that its message shows the snapshot being taken. Once the part holds its
-// tree it is gone, unless ShowDone keeps it, as the Debug setting does: then
-// it shows the tree's hash, as engine.ShortHash gives it, in brackets, as in
-// "Snapshot [7a36b04c]", or FailedStatus. The box always shows as a row,
-// starts with ui.ToolMarker as tool calls do, and has nothing to expand. The
-// changes of a reply's step show in its PatchBox either way.
+// tree it is gone, unless ShowDone keeps it, as the Snapshots setting of
+// /config does: then it shows the tree's hash, as engine.ShortHash gives
+// it, in brackets, as in "Snapshot [7a36b04c]", or FailedStatus. The box
+// always shows as a row, starts with ui.ToolMarker as tool calls do, and has
+// nothing to expand. The changes of a turn show in the PatchBox of its last
+// reply either way.
 type SnapshotBox struct {
 	*ui.PartBox
 	// Part is the snapshot part shown.
@@ -64,10 +65,10 @@ func (b *SnapshotBox) SetPart(part message.ContentPart) {
 }
 
 // SetViewStyle shows the box as st says: the snapshot once taken while
-// st.Debug is on, the marker as tool calls show it, in their shape, and the
+// st.Snapshots is on, the marker as tool calls show it, in their shape, and the
 // name in their color.
 func (b *SnapshotBox) SetViewStyle(st ui.ViewStyle) {
-	b.SetShowDone(st.Debug)
+	b.SetShowDone(st.Snapshots)
 	b.SetMarker(st.ToolMarkers)
 	b.SetNameFg(st.NameFg)
 	b.SetMarkerShape(st.MarkerShape)

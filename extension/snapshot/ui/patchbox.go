@@ -11,19 +11,20 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// PatchBox is the ui.PartBox of the workspace changes one agent step made,
-// shown as a tool call is: a row on the canvas, marked as /config marks
+// PatchBox is the ui.PartBox of the workspace changes one turn made, from its
+// prompt to its last reply, shown at the bottom of the turn, above its
+// footer, as a tool call is: a row on the canvas, marked as /config marks
 // tool calls, whose header sums them up, as PatchHeader gives it, and which
 // Ctrl+O expands with the tool calls. Expanded, the header is PatchTitle
 // alone, and the details show the summary under it, then the changes of each
 // file, as FileView shows them. It stays hidden until a nonempty patch is
-// set.
+// set, which only the box of the reply that ends a turn gets.
 type PatchBox struct {
 	*ui.PartBox
-	// From is the tree the step started from, which the message before it
-	// ended with.
+	// From is the tree the turn started from, which the message before its
+	// first reply, usually its prompt, ended with.
 	From snapshot.Hash
-	// To is the tree the step ended with.
+	// To is the tree the turn ended with, which its last reply ended with.
 	To snapshot.Hash
 	// Requested reports whether the patch between From and To was requested.
 	Requested bool
@@ -80,23 +81,24 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	return b
 }
 
-// SetMessage records the trees bounding the step that msg ends, as SetTrees
-// does, and loads its patch once both are known: for a reply, the tree the
-// message before it ended with, and the one it ended with itself. A prompt
-// changes no files, so it has no patch.
+// SetMessage records the trees bounding the turn that msg ends, as SetTrees
+// does, and loads its patch once both are known: the tree the message before
+// the turn's first reply ended with, and the one msg ended with itself. Only
+// the reply that ends a turn, as ui.ChatMessage.EndsTurn marks it, shows the
+// turn's changes, so the other replies of the turn show none, and a prompt,
+// which changes no files, has none either.
 func (b *PatchBox) SetMessage(msg ui.ChatMessage) {
-	var from snapshot.Hash
-	if msg.Role == message.RoleAgent {
-		from = snapshot.TreeIn(msg.Prev)
+	if msg.Role != message.RoleAgent || !msg.EndsTurn {
+		return
 	}
-	b.SetTrees(from, snapshot.TreeIn(msg.Parts))
+	b.SetTrees(snapshot.TreeIn(msg.TurnPrev), snapshot.TreeIn(msg.Parts))
 	if b.Load != nil && b.Pending() {
 		b.Requested = true
 		b.Load(b.From, b.To)
 	}
 }
 
-// SetTrees records the trees bounding the step. The zero Hash leaves the
+// SetTrees records the trees bounding the turn. The zero Hash leaves the
 // recorded tree unchanged.
 func (b *PatchBox) SetTrees(from, to snapshot.Hash) {
 	if !from.IsZero() {
@@ -268,7 +270,7 @@ func GitDiffPath(rest string) string {
 	return strings.TrimPrefix(rest, "a/")
 }
 
-// PatchTitle names the changes of a step during a run. The notice of a
+// PatchTitle names the changes of a turn. The notice of a
 // history move names its changes ui.ChangesTitle instead.
 const PatchTitle = "Diff"
 

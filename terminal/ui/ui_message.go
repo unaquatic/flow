@@ -99,6 +99,7 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 		ChatMessageWithToolColor(ui.service.state.ToolColor),
 		ChatMessageWithMarkerShape(ui.service.state.MarkerShape),
 		ChatMessageWithDebug(ui.service.state.Debug),
+		ChatMessageWithSnapshots(ui.service.state.ShowSnapshots),
 		ChatMessageWithCacheMode(ui.service.state.CacheMode),
 		ChatMessageWithExtensions(ui.extensions),
 	}
@@ -167,8 +168,18 @@ func (ui *UI) ShowStatusMarker() {
 	ui.SyncSlashStatus()
 }
 
-// SetDebug shows what helps debug flow in the transcript, such as the snapshot
-// every prompt and reply ends with, or hides it, as on says.
+// SetSnapshots keeps the snapshot every prompt and reply of the transcript
+// ends with once taken, by its hash, or shows it only while it is being
+// taken, as show says.
+func (ui *UI) SetSnapshots(show bool) {
+	for cm := range ui.Bubbles() {
+		cm.SetSnapshots(show)
+	}
+	ui.ReprintCommitted()
+}
+
+// SetDebug shows what helps debug flow in the transcript, or hides it, as on
+// says.
 func (ui *UI) SetDebug(on bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetDebug(on)

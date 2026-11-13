@@ -171,6 +171,10 @@ type Terminal struct {
 	// Fullscreen starts the terminal on the alternate screen rather than
 	// inline.
 	Fullscreen bool `json:"fullscreen,omitempty"`
+	// Snapshots keeps the row of each workspace snapshot in the transcript
+	// once it is taken, showing its hash, rather than only while it is
+	// being taken.
+	Snapshots bool `json:"snapshots,omitempty"`
 }
 
 // versionKey is the key of the config file that holds its format version.

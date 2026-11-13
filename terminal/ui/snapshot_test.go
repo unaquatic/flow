@@ -98,8 +98,8 @@ func TestSnapshotFrames(t *testing.T) {
 		}},
 		// Consecutive prompts share a bubble, each its own block a blank row
 		// under the one above, with its snapshot under it.
-		{name: "user_messages_grouped_debug", h: 11, add: func(u *ui.UI) {
-			u.Apply(u.Service().SetDebug(true))
+		{name: "user_messages_grouped_snapshots", h: 11, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetSnapshots(true))
 			for _, id := range []message.ID{"u1", "u2"} {
 				prompt := ui.UserText(id, "Run the tests")
 				prompt.ParentID = "u1"
@@ -107,10 +107,11 @@ func TestSnapshotFrames(t *testing.T) {
 				u.AddMessage(prompt)
 			}
 		}},
-		// With debug on in /config, the snapshot stays once taken, as a row
-		// that shows its hash, under the prompt and under the reply's call.
-		{name: "agent_indexed_debug", h: 12, add: func(u *ui.UI) {
-			u.Apply(u.Service().SetDebug(true))
+		// With snapshots on in /config, the snapshot stays once taken, as a
+		// row that shows its hash, under the prompt and under the reply's
+		// call.
+		{name: "agent_indexed_snapshots", h: 12, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetSnapshots(true))
 			prompt := ui.UserText("u1", "Run the tests")
 			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnTree})
 			u.AddMessage(prompt)
@@ -122,7 +123,7 @@ func TestSnapshotFrames(t *testing.T) {
 		// its footer: the three stack as rows would but for the footer, which
 		// is parted from the cache row by a blank row.
 		{name: "agent_snapshot_cache_footer", h: 13, add: func(u *ui.UI) {
-			u.Apply(u.Service().SetDebug(true))
+			u.Apply(u.Service().SetSnapshots(true))
 			u.Apply(u.Service().SetCacheMode(ui.CachePerMessage))
 			prompt := ui.UserText("u1", "Hi")
 			prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnTree})
@@ -159,6 +160,18 @@ func TestSnapshotFrames(t *testing.T) {
 					"diff --git a/old.go b/old.go\ndeleted file mode 100644\n--- a/old.go\n+++ /dev/null\n@@ -1 +0,0 @@\n-package calc\n")
 			u.Bubble("a1").SyncRows()
 			ui.ExpandTools(u)
+		}},
+		// A turn of two replies shows its changes once, at its bottom: under
+		// the last reply, right above the turn's footer, and none under the
+		// reply before it.
+		{name: "turn_patch_at_bottom", h: 8, add: func(u *ui.UI) {
+			u.AddMessage(ui.AgentText("a1", "Reading the calculator."))
+			last := ui.AgentText("a2", "Updated the calculator.")
+			last.EndsTurn, last.Worked = true, 3*time.Second
+			u.AddMessage(last)
+			patchBox(u, "a2").SetPatch(
+				"diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n")
+			u.Bubble("a2").SyncRows()
 		}},
 		// Expanded boxed, the changes show in a block on the surface, as a
 		// tool call's do.
@@ -292,21 +305,51 @@ func TestSnapshotIndicatorFrames(t *testing.T) {
 	ui.AssertIndicatorFrames(t, u, "user_message_indexing_indicator", 48, 8)
 }
 
-// TestSnapshotPatchBounds checks that a reply's changes are bounded by the
-// tree the message before it ended with and the tree of its own snapshot part,
-// once it arrives.
+// TestSnapshotPatchBounds checks that a turn's changes show under its last
+// reply alone, once the turn ends, bounded by the tree its prompt ended with
+// and the tree of that reply's snapshot part, and that the replies before it
+// show none.
 func TestSnapshotPatchBounds(t *testing.T) {
 	u := ui.NewInlineTestUI(t, snapshotViews())
-	ui.StreamToolTurn(u)
-	if box := patchBox(u, "a1"); box.From != ui.ToolTurnBase || box.To != ui.ToolTurnTree {
-		t.Errorf("patch bounds = %s..%s, want the prompt's tree and the reply's", box.From, box.To)
+	prompt := ui.UserText("u1", "Run the tests")
+	prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnBase})
+	u.Apply(u.Service().AddMessage(prompt))
+	u.Service().StartTurn(time.Now())
+	mid := mustTree("1111111111111111111111111111111111111111")
+	u.Apply(u.Service().AddMessage(ui.AgentParts("a1", snapshot.SnapshotPart{ID: "a1-step", Tree: mid})))
+	u.Apply(u.Service().AddMessage(ui.AgentParts("a2", snapshot.SnapshotPart{ID: "a2-step", Tree: ui.ToolTurnTree})))
+	if box := patchBox(u, "a2"); !box.From.IsZero() || !box.To.IsZero() {
+		t.Errorf("patch bounds before the turn ended = %s..%s, want none", box.From, box.To)
+	}
+
+	// The inline test UI has no slash menu to show the turn's time in, so
+	// only the update of the reply that ends the turn applies.
+	for _, ev := range u.Service().EndTurn(time.Now()) {
+		if up, ok := ev.(ui.EventMessageUpdated); ok {
+			u.UpdateMessage(up.Msg)
+		}
+	}
+	if box := patchBox(u, "a1"); !box.From.IsZero() || !box.To.IsZero() {
+		t.Errorf("the first reply's patch bounds = %s..%s, want none", box.From, box.To)
+	}
+	if box := patchBox(u, "a2"); box.From != ui.ToolTurnBase || box.To != ui.ToolTurnTree {
+		t.Errorf("patch bounds = %s..%s, want the prompt's tree and the last reply's", box.From, box.To)
 	}
 }
 
-// TestSnapshotDebugSet checks that debug shows the snapshot of every prompt
-// and reply once taken, of those shown and of those added later, and hides it
-// again.
-func TestSnapshotDebugSet(t *testing.T) {
+// mustTree parses s, a valid tree hash.
+func mustTree(s string) snapshot.Hash {
+	h, err := snapshot.ParseHash(s)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+// TestSnapshotsSet checks that the Snapshots setting shows the snapshot of
+// every prompt and reply once taken, of those shown and of those added
+// later, and hides it again, and that debug leaves them as they are.
+func TestSnapshotsSet(t *testing.T) {
 	u := ui.NewInlineTestUI(t, snapshotViews())
 	step := func(id message.PartID) message.ContentPart {
 		return snapshot.SnapshotPart{ID: id, Tree: ui.ToolTurnTree}
@@ -334,10 +377,12 @@ func TestSnapshotDebugSet(t *testing.T) {
 
 	check("off", false, false)
 	u.Apply(u.Service().SetDebug(true))
+	check("debug on", false, false)
+	u.Apply(u.Service().SetSnapshots(true))
 	check("on", true, true)
 	u.AddMessage(ui.AgentParts("a2", message.TextPart{ID: "a2-text", Text: "Again."}, step("a2-step")))
 	check("added on", true, true, true)
-	u.Apply(u.Service().SetDebug(false))
+	u.Apply(u.Service().SetSnapshots(false))
 	check("off again", false, false, false)
 }
 

@@ -168,6 +168,48 @@ func TestMessagesHoldThePartsBefore(t *testing.T) {
 	}
 }
 
+// TestRepliesHoldThePartsTheirTurnStartedFrom checks that each reply of a
+// turn, streamed or loaded, holds the parts of the turn's prompt, which its
+// changes are shown against, a prompt none, and that only the last reply of
+// each turn of a loaded session ends it.
+func TestRepliesHoldThePartsTheirTurnStartedFrom(t *testing.T) {
+	prompt := ChatMessage{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{
+		message.TextPart{ID: "u1-text", Text: "Run the tests"}, snapshot.SnapshotPart{ID: "u1-step", Tree: toolTurnBase},
+	}}
+	first := ChatMessage{ID: "a1", Role: message.RoleAgent, Parts: []message.ContentPart{snapshot.SnapshotPart{ID: "a1-step", Tree: toolTurnTree}}}
+	second := ChatMessage{ID: "a2", Role: message.RoleAgent}
+	next := ChatMessage{ID: "u2", Role: message.RoleUser}
+	msgs := []ChatMessage{prompt, first, second, next}
+	want := [][]message.ContentPart{nil, prompt.Parts, prompt.Parts, nil}
+
+	ui := newInlineTestUI(t)
+	var streamed [][]message.ContentPart
+	for _, msg := range msgs {
+		for _, ev := range ui.service.AddMessage(msg) {
+			streamed = append(streamed, ev.(EventMessageAdded).Msg.TurnPrev)
+		}
+	}
+	if !reflect.DeepEqual(streamed, want) {
+		t.Errorf("streamed TurnPrev = %v, want %v", streamed, want)
+	}
+
+	loaded := slices.Clone(msgs)
+	AssignPrev(loaded)
+	AssignTurnEnds(loaded)
+	var prevs [][]message.ContentPart
+	var ends []bool
+	for _, msg := range loaded {
+		prevs = append(prevs, msg.TurnPrev)
+		ends = append(ends, msg.EndsTurn)
+	}
+	if !reflect.DeepEqual(prevs, want) {
+		t.Errorf("loaded TurnPrev = %v, want %v", prevs, want)
+	}
+	if want := []bool{false, false, true, false}; !slices.Equal(ends, want) {
+		t.Errorf("loaded EndsTurn = %v, want %v", ends, want)
+	}
+}
+
 func TestPromptStartedAndEnded(t *testing.T) {
 	ui := newInlineTestUI(t)
 	prompt := app.Message{

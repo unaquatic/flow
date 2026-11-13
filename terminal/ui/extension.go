@@ -8,7 +8,7 @@ import (
 
 // Extension adds the widgets of a feature to the transcript: a view of each
 // content part the feature defines, and a view under the parts of each
-// message, such as the changes a reply made. It is the terminal side of an
+// message, such as the changes a turn made. It is the terminal side of an
 // extension.Extension, which adds the parts to the messages. Either method
 // returns nil for none. An Extension that implements ToolFormatter also
 // describes how the calls of the tools it knows show, and one that implements
@@ -63,6 +63,9 @@ type ViewStyle struct {
 	NameFg style.Color
 	// Debug shows what helps debug flow.
 	Debug bool
+	// Snapshots keeps the snapshot each message ends with once taken,
+	// rather than only while it is being taken.
+	Snapshots bool
 }
 
 // ViewHost is the bubble an extension's view shows in.

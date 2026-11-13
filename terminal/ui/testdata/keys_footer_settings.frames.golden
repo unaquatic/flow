@@ -2,20 +2,20 @@
 |■ Settings                                                              |
 |                                                                        |
 |  Fullscreen              On                                            |
+|  Snapshots               Off                                           |
 |  Debug                   Off                                           |
 |                                                                        |
 |■                                                                       |
 |  esc cancel  ↑/↓ move  ←/→ change  type search                         |
-|                                                                        |
 === fg ===
 |A AAAAAAAA                                                              |
 |                                                                        |
 |  BBBBBBBBBB              BB                                            |
+|  AAAAAAAAA               CCC                                           |
 |  AAAAA                   CCC                                           |
 |                                                                        |
 |A                                                                       |
 |  CCC CCCCCC  CCC CCCC  CCC CCCCCC  CCCC CCCCCC                         |
-|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |

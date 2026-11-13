@@ -246,9 +246,9 @@ const NoMatchesText = "[no matches]"
 // keyHintsSetting the row that sets the KeyHintsMode,
 // listCountSetting the row that sets the CountPlace, selectionSetting the
 // row that sets the SelectionStyle, promptSetting the row that sets the
-// PromptStyle, inputSetting the row that sets the InputStyle, and
-// debugSetting the row that switches
-// Debug.
+// PromptStyle, inputSetting the row that sets the InputStyle,
+// snapshotsSetting the row that shows or hides the snapshots once taken, and
+// debugSetting the row that switches Debug.
 const (
 	fullscreenSetting  = "Fullscreen"
 	cacheUsageSetting  = "Cache usage"
@@ -261,16 +261,18 @@ const (
 	selectionSetting   = "Selection"
 	promptSetting      = "Prompt style"
 	inputSetting       = "Input style"
+	snapshotsSetting   = "Snapshots"
 	debugSetting       = "Debug"
 )
 
 // ShowSettingsMenu lists the settings with their values, searched from the
 // input. Choosing one moves it to its next value, after the last back to the
 // first, and ←/→ move it back and forth; the menu stays open with the same
-// search, on the setting. Fullscreen is on or off, and debug, the last row,
-// on or off; each is saved, as PersistTerminal and PersistDebug save it, so
-// that the terminal starts with it next time. While debug is on, the style
-// settings show between them, for this terminal alone: cache usage one of
+// search, on the setting. Fullscreen is on or off, snapshots, the row before
+// debug, on or off, and debug, the last row, on or off; each is saved, as
+// PersistTerminal and PersistDebug save it, so that the terminal starts with
+// it next time. While debug is on, the style settings show between
+// fullscreen and snapshots, for this terminal alone: cache usage one of
 // CacheModes, expanded tools one of ExpandedStyles, the tool marker on or
 // off, the marker shape one of MarkerShapes, the tool name color one of
 // ToolNameColors, key hints one of KeyHintsModes, list count one of
@@ -287,8 +289,11 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 		debug := setting(debugSetting, onOff(s.state.Debug), func(int) []UIEvent {
 			return s.SetDebug(!s.state.Debug)
 		})
+		snapshots := setting(snapshotsSetting, onOff(s.state.ShowSnapshots), func(int) []UIEvent {
+			return s.SetSnapshots(!s.state.ShowSnapshots)
+		})
 		if !s.state.Debug {
-			return []MenuItem{fullscreen, debug}
+			return []MenuItem{fullscreen, snapshots, debug}
 		}
 		return []MenuItem{
 			fullscreen,
@@ -322,6 +327,7 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			setting(inputSetting, s.state.InputStyle.String(), func(step int) []UIEvent {
 				return s.SetInputStyle(s.state.InputStyle.Next(step))
 			}),
+			snapshots,
 			debug,
 		}
 	}
@@ -403,9 +409,17 @@ func (s *Service) SetSelectionStyle(style SelectionStyle) []UIEvent {
 	return []UIEvent{EventSelectionStyleSet{Style: style}}
 }
 
-// SetDebug shows what helps debug flow, in the transcript and in what is
-// added to it later, or hides it, as on says: the
-// snapshot each prompt and reply ends with, by its hash, once taken.
+// SetSnapshots keeps the snapshot each prompt and reply of the transcript
+// ends with, and of those added later, once taken, by its hash, or shows it
+// only while it is being taken, as show says, and saves the setting, as
+// PersistTerminal does.
+func (s *Service) SetSnapshots(show bool) []UIEvent {
+	s.state.ShowSnapshots = show
+	return append([]UIEvent{EventSnapshotsSet{Show: show}}, s.PersistTerminal()...)
+}
+
+// SetDebug shows what helps debug flow, such as the style settings of
+// /config and the debug commands, or hides it, as on says.
 func (s *Service) SetDebug(on bool) []UIEvent {
 	s.state.Debug = on
 	return append([]UIEvent{EventDebugSet{On: on}}, s.PersistDebug()...)

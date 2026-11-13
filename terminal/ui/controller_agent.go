@@ -20,6 +20,7 @@ func (s *Service) AddMessage(msg ChatMessage) []UIEvent {
 			msg.ParentID = prev.ParentID
 		}
 		msg.Prev = slices.Clone(prev.Parts)
+		msg.TurnPrev = TurnPrevOf(msg, *prev)
 	}
 	if msg.ParentID == "" {
 		msg.ParentID = msg.ID
@@ -113,8 +114,10 @@ func (s *Service) StartTurn(start time.Time) {
 }
 
 // EndTurn closes the turn in progress at end. When the turn ends with a reply
-// it added, it records how long the turn took on that reply and returns the
-// event that shows it there. It does nothing while no turn is in progress.
+// it added, it records how long the turn took on that reply, marks it as
+// ending the turn, and returns the events that show both there: the update
+// of the reply, which its views see EndsTurn in, and the time under it. It
+// does nothing while no turn is in progress.
 func (s *Service) EndTurn(end time.Time) []UIEvent {
 	start := s.state.TurnStart
 	s.state.TurnStart = time.Time{}
@@ -126,7 +129,15 @@ func (s *Service) EndTurn(end time.Time) []UIEvent {
 		return nil
 	}
 	last.Worked = end.Sub(start)
-	return []UIEvent{EventTurnEnded{MessageID: last.ID, Worked: last.Worked}}
+	last.EndsTurn = true
+	msg := *last
+	msg.Parts = slices.Clone(last.Parts)
+	msg.Live = slices.Clone(last.Live)
+	msg.Usage = message.Usage{}
+	return []UIEvent{
+		EventMessageUpdated{Msg: msg},
+		EventTurnEnded{MessageID: last.ID, Worked: last.Worked},
+	}
 }
 
 // ApplyAgentEvent updates conversation state and returns events for the UI.
