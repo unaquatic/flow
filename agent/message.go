@@ -46,6 +46,49 @@ func OwnReasoning(msgs []Message, t ProviderID, model string) []Message {
 	return out
 }
 
+// OwnMetadata returns msgs without the protocol metadata of the tool calls
+// that a model other than model of provider t made, as another provider
+// may reject data it did not send. Messages whose writer is not known keep
+// theirs. It copies only the messages it changes.
+func OwnMetadata(msgs []Message, t ProviderID, model string) []Message {
+	out, copied := msgs, false
+	for i, m := range msgs {
+		if m.Provider == "" || (m.Provider == t && m.Model == model) {
+			continue
+		}
+		if !slices.ContainsFunc(m.Content, hasMetadata) {
+			continue
+		}
+		if !copied {
+			out, copied = slices.Clone(msgs), true
+		}
+		content := slices.Clone(m.Content)
+		for j, p := range content {
+			switch v := p.(type) {
+			case message.ToolPart:
+				v.Metadata = nil
+				content[j] = v
+			case message.ToolUsePart:
+				v.Metadata = nil
+				content[j] = v
+			}
+		}
+		out[i].Content = content
+	}
+	return out
+}
+
+// hasMetadata reports whether p is a tool call with protocol metadata.
+func hasMetadata(p message.ContentPart) bool {
+	switch v := p.(type) {
+	case message.ToolPart:
+		return len(v.Metadata) > 0
+	case message.ToolUsePart:
+		return len(v.Metadata) > 0
+	}
+	return false
+}
+
 // NewTextMessage returns a message with one text part.
 func NewTextMessage(role message.Role, text string) Message {
 	return Message{

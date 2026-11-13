@@ -55,6 +55,16 @@ func blockStop(index int) [2]string {
 	return event("content_block_stop", map[string]any{"index": index})
 }
 
+// signed returns the metadata of a thinking block signed with sig.
+func signed(sig string) message.ProtocolMetadata {
+	return message.TextMetadata(MetadataKey, SignatureField, sig)
+}
+
+// redacted returns the metadata of a redacted_thinking block of data.
+func redacted(data string) message.ProtocolMetadata {
+	return message.TextMetadata(MetadataKey, RedactedField, data)
+}
+
 // Call is a tool call as its stream parts describe it.
 type Call struct {
 	// ID is that of the call's ToolUseStart.
@@ -121,6 +131,52 @@ func TestStream_ToolCalls(t *testing.T) {
 	}
 }
 
+// TestStream_ToolCaller checks that the caller of a tool_use block stays
+// with its call as protocol metadata and goes back to the API unchanged,
+// and that a block without one sends none.
+func TestStream_ToolCaller(t *testing.T) {
+	direct := `{"type":"direct"}`
+	resp, err := eventStream(eventBody(
+		event("message_start", map[string]any{"message": map[string]any{"usage": map[string]int{}}}),
+		event("content_block_start", map[string]any{"index": 0, "content_block": map[string]any{
+			"type": "tool_use", "id": "toolu_1", "name": "bash", "input": map[string]any{}, "caller": json.RawMessage(direct),
+		}}),
+		inputDelta(0, `{"command":"pwd"}`),
+		blockStop(0),
+		toolStart(1, "toolu_2", `{}`),
+		blockStop(1),
+		event("message_delta", map[string]any{"delta": map[string]any{"stop_reason": "tool_use"}, "usage": map[string]int{}}),
+		event("message_stop", map[string]any{}),
+	), "provider-b").Collect()
+	if err != nil {
+		t.Fatalf("collect: %v", err)
+	}
+
+	want := []message.ContentPart{
+		message.ToolUsePart{CallID: "toolu_1", Name: "bash", Input: json.RawMessage(`{"command":"pwd"}`),
+			Metadata: message.ProtocolMetadata{MetadataKey: {CallerField: json.RawMessage(direct)}}},
+		message.ToolUsePart{CallID: "toolu_2", Name: "bash", Input: json.RawMessage(`{}`)},
+	}
+	if !reflect.DeepEqual(resp.Message.Content, want) {
+		t.Errorf("content = %+v\nwant      %+v", resp.Message.Content, want)
+	}
+
+	_, out := ToMessages([]agent.Message{resp.Message})
+	blocks, _ := out[0].Content.([]ContentBlock)
+	var got []string
+	for _, block := range blocks {
+		b, _ := json.Marshal(block)
+		got = append(got, string(b))
+	}
+	wantBlocks := []string{
+		`{"type":"tool_use","id":"toolu_1","name":"bash","input":{"command":"pwd"},"caller":{"type":"direct"}}`,
+		`{"type":"tool_use","id":"toolu_2","name":"bash","input":{}}`,
+	}
+	if !reflect.DeepEqual(got, wantBlocks) {
+		t.Errorf("blocks = %q\nwant     %q", got, wantBlocks)
+	}
+}
+
 // TestStream_CollectsEveryBlock checks that a response's parts alone carry
 // all of it: thinking with its signature, text, and a tool call, in block
 // order, with the stop reason and usage.
@@ -146,7 +202,7 @@ func TestStream_CollectsEveryBlock(t *testing.T) {
 	}
 
 	want := []message.ContentPart{
-		message.ReasoningPart{Text: "Need the files.", Signature: "EqQBCgIYAh"},
+		message.ReasoningPart{Text: "Need the files.", Metadata: signed("EqQBCgIYAh")},
 		message.TextPart{Text: "Listing."},
 		message.ToolUsePart{CallID: "toolu_1", Name: "bash", Input: json.RawMessage(`{"command":"ls"}`)},
 	}
@@ -572,8 +628,8 @@ func TestStream_Mode(t *testing.T) {
 }
 
 // TestStream_RedactedThinking checks that a redacted_thinking block, which
-// comes whole, becomes a reasoning part marked redacted, holding the
-// encrypted reasoning, in its place among the other blocks.
+// comes whole, becomes a reasoning part whose metadata holds the encrypted
+// reasoning, in its place among the other blocks.
 func TestStream_RedactedThinking(t *testing.T) {
 	resp, err := eventStream(eventBody(
 		event("message_start", map[string]any{"message": map[string]any{"usage": map[string]int{}}}),
@@ -592,8 +648,8 @@ func TestStream_RedactedThinking(t *testing.T) {
 		t.Fatalf("Collect: %v", err)
 	}
 	want := []message.ContentPart{
-		message.ReasoningPart{Text: "Plan.", Signature: "sig"},
-		message.ReasoningPart{Signature: "EmwKAhgB", Redacted: true},
+		message.ReasoningPart{Text: "Plan.", Metadata: signed("sig")},
+		message.ReasoningPart{Metadata: redacted("EmwKAhgB")},
 		message.ToolUsePart{CallID: "toolu_1", Name: "bash", Input: json.RawMessage(`{"command":"ls"}`)},
 	}
 	if !reflect.DeepEqual(resp.Message.Content, want) {
@@ -603,8 +659,9 @@ func TestStream_RedactedThinking(t *testing.T) {
 
 // TestToMessages_Reasoning checks how reasoning goes back to the API:
 // redacted reasoning as redacted_thinking, signed reasoning as thinking,
-// unsigned reasoning, as a stop mid-thought leaves it, as text, and empty
-// unsigned reasoning not at all, with a message it empties left out.
+// unsigned reasoning, as a stop mid-thought leaves it, or reasoning that
+// another format signed, as text, and empty unsigned reasoning not at all,
+// with a message it empties left out.
 func TestToMessages_Reasoning(t *testing.T) {
 	agentMessage := func(parts ...message.ContentPart) agent.Message {
 		return agent.Message{Role: message.RoleAgent, Content: parts}
@@ -612,12 +669,13 @@ func TestToMessages_Reasoning(t *testing.T) {
 	_, out := ToMessages([]agent.Message{
 		agent.NewUserMessage("list files"),
 		agentMessage(
-			message.ReasoningPart{Text: "Plan.", Signature: "sig"},
-			message.ReasoningPart{Signature: "EmwKAhgB", Redacted: true},
+			message.ReasoningPart{Text: "Plan.", Metadata: signed("sig")},
+			message.ReasoningPart{Metadata: redacted("EmwKAhgB")},
 			message.ToolUsePart{CallID: "toolu_1", Name: "bash", Input: json.RawMessage(`{}`)},
 		),
 		{Role: message.RoleUser, Content: []message.ContentPart{message.ToolResultPart{ToolUseID: "toolu_1", Text: "go.mod"}}},
 		agentMessage(message.ReasoningPart{Text: "I was thinking abo"}),
+		agentMessage(message.ReasoningPart{Text: "Another format's.", Metadata: message.TextMetadata("proto-b", SignatureField, "x")}),
 		agentMessage(message.ReasoningPart{Text: "  "}, message.ReasoningPart{}),
 		agent.NewUserMessage("go on"),
 	})
@@ -647,6 +705,7 @@ func TestToMessages_Reasoning(t *testing.T) {
 		},
 		{`{"type":"tool_result","tool_use_id":"toolu_1","content":"go.mod"}`},
 		{`{"type":"text","text":"I was thinking abo"}`},
+		{`{"type":"text","text":"Another format's."}`},
 		{`"go on"`},
 	}
 	if !reflect.DeepEqual(got, want) {

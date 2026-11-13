@@ -366,18 +366,21 @@ func TestAgentEvents_ReasoningBecomesAPart(t *testing.T) {
 	}
 }
 
-// TestAgentEvents_ReasoningKeepsItsSignature checks that a reasoning block's
-// signature reaches its part, and the history the next request sends, also
-// for a block that streamed no text, and that a redacted block stays marked.
-func TestAgentEvents_ReasoningKeepsItsSignature(t *testing.T) {
+// TestAgentEvents_ReasoningKeepsItsMetadata checks that a reasoning block's
+// protocol metadata reaches its part, and the history the next request
+// sends, each field over the earlier, also for a block that streamed no
+// text.
+func TestAgentEvents_ReasoningKeepsItsMetadata(t *testing.T) {
+	sig := func(s string) message.ProtocolMetadata { return message.TextMetadata("proto-a", "signature", s) }
 	ag := &agent.Agent{
 		Providers: agenttest.NewProviders(t, &agenttest.Gateway{StreamFunc: func() (agent.StreamResponse, error) {
 			return agenttest.Stream(
 				agent.ReasoningDelta{Block: 0, Text: "think"},
-				agent.ReasoningSignature{Block: 0, Signature: "sig-0"},
+				agent.ReasoningMetadata{Block: 0, Metadata: sig("old")},
+				agent.ReasoningMetadata{Block: 0, Metadata: sig("sig-0")},
 				agent.TextDelta{Block: 1, Text: "answer"},
-				agent.ReasoningSignature{Block: 2, Signature: "sig-2"},
-				agent.ReasoningSignature{Block: 3, Signature: "enc-3", Redacted: true},
+				agent.ReasoningMetadata{Block: 2, Metadata: sig("sig-2")},
+				agent.ReasoningMetadata{Block: 3, Metadata: message.TextMetadata("proto-a", "redacted_data", "enc-3")},
 				agent.Stop{Reason: agent.StopEndTurn},
 			), nil
 		}}, "test"),
@@ -390,22 +393,23 @@ func TestAgentEvents_ReasoningKeepsItsSignature(t *testing.T) {
 	if err != nil {
 		t.Fatalf("agent run: %v", err)
 	}
-	type reasoning struct {
-		Text, Signature string
-		Redacted        bool
+	want := []message.ReasoningPart{
+		{Text: "think", Metadata: sig("sig-0")},
+		{Metadata: sig("sig-2")},
+		{Metadata: message.TextMetadata("proto-a", "redacted_data", "enc-3")},
 	}
-	want := []reasoning{{"think", "sig-0", false}, {"", "sig-2", false}, {"", "enc-3", true}}
 	for name, parts := range map[string][]message.ContentPart{
 		"final message": turns[0].Parts,
 		"history":       ag.Messages[1].Content,
 	} {
-		var got []reasoning
+		var got []message.ReasoningPart
 		for _, p := range parts {
 			if rp, ok := p.(message.ReasoningPart); ok {
-				got = append(got, reasoning{rp.Text, rp.Signature, rp.Redacted})
+				rp.ID = ""
+				got = append(got, rp)
 			}
 		}
-		if !slices.Equal(got, want) {
+		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s reasoning = %+v, want %+v", name, got, want)
 		}
 	}

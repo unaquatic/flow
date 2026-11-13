@@ -1086,7 +1086,7 @@ func TestIndicatorFrames(t *testing.T) {
 		{name: "indicator_reply_streaming", h: 13, add: func(ui *UI) {
 			replyStarted(ui)
 			ui.UpdateMessage(agentParts("a1",
-				message.ReasoningPart{ID: "a1-think", Signature: "sig"},
+				message.ReasoningPart{ID: "a1-think", Metadata: message.TextMetadata("proto-a", "signature", "sig")},
 				message.TextPart{ID: "a1-text", Text: "Running them now."},
 			))
 		}, show: WorkingIndicator(12*time.Second, false), working: true},

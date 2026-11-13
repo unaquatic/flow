@@ -37,6 +37,7 @@ func ExpandToolParts(msgs []Message) []Message {
 				CallID:       tp.CallID,
 				Name:         tp.Name,
 				Input:        input,
+				Metadata:     tp.Metadata,
 				CacheControl: tp.CacheControl,
 			})
 
