@@ -5,6 +5,8 @@ import (
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/unaquatic/flow/app"
 )
 
 // TestCtrlCQuitsWithinQuitWindow checks that an idle Ctrl+C arms the quit,
@@ -47,5 +49,26 @@ func TestCtrlCWithInputDoesNotArmQuit(t *testing.T) {
 	_, out := s.HandleCtrlC(true)
 	if slices.Contains(out, UIEvent(EventQuitArmed{})) || s.QuitArmed(time.Now()) {
 		t.Errorf("Ctrl+C on input = %v; want it to clear the input without arming the quit", out)
+	}
+}
+
+// TestCtrlCWithInputDuringRunKeepsTheRun checks that a Ctrl+C that clears
+// the input while a run is active leaves the run going, and that the next
+// press, on the empty input, stops it.
+func TestCtrlCWithInputDuringRunKeepsTheRun(t *testing.T) {
+	q := newQueueTest(t)
+	q.startDemo()
+
+	if _, out := q.s.HandleCtrlC(true); !slices.Contains(out, UIEvent(EventInputClear{})) {
+		t.Errorf("Ctrl+C on input = %v; want it to clear the input", out)
+	}
+	if !q.s.Streaming() || !q.s.state.Working {
+		t.Fatal("Ctrl+C that cleared the input stopped the run")
+	}
+
+	q.s.HandleCtrlC(false)
+	q.until(app.TypeAgentEnded)
+	if q.s.Streaming() {
+		t.Error("Ctrl+C on the empty input did not stop the run")
 	}
 }
