@@ -490,6 +490,12 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
 		}},
+		// The notice of an undo is headed by the word undo and the snapshot
+		// it checked out, rather than by checkout.
+		{name: "notice_undo_bar", h: 7, add: func(ui *UI) {
+			ui.AddMessage(userText("u1", "Run the tests"))
+			ui.Apply(ui.service.CompleteUndo(app.MoveResult{Files: movedFiles()[:2], Checkout: "31611124a5b6c7d8"}, nil))
+		}},
 		// With the prompt style filled, the same notices fill boxes on the
 		// box background, as the prompt does.
 		{name: "notice_filled", h: 16, add: func(ui *UI) {
