@@ -29,6 +29,15 @@ const DefaultBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 // own API.
 const DefaultKeyHeader = "x-goog-api-key"
 
+// The namespace and field of the format's data in message.ProtocolMetadata.
+const (
+	// MetadataKey namespaces the format's data in message.ProtocolMetadata.
+	MetadataKey = "google"
+	// SignatureField holds the thought signature of a thought or a
+	// function call, a JSON string.
+	SignatureField = "thoughtSignature"
+)
+
 // SkipSignature is the thought signature the API documents for a function
 // call whose own signature is lost, such as one another model made, which
 // the models of version 3 and later otherwise reject.
@@ -210,11 +219,13 @@ var legacyModel = regexp.MustCompile(`(^|/)` + LegacyFamily + `(-live)?-[12]([.-
 // model, and the text of the system messages to the parts of its system
 // instruction.
 //
-// A reasoning part with text goes back as a thought, with its signature; a
-// signature with no text is the signature of the part that follows it, as
-// Stream yields a function call's. The first function call of a turn that
-// has none, such as one another model made, takes SkipSignature, which
-// models of version 3 and later need; models before it take no call IDs.
+// A reasoning part with text goes back as a thought, and a function call as
+// a call, each with the signature its metadata of MetadataKey keeps; the
+// signature of a reasoning part with no text goes with the part that
+// follows it, as the API takes no part without data. The first function
+// call of a turn that has no signature, such as one another model made,
+// takes SkipSignature, which models of version 3 and later need; models
+// before it take no call IDs.
 //
 // The attachments of a tool result, such as an image, go in its function
 // response's parts to models of version 3 and later. Models before it take
@@ -256,12 +267,11 @@ func ToContents(msgs []agent.Message, model string) (system []Part, out []Conten
 					parts = append(parts, Part{Text: v.Text, ThoughtSignature: take()})
 				}
 			case message.ReasoningPart:
-				switch {
-				case v.Redacted:
-				case v.Text == "":
-					pending = v.Signature
-				default:
-					parts = append(parts, Part{Text: v.Text, Thought: true, ThoughtSignature: v.Signature})
+				sig, _ := v.Metadata.Text(MetadataKey, SignatureField)
+				if v.Text == "" {
+					pending = sig
+				} else {
+					parts = append(parts, Part{Text: v.Text, Thought: true, ThoughtSignature: sig})
 				}
 			case message.ImagePart:
 				if v.Source == nil {
@@ -275,7 +285,8 @@ func ToContents(msgs []agent.Message, model string) (system []Part, out []Conten
 			case message.FilePart:
 				parts = append(parts, Part{InlineData: &Blob{MimeType: v.MediaType, Data: v.Data}})
 			case message.ToolUsePart:
-				sig := take()
+				own, _ := v.Metadata.Text(MetadataKey, SignatureField)
+				sig := cmp.Or(own, take())
 				if sig == "" && !signed && !legacy {
 					sig = SkipSignature
 				}
@@ -397,10 +408,9 @@ func (u UsageMetadata) Usage() agent.Usage {
 // Stream returns the stream of the generateContent response body of the provider
 // named name, which it closes once the stream ends: its thoughts and text,
 // each run of them a block of its own, its function calls, each whole, and
-// then its usage and why it stopped. A function call's thought signature
-// streams as the signature of a reasoning block of its own, just before
-// the call; the signatures of text parts, which the API does not need back,
-// are left out.
+// then its usage and why it stopped. The thought signatures of thoughts and
+// function calls stream as their metadata of MetadataKey; the signatures of
+// text parts, which the API does not need back, are left out.
 func Stream(body io.ReadCloser, name string) agent.StreamResponse {
 	return func(yield func(agent.StreamPart, error) bool) {
 		defer body.Close()
@@ -469,18 +479,16 @@ func (st *StreamState) Handle(data string, yield func(agent.StreamPart, error) b
 		switch {
 		case p.FunctionCall != nil:
 			st.open = false
-			if p.ThoughtSignature != "" {
-				st.block++
-				if !yield(agent.ReasoningSignature{Block: st.block, Signature: p.ThoughtSignature}, nil) {
-					return false
-				}
-			}
 			id := st.CallID(p.FunctionCall.ID)
 			args := p.FunctionCall.Args
 			if len(args) == 0 || string(args) == "null" {
 				args = json.RawMessage("{}")
 			}
-			if !yield(agent.ToolUseStart{ID: id, Name: p.FunctionCall.Name}, nil) ||
+			start := agent.ToolUseStart{ID: id, Name: p.FunctionCall.Name}
+			if p.ThoughtSignature != "" {
+				start.Metadata = message.TextMetadata(MetadataKey, SignatureField, p.ThoughtSignature)
+			}
+			if !yield(start, nil) ||
 				!yield(agent.ToolUseEnd{ID: id, Input: args}, nil) {
 				return false
 			}
@@ -489,8 +497,11 @@ func (st *StreamState) Handle(data string, yield func(agent.StreamPart, error) b
 			if p.Text != "" && !yield(agent.ReasoningDelta{Block: b, Text: p.Text}, nil) {
 				return false
 			}
-			if p.ThoughtSignature != "" && !yield(agent.ReasoningSignature{Block: b, Signature: p.ThoughtSignature}, nil) {
-				return false
+			if p.ThoughtSignature != "" {
+				md := message.TextMetadata(MetadataKey, SignatureField, p.ThoughtSignature)
+				if !yield(agent.ReasoningMetadata{Block: b, Metadata: md}, nil) {
+					return false
+				}
 			}
 		case p.Text != "":
 			if !yield(agent.TextDelta{Block: st.next(false), Text: p.Text}, nil) {

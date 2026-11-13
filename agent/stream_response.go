@@ -60,14 +60,14 @@ func (s StreamResponse) Collect() (*Response, error) {
 				rp.Text += p.Text
 				content[i] = rp
 			}
-		case ReasoningSignature:
+		case ReasoningMetadata:
 			i := slot(BlockKey{Reasoning: true, Block: p.Block})
 			rp := content[i].(message.ReasoningPart)
-			rp.Signature, rp.Redacted = p.Signature, p.Redacted
+			rp.Metadata = rp.Metadata.Merge(p.Metadata)
 			content[i] = rp
 		case ToolUseStart:
 			calls[p.ID] = len(content)
-			content = append(content, message.ToolUsePart{CallID: p.ID, Name: p.Name})
+			content = append(content, message.ToolUsePart{CallID: p.ID, Name: p.Name, Metadata: p.Metadata})
 		case ToolUseDelta:
 			if i, ok := calls[p.ID]; ok {
 				tu := content[i].(message.ToolUsePart)

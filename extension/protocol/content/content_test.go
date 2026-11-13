@@ -16,6 +16,11 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 )
 
+// signed returns the metadata of a part with thought signature sig.
+func signed(sig string) message.ProtocolMetadata {
+	return message.TextMetadata(MetadataKey, SignatureField, sig)
+}
+
 // sseBody returns the server-sent events of chunks.
 func sseBody(chunks ...string) io.ReadCloser {
 	var b strings.Builder
@@ -36,32 +41,30 @@ var reply = []string{
 }
 
 // TestStream checks the parts of a streamed response, as Collect gathers
-// them: the thoughts with their signature, the text, the first call's
-// signature just before it, and both calls, with the API's ID or one of
-// their own, and the usage, the thoughts counted as output.
+// them: the thoughts with their signature, the text, and both calls, the
+// first with its signature, with the API's ID or one of their own, and the
+// usage, the thoughts counted as output.
 func TestStream(t *testing.T) {
 	resp, err := Stream(sseBody(reply...), "provider-c").Collect()
 	if err != nil {
 		t.Fatal(err)
 	}
 	c := resp.Message.Content
-	if len(c) != 5 {
-		t.Fatalf("content = %#v, want 5 parts", c)
+	if len(c) != 4 {
+		t.Fatalf("content = %#v, want 4 parts", c)
 	}
-	if r, ok := c[0].(message.ReasoningPart); !ok || r.Text != "Looking at the files." || r.Signature != "sig-thought" {
+	if r, ok := c[0].(message.ReasoningPart); !ok || r.Text != "Looking at the files." || !reflect.DeepEqual(r.Metadata, signed("sig-thought")) {
 		t.Errorf("part 0 = %#v, want the signed thoughts", c[0])
 	}
 	if tp, ok := c[1].(message.TextPart); !ok || tp.Text != "Let me check." {
 		t.Errorf("part 1 = %#v, want the text", c[1])
 	}
-	if r, ok := c[2].(message.ReasoningPart); !ok || r.Text != "" || r.Signature != "sig-call" {
-		t.Errorf("part 2 = %#v, want the call's signature alone", c[2])
-	}
-	first, ok1 := c[3].(message.ToolUsePart)
-	second, ok2 := c[4].(message.ToolUsePart)
+	first, ok1 := c[2].(message.ToolUsePart)
+	second, ok2 := c[3].(message.ToolUsePart)
 	if !ok1 || !ok2 || first.CallID != "c1" || first.Name != "bash" || string(first.Input) != `{"command":"ls"}` ||
-		second.Name != "read" || !strings.HasPrefix(second.CallID, "call_") || string(second.Input) != `{"path":"go.mod"}` {
-		t.Errorf("calls = %#v, %#v", c[3], c[4])
+		!reflect.DeepEqual(first.Metadata, signed("sig-call")) ||
+		second.Name != "read" || !strings.HasPrefix(second.CallID, "call_") || string(second.Input) != `{"path":"go.mod"}` || second.Metadata != nil {
+		t.Errorf("calls = %#v, %#v, want the first signed", c[2], c[3])
 	}
 	if resp.StopReason != agent.StopToolUse {
 		t.Errorf("stop = %q, want tool_use", resp.StopReason)
@@ -91,7 +94,7 @@ func TestToContents(t *testing.T) {
 		resp.Message,
 		{Role: message.RoleUser, Content: []message.ContentPart{
 			message.ToolResultPart{ToolUseID: "c1", Name: "bash", Text: "go.mod"},
-			message.ToolResultPart{ToolUseID: resp.Message.Content[4].(message.ToolUsePart).CallID, Name: "read", Text: "no such file", IsError: true},
+			message.ToolResultPart{ToolUseID: resp.Message.Content[3].(message.ToolUsePart).CallID, Name: "read", Text: "no such file", IsError: true},
 		}},
 		other,
 	}
@@ -126,6 +129,29 @@ func TestToContents(t *testing.T) {
 	_, legacy := ToContents(msgs, LegacyFamily+"-2.5")
 	if calls := legacy[3].Parts; calls[0].ThoughtSignature != "" || calls[0].FunctionCall.ID != "" || legacy[2].Parts[0].FunctionResponse.ID != "" {
 		t.Errorf("version 2.5 call = %+v, response = %+v; want no signature and no IDs", calls[0], legacy[2].Parts[0].FunctionResponse)
+	}
+}
+
+// TestToContents_SignatureWithoutText checks that the signature of a
+// thought with no text goes with the part after it, as the API takes no
+// part without data, unless that part is a call signed itself; and that
+// another format's metadata signs nothing.
+func TestToContents_SignatureWithoutText(t *testing.T) {
+	_, contents := ToContents([]agent.Message{{Role: message.RoleAgent, Content: []message.ContentPart{
+		message.ReasoningPart{Metadata: signed("sig-empty")},
+		message.TextPart{Text: "Done."},
+		message.ReasoningPart{Metadata: signed("sig-lost")},
+		message.ToolUsePart{CallID: "c1", Name: "bash", Input: json.RawMessage(`{}`), Metadata: signed("sig-call")},
+		message.ReasoningPart{Text: "Other.", Metadata: message.TextMetadata("proto-b", SignatureField, "x")},
+		message.ToolUsePart{CallID: "c2", Name: "bash", Input: json.RawMessage(`{}`), Metadata: message.TextMetadata("proto-b", SignatureField, "x")},
+	}}}, "model-a")
+
+	var got []string
+	for _, p := range contents[0].Parts {
+		got = append(got, p.ThoughtSignature)
+	}
+	if want := []string{"sig-empty", "sig-call", "", ""}; !reflect.DeepEqual(got, want) {
+		t.Errorf("signatures = %q, want %q", got, want)
 	}
 }
 

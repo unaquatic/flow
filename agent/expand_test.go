@@ -2,6 +2,7 @@ package agent
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -197,5 +198,56 @@ func TestExpandToolParts_InvalidInputBecomesEmptyObject(t *testing.T) {
 	use, ok := got[0].Content[0].(message.ToolUsePart)
 	if !ok || string(use.Input) != "{}" {
 		t.Fatalf("tool use = %+v, want empty object input", got[0].Content[0])
+	}
+}
+
+// TestExpandToolParts_KeepsProtocolMetadata checks that a call's tool_use
+// part keeps the protocol metadata of the tool part it comes from.
+func TestExpandToolParts_KeepsProtocolMetadata(t *testing.T) {
+	md := message.ProtocolMetadata{"proto-a": {"caller": json.RawMessage(`{"type":"direct"}`)}}
+	msgs := []Message{{
+		Role: message.RoleAgent,
+		Content: []message.ContentPart{message.ToolPart{
+			CallID:   "call_1",
+			Name:     "read",
+			Metadata: md,
+			State:    message.ToolStateCompleted{Input: json.RawMessage(`{}`), Output: "ok"},
+		}},
+	}}
+
+	got := ExpandToolParts(msgs)
+	use, ok := got[0].Content[0].(message.ToolUsePart)
+	if !ok || !reflect.DeepEqual(use.Metadata, md) {
+		t.Fatalf("tool use = %+v, want metadata %v", got[0].Content[0], md)
+	}
+}
+
+// TestOwnMetadata checks that the tool calls of messages another model
+// wrote lose their protocol metadata, and that those of the model itself,
+// and of messages whose writer is not known, keep theirs, without changing
+// the messages passed in.
+func TestOwnMetadata(t *testing.T) {
+	md := message.ProtocolMetadata{"proto-a": {"caller": json.RawMessage(`{"type":"direct"}`)}}
+	call := func(p ProviderID, model string) Message {
+		return Message{Role: message.RoleAgent, Provider: p, Model: model, Content: []message.ContentPart{
+			message.TextPart{Text: "running"},
+			message.ToolPart{CallID: "call_1", Name: "read", Metadata: md, State: message.ToolStatePending{}},
+			message.ToolUsePart{CallID: "call_2", Name: "read", Metadata: md},
+		}}
+	}
+	msgs := []Message{call("provider-a", "lab-a/model-a"), call("provider-b", "lab-a/model-a"), call("provider-a", "lab-a/model-b"), call("", "")}
+
+	got := OwnMetadata(msgs, "provider-a", "lab-a/model-a")
+	for i, keep := range []bool{true, false, false, true} {
+		tp := got[i].Content[1].(message.ToolPart)
+		tu := got[i].Content[2].(message.ToolUsePart)
+		if (tp.Metadata != nil) != keep || (tu.Metadata != nil) != keep {
+			t.Errorf("message %d: metadata %v, %v, want kept %v", i, tp.Metadata, tu.Metadata, keep)
+		}
+	}
+	for i, m := range msgs {
+		if m.Content[1].(message.ToolPart).Metadata == nil || m.Content[2].(message.ToolUsePart).Metadata == nil {
+			t.Errorf("message %d passed in lost its metadata", i)
+		}
 	}
 }

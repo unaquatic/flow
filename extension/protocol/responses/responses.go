@@ -27,6 +27,12 @@ const (
 	// maxCacheKeyLen is the most characters the platform API takes in a
 	// prompt_cache_key.
 	maxCacheKeyLen = 64
+
+	// MetadataKey namespaces the format's data in message.ProtocolMetadata.
+	MetadataKey = "openai"
+	// ReasoningItemField holds the reasoning item of a reasoning part, as
+	// ReasoningItem keeps it.
+	ReasoningItemField = "reasoning_item"
 )
 
 // Client implements agent.Provider for an API that takes Responses
@@ -243,8 +249,8 @@ func (h *Handler) ReasoningAt(index int) *StreamedReasoning {
 }
 
 // ReasoningItem is a Responses API reasoning item as a reasoning part keeps
-// it in its signature, to send it back to the model with later requests, as
-// the API returned it.
+// it in its metadata, under ReasoningItemField, to send it back to the
+// model with later requests, as the API returned it.
 type ReasoningItem struct {
 	// ID identifies the item, as the API returned it.
 	ID string `json:"id,omitempty"`
@@ -256,12 +262,12 @@ type ReasoningItem struct {
 	EncryptedContent string `json:"encrypted_content,omitempty"`
 }
 
-// ParseReasoningItem returns the reasoning item that signature holds, and
-// reports whether it holds one with encrypted reasoning, the only kind
-// worth sending back. The signatures of the Messages format hold none.
-func ParseReasoningItem(signature string) (ReasoningItem, bool) {
+// ReasoningItemOf returns the reasoning item that md, a reasoning part's
+// metadata, holds, and reports whether it holds one with encrypted
+// reasoning, the only kind worth sending back.
+func ReasoningItemOf(md message.ProtocolMetadata) (ReasoningItem, bool) {
 	var item ReasoningItem
-	if json.Unmarshal([]byte(signature), &item) != nil || item.Type != "reasoning" || item.EncryptedContent == "" {
+	if json.Unmarshal(md[MetadataKey][ReasoningItemField], &item) != nil || item.Type != "reasoning" || item.EncryptedContent == "" {
 		return ReasoningItem{}, false
 	}
 	return item, true
@@ -269,7 +275,7 @@ func ParseReasoningItem(signature string) (ReasoningItem, bool) {
 
 // EndReasoning completes item, the reasoning at output index: it yields
 // the text of its summary unless the text streamed, and then, once, its
-// signature, the item as ReasoningItem keeps it, when it has encrypted
+// metadata, the item as ReasoningItem keeps it, when it has encrypted
 // reasoning to send back. Some servers send the encrypted reasoning only in
 // the completed response, which ends the item again. It reports whether
 // streaming should continue.
@@ -298,12 +304,13 @@ func (h *Handler) EndReasoning(item Output, index int, yield func(agent.StreamPa
 	if summary == nil {
 		summary = []OutputContent{}
 	}
-	sig, err := json.Marshal(ReasoningItem{ID: item.ID, Type: "reasoning", Summary: summary, EncryptedContent: item.EncryptedContent})
+	raw, err := json.Marshal(ReasoningItem{ID: item.ID, Type: "reasoning", Summary: summary, EncryptedContent: item.EncryptedContent})
 	if err != nil {
 		return true
 	}
 	r.Signed = true
-	return yield(agent.ReasoningSignature{Block: block, Signature: string(sig)}, nil)
+	md := message.ProtocolMetadata{MetadataKey: {ReasoningItemField: raw}}
+	return yield(agent.ReasoningMetadata{Block: block, Metadata: md}, nil)
 }
 
 // Handle folds one event into the response, yields the stream parts it
@@ -682,7 +689,7 @@ func ToInput(msgs []agent.Message) (instructions string, input []any) {
 			case message.FilePart:
 				content = append(content, AttachmentItem(v))
 			case message.ReasoningPart:
-				if item, ok := ParseReasoningItem(v.Signature); ok {
+				if item, ok := ReasoningItemOf(v.Metadata); ok {
 					flush()
 					input = append(input, item)
 				}

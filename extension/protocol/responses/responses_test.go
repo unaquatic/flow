@@ -526,17 +526,17 @@ func summaryDelta(index, part int, delta string) [2]string {
 
 // TestHandler_Reasoning checks that a reasoning item becomes a
 // reasoning part: its summary text, streamed or whole, with its parts set
-// apart by blank lines, signed with the item that goes back to the model,
-// encrypted reasoning included, even when only the completed response
-// carries it.
+// apart by blank lines, with the item that goes back to the model in its
+// metadata, encrypted reasoning included, even when only the completed
+// response carries it.
 func TestHandler_Reasoning(t *testing.T) {
-	sig := func(summary []string, encrypted string) string {
+	sig := func(summary []string, encrypted string) message.ProtocolMetadata {
 		parts := []OutputContent{}
 		for _, s := range summary {
 			parts = append(parts, OutputContent{Type: "summary_text", Text: s})
 		}
 		b, _ := json.Marshal(ReasoningItem{ID: "rs_1", Type: "reasoning", Summary: parts, EncryptedContent: encrypted})
-		return string(b)
+		return message.ProtocolMetadata{MetadataKey: {ReasoningItemField: b}}
 	}
 	tests := []struct {
 		name   string
@@ -554,8 +554,8 @@ func TestHandler_Reasoning(t *testing.T) {
 				completed(reasoningItem([]string{"Look at the files.", "Then run tests."}, "enc")),
 			},
 			want: message.ReasoningPart{
-				Text:      "Look at the files.\n\nThen run tests.",
-				Signature: sig([]string{"Look at the files.", "Then run tests."}, "enc"),
+				Text:     "Look at the files.\n\nThen run tests.",
+				Metadata: sig([]string{"Look at the files.", "Then run tests."}, "enc"),
 			},
 		},
 		{
@@ -564,7 +564,7 @@ func TestHandler_Reasoning(t *testing.T) {
 				itemEvent("response.output_item.done", 0, reasoningItem([]string{"First.", "Second."}, "enc")),
 				completed(reasoningItem([]string{"First.", "Second."}, "enc")),
 			},
-			want: message.ReasoningPart{Text: "First.\n\nSecond.", Signature: sig([]string{"First.", "Second."}, "enc")},
+			want: message.ReasoningPart{Text: "First.\n\nSecond.", Metadata: sig([]string{"First.", "Second."}, "enc")},
 		},
 		{
 			name: "encrypted reasoning only when completed",
@@ -572,7 +572,7 @@ func TestHandler_Reasoning(t *testing.T) {
 				itemEvent("response.output_item.done", 0, reasoningItem(nil, "")),
 				completed(reasoningItem(nil, "late")),
 			},
-			want: message.ReasoningPart{Signature: sig(nil, "late")},
+			want: message.ReasoningPart{Metadata: sig(nil, "late")},
 		},
 	}
 	for _, tt := range tests {
@@ -591,13 +591,13 @@ func TestHandler_Reasoning(t *testing.T) {
 // TestToInput_Reasoning checks that a reasoning part that holds
 // encrypted reasoning goes back as the reasoning item the API returned, ID
 // included, just before the items that followed it, and that other
-// reasoning parts, such as those of the Messages format, are left out.
+// reasoning parts, such as those another format signed, are left out.
 func TestToInput_Reasoning(t *testing.T) {
-	sig, _ := json.Marshal(ReasoningItem{ID: "rs_1", Type: "reasoning", Summary: []OutputContent{}, EncryptedContent: "enc"})
+	item, _ := json.Marshal(ReasoningItem{ID: "rs_1", Type: "reasoning", Summary: []OutputContent{}, EncryptedContent: "enc"})
 	msgs := []agent.Message{
 		agent.NewUserMessage("list files"),
 		{Role: message.RoleAgent, Content: []message.ContentPart{
-			message.ReasoningPart{Text: "Need ls.", Signature: string(sig)},
+			message.ReasoningPart{Text: "Need ls.", Metadata: message.ProtocolMetadata{MetadataKey: {ReasoningItemField: item}}},
 			message.TextPart{Text: "Listing."},
 			message.ToolUsePart{CallID: "call_1", Name: "bash", Input: json.RawMessage(ls)},
 		}},
@@ -605,7 +605,7 @@ func TestToInput_Reasoning(t *testing.T) {
 			message.ToolResultPart{ToolUseID: "call_1", Text: "go.mod"},
 		}},
 		{Role: message.RoleAgent, Content: []message.ContentPart{
-			message.ReasoningPart{Text: "Another format's.", Signature: "EqQBCgIYAh"},
+			message.ReasoningPart{Text: "Another format's.", Metadata: message.ProtocolMetadata{"proto-b": {ReasoningItemField: item}}},
 			message.TextPart{Text: "Done."},
 		}},
 	}

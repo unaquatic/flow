@@ -144,10 +144,10 @@ func (s *TurnState) Handle(part StreamPart) {
 		s.AppendText(BlockText, p.Block, p.Text)
 	case ReasoningDelta:
 		s.AppendText(BlockReasoning, p.Block, p.Text)
-	case ReasoningSignature:
-		s.SignReasoning(p)
+	case ReasoningMetadata:
+		s.AddReasoningMetadata(p)
 	case ToolUseStart:
-		s.OpenTool(p.ID, p.Name)
+		s.OpenTool(p)
 	case ToolUseDelta:
 		s.GrowTool(p.ID, p.JSON)
 	case ToolUseEnd:
@@ -182,19 +182,18 @@ func (s *TurnState) AppendText(kind BlockKind, block Block, chunk string) {
 	}
 }
 
-// SignReasoning sets the signature of a reasoning block's part, and whether
-// its reasoning is redacted, as sig gives them, starting the part if the
-// block streamed no text.
-func (s *TurnState) SignReasoning(sig ReasoningSignature) {
-	key := BlockKey{Kind: BlockReasoning, Block: sig.Block}
+// AddReasoningMetadata sets the protocol metadata md gives over that of a
+// reasoning block's part, starting the part if the block streamed no text.
+func (s *TurnState) AddReasoningMetadata(md ReasoningMetadata) {
+	key := BlockKey{Kind: BlockReasoning, Block: md.Block}
 	slot, ok := s.Blocks[key]
 	if !ok {
 		s.Blocks[key] = len(s.Parts)
-		s.StartPart(message.ReasoningPart{ID: message.NewPartID(), Signature: sig.Signature, Redacted: sig.Redacted})
+		s.StartPart(message.ReasoningPart{ID: message.NewPartID(), Metadata: md.Metadata.Merge(nil)})
 		return
 	}
 	if p, ok := s.Parts[slot].(message.ReasoningPart); ok {
-		p.Signature, p.Redacted = sig.Signature, sig.Redacted
+		p.Metadata = p.Metadata.Merge(md.Metadata)
 		s.UpdatePart(slot, p)
 	}
 }
@@ -225,13 +224,15 @@ func (s *TurnState) EndUsage() {
 	s.EndPart(len(s.Parts)-1, part)
 }
 
-// OpenTool starts a pending tool part.
-func (s *TurnState) OpenTool(callID, name string) {
+// OpenTool starts a pending tool part for the call p starts, which keeps
+// the call's protocol metadata.
+func (s *TurnState) OpenTool(p ToolUseStart) {
 	s.StartPart(message.ToolPart{
-		ID:     message.NewPartID(),
-		CallID: callID,
-		Name:   name,
-		State:  message.ToolStatePending{},
+		ID:       message.NewPartID(),
+		CallID:   p.ID,
+		Name:     p.Name,
+		Metadata: p.Metadata,
+		State:    message.ToolStatePending{},
 	})
 }
 

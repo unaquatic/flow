@@ -273,8 +273,9 @@ func (s *Providers) RefreshModels(ctx context.Context) error {
 // variant the catalog does not list fails with ErrVariantNotFound, and an
 // endpoint flow does not speak with ErrFormatNotSupported.
 //
-// The reasoning of messages that another model wrote is dropped, as
-// OwnReasoning drops it. A provider whose Settings set ToolChanges gets
+// The reasoning and the tool calls' protocol metadata of messages that
+// another model wrote are dropped, as OwnReasoning and OwnMetadata drop
+// them. A provider whose Settings set ToolChanges gets
 // requests that set it too.
 func (s *Providers) Stream(ctx context.Context, v Variant, req Request) (StreamResponse, error) {
 	if s.settings(v.Provider).ToolChanges {
@@ -298,7 +299,7 @@ func (s *Providers) Stream(ctx context.Context, v Variant, req Request) (StreamR
 			req.Headers = headers
 		}
 	}
-	req.Messages = ExpandToolParts(OwnReasoning(req.Messages, v.Provider, v.Model))
+	req.Messages = ExpandToolParts(OwnMetadata(OwnReasoning(req.Messages, v.Provider, v.Model), v.Provider, v.Model))
 
 	if p, ok := s.overrides[v.Provider]; ok {
 		return p.Model(cmp.Or(r.ProviderOptions.ID, v.Model)).Stream(ctx, req)

@@ -281,12 +281,14 @@ func TestPartID_AutoAssignedOnMissing(t *testing.T) {
 	}
 }
 
-// TestReasoningPart_JSONRoundtripRedacted checks that redacted reasoning
-// keeps its mark and its encrypted reasoning through the stored form.
-func TestReasoningPart_JSONRoundtripRedacted(t *testing.T) {
+// TestReasoningPart_JSONRoundtripMetadata checks that reasoning keeps its
+// protocol metadata, such as a signature, through the stored form, and
+// that reasoning without any stores none.
+func TestReasoningPart_JSONRoundtripMetadata(t *testing.T) {
 	in := []ContentPart{
-		ReasoningPart{Signature: "enc", Redacted: true},
-		ReasoningPart{Text: "thought", Signature: "sig"},
+		ReasoningPart{Metadata: TextMetadata("proto-a", "redacted_data", "enc")},
+		ReasoningPart{Text: "thought", Metadata: TextMetadata("proto-a", "signature", "sig")},
+		ReasoningPart{Text: "unsigned"},
 	}
 	data, err := MarshalParts(in)
 	if err != nil {
@@ -299,7 +301,64 @@ func TestReasoningPart_JSONRoundtripRedacted(t *testing.T) {
 	if got := stripPartIDs(out); !reflect.DeepEqual(got, in) {
 		t.Errorf("round trip = %+v, want %+v", got, in)
 	}
-	if strings.Count(string(data), `"redacted"`) != 1 {
-		t.Errorf("stored form %s, want the mark on the redacted part alone", data)
+	if strings.Count(string(data), `"metadata"`) != 2 {
+		t.Errorf("stored form %s, want metadata on the first two parts alone", data)
+	}
+}
+
+// TestProtocolMetadata_TextAndMerge checks that Text reads the JSON
+// strings TextMetadata writes, and that Merge sets the fields of its
+// argument over those of its receiver, by namespace, sharing no map.
+func TestProtocolMetadata_TextAndMerge(t *testing.T) {
+	md := TextMetadata("proto-a", "signature", "sig")
+	if s, ok := md.Text("proto-a", "signature"); !ok || s != "sig" {
+		t.Errorf("Text = %q, %v, want sig", s, ok)
+	}
+	for _, missing := range [][2]string{{"proto-a", "other"}, {"proto-b", "signature"}} {
+		if s, ok := md.Text(missing[0], missing[1]); ok {
+			t.Errorf("Text(%q, %q) = %q, want none", missing[0], missing[1], s)
+		}
+	}
+	if s, ok := (ProtocolMetadata{"proto-a": {"caller": []byte(`{"type":"direct"}`)}}).Text("proto-a", "caller"); ok {
+		t.Errorf("Text of an object = %q, want none", s)
+	}
+
+	over := ProtocolMetadata{"proto-a": {"signature": []byte(`"new"`), "caller": []byte(`{}`)}, "proto-b": {"x": []byte(`1`)}}
+	got := md.Merge(over)
+	want := ProtocolMetadata{"proto-a": {"signature": []byte(`"new"`), "caller": []byte(`{}`)}, "proto-b": {"x": []byte(`1`)}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Merge = %s, want %s", got, want)
+	}
+	got["proto-a"]["signature"] = []byte(`"changed"`)
+	if s, _ := md.Text("proto-a", "signature"); s != "sig" {
+		t.Errorf("Merge shares a map with its receiver: %q", s)
+	}
+	if ProtocolMetadata(nil).Merge(nil) != nil {
+		t.Error("Merge of nothing is not nil")
+	}
+}
+
+// TestProtocolMetadata_JSONRoundtrip checks that the protocol metadata of a
+// tool call keeps through the tagged form, as "metadata" beside the call's
+// other fields, in both the fused and the provider-facing part.
+func TestProtocolMetadata_JSONRoundtrip(t *testing.T) {
+	md := ProtocolMetadata{"proto-a": {"caller": []byte(`{"type":"direct"}`)}}
+	parts := []ContentPart{
+		ToolPart{ID: "p1", CallID: "call_1", Name: "read", Metadata: md, State: ToolStatePending{}},
+		ToolUsePart{ID: "p2", CallID: "call_2", Name: "read", Input: []byte(`{}`), Metadata: md},
+	}
+	data, err := MarshalParts(parts)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if want := `"metadata":{"proto-a":{"caller":{"type":"direct"}}}`; strings.Count(string(data), want) != 2 {
+		t.Errorf("parts = %s, want %s in each", data, want)
+	}
+	got, err := UnmarshalParts(data)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(got, parts) {
+		t.Errorf("parts = %+v\nwant    %+v", got, parts)
 	}
 }

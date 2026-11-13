@@ -1,6 +1,10 @@
 package agent
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/unaquatic/flow/agent/message"
+)
 
 // StreamPartType identifies the kind of stream part.
 type StreamPartType string
@@ -10,9 +14,9 @@ const (
 	StreamPartTextDelta StreamPartType = "text_delta"
 	// StreamPartReasoningDelta identifies incremental reasoning text.
 	StreamPartReasoningDelta StreamPartType = "reasoning_delta"
-	// StreamPartReasoningSignature identifies the signature of a reasoning
-	// block.
-	StreamPartReasoningSignature StreamPartType = "reasoning_signature"
+	// StreamPartReasoningMetadata identifies the protocol data of a
+	// reasoning block.
+	StreamPartReasoningMetadata StreamPartType = "reasoning_metadata"
 	// StreamPartToolUseStart identifies the start of a tool call.
 	StreamPartToolUseStart StreamPartType = "tool_use_start"
 	// StreamPartToolUseDelta identifies incremental tool arguments.
@@ -55,21 +59,20 @@ type ReasoningDelta struct {
 
 func (ReasoningDelta) streamPartType() StreamPartType { return StreamPartReasoningDelta }
 
-// ReasoningSignature carries the signature that verifies a reasoning block,
-// which a provider may require to accept the block back in a later request.
-// A block may have a signature and no text.
-type ReasoningSignature struct {
+// ReasoningMetadata carries the protocol's data about a reasoning block,
+// such as the signature that verifies it or its reasoning, encrypted, which
+// a provider may require to accept the block back in a later request. A
+// block may have metadata and no text, as one whose reasoning the provider
+// withheld has. Each ReasoningMetadata of a block sets its fields over
+// those an earlier one set.
+type ReasoningMetadata struct {
 	// Block identifies the reasoning block, as its deltas did.
 	Block Block
-	// Signature is the block's verification data, or its reasoning,
-	// encrypted, when Redacted is set.
-	Signature string
-	// Redacted reports that the provider withheld the block's reasoning,
-	// which streams no text, as the Messages format's redacted_thinking blocks do.
-	Redacted bool
+	// Metadata is the block's protocol data.
+	Metadata message.ProtocolMetadata
 }
 
-func (ReasoningSignature) streamPartType() StreamPartType { return StreamPartReasoningSignature }
+func (ReasoningMetadata) streamPartType() StreamPartType { return StreamPartReasoningMetadata }
 
 // ToolUseStart begins a streamed tool invocation.
 type ToolUseStart struct {
@@ -77,6 +80,10 @@ type ToolUseStart struct {
 	ID string
 	// Name identifies the tool.
 	Name string
+	// Metadata is the protocol's data about the call, such as who made it,
+	// which the call's part keeps to send back. It is nil when there is
+	// none.
+	Metadata message.ProtocolMetadata
 }
 
 func (ToolUseStart) streamPartType() StreamPartType { return StreamPartToolUseStart }

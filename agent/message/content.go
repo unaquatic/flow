@@ -5,6 +5,7 @@ package message
 
 import (
 	"encoding/json"
+	"maps"
 )
 
 // ContentType identifies the kind of content part.
@@ -62,21 +63,60 @@ func (p TextPart) PartID() PartID      { return p.ID }
 type ReasoningPart struct {
 	// ID identifies the part.
 	ID PartID `json:"id,omitempty"`
-	// Text is the reasoning content.
+	// Text is the reasoning content. It is empty when the provider withheld
+	// the reasoning, which Metadata then holds, encrypted.
 	Text string `json:"text"`
-	// Signature contains provider verification data, or the reasoning
-	// itself, encrypted, when Redacted is set.
-	Signature string `json:"signature,omitempty"`
-	// Redacted reports that the provider withheld the reasoning, as
-	// the Messages format does in a redacted_thinking block, so it has no text and
-	// Signature holds the reasoning to send back unchanged.
-	Redacted bool `json:"redacted,omitempty"`
+	// Metadata is the protocol's data about the reasoning, such as the
+	// signature that verifies it, which goes back with it to the model that
+	// wrote it.
+	Metadata ProtocolMetadata `json:"metadata,omitempty"`
 	// CacheControl contains provider prompt-cache hints.
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
 
 func (ReasoningPart) PartType() ContentType { return TypeReasoning }
 func (p ReasoningPart) PartID() PartID      { return p.ID }
+
+// ProtocolMetadata holds the data a protocol attached to a part that flow
+// does not read but keeps, to send back unchanged to the model that wrote
+// it: by the protocol's namespace, such as "anthropic", and then by field,
+// such as "caller". Each value is the JSON the protocol sent.
+type ProtocolMetadata map[string]map[string]json.RawMessage
+
+// TextMetadata returns metadata whose field of namespace ns holds s, as a
+// JSON string.
+func TextMetadata(ns, field, s string) ProtocolMetadata {
+	b, _ := json.Marshal(s)
+	return ProtocolMetadata{ns: {field: b}}
+}
+
+// Text returns the JSON string that field of namespace ns holds, and
+// reports whether it holds a nonempty one.
+func (m ProtocolMetadata) Text(ns, field string) (string, bool) {
+	var s string
+	if json.Unmarshal(m[ns][field], &s) != nil || s == "" {
+		return "", false
+	}
+	return s, true
+}
+
+// Merge returns m with the fields of o set over its own, as a copy that
+// shares no map with either, or nil when both are empty.
+func (m ProtocolMetadata) Merge(o ProtocolMetadata) ProtocolMetadata {
+	if len(m) == 0 && len(o) == 0 {
+		return nil
+	}
+	out := make(ProtocolMetadata, len(m)+len(o))
+	for _, src := range []ProtocolMetadata{m, o} {
+		for ns, fields := range src {
+			if out[ns] == nil {
+				out[ns] = make(map[string]json.RawMessage, len(fields))
+			}
+			maps.Copy(out[ns], fields)
+		}
+	}
+	return out
+}
 
 // ToolUsePart is a provider-facing tool invocation.
 type ToolUsePart struct {
@@ -88,6 +128,8 @@ type ToolUsePart struct {
 	Name string `json:"name"`
 	// Input contains raw tool arguments.
 	Input json.RawMessage `json:"input"`
+	// Metadata is the protocol's data about the call, such as who made it.
+	Metadata ProtocolMetadata `json:"metadata,omitempty"`
 	// CacheControl contains provider prompt-cache hints.
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
 }
@@ -264,10 +306,6 @@ type PartJSON struct {
 	MediaType string `json:"media_type,omitempty"`
 	// Filename is the optional file name.
 	Filename string `json:"filename,omitempty"`
-	// Signature contains provider reasoning verification data.
-	Signature string `json:"signature,omitempty"`
-	// Redacted marks reasoning that the provider withheld.
-	Redacted bool `json:"redacted,omitempty"`
 	// Name identifies a tool.
 	Name string `json:"name,omitempty"`
 	// Tools are the tools of a toolset part, which an empty set writes as an
@@ -283,6 +321,8 @@ type PartJSON struct {
 	Attachments []FilePart `json:"attachments,omitempty"`
 	// CallID is the provider-assigned tool-call identifier.
 	CallID string `json:"call_id,omitempty"`
+	// Metadata is the protocol's data about reasoning or a tool call.
+	Metadata ProtocolMetadata `json:"metadata,omitempty"`
 	// State contains a fused tool lifecycle state.
 	State *ToolStateJSON `json:"state,omitempty"`
 	// Usage contains the token counts of a usage part.
@@ -314,14 +354,14 @@ func PartToJSON(p ContentPart) PartJSON {
 	case ReasoningPart:
 		j.PartID = ensurePartID(v.ID)
 		j.Text = v.Text
-		j.Signature = v.Signature
-		j.Redacted = v.Redacted
+		j.Metadata = v.Metadata
 		j.CacheControl = v.CacheControl
 	case ToolUsePart:
 		j.PartID = ensurePartID(v.ID)
 		j.CallID = v.CallID
 		j.Name = v.Name
 		j.Input = v.Input
+		j.Metadata = v.Metadata
 		j.CacheControl = v.CacheControl
 	case ToolResultPart:
 		j.PartID = ensurePartID(v.ID)
@@ -335,6 +375,7 @@ func PartToJSON(p ContentPart) PartJSON {
 		j.PartID = ensurePartID(v.ID)
 		j.CallID = v.CallID
 		j.Name = v.Name
+		j.Metadata = v.Metadata
 		state := encodeToolState(v.State)
 		j.State = &state
 		j.CacheControl = v.CacheControl
@@ -380,7 +421,7 @@ func PartFromJSON(j PartJSON) ContentPart {
 	case TypeText:
 		return TextPart{ID: id, Text: j.Text, CacheControl: j.CacheControl}
 	case TypeReasoning:
-		return ReasoningPart{ID: id, Text: j.Text, Signature: j.Signature, Redacted: j.Redacted, CacheControl: j.CacheControl}
+		return ReasoningPart{ID: id, Text: j.Text, Metadata: j.Metadata, CacheControl: j.CacheControl}
 	case TypeTool:
 		var state ToolState
 		if j.State != nil {
@@ -388,9 +429,9 @@ func PartFromJSON(j PartJSON) ContentPart {
 		} else {
 			state = ToolStatePending{}
 		}
-		return ToolPart{ID: id, CallID: j.CallID, Name: j.Name, State: state, CacheControl: j.CacheControl}
+		return ToolPart{ID: id, CallID: j.CallID, Name: j.Name, Metadata: j.Metadata, State: state, CacheControl: j.CacheControl}
 	case TypeToolUse:
-		return ToolUsePart{ID: id, CallID: j.CallID, Name: j.Name, Input: j.Input, CacheControl: j.CacheControl}
+		return ToolUsePart{ID: id, CallID: j.CallID, Name: j.Name, Input: j.Input, Metadata: j.Metadata, CacheControl: j.CacheControl}
 	case TypeToolResult:
 		return ToolResultPart{ID: id, ToolUseID: j.ToolUseID, Name: j.Name, Text: j.Text, IsError: j.IsError, Attachments: j.Attachments, CacheControl: j.CacheControl}
 	case TypeImage:

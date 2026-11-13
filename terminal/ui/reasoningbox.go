@@ -64,14 +64,16 @@ func NewReasoningBox(part message.ReasoningPart, theme *style.Theme) *ReasoningB
 	return b
 }
 
-// SetPart replaces the reasoning content, unless part equals the part
-// already shown. Reasoning without text, such as a signed block that
-// streamed none, takes no rows.
+// SetPart replaces the reasoning part, and its content unless the part
+// already shown has the same text, as a change of its metadata alone
+// leaves it. Reasoning without text, such as a signed block that streamed
+// none, takes no rows.
 func (b *ReasoningBox) SetPart(part message.ReasoningPart) {
-	if part == b.Part {
+	same := part.Text == b.Part.Text
+	b.Part = part
+	if same {
 		return
 	}
-	b.Part = part
 	b.Body.SetContent(part.Text)
 	b.SetGone(part.Text == "")
 }

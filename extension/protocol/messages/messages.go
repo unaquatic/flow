@@ -42,6 +42,21 @@ const APIVersion = "2023-06-01"
 // VersionField.
 const RawPredictVersion = "vertex-2023-10-16"
 
+// The namespace and fields of the format's data in message.ProtocolMetadata.
+const (
+	// MetadataKey namespaces the format's data in message.ProtocolMetadata.
+	MetadataKey = "anthropic"
+	// CallerField holds the caller of a tool_use block: who made the call,
+	// the model directly or code it ran.
+	CallerField = "caller"
+	// SignatureField holds the signature of a thinking block, a JSON
+	// string.
+	SignatureField = "signature"
+	// RedactedField holds the data of a redacted_thinking block, its
+	// reasoning, encrypted, a JSON string.
+	RedactedField = "redacted_data"
+)
+
 // Client implements agent.Provider for an API that takes Messages
 // requests: the format's own, or another provider's at its base URL, such
 // as a gateway's.
@@ -292,6 +307,9 @@ type ContentBlock struct {
 	Name string `json:"name,omitempty"`
 	// Input contains raw tool arguments.
 	Input json.RawMessage `json:"input,omitempty"`
+	// Caller is who made a tool_use call, the model directly or code it
+	// ran, as the API sent it.
+	Caller json.RawMessage `json:"caller,omitempty"`
 
 	// ToolUseID identifies the corresponding tool call.
 	ToolUseID string `json:"tool_use_id,omitempty"`
@@ -326,8 +344,9 @@ type Source struct {
 // of the system messages to the system blocks, which the API takes apart from
 // the conversation. Each block keeps its part's cache control.
 //
-// Reasoning goes back as the API sent it: redacted reasoning as a
-// redacted_thinking block, and signed reasoning as a thinking block.
+// Reasoning goes back as the API sent it, as its metadata of MetadataKey
+// keeps it: redacted reasoning as a redacted_thinking block, and signed
+// reasoning as a thinking block. A tool call goes back with its caller.
 // Reasoning without a signature, as a stop mid-thought leaves it, would fail
 // the API's check, so it goes back as text, and is left out when it has no
 // text. A message left with no blocks is left out, as the API joins the
@@ -374,14 +393,16 @@ func ToMessages(msgs []agent.Message) (system []ContentBlock, out []Message) {
 				ab.CacheControl = v.CacheControl
 			case message.ReasoningPart:
 				ab.CacheControl = v.CacheControl
+				redacted, isRedacted := v.Metadata.Text(MetadataKey, RedactedField)
+				signature, signed := v.Metadata.Text(MetadataKey, SignatureField)
 				switch {
-				case v.Redacted:
+				case isRedacted:
 					ab.Type = "redacted_thinking"
-					ab.Data = v.Signature
-				case v.Signature != "":
+					ab.Data = redacted
+				case signed:
 					ab.Type = "thinking"
 					ab.Thinking = v.Text
-					ab.Signature = v.Signature
+					ab.Signature = signature
 				case strings.TrimSpace(v.Text) != "":
 					ab.Type = "text"
 					ab.Text = v.Text
@@ -392,6 +413,7 @@ func ToMessages(msgs []agent.Message) (system []ContentBlock, out []Message) {
 				ab.Type = "tool_use"
 				ab.ID = v.CallID
 				ab.Name = v.Name
+				ab.Caller = v.Metadata[MetadataKey][CallerField]
 				ab.CacheControl = v.CacheControl
 				if v.Input != nil {
 					ab.Input = v.Input
@@ -525,12 +547,13 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 		var ev struct {
 			Index        int `json:"index"`
 			ContentBlock struct {
-				Type  string          `json:"type"`
-				Text  string          `json:"text"`
-				ID    string          `json:"id"`
-				Name  string          `json:"name"`
-				Input json.RawMessage `json:"input"`
-				Data  string          `json:"data"`
+				Type   string          `json:"type"`
+				Text   string          `json:"text"`
+				ID     string          `json:"id"`
+				Name   string          `json:"name"`
+				Input  json.RawMessage `json:"input"`
+				Data   string          `json:"data"`
+				Caller json.RawMessage `json:"caller"`
 			} `json:"content_block"`
 		}
 		if json.Unmarshal(data, &ev) != nil {
@@ -550,13 +573,18 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 		case "redacted_thinking":
 			// The block comes whole, its reasoning encrypted, and must go
 			// back unchanged.
-			if !yield(agent.ReasoningSignature{Block: agent.Block(ev.Index), Signature: ev.ContentBlock.Data, Redacted: true}, nil) {
+			md := message.TextMetadata(MetadataKey, RedactedField, ev.ContentBlock.Data)
+			if !yield(agent.ReasoningMetadata{Block: agent.Block(ev.Index), Metadata: md}, nil) {
 				return false
 			}
 		case "tool_use":
 			bs.toolID = ev.ContentBlock.ID
 			bs.toolName = ev.ContentBlock.Name
-			if !yield(agent.ToolUseStart{ID: bs.toolID, Name: bs.toolName}, nil) {
+			start := agent.ToolUseStart{ID: bs.toolID, Name: bs.toolName}
+			if c := ev.ContentBlock.Caller; len(c) > 0 && string(c) != "null" {
+				start.Metadata = message.ProtocolMetadata{MetadataKey: {CallerField: c}}
+			}
+			if !yield(start, nil) {
 				return false
 			}
 			// The block usually starts with an empty object that deltas
@@ -625,7 +653,8 @@ func (st *streamState) Handle(event sse.Event, yield func(agent.StreamPart, erro
 		switch bs.kind {
 		case "thinking":
 			if bs.signature != "" {
-				return yield(agent.ReasoningSignature{Block: agent.Block(ev.Index), Signature: bs.signature}, nil)
+				md := message.TextMetadata(MetadataKey, SignatureField, bs.signature)
+				return yield(agent.ReasoningMetadata{Block: agent.Block(ev.Index), Metadata: md}, nil)
 			}
 		case "tool_use":
 			return yield(agent.ToolUseEnd{ID: bs.toolID, Input: bs.ToolInput()}, nil)

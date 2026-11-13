@@ -21,16 +21,20 @@ func streamOf(parts ...StreamPart) StreamResponse {
 
 // TestCollect_AssemblesFromParts checks that Collect builds the message from
 // the stream's parts alone, in the order its blocks and calls start: each
-// reasoning block with its signature, also one with no text, each text
-// block, and every call with its own input, from interleaved deltas or from
-// its end, which replaces them, or an empty object if none arrived.
+// reasoning block with its metadata, each field over the earlier, also one
+// with no text, each text block, and every call with its metadata and its
+// own input, from interleaved deltas or from its end, which replaces them,
+// or an empty object if none arrived.
 func TestCollect_AssemblesFromParts(t *testing.T) {
+	sig := func(s string) message.ProtocolMetadata { return message.TextMetadata("proto-a", "signature", s) }
+	caller := message.ProtocolMetadata{"proto-a": {"caller": json.RawMessage(`{"type":"direct"}`)}}
 	resp, err := streamOf(
 		ReasoningDelta{Block: 0, Text: "let me "},
 		ReasoningDelta{Block: 0, Text: "look"},
-		ReasoningSignature{Block: 0, Signature: "sig-0"},
+		ReasoningMetadata{Block: 0, Metadata: sig("old")},
+		ReasoningMetadata{Block: 0, Metadata: sig("sig-0").Merge(message.TextMetadata("proto-b", "id", "r0"))},
 		TextDelta{Block: 1, Text: "Looking."},
-		ToolUseStart{ID: "call_a", Name: "bash"},
+		ToolUseStart{ID: "call_a", Name: "bash", Metadata: caller},
 		ToolUseStart{ID: "call_b", Name: "bash"},
 		ToolUseStart{ID: "call_c", Name: "bash"},
 		ToolUseStart{ID: "call_d", Name: "bash"},
@@ -40,7 +44,7 @@ func TestCollect_AssemblesFromParts(t *testing.T) {
 		ToolUseDelta{ID: "call_c", JSON: `{"comm`},
 		ToolUseEnd{ID: "call_c", Input: json.RawMessage(`{"command":"cat go.mod"}`)},
 		TextDelta{Block: 6, Text: "Then more."},
-		ReasoningSignature{Block: 7, Signature: "sig-7"},
+		ReasoningMetadata{Block: 7, Metadata: sig("sig-7")},
 		Usage{InputTokens: 9},
 		Stop{Reason: StopToolUse},
 	).Collect()
@@ -49,14 +53,14 @@ func TestCollect_AssemblesFromParts(t *testing.T) {
 	}
 
 	want := []message.ContentPart{
-		message.ReasoningPart{Text: "let me look", Signature: "sig-0"},
+		message.ReasoningPart{Text: "let me look", Metadata: sig("sig-0").Merge(message.TextMetadata("proto-b", "id", "r0"))},
 		message.TextPart{Text: "Looking."},
-		message.ToolUsePart{CallID: "call_a", Name: "bash", Input: json.RawMessage(`{"command":"pwd"}`)},
+		message.ToolUsePart{CallID: "call_a", Name: "bash", Input: json.RawMessage(`{"command":"pwd"}`), Metadata: caller},
 		message.ToolUsePart{CallID: "call_b", Name: "bash", Input: json.RawMessage(`{"command":"ls"}`)},
 		message.ToolUsePart{CallID: "call_c", Name: "bash", Input: json.RawMessage(`{"command":"cat go.mod"}`)},
 		message.ToolUsePart{CallID: "call_d", Name: "bash", Input: json.RawMessage(`{}`)},
 		message.TextPart{Text: "Then more."},
-		message.ReasoningPart{Signature: "sig-7"},
+		message.ReasoningPart{Metadata: sig("sig-7")},
 	}
 	if !reflect.DeepEqual(resp.Message.Content, want) {
 		t.Errorf("content = %+v\nwant      %+v", resp.Message.Content, want)

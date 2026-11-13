@@ -89,6 +89,9 @@ type ToolPart struct {
 	CallID string `json:"call_id"`
 	// Name identifies the tool.
 	Name string `json:"name"`
+	// Metadata is the protocol's data about the call, such as who made it,
+	// which goes back with the call to the model that made it.
+	Metadata ProtocolMetadata `json:"metadata,omitempty"`
 	// State contains the current lifecycle state.
 	State ToolState `json:"state"`
 	// CacheControl contains provider prompt-cache hints.
