@@ -1,18 +1,18 @@
 === text ===
 |■ Bash go test ./...                    |
+|                                        |
 |■ Cache read 0K write 0K                |
 |                                        |
 |■ Done [3s]                             |
 |                                        |
 |                                        |
 |                                        |
-|                                        |
 === fg ===
 |A AAAA AA AAAA AAAAA                    |
+|                                        |
 |A AAAAA AAAA AA AAAAA AA                |
 |                                        |
 |A AAAA AAAA                             |
-|                                        |
 |                                        |
 |                                        |
 |                                        |

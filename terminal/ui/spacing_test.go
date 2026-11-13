@@ -34,18 +34,23 @@ func TestGap(t *testing.T) {
 }
 
 // TestKindOf checks the kind each widget of a bubble reports: a PartBox that
-// shows as a row is a row, one that shows as a block is a block, a footer is a
-// footer, even while hidden, and anything else, nil too, is a block.
+// shows as a row is a row, unless it is Apart, as the cache row is, which is a
+// block, as is one that shows as a block; a footer is a footer, even while
+// hidden, and anything else, nil too, is a block.
 func TestKindOf(t *testing.T) {
 	block := NewPartBox(nil, style.Color{}, style.ColorTransparent)
 	block.Shape = ShapeBlock
 	block.ShowShape()
+	row := NewPartBox(nil, style.Color{}, style.ColorTransparent)
+	row.Shape = ShapeRow
+	row.ShowShape()
 	tests := []struct {
 		name string
 		r    render.Renderable
 		want RowKind
 	}{
-		{name: "cache row", r: NewCacheBox(), want: KindRow},
+		{name: "row box", r: row, want: KindRow},
+		{name: "cache row", r: NewCacheBox(), want: KindBlock},
 		{name: "block box", r: block, want: KindBlock},
 		{name: "footer", r: NewFooterBox(0, textFg), want: KindFooter},
 		{name: "text", r: widget.NewText("x"), want: KindBlock},
@@ -88,8 +93,8 @@ func sequences(alphabet string, maxLen int) iter.Seq[string] {
 type spacedRow struct {
 	// Marker is text that only this row draws.
 	Marker string
-	// Stacks reports that the row is a collapsed call, a snapshot, or a cache
-	// row: the kind of row that stacks under another.
+	// Stacks reports that the row is a collapsed call: the kind of row that
+	// stacks under another. A cache row is parted from the rows around it.
 	Stacks bool
 }
 
@@ -144,7 +149,7 @@ func checkBubbleSpacing(t *testing.T, mode CacheMode, worked bool, usage message
 		msg := agentParts(id, parts...)
 		msg.Usage = usage
 		if mode == CachePerMessage {
-			want = append(want, spacedRow{Marker: "Cache read", Stacks: true})
+			want = append(want, spacedRow{Marker: "Cache read"})
 		}
 		if last && worked {
 			msg.Worked = 3 * time.Second

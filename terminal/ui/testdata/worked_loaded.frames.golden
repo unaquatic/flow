@@ -2,6 +2,7 @@
 |■ Run the tests                                                                 |
 |                                                                                |
 |■ Bash go test ./...                                                            |
+|                                                                                |
 |■ Cache read 0K write 0K                                                        |
 |                                                                                |
 |■ All tests pass.                                                               |
@@ -18,11 +19,11 @@
 |                                                                                |
 |                                                                                |
 |                                                                                |
-|                                                                                |
 === fg ===
 |A AAA AAA AAAAA                                                                 |
 |                                                                                |
 |B BBBB BB BBBB BBBBB                                                            |
+|                                                                                |
 |B BBBBB BBBB BB BBBBB BB                                                        |
 |                                                                                |
 |C AAA AAAAA AAAAA                                                               |
@@ -36,7 +37,6 @@
 |C AAAAAAAAAA                                                                    |
 |                                                                                |
 |B BBBB BBBB                                                                     |
-|                                                                                |
 |                                                                                |
 |                                                                                |
 |                                                                                |

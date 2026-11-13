@@ -2,15 +2,15 @@
 |■ Running the tests.                    |
 |                                        |
 |■ Bash go test ./... [interrupted]      |
-|■ Snapshot [indexing]                   |
 |                                        |
+|■ Snapshot [indexing]                   |
 |                                        |
 === fg ===
 |A BBBBBBB BBB BBBBBB                    |
 |                                        |
 |C CCCC CC CCCC CCCCC CCCCCCCCCCCCC      |
-|C CCCCCCCC CCCCCCCCCC                   |
 |                                        |
+|C CCCCCCCC CCCCCCCCCC                   |
 |                                        |
 === legend ===
 A #eb7513
