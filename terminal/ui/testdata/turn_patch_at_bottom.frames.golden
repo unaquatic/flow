@@ -1,0 +1,24 @@
+=== text ===
+|■ Reading the calculator.               |
+|                                        |
+|■ Updated the calculator.               |
+|                                        |
+|■ Diff 1 file  +2 -0                    |
+|                                        |
+|■ Done [3s]                             |
+|                                        |
+=== fg ===
+|A BBBBBBB BBB BBBBBBBBBBB               |
+|                                        |
+|A BBBBBBB BBB BBBBBBBBBBB               |
+|                                        |
+|B BBBB B BBBB  CC DD                    |
+|                                        |
+|E EEEE EEEE                             |
+|                                        |
+=== legend ===
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e
+E #8a8a8a

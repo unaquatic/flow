@@ -75,6 +75,8 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnMarkerShapeSet(e)
 	case EventDebugSet:
 		ui.OnDebugSet(e)
+	case EventSnapshotsSet:
+		ui.OnSnapshotsSet(e)
 	case EventCacheModeSet:
 		ui.OnCacheModeSet(e)
 	case EventKeyHintsModeSet:
@@ -121,6 +123,9 @@ func (ui *UI) OnToolColorSet(e EventToolColorSet) { ui.SetToolColor(e.Color) }
 
 // OnDebugSet shows or hides what helps debug flow as e says.
 func (ui *UI) OnDebugSet(e EventDebugSet) { ui.SetDebug(e.On) }
+
+// OnSnapshotsSet keeps the snapshots once taken, or not, as e says.
+func (ui *UI) OnSnapshotsSet(e EventSnapshotsSet) { ui.SetSnapshots(e.Show) }
 
 // OnKeyHintsModeSet names every panel's keys where the mode now says.
 func (ui *UI) OnKeyHintsModeSet(EventKeyHintsModeSet) { ui.SyncKeyHints() }

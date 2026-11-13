@@ -12,9 +12,9 @@
 |  Selection               Fill                                          |
 |  Prompt style            Bar                                           |
 |  Input style             Bar                                           |
-|  Debug                   On                                            |
+|  Snapshots               Off                                           |
+|  [9/13]                                                                |
 |                                                                        |
-|■                                                                       |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
 |                                                                        |
@@ -29,9 +29,9 @@
 |  CCCCCCCCC               CCCC                                          |
 |  AAAAAA AAAAA            BBB                                           |
 |  AAAAA AAAAA             BBB                                           |
-|  AAAAA                   BB                                            |
+|  AAAAAAAAA               BBB                                           |
+|  BBBBBB                                                                |
 |                                                                        |
-|A                                                                       |
 === bg ===
 |                                                                        |
 |                                                                        |

@@ -149,7 +149,7 @@ func TestServiceSaveTerminalAndDebug(t *testing.T) {
 	dir := t.TempDir()
 	write(t, dir, `{"default_model":"lab-a/model-a","default_provider":"provider-a","terminal":{"selection":"arrow"}}`)
 	s := NewService(dir)
-	if err := s.SaveTerminal(Terminal{Fullscreen: true}); err != nil {
+	if err := s.SaveTerminal(Terminal{Fullscreen: true, Snapshots: true}); err != nil {
 		t.Fatalf("SaveTerminal: %v", err)
 	}
 	if err := s.SaveDebug(true); err != nil {
@@ -159,8 +159,8 @@ func TestServiceSaveTerminalAndDebug(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	if cfg.DefaultModel != "lab-a/model-a" || cfg.DefaultProvider != "provider-a" || !cfg.Debug || !cfg.Terminal.Fullscreen {
-		t.Errorf("config = model %q, debug %v, terminal %+v; want the model kept, debug on, and fullscreen",
+	if cfg.DefaultModel != "lab-a/model-a" || cfg.DefaultProvider != "provider-a" || !cfg.Debug || !cfg.Terminal.Fullscreen || !cfg.Terminal.Snapshots {
+		t.Errorf("config = model %q, debug %v, terminal %+v; want the model kept, debug on, fullscreen and snapshots",
 			cfg.DefaultModel, cfg.Debug, cfg.Terminal)
 	}
 	keys, err := s.File().Read()
@@ -168,7 +168,7 @@ func TestServiceSaveTerminalAndDebug(t *testing.T) {
 	if err == nil {
 		err = json.Unmarshal(keys["terminal"], &section)
 	}
-	if err != nil || !maps.Equal(section, map[string]any{"fullscreen": true}) {
+	if err != nil || !maps.Equal(section, map[string]any{"fullscreen": true, "snapshots": true}) {
 		t.Errorf("terminal section = %s, %v, want the saved settings alone", keys["terminal"], err)
 	}
 }

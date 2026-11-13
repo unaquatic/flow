@@ -110,8 +110,8 @@ func TestTurnWorked(t *testing.T) {
 				if i < 0 {
 					t.Fatalf("no reply %s in the transcript", e.MessageID)
 				}
-				if m := s.state.Messages[i]; m.Worked != e.Worked {
-					t.Errorf("reply %s records worked %v, want %v", e.MessageID, m.Worked, e.Worked)
+				if m := s.state.Messages[i]; m.Worked != e.Worked || !m.EndsTurn {
+					t.Errorf("reply %s records worked %v, ends turn %v, want %v ending it", e.MessageID, m.Worked, m.EndsTurn, e.Worked)
 				}
 			}
 		})

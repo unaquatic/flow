@@ -226,7 +226,7 @@ func TestNoticesStayOutOfTheConversation(t *testing.T) {
 		t.Errorf("the reply after the notice follows %+v, want the parts of a1", added.Prev)
 	}
 	s.ShowToast("another notice")
-	if ended := s.EndTurn(start.Add(time.Second)); len(ended) != 1 || ended[0].(EventTurnEnded).MessageID != "a2" {
+	if ended := turnsEnded(s.EndTurn(start.Add(time.Second))); len(ended) != 1 || ended[0].MessageID != "a2" {
 		t.Errorf("the turn ended with %+v, want its time under a2", ended)
 	}
 

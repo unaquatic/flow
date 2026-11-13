@@ -294,9 +294,15 @@ type EventToolColorSet struct {
 	Color ToolNameColor
 }
 
-// EventDebugSet shows what helps debug flow in the transcript, and in what is
-// added to it later, or hides it: the snapshot each prompt and reply ends
-// with, by its hash, once taken.
+// EventSnapshotsSet keeps the snapshot each prompt and reply of the
+// transcript ends with, and of those added later, once taken, by its hash,
+// or shows it only while it is being taken.
+type EventSnapshotsSet struct {
+	// Show keeps the snapshots once taken when true.
+	Show bool
+}
+
+// EventDebugSet shows what helps debug flow, or hides it.
 type EventDebugSet struct {
 	// On shows it when true and hides it when false.
 	On bool
@@ -395,6 +401,7 @@ func (EventToolMarkersSet) uiEvent()    {}
 func (EventToolColorSet) uiEvent()      {}
 func (EventMarkerShapeSet) uiEvent()    {}
 func (EventDebugSet) uiEvent()          {}
+func (EventSnapshotsSet) uiEvent()      {}
 func (EventCacheModeSet) uiEvent()      {}
 func (EventKeyHintsModeSet) uiEvent()   {}
 func (EventUsagePinnedSet) uiEvent()    {}

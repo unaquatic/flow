@@ -89,9 +89,11 @@ type ChatMessageBox struct {
 	// ToolColor is the color of the marker and the name of the bubble's
 	// tool calls.
 	ToolColor ToolNameColor
-	// Debug reports that the bubble shows what helps debug flow, such as
-	// the snapshot each message ends with.
+	// Debug reports that the bubble shows what helps debug flow.
 	Debug bool
+	// Snapshots reports that the bubble keeps the snapshot each message
+	// ends with once taken.
+	Snapshots bool
 	// Blink, when set, is the clock the markers of the bubble's tool calls
 	// blink by while they execute, and the marker of the text its reply is
 	// writing.
@@ -178,6 +180,13 @@ func ChatMessageWithToolColor(c ToolNameColor) ChatMessageOption {
 // It does not by default.
 func ChatMessageWithDebug(on bool) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.Debug = on }
+}
+
+// ChatMessageWithSnapshots sets whether the bubble keeps the snapshot each
+// message ends with once taken. It shows it only while it is being taken by
+// default.
+func ChatMessageWithSnapshots(show bool) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.Snapshots = show }
 }
 
 // ChatMessageWithToolMarkers sets whether the bubble's tool calls show
@@ -1173,9 +1182,21 @@ func (cm *ChatMessageBox) SetMarkerShape(m MarkerShape) {
 	cm.RestyleViews()
 }
 
+// SetSnapshots keeps the snapshot each message of the bubble ends with once
+// taken, in the views that follow the ViewStyle and in those added to it
+// later, or shows it only while it is being taken, as show says.
+func (cm *ChatMessageBox) SetSnapshots(show bool) {
+	if show == cm.Snapshots {
+		return
+	}
+	cm.Snapshots = show
+	cm.RestyleViews()
+	cm.SyncRows()
+}
+
 // SetDebug shows what helps debug flow in the views of the bubble that
-// follow the ViewStyle, such as the snapshot each message ends with, and in
-// those added to it later, or hides it, as on says.
+// follow the ViewStyle, and in those added to it later, or hides it, as on
+// says.
 func (cm *ChatMessageBox) SetDebug(on bool) {
 	if on == cm.Debug {
 		return
@@ -1188,7 +1209,7 @@ func (cm *ChatMessageBox) SetDebug(on bool) {
 // ViewStyle returns how the bubble shows its parts, which the views of
 // extensions follow.
 func (cm *ChatMessageBox) ViewStyle() ViewStyle {
-	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug}
+	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots}
 }
 
 // RestyleViews shows the bubble's StyledViews in its ViewStyle.

@@ -590,6 +590,7 @@ func (s *Service) OpenSession(id message.SessionID) error {
 	}
 	AssignParents(s.state.Messages)
 	AssignPrev(s.state.Messages)
+	AssignTurnEnds(s.state.Messages)
 	AssignWorked(s.state.Messages)
 	s.AssignWindows(s.state.Messages)
 	return nil
@@ -604,6 +605,7 @@ func (s *Service) LoadMessages(loaded []app.Message) []UIEvent {
 	}
 	AssignParents(s.state.Messages)
 	AssignPrev(s.state.Messages)
+	AssignTurnEnds(s.state.Messages)
 	AssignWorked(s.state.Messages)
 	s.AssignWindows(s.state.Messages)
 	s.state.TurnStart = time.Time{}

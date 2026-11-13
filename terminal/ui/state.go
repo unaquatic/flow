@@ -32,6 +32,16 @@ type ChatMessage struct {
 	// against, as a reply's changes are those from the workspace the message
 	// before it ended with. It is nil for the first message.
 	Prev []message.ContentPart
+	// TurnPrev holds, for a reply, the parts of the message before the
+	// first reply of its turn, usually the turn's prompt, which the views of
+	// an extension may show the whole turn against, as a turn's changes are
+	// those from the workspace its prompt was sent in. It is nil for a
+	// prompt, and for a reply whose turn starts the transcript.
+	TurnPrev []message.ContentPart
+	// EndsTurn reports that the message is the last reply of its turn, as
+	// the reply the turn's footer shows under. It is false for a prompt and
+	// while the turn is still running.
+	EndsTurn bool
 	// Error is an optional failure rendered with the message.
 	Error error
 	// Provider is the provider of the model variant that produced the
@@ -112,13 +122,37 @@ func (m ChatMessage) Variant(cat *gateway.Catalog) agent.Variant {
 }
 
 // AssignPrev records on each message in msgs the parts of the one before
-// it, as Prev describes them.
+// it, as Prev describes them, and on each reply those its turn started
+// from, as TurnPrev describes them.
 func AssignPrev(msgs []ChatMessage) {
 	for i := range msgs {
-		msgs[i].Prev = nil
+		msgs[i].Prev, msgs[i].TurnPrev = nil, nil
 		if i > 0 {
 			msgs[i].Prev = slices.Clone(msgs[i-1].Parts)
+			msgs[i].TurnPrev = TurnPrevOf(msgs[i], msgs[i-1])
 		}
+	}
+}
+
+// TurnPrevOf returns the TurnPrev of msg, the message after prev: none for
+// a prompt, that of prev for a reply that continues prev's turn, and
+// otherwise a copy of the parts of prev, which the turn starts after.
+func TurnPrevOf(msg, prev ChatMessage) []message.ContentPart {
+	switch {
+	case msg.Role != message.RoleAgent:
+		return nil
+	case prev.Role == message.RoleAgent:
+		return prev.TurnPrev
+	}
+	return slices.Clone(prev.Parts)
+}
+
+// AssignTurnEnds marks the last reply of each turn in msgs, the last of the
+// replies that follow a prompt, as EndsTurn describes it.
+func AssignTurnEnds(msgs []ChatMessage) {
+	for i := range msgs {
+		next := i+1 < len(msgs) && msgs[i+1].Role == message.RoleAgent
+		msgs[i].EndsTurn = msgs[i].Role == message.RoleAgent && !next
 	}
 }
 
@@ -650,9 +684,14 @@ type UIState struct {
 	// ToolColor is the color of each tool call's marker and name, which
 	// /config sets. It is ToolNameGray by default.
 	ToolColor ToolNameColor
+	// ShowSnapshots keeps the snapshot each prompt and reply ends with in
+	// the transcript once taken, by its hash, which /config sets and the
+	// config file saves. Off, the default, a snapshot shows only while it
+	// is being taken.
+	ShowSnapshots bool
 	// Debug shows what helps debug flow, which /config sets, such as the
-	// snapshot each prompt and reply ends with, by its hash, once taken. It
-	// is off by default.
+	// style settings of /config and the debug commands. It is off by
+	// default.
 	Debug bool
 	// CacheMode is where replies show the cache use of their requests, which
 	// /config sets. It is CacheOff by default.

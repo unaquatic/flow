@@ -32,10 +32,10 @@ func mustHash(s string) snapshot.Hash {
 // other parts to the transcript.
 func TestNewPartView(t *testing.T) {
 	e := New(t.Context(), nil)
-	host := ui.ViewHost{Style: ui.ViewStyle{Debug: true, NameFg: ui.DefaultTheme().TextMuted}}
+	host := ui.ViewHost{Style: ui.ViewStyle{Snapshots: true, NameFg: ui.DefaultTheme().TextMuted}}
 	box, ok := e.NewPartView(snapshot.SnapshotPart{ID: "s", Tree: tree}, host).(*SnapshotBox)
 	if !ok || !box.Visible() {
-		t.Fatalf("view of a snapshot part = %T, want a SnapshotBox shown, as debug is on", box)
+		t.Fatalf("view of a snapshot part = %T, want a SnapshotBox shown, as snapshots are on", box)
 	}
 	if view := e.NewPartView(message.TextPart{Text: "hi"}, host); view != nil {
 		t.Errorf("view of a text part = %T, want none", view)
@@ -93,21 +93,25 @@ func TestSnapshotBox_ShowDone(t *testing.T) {
 	}
 }
 
-// TestPatchBox_LoadsOnceBothTreesAreKnown checks that a reply's changes are
-// fetched once, between the tree the message before it ended with and the
-// tree of its own snapshot part, once that arrives, and that a prompt's are
-// not.
+// TestPatchBox_LoadsOnceBothTreesAreKnown checks that a turn's changes are
+// fetched once, under the reply that ends it, between the tree its prompt
+// ended with and the tree of that reply's own snapshot part, once that
+// arrives, and that neither a reply that does not end its turn nor a prompt
+// fetches any.
 func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 	var loads [][2]snapshot.Hash
 	box := NewPatchBox(nil, style.Color{})
 	box.Load = func(from, to snapshot.Hash) { loads = append(loads, [2]snapshot.Hash{from, to}) }
-	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
-		Prev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}}}
+	reply := ui.ChatMessage{ID: "a2", Role: message.RoleAgent,
+		Prev:     []message.ContentPart{snapshot.SnapshotPart{Tree: mustHash("1111111111111111111111111111111111111111")}},
+		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}}}
+	box.SetMessage(reply)
+	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
 	box.SetMessage(reply)
 	if len(loads) != 0 {
-		t.Fatalf("loaded %v before the reply's tree arrived", loads)
+		t.Fatalf("loaded %v before the turn ended", loads)
 	}
-	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
+	reply.EndsTurn = true
 	box.SetMessage(reply)
 	box.SetMessage(reply)
 	if want := [][2]snapshot.Hash{{base, tree}}; len(loads) != 1 || loads[0] != want[0] {
@@ -116,7 +120,7 @@ func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 
 	prompt := NewPatchBox(nil, style.Color{})
 	prompt.Load = func(from, to snapshot.Hash) { t.Errorf("a prompt loaded %s..%s", from, to) }
-	prompt.SetMessage(ui.ChatMessage{ID: "u2", Role: message.RoleUser,
+	prompt.SetMessage(ui.ChatMessage{ID: "u2", Role: message.RoleUser, EndsTurn: true,
 		Prev:  []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
 		Parts: []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}})
 }
@@ -139,21 +143,22 @@ func readPatches(patch string, err error) (*Extension, *int) {
 // stepPatch is the patch of a step that changed one line of one file.
 const stepPatch = "diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -1 +1 @@\n-a\n+b\n"
 
-// TestNewSegmentView_ShowsThePatchAtOnce checks that the changes of a reply
-// show as its view is made, rather than once a patch read later arrives,
-// which could change a row already in the scrollback.
+// TestNewSegmentView_ShowsThePatchAtOnce checks that the changes of a turn
+// show as the view of the reply that ends it is made, rather than once a
+// patch read later arrives, which could change a row already in the
+// scrollback.
 func TestNewSegmentView_ShowsThePatchAtOnce(t *testing.T) {
 	e, _ := readPatches(stepPatch, nil)
 	relayouts := 0
 	host := ui.ViewHost{Enqueue: func(func()) {}, Relayout: func() { relayouts++ }}
-	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
-		Prev:  []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
-		Parts: []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
+	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent, EndsTurn: true,
+		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		Parts:    []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
 
 	box := e.NewSegmentView(reply, host).(*PatchBox)
 
 	if box.Patch != stepPatch || !box.Visible() {
-		t.Errorf("the view shows patch %q, visible %v, want the step's patch shown", box.Patch, box.Visible())
+		t.Errorf("the view shows patch %q, visible %v, want the turn's patch shown", box.Patch, box.Visible())
 	}
 	if relayouts != 1 {
 		t.Errorf("the bubble was laid out again %d times, want once", relayouts)

@@ -1,7 +1,7 @@
 // Package ui shows workspace snapshots in the terminal UI, as the terminal
 // side of the snapshot extension: a row like a tool call's while a snapshot
-// is being taken (SnapshotBox), and under each reply the changes it made
-// (PatchBox).
+// is being taken (SnapshotBox), and at the bottom of each turn the changes it
+// made (PatchBox).
 package ui
 
 import (
@@ -49,8 +49,9 @@ func (e *Extension) NewPartView(part message.ContentPart, host ui.ViewHost) ui.P
 	return box
 }
 
-// NewSegmentView returns the PatchBox that shows the changes msg made, which
-// stays hidden until they are known, and while there are none.
+// NewSegmentView returns the PatchBox that shows the changes of the turn msg
+// ends, which stays hidden until msg ends its turn and they are known, and
+// while there are none.
 func (e *Extension) NewSegmentView(msg ui.ChatMessage, host ui.ViewHost) ui.SegmentView {
 	box := NewPatchBox(host.Theme, host.Fg)
 	if host.Enqueue != nil {
@@ -72,7 +73,7 @@ func (e *Extension) LoadPatch(box *PatchBox, from, to snapshot.Hash, host ui.Vie
 	if !ok {
 		var err error
 		if patch, err = e.ReadPatch(e.ctx, from, to); err != nil {
-			slog.Warn("step patch", "from", from, "to", to, "err", err)
+			slog.Warn("turn patch", "from", from, "to", to, "err", err)
 			return
 		}
 		e.Patches[key] = patch

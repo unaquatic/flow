@@ -12,10 +12,10 @@
 |  Selection               Full width                                    |
 |  Prompt style            Bar                                           |
 |  Input style             Bar                                           |
-|  Debug                   On                                            |
+|  Snapshots               Off                                           |
+|  [1/13]                                                                |
 |                                                                        |
 |■                                                                       |
-|                                                                        |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
 |                                                                        |
@@ -30,10 +30,10 @@
 |  AAAAAAAAA               BBBB BBBBB                                    |
 |  AAAAAA AAAAA            BBB                                           |
 |  AAAAA AAAAA             BBB                                           |
-|  AAAAA                   BB                                            |
+|  AAAAAAAAA               BBB                                           |
+|  BBBBBB                                                                |
 |                                                                        |
 |A                                                                       |
-|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |

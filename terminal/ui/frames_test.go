@@ -1701,11 +1701,13 @@ func TestMenuFrames(t *testing.T) {
 		{name: "banner_loading", h: 7, open: func(ui *UI) {
 			ui.ShowBanner(EventBannerShow{Title: "Models", Text: "Loading models..."})
 		}},
-		// While debug is off, /config shows fullscreen and debug alone.
+		// While debug is off, /config shows fullscreen, snapshots and debug
+		// alone.
 		{name: "banner_settings_menu", h: 7, open: func(ui *UI) {
 			ui.Apply(ui.service.ShowSettingsMenu())
 		}},
-		// While debug is on, the style settings show between the two.
+		// While debug is on, the style settings show between fullscreen and
+		// snapshots.
 		{name: "banner_settings_debug", h: 17, open: func(ui *UI) {
 			ui.Apply(ui.service.SetDebug(true))
 			ui.Apply(ui.service.ShowSettingsMenu())
