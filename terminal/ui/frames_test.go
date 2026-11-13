@@ -237,6 +237,11 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "notice_keyword", w: 64, h: 4, add: func(ui *UI) {
 			ui.Apply(ui.service.ShowKeywordToast("Switched to ", "provider-a/lab-a/model-a:high", " as the default model"))
 		}},
+		// A notice that switches the model names it as the session info
+		// does, in the primary color, with its provider dim and bracketed.
+		{name: "notice_model", w: 64, h: 4, add: func(ui *UI) {
+			ui.AddNotice(Notice{Lines: []style.StyledText{ModelNoticeLine("Switched to ", "Model A High", "provider-a", " as the default model")}})
+		}},
 		// The first start of a release an update installed tells of it
 		// under the session info, its version in the primary color.
 		{name: "status_notice_updated", h: 8, add: func(ui *UI) {

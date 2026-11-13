@@ -121,6 +121,34 @@ func (s *Service) ShowKeywordToast(before, keyword, after string) []UIEvent {
 	return s.AddNotice(Notice{Lines: []style.StyledText{line}})
 }
 
+// ShowModelToast returns an event that appends a one-line transcript notice
+// reading before, model as the session info names it, and after, as
+// ModelNoticeLine lays it out, such as "Switched to Model A High
+// [provider-a] as the default model". model is a variant in
+// "provider/model:option:effort" form.
+func (s *Service) ShowModelToast(before, model, after string) []UIEvent {
+	provider, _ := agent.ParseModel(model)
+	line := ModelNoticeLine(before, s.ModelDisplayName(model), provider, after)
+	return s.AddNotice(Notice{Lines: []style.StyledText{line}})
+}
+
+// ModelNoticeLine returns a notice line reading before, name, the model's
+// name as DisplayName writes it, its provider's ID bracketed, and after,
+// such as "Switched to Model A High [provider-a] as the default model".
+// name is in productFg, and the bracketed IDs, the provider's and that of a
+// model the catalog does not list, are dim, as ModelValue dims them. An
+// empty provider leaves its tag out.
+func ModelNoticeLine(before, name string, provider agent.ProviderID, after string) style.StyledText {
+	dim := style.New().WithFg(themeOrDefault(nil).TextMuted).Func()
+	mark := func(text string) style.TextChunk { return style.TextChunk{Text: text, Fg: productFg} }
+	chunks := []style.TextChunk{style.Plain(before)}
+	chunks = append(chunks, TagChunks(name, mark, dim)...)
+	if provider != "" {
+		chunks = append(chunks, style.Plain(" "), dim(Tag(string(provider))))
+	}
+	return style.NewStyledText(append(chunks, style.Plain(after))...)
+}
+
 // NoFileChangesText is the notice of a history move that changed no file.
 const NoFileChangesText = "No file changes"
 

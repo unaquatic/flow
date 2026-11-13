@@ -216,7 +216,7 @@ func TestSelectModelSavesTheDefault(t *testing.T) {
 	if got, err := q.a.Models().Default(); got != "provider-b/lab-b/model-y" || err != nil {
 		t.Errorf("app default model = %q, %v, want provider-b/lab-b/model-y saved", got, err)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-b/lab-b/model-y as the default model"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to Unknown [model-y] [provider-b] as the default model"}) {
 		t.Errorf("notices = %q, want the model switched to and saved", got)
 	}
 
@@ -253,7 +253,7 @@ func TestModelMenuChooseSavesTheDefault(t *testing.T) {
 	if got, err := s.app.Models().Default(); got != "provider-a/lab-a/model-c:high" || err != nil {
 		t.Errorf("app default model = %q, %v, want provider-a/lab-a/model-c:high", got, err)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/lab-a/model-c:high as the default model"}) {
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to Model C High [provider-a] as the default model"}) {
 		t.Errorf("notices = %q, want the model switched to and saved", got)
 	}
 	if s.state.Banner != NoBanner || s.state.Model != "provider-a/lab-a/model-c:high" {

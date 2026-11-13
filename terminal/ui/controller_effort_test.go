@@ -68,8 +68,8 @@ func TestModelMenuEffortPage(t *testing.T) {
 	if s.state.Model != "provider-a/lab-a/model-a:fast:high" || s.state.Banner != NoBanner {
 		t.Errorf("after choosing high: model %q, banner %v, want provider-a/lab-a/model-a:fast:high and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/lab-a/model-a:fast:high as the default model"}) {
-		t.Errorf("notices = %q, want Switched to provider-a/lab-a/model-a:fast:high", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to Model A Fast High [provider-a] as the default model"}) {
+		t.Errorf("notices = %q, want Switched to Model A Fast High [provider-a]", got)
 	}
 
 	// The next model's page selects the chosen level, as near as it takes it.
@@ -91,8 +91,8 @@ func TestModelMenuWithoutEfforts(t *testing.T) {
 	if s.state.Model != "provider-a/model" || s.state.Banner != NoBanner {
 		t.Errorf("model %q, banner %v, want provider-a/model and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/model as the default model"}) {
-		t.Errorf("notices = %q, want Switched to provider-a/model", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to Unknown [model] [provider-a] as the default model"}) {
+		t.Errorf("notices = %q, want Switched to Unknown [model] [provider-a]", got)
 	}
 }
 
@@ -120,19 +120,41 @@ func TestEffortMenu(t *testing.T) {
 	if s.state.Model != "provider-a/lab-a/model-a:fast:low" || s.state.Banner != NoBanner {
 		t.Errorf("after choosing low: model %q, banner %v, want provider-a/lab-a/model-a:fast:low and the menu closed", s.state.Model, s.state.Banner)
 	}
-	if got := toasts(out); !slices.Equal(got, []string{"Switched to provider-a/lab-a/model-a:fast:low as the default model"}) {
-		t.Errorf("notices = %q, want Switched to provider-a/lab-a/model-a:fast:low", got)
+	if got := toasts(out); !slices.Equal(got, []string{"Switched to Model A Fast Low [provider-a] as the default model"}) {
+		t.Errorf("notices = %q, want Switched to Model A Fast Low [provider-a]", got)
 	}
 }
 
 // TestModelNoticesMarkTheModel checks that the notices naming a model draw it,
-// and only it, in the product's primary color.
+// and only it, in the product's primary color, and that the switch notice
+// names it as the session info does, its provider dim and bracketed.
 func TestModelNoticesMarkTheModel(t *testing.T) {
 	s, _ := newTestService(t)
-	for name, out := range map[string][]UIEvent{
-		"no efforts": s.noEffort(),
-		"switched":   s.SelectModel("provider-a/model"),
+	noEffort := s.noEffort()
+	switched := s.SelectModel("provider-a/lab-a/model-c:low")
+	var dimmed []string
+	for _, ev := range switched {
+		if toast, ok := toastOf(ev); ok {
+			for _, line := range toast.Lines {
+				for _, c := range line.Chunks {
+					if c.Fg == themeOrDefault(nil).TextMuted {
+						dimmed = append(dimmed, c.Text)
+					}
+				}
+			}
+		}
+	}
+	if !slices.Equal(dimmed, []string{"[provider-a]"}) {
+		t.Errorf("switched: dim text = %q, want the provider alone", dimmed)
+	}
+	for name, test := range map[string]struct {
+		out  []UIEvent
+		want string
+	}{
+		"no efforts": {noEffort, "provider-a/model"},
+		"switched":   {switched, "Model C Low"},
 	} {
+		out := test.out
 		var marked []string
 		for _, ev := range out {
 			if toast, ok := toastOf(ev); ok {
@@ -145,7 +167,7 @@ func TestModelNoticesMarkTheModel(t *testing.T) {
 				}
 			}
 		}
-		if !slices.Equal(marked, []string{"provider-a/model"}) {
+		if !slices.Equal(marked, []string{test.want}) {
 			t.Errorf("%s: text in the primary color = %q, want the model alone", name, marked)
 		}
 	}
@@ -200,22 +222,22 @@ func TestCycleEffort(t *testing.T) {
 // provider's default, and keeps the chosen level for the next model.
 func TestSelectModelKeepsEffort(t *testing.T) {
 	s, _ := newTestService(t)
-	steps := []struct{ selected, want string }{
-		{"provider-a/lab-a/model-a:max", "provider-a/lab-a/model-a:max"},
-		{"provider-a/lab-a/model-c", "provider-a/lab-a/model-c:medium"},
-		{"provider-a/lab-a/model-a-pro", "provider-a/lab-a/model-a-pro:max"},
-		{"provider-a/model", "provider-a/model"},
-		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:max"},
-		{"provider-a/lab-a/model-c:low", "provider-a/lab-a/model-c:low"},
-		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:low"},
+	steps := []struct{ selected, want, name string }{
+		{"provider-a/lab-a/model-a:max", "provider-a/lab-a/model-a:max", "Model A Max"},
+		{"provider-a/lab-a/model-c", "provider-a/lab-a/model-c:medium", "Model C Medium"},
+		{"provider-a/lab-a/model-a-pro", "provider-a/lab-a/model-a-pro:max", "Model A Pro Max"},
+		{"provider-a/model", "provider-a/model", "Unknown [model]"},
+		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:max", "Model A Max"},
+		{"provider-a/lab-a/model-c:low", "provider-a/lab-a/model-c:low", "Model C Low"},
+		{"provider-a/lab-a/model-a", "provider-a/lab-a/model-a:low", "Model A Low"},
 	}
 	for _, step := range steps {
 		out := s.SelectModel(step.selected)
 		if s.state.Model != step.want {
 			t.Errorf("select %q: model %q, want %q", step.selected, s.state.Model, step.want)
 		}
-		if got := toasts(out); !slices.Equal(got, []string{"Switched to " + step.want + " as the default model"}) {
-			t.Errorf("select %q: notices %q, want Switched to %s", step.selected, got, step.want)
+		if got := toasts(out); !slices.Equal(got, []string{"Switched to " + step.name + " [provider-a] as the default model"}) {
+			t.Errorf("select %q: notices %q, want Switched to %s [provider-a]", step.selected, got, step.name)
 		}
 	}
 }
