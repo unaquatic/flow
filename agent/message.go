@@ -145,21 +145,26 @@ func (m Message) MarshalJSON() ([]byte, error) {
 		parts[i] = message.PartToJSON(p)
 	}
 	return json.Marshal(struct {
-		Role    message.Role       `json:"role"`
-		Content []message.PartJSON `json:"content"`
-	}{m.Role, parts})
+		Role     message.Role       `json:"role"`
+		Content  []message.PartJSON `json:"content"`
+		Provider ProviderID         `json:"provider,omitempty"`
+		Model    string             `json:"model,omitempty"`
+	}{m.Role, parts, m.Provider, m.Model})
 }
 
 // UnmarshalJSON decodes content using message.PartFromJSON.
 func (m *Message) UnmarshalJSON(data []byte) error {
 	var raw struct {
-		Role    message.Role       `json:"role"`
-		Content []message.PartJSON `json:"content"`
+		Role     message.Role       `json:"role"`
+		Content  []message.PartJSON `json:"content"`
+		Provider ProviderID         `json:"provider,omitempty"`
+		Model    string             `json:"model,omitempty"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 	m.Role = raw.Role
+	m.Provider, m.Model = raw.Provider, raw.Model
 	m.Content = make([]message.ContentPart, len(raw.Content))
 	for i, j := range raw.Content {
 		m.Content[i] = message.PartFromJSON(j)

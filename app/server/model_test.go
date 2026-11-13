@@ -248,9 +248,12 @@ func TestGenerate(t *testing.T) {
 	if status := doJSON(t, "POST", ts.URL+"/generate", generateBody, &got); status != http.StatusOK {
 		t.Fatalf("POST /generate: status %d", status)
 	}
-	if got.Model != "provider-b/lab-b/model-y" || got.Text != "Hello there" || got.StopReason != "end_turn" ||
+	if got.Provider != providerB || got.Model != "lab-b/model-y" || got.Text != "Hello there" || got.StopReason != "end_turn" ||
 		got.Usage.InputTokens != 12 || got.Usage.OutputTokens != 5 {
 		t.Errorf("response = %+v, want model-y's reply Hello there, end_turn, 12 in and 5 out", got)
+	}
+	if got.Message.Provider != providerB || got.Message.Model != "lab-b/model-y" {
+		t.Errorf("message by %q %q, want provider-b lab-b/model-y", got.Message.Provider, got.Message.Model)
 	}
 	sentBodies := bodies()
 	if len(sentBodies) != 1 {
@@ -428,8 +431,11 @@ func TestGenerateVariant(t *testing.T) {
 	if status := doJSON(t, "POST", ts.URL+"/generate", body, &got); status != http.StatusOK {
 		t.Fatalf("POST /generate: status %d", status)
 	}
-	if got.Model != "provider-b/lab-b/model-v:fast:high" {
-		t.Errorf("model = %q, want provider-b/lab-b/model-v:fast:high", got.Model)
+	if got.Provider != providerB || got.Model != "lab-b/model-v:fast:high" {
+		t.Errorf("provider, model = %q, %q, want provider-b, lab-b/model-v:fast:high", got.Provider, got.Model)
+	}
+	if got.Message.Provider != providerB || got.Message.Model != "lab-b/model-v" {
+		t.Errorf("message by %q %q, want provider-b lab-b/model-v", got.Message.Provider, got.Message.Model)
 	}
 	sent := bodies()[0]
 	if sent["model"] != "lab-b/model-v" || sent["speed"] != "fast" {
