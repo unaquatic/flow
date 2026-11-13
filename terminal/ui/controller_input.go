@@ -35,8 +35,9 @@ const QuitWindow = time.Second
 // QuitHint is what the empty input shows while a second Ctrl+C quits.
 const QuitHint = "[ctrl+c quit]"
 
-// HandleCtrlC stops an active run or clears the input. When idle, it arms the
-// quit, and a second press within QuitWindow quits. While a banner or the
+// HandleCtrlC clears the input when it has text, and otherwise stops an active
+// run. With an empty input and no run, it arms the quit, and a second press
+// within QuitWindow quits. While a banner or the
 // session list is open, it closes it instead, as CloseMenu does, and leaves a
 // run going. It always reports that the key was consumed.
 func (s *Service) HandleCtrlC(hasInput bool) (bool, []UIEvent) {
@@ -49,18 +50,18 @@ func (s *Service) HandleCtrlC(hasInput bool) (bool, []UIEvent) {
 	if out := s.CloseMenu(); out != nil {
 		return true, out
 	}
-	now := time.Now()
-	busy := s.Streaming()
-	hadWork := busy || hasInput
-
-	if !hadWork && s.QuitArmed(now) {
-		return true, []UIEvent{EventQuit{}}
+	// Text in the input goes first, so that clearing a draft typed during a
+	// run leaves the run going; the next press stops it.
+	if hasInput {
+		return true, s.ClearInput()
 	}
-	if busy {
+	if s.Streaming() {
 		s.Stop()
+		return true, slices.Concat(s.SetStatus(StatusHintStyled()), s.HideIndicator())
 	}
-	if hadWork {
-		return true, slices.Concat(s.ClearInput(), s.SetStatus(StatusHintStyled()), s.HideIndicator())
+	now := time.Now()
+	if s.QuitArmed(now) {
+		return true, []UIEvent{EventQuit{}}
 	}
 
 	// Remember the first idle press, and show the key that quits until the
