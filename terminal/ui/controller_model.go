@@ -257,10 +257,10 @@ func (s *Service) SelectModel(model string) []UIEvent {
 	s.state.DefaultModel = s.state.Model
 	if err := s.app.Models().SaveDefault(s.state.Model); err != nil {
 		return slices.Concat(events,
-			s.ShowKeywordToast("Switched to ", s.state.Model, ""),
+			s.ShowModelToast("Switched to ", s.state.Model, ""),
 			s.ShowToast("Saving the default model failed: "+err.Error()))
 	}
-	return slices.Concat(events, s.ShowKeywordToast("Switched to ", s.state.Model, " as the default model"))
+	return slices.Concat(events, s.ShowModelToast("Switched to ", s.state.Model, " as the default model"))
 }
 
 // SetVariant makes v, at the terminal's chosen reasoning effort fitted to its
