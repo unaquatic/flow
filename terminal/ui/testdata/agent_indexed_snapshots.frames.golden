@@ -6,8 +6,8 @@
 |■ Running the tests.                    |
 |                                        |
 |■ Bash go test ./... [interrupted]      |
-|■ Snapshot [c1d2e3f4]                   |
 |                                        |
+|■ Snapshot [c1d2e3f4]                   |
 |                                        |
 |                                        |
 |                                        |
@@ -19,8 +19,8 @@
 |C AAAAAAA AAA AAAAAA                    |
 |                                        |
 |B BBBB BB BBBB BBBBB BBBBBBBBBBBBB      |
-|B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
+|B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
 |                                        |
 |                                        |

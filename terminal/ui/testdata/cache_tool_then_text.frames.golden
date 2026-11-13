@@ -4,6 +4,7 @@
 |■ Running the tests.                                        |
 |                                                            |
 |■ Bash go test ./... [exit 1]                               |
+|                                                            |
 |■ Cache read 18K write 4.0K                                 |
 |                                                            |
 |■ Fixed the divide-by-zero check.                           |
@@ -13,13 +14,13 @@
 |■ Done [39s]                                                |
 |                                                            |
 |                                                            |
-|                                                            |
 === fg ===
 |A AAA AAA AAAAAA AAAA                                       |
 |                                                            |
 |B AAAAAAA AAA AAAAAA                                        |
 |                                                            |
 |C CCCC CC CCCC CCCCC CCCCC CC                               |
+|                                                            |
 |C CCCCC CCCC CCC CCCCC CCCC                                 |
 |                                                            |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
@@ -27,7 +28,6 @@
 |C CCCCC CCCC CCC CCCCC CC                                   |
 |                                                            |
 |C CCCC CCCCC                                                |
-|                                                            |
 |                                                            |
 |                                                            |
 === legend ===

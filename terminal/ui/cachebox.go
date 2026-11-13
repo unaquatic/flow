@@ -27,6 +27,9 @@ func NewCacheBox() *CacheBox {
 	b := &CacheBox{PartBox: NewPartBox(nil, style.Color{}, style.ColorTransparent)}
 	b.Content = b
 	b.Shape = ShapeRow
+	// The row is parted from the tool calls above it, so that it reads as
+	// the request's own, not as one more call.
+	b.Apart = true
 	b.Pin()
 	b.SetGone(true)
 	b.ShowHeader()

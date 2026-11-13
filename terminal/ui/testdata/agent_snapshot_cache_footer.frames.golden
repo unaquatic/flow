@@ -6,10 +6,10 @@
 |■ Hi! How can I help you today?         |
 |                                        |
 |■ Snapshot [c1d2e3f4]                   |
+|                                        |
 |■ Cache read 0K write 0K                |
 |                                        |
 |■ Done [3s]                             |
-|                                        |
 |                                        |
 |                                        |
 === fg ===
@@ -20,10 +20,10 @@
 |C AAA AAA AAA A AAAA AAA AAAAAA         |
 |                                        |
 |B BBBBBBBB BBBBBBBBBB                   |
+|                                        |
 |B BBBBB BBBB BB BBBBB BB                |
 |                                        |
 |B BBBB BBBB                             |
-|                                        |
 |                                        |
 |                                        |
 === legend ===

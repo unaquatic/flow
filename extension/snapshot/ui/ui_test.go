@@ -44,7 +44,8 @@ func TestNewPartView(t *testing.T) {
 
 // TestSnapshotBox_ShownWhilePending checks that a snapshot part shows as a
 // row while the snapshot is being taken, and is gone before and once it holds
-// its tree.
+// its tree, and that the row is parted from tool calls rather than stacked
+// with them.
 func TestSnapshotBox_ShownWhilePending(t *testing.T) {
 	box := NewSnapshotBox(snapshot.SnapshotPart{ID: "s"})
 	if box.Visible() {
@@ -62,8 +63,8 @@ func TestSnapshotBox_ShownWhilePending(t *testing.T) {
 			t.Errorf("after %+v visible = %v, want %v", step.part, box.Visible(), step.want)
 		}
 	}
-	if !ui.IsToolRow(box) {
-		t.Error("a snapshot row does not stack as a tool call row")
+	if !box.Row() || ui.IsToolRow(box) {
+		t.Error("a snapshot shows as a row that stacks with tool calls, want a row parted from them")
 	}
 }
 

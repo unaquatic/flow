@@ -27,8 +27,9 @@ const SnapshotLabel = "Snapshot"
 // /config does: then it shows the tree's hash, as engine.ShortHash gives
 // it, in brackets, as in "Snapshot [7a36b04c]", or FailedStatus. The box
 // always shows as a row, starts with ui.ToolMarker as tool calls do, and has
-// nothing to expand. The changes of a turn show in the PatchBox of its last
-// reply either way.
+// nothing to expand, but a blank row parts it from the rows above and below
+// it, as ui.PartBox.Apart says, rather than stacking it with tool calls. The
+// changes of a turn show in the PatchBox of its last reply either way.
 type SnapshotBox struct {
 	*ui.PartBox
 	// Part is the snapshot part shown.
@@ -50,6 +51,9 @@ func NewSnapshotBox(part snapshot.SnapshotPart) *SnapshotBox {
 	b := &SnapshotBox{PartBox: ui.NewPartBox(nil, style.Color{}, style.ColorTransparent)}
 	b.Content = b
 	b.Shape = ui.ShapeRow
+	// The row is parted from the tool calls around it, so that it does not
+	// read as one more call.
+	b.Apart = true
 	b.Pin()
 	b.Show(part)
 	b.ShowShape()

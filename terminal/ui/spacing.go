@@ -15,11 +15,13 @@ type RowKind int
 
 const (
 	// KindBlock is a row that parts itself from the rows around it: prose, a
-	// code block, a reasoning block, an expanded tool call, a step's changes.
+	// code block, a reasoning block, an expanded tool call, a step's changes,
+	// and a row the PartBox of which is Apart, such as a snapshot or the
+	// cache row.
 	KindBlock RowKind = iota
 	// KindRow is a PartBox that shows as its header alone, one row on the
-	// canvas: a collapsed tool call, a snapshot, the cache row. It stacks
-	// right under another such row, so that they read as a list.
+	// canvas, such as a collapsed tool call. It stacks right under another
+	// such row, so that they read as a list.
 	KindRow
 	// KindFooter is the footer of the reply that ends a turn. It is parted
 	// from the row above it, whatever that row is: it never stacks under one.
@@ -27,14 +29,14 @@ const (
 )
 
 // KindOf returns the RowKind of r, a widget of a bubble: KindFooter for a
-// FooterBox, KindRow for a Framed widget whose box shows as a row, and
-// KindBlock for any other, a nil r included.
+// FooterBox, KindRow for a Framed widget whose box shows as a row and is not
+// Apart, and KindBlock for any other, a nil r included.
 func KindOf(r render.Renderable) RowKind {
 	switch r := r.(type) {
 	case *FooterBox:
 		return KindFooter
 	case Framed:
-		if r.Frame().Row() {
+		if f := r.Frame(); f.Row() && !f.Apart {
 			return KindRow
 		}
 	}

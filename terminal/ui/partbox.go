@@ -106,6 +106,11 @@ type PartBox struct {
 	MarkerFg style.Color
 	// Shape is how the box shows while it is collapsed.
 	Shape BoxShape
+	// Apart parts the box from the rows around it while it shows as a row,
+	// by a blank row above and below, as a block is parted, rather than
+	// stacking it under and over other rows, as collapsed tool calls stack.
+	// A snapshot and the cache row show apart.
+	Apart bool
 	// Style is how the box shows as a block: on Surface, or on the canvas.
 	Style ExpandedStyle
 	// Surface is the background a block fills, padding included, in
