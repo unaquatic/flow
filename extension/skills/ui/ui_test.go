@@ -23,19 +23,42 @@ var review = skills.Skill{
 	Path:        "/home/u/.agents/skills/review/SKILL.md",
 }
 
-// TestSlashCommands checks that the extension adds /skills alone, and no
-// command of each skill, which the UI finds by that name.
+// TestSlashCommands checks that the extension adds /skills and then a
+// command of each skill, by its name, marked as a skill and described on
+// one line, which the UI finds by that name; and that a skill named as one
+// of the UI's own commands, or as /skills, adds none.
 func TestSlashCommands(t *testing.T) {
-	cmds := New(review).SlashCommands()
-	if len(cmds) != 1 || cmds[0].Name.String() != "/skills" {
-		t.Fatalf("commands = %+v, want /skills alone", cmds)
+	model := skills.Skill{Name: "model", Description: "Shadows /model."}
+	list := skills.Skill{Name: "skills", Description: "Shadows /skills."}
+	cmds := New(review, model, list).SlashCommands()
+	var names []string
+	for _, c := range cmds {
+		names = append(names, c.Name.String())
+	}
+	if want := []string{"/skills", "/review"}; !slices.Equal(names, want) {
+		t.Fatalf("commands = %v, want %v", names, want)
+	}
+	if c := cmds[1]; c.Hint != Hint || c.Desc != "Review code for bugs." {
+		t.Errorf("/review = hint %q, desc %q; want %q, %q", c.Hint, c.Desc, Hint, "Review code for bugs.")
 	}
 	all := ui.CommandsWith([]ui.Extension{New(review)})
-	if _, ok := ui.LookupCommand(all, Command); !ok {
-		t.Error("the UI does not find /skills among its commands")
+	for _, name := range []ui.Command{Command, "review"} {
+		if _, ok := ui.LookupCommand(all, name); !ok {
+			t.Errorf("the UI does not find %s among its commands", name)
+		}
 	}
-	if _, ok := ui.LookupCommand(all, "skill:review"); ok {
-		t.Error("the UI has a command of the skill review, want /skills alone")
+	if c, _ := ui.LookupCommand(all, "model"); c.Hint != "" {
+		t.Errorf("/model = %+v, want the UI's own", c)
+	}
+}
+
+// TestSkillCommandSends checks that running a skill's command sends /name,
+// for the skills extension to expand.
+func TestSkillCommandSends(t *testing.T) {
+	s := newTestService(t)
+	events := SkillCommand(review).Run(s)
+	if !slices.ContainsFunc(events, func(e ui.UIEvent) bool { _, ok := e.(ui.EventQueueChanged); return ok }) {
+		t.Errorf("running /review = %#v, want the prompt queued", events)
 	}
 }
 

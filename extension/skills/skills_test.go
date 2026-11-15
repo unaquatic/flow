@@ -121,7 +121,10 @@ func TestParseCommand(t *testing.T) {
 		{"  /skill:review  check main.go\nand tests ", "review", "check main.go\nand tests", true},
 		{"/skill:review\nnext line", "review", "next line", true},
 		{"/skill:", "", "", false},
-		{"/review", "", "", false},
+		{"/review", "review", "", true},
+		{"  /review check main.go", "review", "check main.go", true},
+		{"/", "", "", false},
+		{"review", "", "", false},
 		{"run /skill:review", "", "", false},
 	} {
 		name, args, ok := ParseCommand(tt.text)
@@ -219,12 +222,14 @@ func TestExtensionExpandPrompt(t *testing.T) {
 	for _, tt := range []struct{ text, want string }{
 		{"/skill:review  check main.go\nand tests", body + "\n\ncheck main.go\nand tests"},
 		{"/skill:review", body},
+		{"/review  check main.go", body + "\n\ncheck main.go"},
+		{"/review", body},
 	} {
 		if got, ok := e.ExpandPrompt(t.Context(), extension.Prompt{Text: tt.text}); !ok || got != tt.want {
 			t.Errorf("ExpandPrompt(%q) = %q, %v; want %q", tt.text, got, ok, tt.want)
 		}
 	}
-	for _, text := range []string{"review it", "/skill:missing"} {
+	for _, text := range []string{"review it", "/skill:missing", "/missing", "/etc/hosts is wrong"} {
 		if got, ok := e.ExpandPrompt(t.Context(), extension.Prompt{Text: text}); ok {
 			t.Errorf("ExpandPrompt(%q) = %q, want it not expanded", text, got)
 		}

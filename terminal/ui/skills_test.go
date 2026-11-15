@@ -63,3 +63,20 @@ func TestSkillsMenuFrames(t *testing.T) {
 	}
 	ui.AssertInputFrames(t, u, "input_skill_filled", 60, 10)
 }
+
+// TestSkillSlashMenuFrames draws the slash menu with a command of each
+// skill: "/re" offers /review, marked [skill] in grey, among the UI's own
+// commands; "/rev" selects it, its mark in the fill's text color; and under
+// SelectionArrow the selected row's mark stays grey.
+func TestSkillSlashMenuFrames(t *testing.T) {
+	u := ui.NewInputTestUI(t, skillViews())
+	u.Apply(u.Service().UpdateSlashMenu("/re"))
+	ui.AssertInputFrames(t, u, "input_slash_skills", 60, 12)
+
+	u.Apply(u.Service().UpdateSlashMenu("/rev"))
+	ui.AssertInputFrames(t, u, "input_slash_skill_selected", 60, 8)
+
+	u.Apply(u.Service().SetSelectionStyle(ui.SelectionArrow))
+	u.Apply(u.Service().UpdateSlashMenu("/rev"))
+	ui.AssertInputFrames(t, u, "input_slash_skill_arrow", 60, 8)
+}

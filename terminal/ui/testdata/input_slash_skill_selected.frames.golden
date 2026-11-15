@@ -1,0 +1,32 @@
+=== text ===
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
+|                                                            |
+|■ Commands [↑/↓ move] [esc cancel]                          |
+|                                                            |
+|  /review [skill]           Review the changes for bugs an  |
+|  /resume                   Resume a session from history   |
+|  /redo                     Move the workspace forward one  |
+|                                                            |
+=== fg ===
+|A AAAAA BBBBBBB AAAAAAA AAAAAAA BB A BB A BBB AAAAAAA AAAA  |
+|                                                            |
+|B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
+|                                                            |
+|  CCCCCCC CCCCCCC           CCCCCC CCC CCCCCCC CCC CCCC CC  |
+|  BBBBBBB                   AAAAAA A AAAAAAA AAAA AAAAAAA   |
+|  BBBBB                     AAAA AAA AAAAAAAAA AAAAAAA AAA  |
+|                                                            |
+=== bg ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #232323 BoxBg
+░ #ff5f00

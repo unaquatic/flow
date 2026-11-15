@@ -54,6 +54,9 @@ type SlashCommand struct {
 	Aliases []Command
 	// Desc is the description shown beside the command.
 	Desc string
+	// Hint is shown in grey right after the command's name in the menu,
+	// such as "[skill]" for a command an extension adds for each skill.
+	Hint string
 	// Debug keeps the command out of the menu and /help unless debug is on
 	// in /config. Typed in full, it runs either way.
 	Debug bool
@@ -219,9 +222,9 @@ func MatchSlashCommands(cmds []SlashCommand, query string) []SlashCommand {
 }
 
 // Item returns c as a row of the slash menu, named as the user types it,
-// such as "/status".
+// such as "/status", with its Hint after the name.
 func (c SlashCommand) Item() widget.SelectItem {
-	return widget.SelectItem{Name: c.Name.String(), Description: c.Desc, Value: c.Name}
+	return widget.SelectItem{Name: c.Name.String(), Hint: c.Hint, Description: c.Desc, Value: c.Name}
 }
 
 // ShowSlashMenu offers the commands matching query, or hides the menu when

@@ -1,0 +1,44 @@
+=== text ===
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
+|                                                            |
+|■ Commands [↑/↓ move] [esc cancel]                          |
+|                                                            |
+|  /resume                   Resume a session from history   |
+|  /redo                     Move the workspace forward one  |
+|  /review [skill]           Review the changes for bugs an  |
+|  /checkout                 Check out a point in the sessi  |
+|                                                            |
+|■                                                           |
+|                                                            |
+|                                                            |
+=== fg ===
+|A AAAAA BBBBBBB AAAAAAA AAAAAAA BB A BB A BBB AAAAAAA AAAA  |
+|                                                            |
+|B BBBBBBBB AAAA AAAAA AAAA AAAAAAA                          |
+|                                                            |
+|  CCCCCCC                   CCCCCC C CCCCCCC CCCC CCCCCCC   |
+|  BBBBB                     AAAA AAA AAAAAAAAA AAAAAAA AAA  |
+|  BBBBBBB AAAAAAA           AAAAAA AAA AAAAAAA AAA AAAA AA  |
+|  BBBBBBBBB                 AAAAA AAA A AAAAA AA AAA AAAAA  |
+|                                                            |
+|B                                                           |
+|                                                            |
+|                                                            |
+=== bg ===
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #232323 BoxBg
+░ #ff5f00

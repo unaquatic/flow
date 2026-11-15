@@ -502,6 +502,10 @@ func (ui *UI) BuildUI() {
 		// The descriptions are dim, as the labels of the Usage box's values
 		// are, and the commands bright, as its values are.
 		widget.SelectWithDescriptionFg(ui.theme.TextMuted),
+		// A command's hint, such as a skill's "[skill]", is dim, and stays
+		// dim on the selected row under SelectionArrow, and takes the fill's
+		// text color under the styles that fill it.
+		widget.SelectWithHintFg(ui.theme.TextMuted),
 		widget.SelectWithFocusedBold(false),
 		widget.SelectWithFocusedFg(activeFg),
 		widget.SelectWithSelectedFg(activeFg),

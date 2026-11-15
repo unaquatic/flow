@@ -1,4 +1,5 @@
-// Package ui is the terminal side of the skills extension: /skills, which
+// Package ui is the terminal side of the skills extension: a /name command
+// of each skill, marked "[skill]" in the slash menu, and /skills, which
 // lists the skills to pick from, and fills the input with the instructions
 // of the one picked, for the user to say what to do under them and send. A
 // prompt sent so shows as any prompt does, as its text.
@@ -6,6 +7,7 @@ package ui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/unaquatic/flow/agent/message"
@@ -38,9 +40,45 @@ func (*Extension) NewPartView(message.ContentPart, ui.ViewHost) ui.PartView { re
 // NewSegmentView returns nil: the extension shows nothing under a message.
 func (*Extension) NewSegmentView(ui.ChatMessage, ui.ViewHost) ui.SegmentView { return nil }
 
-// SlashCommands returns /skills, which runs as ShowMenu does.
+// Hint follows the name of a skill's command in the slash menu, in grey.
+const Hint = "[skill]"
+
+// SlashCommands returns /skills, which runs as ShowMenu does, and then a
+// command of each of Skills, as SkillCommand makes it, in order. A skill
+// whose name is taken by one of the UI's own commands, or by /skills, has
+// no command of its own: /skills still lists it, and /skill:name still
+// invokes it.
 func (e *Extension) SlashCommands() []ui.SlashCommand {
-	return []ui.SlashCommand{{Name: Command, Desc: "Pick a skill to invoke", Run: e.ShowMenu}}
+	cmds := []ui.SlashCommand{{Name: Command, Desc: "Pick a skill to invoke", Run: e.ShowMenu}}
+	for _, sk := range e.Skills {
+		name := ui.Command(sk.Name)
+		if _, taken := ui.LookupCommand(cmds, name); taken {
+			continue
+		}
+		if _, taken := ui.LookupCommand(ui.SlashCommands, name); taken {
+			continue
+		}
+		cmds = append(cmds, SkillCommand(sk))
+	}
+	return cmds
+}
+
+// SkillCommand returns the slash command of sk: /name, marked Hint in the
+// menu and described by the first paragraph of its description, as OneLine
+// gives it. Picked from the menu, or typed alone, it sends /name, which the
+// skills extension expands into the skill's instructions as the prompt is
+// sent; typed with what to do after it, as in "/review main.go", it is sent
+// as any prompt is and expanded so too.
+func SkillCommand(sk skills.Skill) ui.SlashCommand {
+	name := ui.Command(sk.Name)
+	return ui.SlashCommand{
+		Name: name,
+		Desc: OneLine(sk.Description),
+		Hint: Hint,
+		Run: func(s *ui.Service) []ui.UIEvent {
+			return slices.Concat(s.QueuePrompt(name.String()), s.SendQueued())
+		},
+	}
 }
 
 // ShowMenu lists Skills, searched from the input, as MenuItems gives them,

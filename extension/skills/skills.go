@@ -13,7 +13,8 @@
 //     to do", as Block writes it, so that the model reads
 //     the instructions whatever it would choose. It adds no content of its
 //     own.
-//   - Terminal UI: package ui offers a /skill:name command for each skill.
+//   - Terminal UI: package ui offers a /name command for each skill, and
+//     /skills, which lists them.
 //
 // It finds skills in the user's ~/.agents/skills, and in the .agents/skills
 // of each folder of the project, from the working directory up to the root
@@ -55,6 +56,11 @@ var Dir = filepath.Join(".agents", "skills")
 // CommandPrefix starts a prompt that invokes a skill, as in
 // "/skill:pdf-tools extract report.pdf".
 const CommandPrefix = "/skill:"
+
+// ShortPrefix starts a prompt that invokes a skill by its name alone, as in
+// "/pdf-tools extract report.pdf", the command the terminal UI offers for
+// each skill.
+const ShortPrefix = "/"
 
 // MaxNameLength and MaxDescriptionLength are the longest name and
 // description the Agent Skills standard allows. A skill that exceeds either
@@ -248,10 +254,16 @@ func Lookup(skills []Skill, name string) (Skill, bool) {
 }
 
 // ParseCommand returns the name of the skill that text invokes, as in
-// "/skill:pdf-tools extract report.pdf", and what follows it, without the
-// spaces around it, and reports whether text invokes one.
+// "/skill:pdf-tools extract report.pdf" or, by the name alone after
+// ShortPrefix, "/pdf-tools extract report.pdf", and what follows it, without
+// the spaces around it, and reports whether text reads as a command. Whether
+// a skill has that name is for the caller to look up.
 func ParseCommand(text string) (name, args string, ok bool) {
-	rest, ok := strings.CutPrefix(strings.TrimSpace(text), CommandPrefix)
+	text = strings.TrimSpace(text)
+	rest, ok := strings.CutPrefix(text, CommandPrefix)
+	if !ok {
+		rest, ok = strings.CutPrefix(text, ShortPrefix)
+	}
 	if !ok {
 		return "", "", false
 	}
