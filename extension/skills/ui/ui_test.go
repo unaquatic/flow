@@ -52,14 +52,74 @@ func TestSlashCommands(t *testing.T) {
 	}
 }
 
-// TestSkillCommandSends checks that running a skill's command sends /name,
-// for the skills extension to expand.
+// TestSkillCommandSends checks that a skill's command sends /skill:name,
+// alone or with what is typed after it, for the skills extension to expand.
 func TestSkillCommandSends(t *testing.T) {
 	s := newTestService(t)
-	events := SkillCommand(review).Run(s)
-	if !slices.ContainsFunc(events, func(e ui.UIEvent) bool { _, ok := e.(ui.EventQueueChanged); return ok }) {
-		t.Errorf("running /review = %#v, want the prompt queued", events)
+	s.Commands = ui.CommandsWith([]ui.Extension{New(review)})
+	for _, tt := range []struct{ typed, want string }{
+		{"/review", "/skill:review"},
+		{"/review  check main.go", "/skill:review check main.go"},
+	} {
+		if got := queued(s.HandleSubmit(tt.typed)); !slices.Contains(got, tt.want) {
+			t.Errorf("typing %q queued %q, want %q", tt.typed, got, tt.want)
+		}
 	}
+}
+
+// TestSkillNeverShadowsCommand checks that a skill named as one of the UI's
+// own commands, or as one of its aliases, never runs in its place: typed
+// alone the command runs, and typed with text after it the text is sent as
+// it was typed, which no skill expands.
+func TestSkillNeverShadowsCommand(t *testing.T) {
+	s := newTestService(t)
+	model := skills.Skill{Name: "model", Description: "Shadows /model."}
+	clear := skills.Skill{Name: "clear", Description: "Shadows /new's alias."}
+	s.Commands = ui.CommandsWith([]ui.Extension{New(model, clear)})
+	for _, c := range s.Commands {
+		if c.Hint == Hint {
+			t.Errorf("/%s is a skill's command, want the UI's own alone", c.Name)
+		}
+	}
+	for _, typed := range []string{"/model", "/clear"} {
+		if got := queued(s.HandleSubmit(typed)); len(got) > 0 {
+			t.Errorf("typing %q queued %q, want the UI's own command run", typed, got)
+		}
+	}
+	for _, typed := range []string{"/model something", "/clear it all"} {
+		if got := queued(s.HandleSubmit(typed)); slices.ContainsFunc(got, func(p string) bool { return p != typed }) {
+			t.Errorf("typing %q queued %q, want it sent as typed", typed, got)
+		}
+	}
+}
+
+// TestSkillNeverShadowsExtensionCommand checks that a skill named as a
+// command another extension adds before it is left out, and that two
+// skills of one name add one command.
+func TestSkillNeverShadowsExtensionCommand(t *testing.T) {
+	other := skills.Skill{Name: "review", Description: "A second review."}
+	cmds := ui.CommandsWith([]ui.Extension{New(review), New(review, other)})
+	var n int
+	for _, c := range cmds {
+		if c.Name == "review" || c.Name == Command {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Errorf("commands named /review or /skills = %d, want 2, one each", n)
+	}
+}
+
+// queued returns every prompt a queue change among events holds, as the
+// queue may be sent and emptied in the same events.
+func queued(events []ui.UIEvent) []string {
+	var out []string
+	for _, e := range events {
+		if q, ok := e.(ui.EventQueueChanged); ok {
+			out = append(out, q.Prompts...)
+		}
+	}
+	return out
 }
 
 // TestMenuItems checks that /skills lists each skill by its name and the
