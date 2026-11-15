@@ -148,8 +148,8 @@ func TestToolBox_ExpandedHeaderDropsParams(t *testing.T) {
 		t.Errorf("expanded header after an update = %q; want %q", got, "Bash")
 	}
 	box.SetExpanded(false)
-	if got := box.Header.PlainText(); got != "Bash go test ./..." {
-		t.Errorf("collapsed header = %q; want %q", got, "Bash go test ./...")
+	if got := box.Header.PlainText(); got != "Bash go test" {
+		t.Errorf("collapsed header = %q; want %q", got, "Bash go test")
 	}
 
 	read := newTestToolBox(t, message.ToolPart{Name: "read", State: message.ToolStateCompleted{
@@ -302,8 +302,8 @@ func TestToolBox_ShowsInputWithoutOutput(t *testing.T) {
 }
 
 // TestToolBox_CollapsedBashHeaderPlain checks that a collapsed bash call's
-// header shows the first line of its command, before an ellipsis, all in the
-// color of its status, in either expanded style, while the command line under an
+// header shows the names of the commands it runs, a line's apart by "; ",
+// all in the color of its status, in either expanded style, while the command line under an
 // expanded header highlights it.
 func TestToolBox_CollapsedBashHeaderPlain(t *testing.T) {
 	theme := DefaultTheme()
@@ -313,7 +313,7 @@ func TestToolBox_CollapsedBashHeaderPlain(t *testing.T) {
 			box := newTestToolBox(t, message.ToolPart{Name: "bash", State: message.ToolStatePending{Input: json.RawMessage(
 				`{"command":"go test -run 'TestDivide' -count=1\ngo vet ./..."}`)}}, theme, theme.CodeFg)
 			box.SetStyle(ts)
-			if got, want := box.Header.PlainText(), "Bash go test -run 'TestDivide' -count=1…"; got != want {
+			if got, want := box.Header.PlainText(), "Bash go test; go vet"; got != want {
 				t.Fatalf("header = %q; want %q", got, want)
 			}
 			// The header is the label, a space, and then the command.
@@ -341,7 +341,7 @@ func TestToolBox_HeaderNameAndInput(t *testing.T) {
 		"read":  {"read", `{"path":"calculator/calc_test.go"}`, "Read calculator/calc_test.go"},
 		"edit":  {"edit", `{"path":"calc.go","old_string":"a","new_string":"b"}`, "Edit calc.go"},
 		"write": {"write", `{"path":"divide_test.go","content":"x"}`, "Write divide_test.go"},
-		"bash":  {"bash", `{"command":"go test ./...","description":"Run tests"}`, "Bash go test ./..."},
+		"bash":  {"bash", `{"command":"go test ./...","description":"Run tests"}`, "Bash go test"},
 		// A search is summed up by what it looks for, not where.
 		"grep with path": {"grep", `{"pattern":"TODO","path":"internal","include":"*.go"}`, "Grep TODO"},
 		"glob with path": {"glob", `{"pattern":"**/*.go","path":"internal"}`, "Glob **/*.go"},

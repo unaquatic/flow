@@ -1,7 +1,7 @@
 === text ===
 |■ Run the tests                                                         |
 |                                                                        |
-|■ Bash go test ./...                                                    |
+|■ Bash go test                                                          |
 |                                                                        |
 |■ Working [12s] [esc cancel] [ctrl+o expand]                            |
 |                                                                        |
@@ -21,7 +21,7 @@
 === fg ===
 |A AAA AAA AAAAA                                                         |
 |                                                                        |
-|B BBBB BB BBBB BBBBB                                                    |
+|B BBBB BB BBBB                                                          |
 |                                                                        |
 |B BBBBBBB BBBBB BBBB BBBBBBB BBBBBBB BBBBBBB                            |
 |                                                                        |

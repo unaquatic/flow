@@ -1,11 +1,11 @@
 === text ===
-|  Bash go test ./... [executing]        |
-|■ Bash go vet ./...                     |
+|  Bash go test [executing]              |
+|■ Bash go vet                           |
 |                                        |
 |                                        |
 === fg ===
-|  AAAA AA AAAA AAAAA AAAAAAAAAAA        |
-|A AAAA AA AAA AAAAA                     |
+|  AAAA AA AAAA AAAAAAAAAAA              |
+|A AAAA AA AAA                           |
 |                                        |
 |                                        |
 === legend ===

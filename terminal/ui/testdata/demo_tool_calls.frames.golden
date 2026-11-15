@@ -12,18 +12,18 @@
 |  Read calculator/calc.go [8-14]                            |
 |  Read calculator/calc_test.go                              |
 |  Write calculator/divide_test.go                           |
-|  Bash go test ./calculator/... -run 'TestDivide… [exit 1]  |
+|  Bash go test [exit 1]                                     |
 |  Edit calculator/divide_test.go                            |
-|  Bash go test ./calculator/... -v                          |
-|  Bash cd calculator… [exit 1]                              |
-|  Bash gofmt -w calculator && gofmt -l calculator           |
+|  Bash go test                                              |
+|  Bash cd; test [exit 1]                                    |
+|  Bash gofmt && gofmt                                       |
 |  List calculator [interrupted]                             |
 |  List calculator                                           |
-|  Bash go test ./calculator/... -run… [timeout after 120s]  |
-|  Bash watchexec -e go -- go test ./calculato… [cancelled]  |
+|  Bash go test [timeout after 120s]                         |
+|  Bash watchexec go test [cancelled]                        |
 |  Write calculator/divide_cases_test.go                     |
-|  Bash go test ./calculator/... -run TestDivideCases -cou…  |
-|  Bash go test ./calculator/... -cover                      |
+|  Bash go test                                              |
+|  Bash go test                                              |
 |                                                            |
 === fg ===
 |  AAAA AAAAAA                                               |
@@ -39,18 +39,18 @@
 |  AAAA AAAAAAAAAAAAAAAAAA AAAAAA                            |
 |  AAAA AAAAAAAAAAAAAAAAAAAAAAA                              |
 |  AAAAA AAAAAAAAAAAAAAAAAAAAAAAAA                           |
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AAAA AAAAAAAAAAAA AAAAA AA  |
+|  AAAA AA AAAA AAAAA AA                                     |
 |  AAAA AAAAAAAAAAAAAAAAAAAAAAAAA                            |
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AA                          |
-|  AAAA AA AAAAAAAAAAA AAAAA AA                              |
-|  AAAA AAAAA AA AAAAAAAAAA AA AAAAA AA AAAAAAAAAA           |
+|  AAAA AA AAAA                                              |
+|  AAAA AAA AAAA AAAAA AA                                    |
+|  AAAA AAAAA AA AAAAA                                       |
 |  AAAA AAAAAAAAAA AAAAAAAAAAAAA                             |
 |  AAAA AAAAAAAAAA                                           |
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AAAAA AAAAAAAA AAAAA AAAAA  |
-|  AAAA AAAAAAAAA AA AA AA AA AAAA AAAAAAAAAAAA AAAAAAAAAAA  |
+|  AAAA AA AAAA AAAAAAAA AAAAA AAAAA                         |
+|  AAAA AAAAAAAAA AA AAAA AAAAAAAAAAA                        |
 |  AAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA                     |
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AAAA AAAAAAAAAAAAAAA AAAAA  |
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AAAAAA                      |
+|  AAAA AA AAAA                                              |
+|  AAAA AA AAAA                                              |
 |                                                            |
 === legend ===
 A #8a8a8a

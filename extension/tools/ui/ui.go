@@ -3,8 +3,10 @@
 // call in a ui.ToolBox; this package tells the boxes what the built-in tools'
 // calls hold, as a ui.ToolFormatter:
 //
-//   - bash: the command as a command line, and its timeout when it is not
-//     the default, never its description;
+//   - bash: in the header, the names of the commands it runs and the
+//     operators between them, as BashSummary gives them; in the details,
+//     the command as a command line, and its timeout when it is not the
+//     default; never its description;
 //   - read: the file as code in its language, and the lines it reads;
 //   - write and edit: the change as a diff;
 //   - grep: the number of matches once it completes;
@@ -22,6 +24,7 @@ import (
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/extension/tools/internal/builtin"
+	"github.com/unaquatic/flow/internal/shell"
 	"github.com/unaquatic/flow/terminal/ui"
 )
 
@@ -48,6 +51,7 @@ func (*Extension) FormatTool(call message.ToolPart) (ui.ToolView, bool) {
 	case "bash":
 		command, timeout := BashCommand(args)
 		return ui.ToolView{
+			Summary:  BashSummary(command),
 			ParamKey: "command",
 			Param:    command,
 			Shell:    true,
@@ -139,6 +143,19 @@ func BashCommand(args map[string]any) (command, note string) {
 		note = "[timeout " + builtin.FormatSeconds(timeout) + "]"
 	}
 	return command, note
+}
+
+// BashSummary returns the header's summary of command: the names of the
+// commands it runs, unexpanded, with the operators and compound commands
+// between them, as shell.Outline gives them, such as "cd && go | grep" for
+// "cd calc && go test ./... | grep -v ok". It returns "", for the header to
+// show the command's first line, for a command bash would not run.
+func BashSummary(command string) string {
+	outline, err := shell.Outline(command)
+	if err != nil {
+		return ""
+	}
+	return outline
 }
 
 // ReadLines returns the lines a read call reads, as ReadRange gives them for

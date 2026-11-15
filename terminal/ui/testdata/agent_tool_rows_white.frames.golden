@@ -1,7 +1,7 @@
 === text ===
 |■ Running the tests.                    |
 |                                        |
-|■ Bash go test ./... [exit 1]           |
+|■ Bash go test [exit 1]                 |
 |■ Read calc.go                          |
 |■ Grep Divide [1 match]                 |
 |                                        |
@@ -12,7 +12,7 @@
 === fg ===
 |A BBBBBBB BBB BBBBBB                    |
 |                                        |
-|B BBBB CC CCCC CCCCC CCCCC CC           |
+|B BBBB CC CCCC CCCCC CC                 |
 |B BBBB CCCCCCC                          |
 |B BBBB CCCCCC CC CCCCCC                 |
 |                                        |

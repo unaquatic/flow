@@ -116,6 +116,9 @@ type ToolFormatter interface {
 type ToolView struct {
 	// Label names the tool in the header, or is "" for ToolLabel's name.
 	Label string
+	// Summary, when set, sums up the input in the header in place of
+	// ToolInputSummary's first line, such as the outline of a command.
+	Summary string
 	// HeaderNote follows the summary of the input in the header, such as
 	// the lines a read reads.
 	HeaderNote string
