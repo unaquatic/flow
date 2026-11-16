@@ -128,7 +128,8 @@ type ToolView struct {
 	// Param is what the details show of ParamKey, when ParamKey is set.
 	Param string
 	// Shell shows Param as a command line, "$ command", highlighted as
-	// bash.
+	// bash, with the words that name the commands it runs in the color of
+	// functions, as ToolBox.HighlightCommand gives it.
 	Shell bool
 	// ParamInHeader keeps the summary of the input, such as a path, after
 	// the tool's name in the header while the call is expanded, rather than

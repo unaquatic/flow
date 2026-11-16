@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"iter"
 	"path"
 	"slices"
 	"strings"
@@ -143,11 +144,18 @@ func (o *OutlineBuilder) Wrapped(words []Word, depth int) string {
 		}
 		return name.Raw + " -c " + o.Script(script.Value, depth)
 	case base == "find":
-		return name.Raw + o.FindExecs(args, depth)
+		s := name.Raw
+		for action, cmd := range FindExecs(args) {
+			s += " " + action.Value + " " + o.Wrapped(cmd, depth+1)
+		}
+		return s
 	default:
 		w, ok := Wrappers[base]
 		if !ok {
-			return name.Raw + Subcommand(base, args)
+			if sub, ok := Subcommand(base, args); ok {
+				return name.Raw + " " + sub.Raw
+			}
+			return name.Raw
 		}
 		cmd, ok := w.Command(args)
 		switch {
@@ -160,23 +168,23 @@ func (o *OutlineBuilder) Wrapped(words []Word, depth int) string {
 	}
 }
 
-// Subcommand returns the subcommand of the command named base, one of
-// Subcommands, with args, its arguments, as written after a space, as
-// " commit", or "" when it names none or none is given, or the subcommand
-// is not literal. A cargo toolchain, as "+nightly", is skipped.
-func Subcommand(base string, args []Word) string {
+// Subcommand returns the word of args, the arguments of the command named
+// base, one of Subcommands, that names its subcommand, such as "commit", and
+// reports false when it names none or none is given, or the subcommand is
+// not literal. A cargo toolchain, as "+nightly", is skipped.
+func Subcommand(base string, args []Word) (Word, bool) {
 	spec, ok := Subcommands[base]
 	if !ok {
-		return ""
+		return Word{}, false
 	}
 	if base == "cargo" && len(args) > 0 && strings.HasPrefix(args[0].Value, "+") {
 		args = args[1:] // the toolchain comes first
 	}
 	rest, ok := spec.Command(args)
 	if !ok || !rest[0].Literal || strings.HasPrefix(rest[0].Value, "-") || isAssignment(rest[0].Raw) {
-		return ""
+		return Word{}, false
 	}
-	return " " + rest[0].Raw
+	return rest[0], true
 }
 
 // Command returns the command that the wrapper w runs with args, its
@@ -280,26 +288,25 @@ func JoinLiteral(words []Word) (string, bool) {
 	return strings.Join(values, " "), true
 }
 
-// FindExecs returns the commands that find, with args, its arguments, runs
-// on the files it finds, each after its action as " -exec rm", depth
-// wrappers deep, or "" when it runs none.
-func (o *OutlineBuilder) FindExecs(args []Word, depth int) string {
-	var b strings.Builder
-	for i := 0; i < len(args); i++ {
-		action := args[i].Value
-		switch action {
-		case "-exec", "-execdir", "-ok", "-okdir":
-		default:
-			continue
+// FindExecs returns an iterator over the commands that find, with args, its
+// arguments, runs on the files it finds: each action, such as -exec, and
+// the command after it, from its name on, sharing storage with args.
+func FindExecs(args []Word) iter.Seq2[Word, []Word] {
+	return func(yield func(Word, []Word) bool) {
+		for i := 0; i < len(args); i++ {
+			switch args[i].Value {
+			case "-exec", "-execdir", "-ok", "-okdir":
+			default:
+				continue
+			}
+			end := i + 1
+			for end < len(args) && args[end].Value != ";" && (args[end].Value != "+" || args[end-1].Value != "{}") {
+				end++
+			}
+			if end > i+1 && !yield(args[i], args[i+1:end]) {
+				return
+			}
+			i = end
 		}
-		end := i + 1
-		for end < len(args) && args[end].Value != ";" && (args[end].Value != "+" || args[end-1].Value != "{}") {
-			end++
-		}
-		if end > i+1 {
-			b.WriteString(" " + action + " " + o.Wrapped(args[i+1:end], depth+1))
-		}
-		i = end
 	}
-	return b.String()
 }

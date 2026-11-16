@@ -11,6 +11,7 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/style"
+	"github.com/unaquatic/fluid/syntax"
 )
 
 // TestFormatContentPart_AllPartsRenderNonEmpty checks that each listed content
@@ -324,6 +325,45 @@ func TestToolBox_CollapsedBashHeaderPlain(t *testing.T) {
 			box.SetExpanded(true)
 			if command := box.Params.Content().Chunks; !slices.ContainsFunc(command, tinted) {
 				t.Errorf("expanded command line = %+v; want some of it highlighted", command)
+			}
+		})
+	}
+}
+
+// TestToolBox_HighlightCommandWords checks that the words that name the
+// commands a command line runs, and no others, show in the color of
+// functions wherever they stand: after a wrapper, as a subcommand, in a
+// substitution or in a script, with the builtins the lexer knows and the
+// commands read before a syntax error.
+func TestToolBox_HighlightCommandWords(t *testing.T) {
+	theme := DefaultTheme()
+	box := newTestToolBox(t, message.ToolPart{Name: "bash"}, theme, theme.CodeFg)
+	fn := box.Highlighter.Styles[syntax.Function].Fg
+	tests := map[string]struct{ command, want string }{
+		"names":        {"FOO=1 go test ./... 2>&1 | grep -v ok", "FOO=1 «go» «test» ./... 2>&1 | «grep» -v ok"},
+		"keywords":     {"for f in *.go; do cd x && gofmt -l \"$f\"; done", "for f in *.go; do «cd» x && «gofmt» -l \"$f\"; done"},
+		"wrapper":      {"sudo -u root rm -rf /tmp/x", "«sudo» -u root «rm» -rf /tmp/x"},
+		"substitution": {"echo \"$(date)\" `id -u`", "«echo» \"$(«date»)\" `«id» -u`"},
+		"script":       {"bash -c 'cd app && make'\nls", "«bash» -c '«cd» app && «make»'\n«ls»"},
+		"syntax error": {"ls && echo 'x", "«ls» && «echo» 'x"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			var b strings.Builder
+			for i, line := range box.HighlightCommand(tt.command, theme.CodeFg, style.ColorTransparent) {
+				if i > 0 {
+					b.WriteByte('\n')
+				}
+				for _, span := range line.Spans {
+					if span.Fg == fn {
+						b.WriteString("«" + span.Text + "»")
+					} else {
+						b.WriteString(span.Text)
+					}
+				}
+			}
+			if got := b.String(); got != tt.want {
+				t.Errorf("HighlightCommand(%q) colors as functions %q; want %q", tt.command, got, tt.want)
 			}
 		})
 	}
