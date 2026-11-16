@@ -41,8 +41,9 @@ func names(skills []Skill) []string {
 // depth first in a root, and that the folders under it, hidden folders and
 // node_modules are not looked in; that a skill without a description is
 // left out and reported; that a name an earlier root found wins; that a
-// name the standard does not allow is reported but found; and that a root
-// that does not exist holds nothing.
+// name that breaks the standard's pattern is left out and reported, while
+// one only too long is reported but found; and that a root that does not
+// exist holds nothing.
 func TestFind(t *testing.T) {
 	root := t.TempDir()
 	user, proj := filepath.Join(root, "user"), filepath.Join(root, "proj")
@@ -54,17 +55,34 @@ func TestFind(t *testing.T) {
 	write(t, filepath.Join(user, "bare", File), "---\nname: bare\n---\nNo description.\n")
 	write(t, filepath.Join(proj, "review", File), skillFile("review", "Project review.", "Shadowed."))
 	write(t, filepath.Join(proj, "Bad_Name", File), "---\ndescription: Named by its folder.\n---\n")
+	write(t, filepath.Join(proj, "dashes", File), skillFile("-two--dashes-", "Dashes.", "Never found."))
+	long := strings.Repeat("a", MaxNameLength+1)
+	write(t, filepath.Join(proj, "long", File), skillFile(long, "Long.", "Long."))
 
 	skills, err := Find(user, proj, filepath.Join(root, "missing"))
-	if got, want := names(skills), []string{"deploy", "review", "Bad_Name"}; !slices.Equal(got, want) {
+	if got, want := names(skills), []string{"deploy", "review", long}; !slices.Equal(got, want) {
 		t.Errorf("skills = %v, want %v", got, want)
 	}
 	if s, _ := Lookup(skills, "review"); s.Description != "Review code." || s.Path != filepath.Join(user, "review", File) {
 		t.Errorf("review = %+v, want the user's", s)
 	}
-	for _, want := range []string{"bare", "no description", "name taken by", "Bad_Name", "characters other than"} {
+	for _, want := range []string{"bare", "no description", "name taken by", "Bad_Name", "characters other than", "-two--dashes-", "two in a row", "more than 64"} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("err = %v, want it to tell of %q", err, want)
+		}
+	}
+}
+
+// TestValidName checks which names follow the standard's pattern.
+func TestValidName(t *testing.T) {
+	for _, name := range []string{"pdf-tools", "a", "v2", "a-b-c"} {
+		if err := ValidName(name); err != nil {
+			t.Errorf("ValidName(%q) = %v, want nil", name, err)
+		}
+	}
+	for _, name := range []string{"-", "PDF", "pdf_tools", "pdf tools", "-pdf", "pdf-", "pdf--tools", "café"} {
+		if ValidName(name) == nil {
+			t.Errorf("ValidName(%q) = nil, want an error", name)
 		}
 	}
 }
