@@ -146,3 +146,26 @@ func TestWorkingStepHiddenExpanded(t *testing.T) {
 		t.Errorf("grouped %v, step %q; want it hidden and named", b.Grouped, cm.StepLabel())
 	}
 }
+
+// TestWorkingStepStaysHidden checks that, inline with Ctrl+O expanding the
+// steps, streaming reasoning stays held and hidden under the indicator frame
+// after frame, rather than flipping between hidden and shown.
+func TestWorkingStepStaysHidden(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.inline = true
+	msg := agentParts("a1", message.ReasoningPart{ID: "r1", Text: "Look.", StartedAt: time.Now()})
+	msg.Live = []message.PartID{"r1"}
+	ui.AddMessage(msg)
+	cm := ui.messageWidgets["a1"]
+	cm.SetHolds(true)
+	cm.SetToolsExpanded(true)
+	cm.SetWorking(true)
+	b := partBoxes(cm)[0]
+	for i := range 4 {
+		cm.SyncHeld()
+		cm.SyncRows()
+		if !b.Grouped || !b.Held || cm.StepLabel() != ThinkingLabel {
+			t.Fatalf("frame %d: grouped %v, held %v, step %q; want it held and hidden as Thinking", i, b.Grouped, b.Held, cm.StepLabel())
+		}
+	}
+}

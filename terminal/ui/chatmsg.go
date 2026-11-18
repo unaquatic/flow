@@ -952,7 +952,15 @@ func (cm *ChatMessageBox) SyncHeld() {
 		}
 		parts := seg.ContentBox.ChildrenRaw()
 		for i, w := range parts {
-			isLive := live[w] && w.LayoutNode().Visibility != layout.Gone
+			// A box that grouping hides under the indicator is still live:
+			// its own gone state says whether it takes rows, else releasing
+			// it would open it, ungroup it, and hold it again, frame after
+			// frame.
+			gone := w.LayoutNode().Visibility == layout.Gone
+			if f, ok := w.(Framed); ok {
+				gone = f.Frame().OwnGone
+			}
+			isLive := live[w] && !gone
 			switch w := w.(type) {
 			case *widget.StreamMarkdown:
 				isLive = isLive && i == len(parts)-1
