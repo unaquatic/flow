@@ -1102,21 +1102,23 @@ func TextMarkerHost(sm *widget.StreamMarkdown) *render.BaseRenderable {
 // edge of the first row of sm, a text part of a reply, in the left padding
 // before its prose, while the tool marker shows: its MarkerShape in
 // RoleMarkerFg. A part that has yet to stream any text gets none, and one the
-// reply is writing gets none while the blink hides it, as TextMarkerBlinks
-// says.
+// reply is writing shows dimmed while the blink turns it off, as
+// TextMarkerBlinks says and DimMarker draws it.
 func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMarkdown) {
 	x, y := sm.X(), sm.Y()
 	if !cm.ToolMarkers || sm.Height() == 0 || strings.TrimSpace(sm.Content()) == "" {
 		return
 	}
+	shape := cm.MarkerShape
+	fg, bg := RoleMarkerFg(cm.theme, message.RoleAgent), buf.Cell(x, y).Bg
 	if cm.TextMarkerBlinks(sm) && cm.Blink.Off {
+		DimMarker(buf, x, y, shape, fg)
 		return
 	}
-	fg, bg := RoleMarkerFg(cm.theme, message.RoleAgent), buf.Cell(x, y).Bg
-	if cm.MarkerShape.Filled() {
+	if shape.Filled() {
 		bg = fg
 	}
-	buf.SetCell(x, y, []rune(cm.MarkerShape.Glyph())[0], fg, bg, 0)
+	buf.SetCell(x, y, []rune(shape.Glyph())[0], fg, bg, 0)
 }
 
 // TextParts returns the widgets of the bubble's text parts, which

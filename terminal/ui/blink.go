@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/unaquatic/fluid/buffer"
+	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
 // BlinkInterval is how long a blinking marker shows, and then how long it is
-// hidden, while a run is in progress: the marker before the indicator's
-// time, that of a tool call that executes, and that of the text a reply is
-// writing.
+// off, showing dimmed as DimMarker draws it, while a run is in progress: the marker
+// before the indicator's time, that of a tool call that executes, and that
+// of the text a reply is writing.
 const BlinkInterval = 500 * time.Millisecond
 
 // BlinkTick is how often the blink checks whether its markers turn on or
@@ -67,11 +68,12 @@ func (b *Blink) SyncRows() {
 }
 
 // BlinkHooks returns the RenderBeforeHook and RenderAfterHook of m, a marker
-// NewMarker made, that hide it while hidden reports true: before m draws,
-// before records the background under it, and after m draws, after puts that
-// background back in its place. Only the cells m covers change, so the
-// layout stays as it is.
-func BlinkHooks(m *widget.Text, hidden func() bool) (before, after func(*buffer.Buffer, time.Duration)) {
+// NewMarker made in the shape shape returns, that turn it off while hidden
+// reports true: before m draws, before records the background under it, and
+// after m draws, after puts that background back in its place and draws the
+// marker on it dimmed, as DimMarker does. Only the cells m covers change, so
+// the layout stays as it is.
+func BlinkHooks(m *widget.Text, hidden func() bool, shape func() MarkerShape) (before, after func(*buffer.Buffer, time.Duration)) {
 	var under []buffer.Cell
 	before = func(buf *buffer.Buffer, _ time.Duration) {
 		under = under[:0]
@@ -88,6 +90,22 @@ func BlinkHooks(m *widget.Text, hidden func() bool) (before, after func(*buffer.
 		for x, cell := range under {
 			buf.FillRect(m.X()+x, m.Y(), 1, 1, cell.Bg)
 		}
+		if len(under) > 0 {
+			DimMarker(buf, m.X(), m.Y(), shape(), m.Fg())
+		}
 	}
 	return before, after
+}
+
+// DimMarker draws a marker in shape at x, y in fg, dimmed by the terminal, as
+// a blinking marker shows while the blink turns it off, over the background
+// already there: its symbol, or for a filled shape a full block, which
+// dims as a filled background cannot.
+func DimMarker(buf *buffer.Buffer, x, y int, shape MarkerShape, fg style.Color) {
+	glyph := []rune(shape.Glyph())[0]
+	if shape.Filled() {
+		glyph = '█'
+	}
+	// A transparent background keeps the one there.
+	buf.SetCell(x, y, glyph, fg, style.ColorTransparent, style.AttrDim)
 }

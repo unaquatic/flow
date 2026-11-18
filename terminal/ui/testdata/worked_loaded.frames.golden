@@ -9,13 +9,13 @@
 |                                                                                |
 |■ Cache read 1.0K write 0.2K                                                    |
 |                                                                                |
-|■ Done [42s]                                                                    |
+|■ Worked [42s]                                                                  |
 |                                                                                |
 |■ commit it                                                                     |
 |                                                                                |
 |■ Committed.                                                                    |
 |                                                                                |
-|■ Done [7s]                                                                     |
+|■ Worked [7s]                                                                   |
 |                                                                                |
 |                                                                                |
 |                                                                                |
@@ -30,13 +30,13 @@
 |                                                                                |
 |B BBBBB BBBB BBBB BBBBB BBBB                                                    |
 |                                                                                |
-|B BBBB BBBBB                                                                    |
+|B BBBBBB BBBBB                                                                  |
 |                                                                                |
 |A AAAAAA AA                                                                     |
 |                                                                                |
 |C AAAAAAAAAA                                                                    |
 |                                                                                |
-|B BBBB BBBB                                                                     |
+|B BBBBBB BBBB                                                                   |
 |                                                                                |
 |                                                                                |
 |                                                                                |

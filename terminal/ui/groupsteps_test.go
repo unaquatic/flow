@@ -54,7 +54,7 @@ func TestGroupStepsSummary(t *testing.T) {
 
 	cm.SetTurnEnd("a1", 40*time.Second, TurnDone)
 	footer := cm.segments[0].Footer
-	if got, want := footer.Text.PlainText(), "Done [40s] [ctrl+o expand]"; shown() != 0 || got != want {
+	if got, want := footer.Text.PlainText(), "Worked [40s] [ctrl+o expand]"; shown() != 0 || got != want {
 		t.Errorf("ended: %d rows shown, footer %q; want none above the footer, %q", shown(), got, want)
 	}
 	cm.SetTurnEnd("a1", 0, TurnDone)

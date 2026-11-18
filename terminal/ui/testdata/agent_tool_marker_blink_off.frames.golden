@@ -1,11 +1,16 @@
 === text ===
-|  Bash go test [executing]              |
+|■ Bash go test [executing]              |
 |■ Bash go vet                           |
 |                                        |
 |                                        |
 === fg ===
-|  AAAA AA AAAA AAAAAAAAAAA              |
+|A AAAA AA AAAA AAAAAAAAAAA              |
 |A AAAA AA AAA                           |
+|                                        |
+|                                        |
+=== attrs ===
+|D                                       |
+|                                        |
 |                                        |
 |                                        |
 === legend ===

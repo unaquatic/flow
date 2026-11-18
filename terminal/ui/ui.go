@@ -718,7 +718,8 @@ func (ui *UI) BuildUI() {
 	// padding, as a tool call's does, and blinks while the time shows.
 	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, ui.theme.TextMuted)
 	ui.indicatorMarker.SetGone(true)
-	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden)
+	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden,
+		func() MarkerShape { return ui.service.state.MarkerShape })
 	ui.indicatorRow = widget.NewBox(
 		widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
 		widget.Children(ui.indicatorMarker, ui.indicatorLabel),

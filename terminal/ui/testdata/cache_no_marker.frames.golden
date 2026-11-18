@@ -11,7 +11,7 @@
 |                                                            |
 |  Cache read 22K write 0K                                   |
 |                                                            |
-|  Done [39s]                                                |
+|  Worked [39s]                                              |
 |                                                            |
 |                                                            |
 === fg ===
@@ -27,7 +27,7 @@
 |                                                            |
 |  BBBBB BBBB BBB BBBBB BB                                   |
 |                                                            |
-|  BBBB BBBBB                                                |
+|  BBBBBB BBBBB                                              |
 |                                                            |
 |                                                            |
 === legend ===

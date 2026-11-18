@@ -535,10 +535,10 @@ func TestCacheModeSet(t *testing.T) {
 		rows   bool
 		footer string
 	}{
-		{mode: CacheOff, footer: "Done [39s]"},
-		{mode: CachePerTurn, footer: "Done [39s] [cache 18K write 0K]"},
-		{mode: CachePerMessage, rows: true, footer: "Done [39s]"},
-		{mode: CacheOff, footer: "Done [39s]"},
+		{mode: CacheOff, footer: "Worked [39s]"},
+		{mode: CachePerTurn, footer: "Worked [39s] [cache 18K write 0K]"},
+		{mode: CachePerMessage, rows: true, footer: "Worked [39s]"},
+		{mode: CacheOff, footer: "Worked [39s]"},
 	}
 	for _, tt := range tests {
 		ui.Apply(ui.service.SetCacheMode(tt.mode))

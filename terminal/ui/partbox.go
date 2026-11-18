@@ -208,7 +208,8 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 	}
 	// Header shrinks, and Status does not, when the two do not fit.
 	b.Header.SetTruncate(true)
-	b.Marker.RenderBeforeHook, b.Marker.RenderAfterHook = BlinkHooks(b.Marker, b.HideMarker)
+	b.Marker.RenderBeforeHook, b.Marker.RenderAfterHook = BlinkHooks(b.Marker, b.HideMarker,
+		func() MarkerShape { return b.MarkerShape })
 	b.Header.OnMouseDownHandler = b.OnHeaderClick
 	b.HeaderRow.OnMouseDownHandler = b.OnHeaderClick
 	b.Add(b.HeaderRow)

@@ -155,7 +155,7 @@ func checkBubbleSpacing(t *testing.T, mode CacheMode, worked bool, usage message
 		}
 		if last && worked {
 			msg.Worked = 3 * time.Second
-			want = append(want, spacedRow{Marker: "Done ["})
+			want = append(want, spacedRow{Marker: "Worked ["})
 		}
 		return msg
 	}

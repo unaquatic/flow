@@ -7,7 +7,7 @@
 |                                                            |
 |■ Fixed the divide-by-zero check.                           |
 |                                                            |
-|■ Done [39s] [cache 22K write 0K]                           |
+|■ Worked [39s] [cache 22K write 0K]                         |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -21,7 +21,7 @@
 |                                                            |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |
-|C CCCC CCCCC CCCCCC CCC CCCCC CCC                           |
+|C CCCCCC CCCCC CCCCCC CCC CCCCC CCC                         |
 |                                                            |
 |                                                            |
 |                                                            |

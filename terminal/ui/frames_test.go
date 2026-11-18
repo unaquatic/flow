@@ -626,7 +626,8 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(msg)
 		}},
 		// While a run is in progress, the marker of a call that executes
-		// blinks, here hidden, and the call that has ended keeps its own.
+		// blinks, here off, showing □ for ■, and the call that has ended
+		// keeps its own.
 		{name: "agent_tool_marker_blink_off", h: 4, add: func(ui *UI) {
 			showSteps(ui)
 			ui.blink.On.Store(true)
@@ -637,6 +638,15 @@ func TestTranscriptFrames(t *testing.T) {
 				message.ToolPart{ID: "a1-vet", CallID: "c2", Name: "bash", State: message.ToolStateCompleted{
 					Input: json.RawMessage(`{"command":"go vet ./..."}`), Output: "ok"}},
 			)
+			ui.AddMessage(msg)
+		}},
+		// The marker of the text a reply writes blinks, here off, showing ■
+		// dimmed, which the frames draw as they draw it on.
+		{name: "agent_text_marker_blink_dim", h: 4, add: func(ui *UI) {
+			ui.blink.On.Store(true)
+			ui.blink.Off = true
+			msg := agentText("a1", "Running the tests.")
+			msg.Live = []message.PartID{"a1-text"}
 			ui.AddMessage(msg)
 		}},
 		// Inline, the marker of the text a reply writes does not blink once
@@ -1234,7 +1244,7 @@ func TestIndicatorFrames(t *testing.T) {
 }
 
 // TestIndicatorBlinkFrames draws the indicator of a run in progress, whose
-// marker before the time blinks: shown, and hidden, while the time stays
+// marker before the time blinks: shown, and off, as □, while the time stays
 // where it is. The time and the hint after it stay in their own colors.
 func TestIndicatorBlinkFrames(t *testing.T) {
 	for _, tt := range []struct {
@@ -1311,7 +1321,7 @@ func TestWorkedFrames(t *testing.T) {
 			}
 		}},
 		// A turn whose run failed, or was stopped, names how it ended in
-		// place of "Done".
+		// place of "Worked".
 		{name: "worked_failed", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Running the tests.")
 			msg.Worked, msg.Outcome = 42*time.Second, TurnFailed

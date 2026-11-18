@@ -11,7 +11,7 @@ import (
 
 // FooterBox displays the footer of the reply that ends a turn as a single
 // row, cut short with an ellipsis when it does not fit: how long the turn
-// took and how it ended, such as "Done [42s]", "Error [42s]" or
+// took and how it ended, such as "Worked [42s]", "Error [42s]" or
 // "Interrupted [42s]", and then, in the CachePerTurn mode, the
 // cache use of its last request. It is hidden under the other replies, and
 // until the turn has ended. While SetMarker shows it, ToolMarker starts the
@@ -158,7 +158,7 @@ const (
 	TurnInterrupted
 )
 
-// String returns the footer's label for o: "Done", "Error", or
+// String returns the footer's label for o: "Worked", "Error", or
 // "Interrupted".
 func (o TurnOutcome) String() string {
 	switch o {
@@ -167,12 +167,12 @@ func (o TurnOutcome) String() string {
 	case TurnInterrupted:
 		return "Interrupted"
 	default:
-		return "Done"
+		return "Worked"
 	}
 }
 
 // FormatWorked returns the footer text for a turn that took d and ended as
-// outcome says, with d as FormatDuration gives it: "Done [42s]",
+// outcome says, with d as FormatDuration gives it: "Worked [42s]",
 // "Error [1m 05s]", or "Interrupted [1h 02m 05s]".
 func FormatWorked(d time.Duration, outcome TurnOutcome) string {
 	return outcome.String() + " [" + FormatDuration(d) + "]"
