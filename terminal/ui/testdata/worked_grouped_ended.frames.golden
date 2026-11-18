@@ -1,7 +1,7 @@
 === text ===
 |■ Run the tests                                                                 |
 |                                                                                |
-|■ Done [32s]                                                                    |
+|■ Done [32s] [ctrl+o expand]                                                    |
 |                                                                                |
 |                                                                                |
 |                                                                                |
@@ -10,7 +10,7 @@
 === fg ===
 |A AAA AAA AAAAA                                                                 |
 |                                                                                |
-|B BBBB BBBBB                                                                    |
+|B BBBB BBBBB BBBBBBB BBBBBBB                                                    |
 |                                                                                |
 |                                                                                |
 |                                                                                |

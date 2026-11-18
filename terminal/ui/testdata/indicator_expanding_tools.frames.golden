@@ -1,9 +1,9 @@
 === text ===
 |■ Run the tests                                                         |
 |                                                                        |
-|■ Worked                                                                |
+|■ Worked [ctrl+o expand]                                                |
 |                                                                        |
-|  Expanding                                                             |
+|■ Expanding                                                             |
 |                                                                        |
 |■                                                                       |
 |                                                                        |
@@ -15,9 +15,9 @@
 === fg ===
 |A AAA AAA AAAAA                                                         |
 |                                                                        |
-|B BBBBBB                                                                |
+|B BBBBBB BBBBBBB BBBBBBB                                                |
 |                                                                        |
-|  BBBBBBBBB                                                             |
+|B BBBBBBBBB                                                             |
 |                                                                        |
 |A                                                                       |
 |                                                                        |

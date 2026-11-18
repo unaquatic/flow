@@ -39,6 +39,7 @@ func TestFooterText(t *testing.T) {
 		name    string
 		worked  time.Duration
 		outcome TurnOutcome
+		hint    string
 		cache   string
 		want    string
 	}{
@@ -47,12 +48,13 @@ func TestFooterText(t *testing.T) {
 		{name: "cache use", worked: 39 * time.Second, cache: "[cache 22K write 0K]", want: "Done [39s] [cache 22K write 0K]"},
 		{name: "failed", worked: 42 * time.Second, outcome: TurnFailed, want: "Error [42s]"},
 		{name: "interrupted", worked: 42 * time.Second, outcome: TurnInterrupted, cache: "[cache 1K write 0K]", want: "Interrupted [42s] [cache 1K write 0K]"},
+		{name: "hint", worked: 17 * time.Second, hint: ExpandHint, cache: "[cache 1K write 0K]", want: "Done [17s] [ctrl+o expand] [cache 1K write 0K]"},
 		{name: "not the turn's end", cache: "[cache 22K write 0K]"},
 		{name: "under half a second", worked: 400 * time.Millisecond},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			text := FooterText(tt.worked, tt.outcome, tt.cache)
+			text := FooterText(tt.worked, tt.outcome, tt.hint, tt.cache)
 			if got := text.PlainText(); got != tt.want {
 				t.Errorf("FooterText(%v, %v, %q) = %q, want %q", tt.worked, tt.outcome, tt.cache, got, tt.want)
 			}

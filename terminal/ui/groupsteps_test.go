@@ -36,6 +36,9 @@ func TestGroupStepsSummary(t *testing.T) {
 		return n
 	}
 	last := boxes[len(boxes)-1]
+	if got, want := last.Summary.PlainText(), "Worked [32s] [ctrl+o expand]"; got != want {
+		t.Errorf("summary row = %q, want %q", got, want)
+	}
 	if shown() != 1 || last.SummaryText != "Worked [32s]" || !last.Summary.Visible() || last.Header.Visible() {
 		t.Fatalf("done: %d rows shown, summary %q; want the last alone, reading Worked [32s]", shown(), last.SummaryText)
 	}
@@ -50,8 +53,9 @@ func TestGroupStepsSummary(t *testing.T) {
 	}
 
 	cm.SetTurnEnd("a1", 40*time.Second, TurnDone)
-	if shown() != 0 {
-		t.Errorf("ended: %d rows shown, want none above the footer", shown())
+	footer := cm.segments[0].Footer
+	if got, want := footer.Text.PlainText(), "Done [40s] [ctrl+o expand]"; shown() != 0 || got != want {
+		t.Errorf("ended: %d rows shown, footer %q; want none above the footer, %q", shown(), got, want)
 	}
 	cm.SetTurnEnd("a1", 0, TurnDone)
 

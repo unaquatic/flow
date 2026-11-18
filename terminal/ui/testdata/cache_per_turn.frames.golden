@@ -3,7 +3,7 @@
 |                                                            |
 |■ Running the tests.                                        |
 |                                                            |
-|■ Worked                                                    |
+|■ Worked [ctrl+o expand]                                    |
 |                                                            |
 |■ Fixed the divide-by-zero check.                           |
 |                                                            |
@@ -17,7 +17,7 @@
 |                                                            |
 |B AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|C CCCCCC                                                    |
+|C CCCCCC CCCCCCC CCCCCCC                                    |
 |                                                            |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |

@@ -5,7 +5,7 @@
 |                                        |
 |■ x := 1                                |
 |                                        |
-|■ Worked                                |
+|■ Worked [ctrl+o expand]                |
 |                                        |
 |                                        |
 |                                        |
@@ -26,7 +26,7 @@
 |                                        |
 |B A AA A                                |
 |                                        |
-|C CCCCCC                                |
+|C CCCCCC CCCCCCC CCCCCCC                |
 |                                        |
 |                                        |
 |                                        |

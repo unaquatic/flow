@@ -31,6 +31,9 @@ type FooterBox struct {
 	Worked time.Duration
 	// Outcome is how the turn that the reply ends ended.
 	Outcome TurnOutcome
+	// Hint follows the time, such as ExpandHint while the footer stands for
+	// the steps above it, which it hides, or is "".
+	Hint string
 	// Cache is the cache use shown after the time, as CacheText gives it, or
 	// "".
 	Cache string
@@ -90,6 +93,15 @@ func (b *FooterBox) SetTurnEnd(worked time.Duration, outcome TurnOutcome) {
 	b.Sync()
 }
 
+// SetHint shows hint after the time, or none when hint is "".
+func (b *FooterBox) SetHint(hint string) {
+	if hint == b.Hint {
+		return
+	}
+	b.Hint = hint
+	b.Sync()
+}
+
 // SetCache shows cache, a cache use as CacheText gives it, after the time.
 // An empty cache shows none.
 func (b *FooterBox) SetCache(cache string) {
@@ -103,7 +115,7 @@ func (b *FooterBox) SetCache(cache string) {
 // Sync shows FooterText of the recorded turn and cache use, and hides the
 // row when that is empty.
 func (b *FooterBox) Sync() {
-	text := FooterText(b.Worked, b.Outcome, b.Cache)
+	text := FooterText(b.Worked, b.Outcome, b.Hint, b.Cache)
 	if len(text.Chunks) == 0 {
 		b.SetGone(true)
 		return
@@ -113,15 +125,19 @@ func (b *FooterBox) Sync() {
 }
 
 // FooterText returns the footer of a reply that ends a turn that took worked
-// and ended as outcome says: FormatWorked of both, and then, when cache is not empty, a space and
+// and ended as outcome says: FormatWorked of both, then, when hint is not
+// empty, a space and hint, and then, when cache is not empty, a space and
 // cache, all in the row's color. A time that rounds to zero seconds, as that
 // of a reply that does not end a turn or of a run that failed at once, has no
 // footer.
-func FooterText(worked time.Duration, outcome TurnOutcome, cache string) style.StyledText {
+func FooterText(worked time.Duration, outcome TurnOutcome, hint, cache string) style.StyledText {
 	if worked.Round(time.Second) <= 0 {
 		return style.StyledText{}
 	}
 	text := style.NewStyledText(style.Plain(FormatWorked(worked, outcome)))
+	if hint != "" {
+		text.Chunks = append(text.Chunks, style.Plain(" "+hint))
+	}
 	if cache != "" {
 		text.Chunks = append(text.Chunks, style.Plain(" "+cache))
 	}

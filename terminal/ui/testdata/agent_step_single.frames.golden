@@ -1,12 +1,12 @@
 === text ===
-|■ Worked [11s]                          |
+|■ Worked [11s] [ctrl+o expand]          |
 |                                        |
 |■ All tests pass.                       |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
-|A AAAAAA AAAAA                          |
+|A AAAAAA AAAAA AAAAAAA AAAAAAA          |
 |                                        |
 |B CCC CCCCC CCCCC                       |
 |                                        |

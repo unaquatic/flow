@@ -3,7 +3,7 @@
 |                                                            |
 |  Running the tests.                                        |
 |                                                            |
-|  Worked                                                    |
+|  Worked [ctrl+o expand]                                    |
 |                                                            |
 |  Cache read 18K write 4.0K                                 |
 |                                                            |
@@ -19,7 +19,7 @@
 |                                                            |
 |  AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|  BBBBBB                                                    |
+|  BBBBBB BBBBBBB BBBBBBB                                    |
 |                                                            |
 |  BBBBB BBBB BBB BBBBB BBBB                                 |
 |                                                            |

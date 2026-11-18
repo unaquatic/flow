@@ -552,7 +552,7 @@ const (
 //     StepLabel names its last step, which the indicator shows in place of
 //     "Working";
 //   - the run right above the turn's footer shows no row either, as the
-//     footer stands for it;
+//     footer stands for it, followed by ExpandHint;
 //   - any other run, even of one row, is done, and its last row shows
 //     instead what the run sums up to, as WorkedSummary gives it, such as
 //     "Worked [32s]", until a click on it opens the run, as OpenRuns
@@ -569,9 +569,10 @@ func (cm *ChatMessageBox) GroupRows() {
 	group := cm.GroupSteps && !cm.ToolsExpanded && cm.role == message.RoleAgent
 	cm.Step = nil
 	var run []*PartBox
-	flush := func(end RunEnd) {
+	// flush shows run as end says, and reports whether it hid it whole.
+	flush := func(end RunEnd) bool {
 		if len(run) == 0 {
-			return
+			return false
 		}
 		open := cm.OpenRuns[run[0]]
 		hide := group && (end == RunEndWorking || end == RunEndFooter && !open)
@@ -591,6 +592,7 @@ func (cm *ChatMessageBox) GroupRows() {
 			cm.Step = run[len(run)-1]
 		}
 		run = run[:0]
+		return hide
 	}
 	breaks := func(r render.Renderable, end RunEnd) {
 		if r.Visible() {
@@ -615,7 +617,12 @@ func (cm *ChatMessageBox) GroupRows() {
 			breaks(v, RunEndRow)
 		}
 		breaks(seg.Cache, RunEndRow)
-		breaks(seg.Footer, RunEndFooter)
+		// The footer names what Ctrl+O shows of the steps it stands for.
+		hint := ""
+		if seg.Footer.Visible() && flush(RunEndFooter) {
+			hint = ExpandHint
+		}
+		seg.Footer.SetHint(hint)
 	}
 	if cm.Working {
 		flush(RunEndWorking)

@@ -1213,7 +1213,7 @@ func TestIndicatorFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
 				State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
-		}, show: EventIndicatorShow{Text: ExpandingToolsText}},
+		}, show: EventIndicatorShow{Text: ExpandingToolsText, Marked: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

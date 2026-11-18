@@ -1,7 +1,7 @@
 === text ===
 |■ Run the tests                                                                 |
 |                                                                                |
-|■ Worked                                                                        |
+|■ Worked [ctrl+o expand]                                                        |
 |                                                                                |
 |■ Cache read 0K write 0K                                                        |
 |                                                                                |
@@ -22,7 +22,7 @@
 === fg ===
 |A AAA AAA AAAAA                                                                 |
 |                                                                                |
-|B BBBBBB                                                                        |
+|B BBBBBB BBBBBBB BBBBBBB                                                        |
 |                                                                                |
 |B BBBBB BBBB BB BBBBB BB                                                        |
 |                                                                                |

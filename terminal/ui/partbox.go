@@ -336,7 +336,7 @@ func (b *PartBox) SetNameFg(fg style.Color) {
 	}
 	b.NameFg = fg
 	StyleMarker(b.Marker, b.MarkerShape, b.MarkerColor())
-	b.Summary.SetStyledContent(style.NewStyledText(ToolNameChunk(b.SummaryText, fg)))
+	b.ShowSummary()
 	b.ShowHeader()
 }
 
@@ -442,8 +442,9 @@ func (b *PartBox) SetStatus(status string) {
 }
 
 // SetSummary shows text, the summary of the run of rows the box ends, in
-// NameFg in place of Header and Status, or, when text is "", the box's own
-// header again.
+// NameFg, and after it ExpandHint, what Ctrl+O shows of the run, in the
+// status's color, in place of Header and Status, or, when text is "", the
+// box's own header again.
 func (b *PartBox) SetSummary(text string) {
 	if text == b.SummaryText {
 		return
@@ -452,7 +453,17 @@ func (b *PartBox) SetSummary(text string) {
 	b.Header.SetGone(text != "")
 	b.Status.SetGone(text != "" || b.StatusText == "")
 	b.Summary.SetGone(text == "")
-	b.Summary.SetStyledContent(style.NewStyledText(ToolNameChunk(text, b.NameFg)))
+	b.ShowSummary()
+}
+
+// ShowSummary writes SummaryText in NameFg, and then ExpandHint in the
+// status's color.
+func (b *PartBox) ShowSummary() {
+	if b.SummaryText == "" {
+		return
+	}
+	b.Summary.SetStyledContent(style.NewStyledText(ToolNameChunk(b.SummaryText, b.NameFg),
+		style.TextChunk{Text: " " + ExpandHint, Fg: b.Status.Fg()}))
 }
 
 // SetBusy records whether the content is at work, which Marker shows by

@@ -17,7 +17,7 @@ func (ui *UI) ShowIndicator(e EventIndicatorShow) {
 	if e.Working {
 		e.Text = ui.WorkingText(e.Elapsed)
 	}
-	ui.indicatorError = e.Error
+	ui.indicatorError, ui.indicatorMarked = e.Error, e.Marked
 	ui.indicatorLabel.SetStyledContent(IndicatorText(e, ui.ErrorFg()))
 	ui.ShowIndicatorDetail(e)
 	ui.indicatorBox.SetGone(false)
@@ -121,7 +121,7 @@ func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {
 // HideIndicator dismisses the indicator.
 func (ui *UI) HideIndicator() {
 	ui.indicatorBox.SetGone(true)
-	ui.indicatorError = false
+	ui.indicatorError, ui.indicatorMarked = false, false
 	ui.SyncBlink()
 }
 
@@ -133,9 +133,9 @@ func (ui *UI) HideIndicator() {
 // transcript again.
 func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
 	content, shown, blink := ui.indicatorLabel.Content(), ui.indicatorBox.Visible(), ui.blink.On.Load()
-	wasError := ui.indicatorError
+	wasError, wasMarked := ui.indicatorError, ui.indicatorMarked
 	detail := ui.indicatorDetail != nil && ui.indicatorDetail.Visible()
-	ui.ShowIndicator(EventIndicatorShow{Text: text})
+	ui.ShowIndicator(EventIndicatorShow{Text: text, Marked: true})
 	// The blink marks the time of a run, not text.
 	ui.blink.On.Store(false)
 	ui.renderer.Render()
@@ -144,7 +144,7 @@ func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
 	if ui.indicatorDetail != nil {
 		ui.indicatorDetail.SetGone(!detail)
 	}
-	ui.indicatorError = wasError
+	ui.indicatorError, ui.indicatorMarked = wasError, wasMarked
 	ui.ShowIndicatorMarker()
 	ui.indicatorBox.SetGone(!shown)
 	ui.blink.On.Store(blink)
@@ -177,7 +177,7 @@ func (ui *UI) ShowIndicatorMarker() {
 		return
 	}
 	StyleMarker(ui.indicatorMarker, ui.service.state.MarkerShape, ui.IndicatorMarkerFg())
-	show := ui.service.state.Working || ui.indicatorError
+	show := ui.service.state.Working || ui.indicatorError || ui.indicatorMarked
 	if ui.indicatorMarker.Visible() == show {
 		return
 	}

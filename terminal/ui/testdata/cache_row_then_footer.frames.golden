@@ -1,5 +1,5 @@
 === text ===
-|■ Worked                                |
+|■ Worked [ctrl+o expand]                |
 |                                        |
 |■ Cache read 0K write 0K                |
 |                                        |
@@ -8,7 +8,7 @@
 |                                        |
 |                                        |
 === fg ===
-|A AAAAAA                                |
+|A AAAAAA AAAAAAA AAAAAAA                |
 |                                        |
 |A AAAAA AAAA AA AAAAA AA                |
 |                                        |

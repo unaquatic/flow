@@ -11,52 +11,52 @@
 |  3. Add the method and regression tests.                     |
 |  4. Run the package tests.                                   |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ The package has a source file and a test file. I'll find    |
 |  the existing methods to match their style.                  |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ Every method lives in calc.go. I'll check whether a         |
 |  divide file exists already.                                 |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ There is no divide file, so Divide belongs in calc.go.      |
 |  I'll read it.                                               |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ calc.go has no imports yet, so I'll add the import after    |
 |  the package clause.                                         |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ The method returns (float64, error) and rejects a zero      |
 |  divisor without changing the other operations. I'll check   |
 |  the existing test style before adding coverage.             |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ I'll add a separate test file for successful division and   |
 |  the zero-divisor error. The assertions will check both      |
 |  return values.                                              |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ I'll run just the new tests first.                          |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ TestDivide expected integer division, but Divide returns    |
 |  a float64. I'll fix the expectation.                        |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ I'll run the whole package with verbose output.             |
 |                                                              |
-|■ Worked                                                      |
+|■ Worked [ctrl+o expand]                                      |
 |                                                              |
 |■ The tests pass.                                             |
 |                                                              |
@@ -80,52 +80,52 @@
 |  CC AAA AAA AAAAAA AAA AAAAAAAAAA AAAAAA                     |
 |  CC AAA AAA AAAAAAA AAAAAA                                   |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAA AAAAAAA AAA A AAAAAA AAAA AAA A AAAA AAAAA AAAA AAAA    |
 |  AAA AAAAAAAA AAAAAAA AA AAAAA AAAAA AAAAAA                  |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAAAA AAAAAA AAAAA AA DDDDDDDA AAAA AAAAA AAAAAAA A         |
 |  AAAAAA AAAA AAAAAA AAAAAAAA                                 |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAAAA AA AA AAAAAA AAAAA AA DDDDDD AAAAAAA AA DDDDDDDA      |
 |  AAAA AAAA AAA                                               |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B DDDDDDD AAA AA AAAAAAA AAAA AA AAAA AAA AAA AAAAAA AAAAA    |
 |  AAA AAAAAAA AAAAAAA                                         |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAA AAAAAA AAAAAAA DDDDDDDDD DDDDDD AAA AAAAAAA A AAAA      |
 |  AAAAAAA AAAAAAA AAAAAAAA AAA AAAAA AAAAAAAAAAA AAAA AAAAA   |
 |  AAA AAAAAAAA AAAA AAAAA AAAAAA AAAAAA AAAAAAAAA             |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAAA AAA A AAAAAAAA AAAA AAAA AAA AAAAAAAAAA AAAAAAAA AAA   |
 |  AAA AAAAAAAAAAAA AAAAAA AAA AAAAAAAAAA AAAA AAAAA AAAA      |
 |  AAAAAA AAAAAAA                                              |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAAA AAA AAAA AAA AAA AAAAA AAAAAA                          |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B DDDDDDDDDD AAAAAAAA AAAAAAA AAAAAAAAA AAA DDDDDD AAAAAAA    |
 |  A DDDDDDDA AAAA AAA AAA AAAAAAAAAAAA                        |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAAA AAA AAA AAAAA AAAAAAA AAAA AAAAAAA AAAAAAA             |
 |                                                              |
-|C CCCCCC                                                      |
+|C CCCCCC CCCCCCC CCCCCCC                                      |
 |                                                              |
 |B AAA AAAAA AAAAA                                             |
 |                                                              |
