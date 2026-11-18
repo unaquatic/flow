@@ -22,8 +22,8 @@
 // It stores provider credentials and runs provider login, too. A provider
 // can have several accounts, each identified by a UUID, one of which is
 // active. The accounts saved by login live in auth.json, and an API key set
-// in the configuration or environment appears as the read-only account
-// [ConfigAccount]. [Accounts] resolves the credential of every provider
+// in the environment appears as the read-only account [ConfigAccount].
+// [Accounts] resolves the credential of every provider
 // request from scratch, from the active account. It keeps no credential in
 // memory, so a login, logout, account switch, key change, or token refresh
 // made by any process applies to the next request of every process.

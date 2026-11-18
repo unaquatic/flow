@@ -12,17 +12,17 @@ import (
 	"time"
 )
 
-// APIKeyFunc returns the API key set for provider t in the configuration or
-// environment, or "" when none is.
+// APIKeyFunc returns the API key set for provider t in the environment, or
+// "" when none is.
 type APIKeyFunc func(t ProviderID) (APIKey, error)
 
 // AccountsConfig configures an Accounts.
 type AccountsConfig struct {
 	// Store holds the accounts saved by login and SetKey.
 	Store AuthFile
-	// Keys returns the API keys set in the configuration or environment,
-	// which the config account holds. It is called whenever the accounts of
-	// a provider are read. Nil means none are set.
+	// Keys returns the API keys set in the environment, which the config
+	// account holds. It is called whenever the accounts of a provider are
+	// read. Nil means none are set.
 	Keys APIKeyFunc
 	// Flows holds the OAuth protocol of each provider that supports login.
 	Flows map[ProviderID]LoginFlow
@@ -234,7 +234,7 @@ func (s *Accounts) Use(ctx context.Context, t ProviderID, id AccountID) error {
 			return err
 		}
 		if key == "" {
-			return fmt.Errorf("%w: %s has no API key in the configuration or environment", ErrUnknownAccount, t)
+			return fmt.Errorf("%w: %s has no API key in the environment", ErrUnknownAccount, t)
 		}
 	}
 	return s.store.Update(ctx, t, func(e *AuthEntry) error {
@@ -350,15 +350,14 @@ func (s *Accounts) selected(ctx context.Context, t ProviderID) (selection, error
 	return sel, nil
 }
 
-// configKey returns the API key set for provider t in the configuration or
-// environment.
+// configKey returns the API key set for provider t in the environment.
 func (s *Accounts) configKey(t ProviderID) (APIKey, error) {
 	if s.keys == nil {
 		return "", nil
 	}
 	key, err := s.keys(t)
 	if err != nil {
-		return "", fmt.Errorf("configured %s API key: %w", t, err)
+		return "", fmt.Errorf("%s API key of the environment: %w", t, err)
 	}
 	return key, nil
 }

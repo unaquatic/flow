@@ -71,9 +71,9 @@ type App struct {
 // chooses those flow is built with.
 type Options struct {
 	// Accounts authorizes the requests of the providers, and holds their
-	// accounts. Nil makes them from the data directory, the configuration,
-	// and the environment, with the login flows that the extensions add
-	// with extension.LoginHook.
+	// accounts. Nil makes them from the data directory and the
+	// environment, with the login flows that the extensions add with
+	// extension.LoginHook.
 	Accounts *agent.Accounts
 	// Providers sends the app's model requests, and lists the catalog's
 	// models. Nil makes the providers of the catalog that the extensions

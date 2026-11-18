@@ -86,7 +86,7 @@ const (
 	// CodeEmptyKey reports an empty API key.
 	CodeEmptyKey ErrorCode = "empty_key"
 	// CodeReadOnlyAccount reports a change to the account that the
-	// configuration or environment sets.
+	// environment sets.
 	CodeReadOnlyAccount ErrorCode = "read_only_account"
 	// CodeInvalidLoginCode reports a pasted authorization result that is
 	// malformed, which can be corrected and sent again.

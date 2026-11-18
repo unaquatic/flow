@@ -230,8 +230,8 @@ type AccountStatus struct {
 	// Kind is "api_key" or "oauth".
 	Kind agent.CredentialKind `json:"kind"`
 	// Source is "config" for the read-only account, with the Nil UUID, that
-	// holds an API key set in the configuration or environment, and "store"
-	// for an account saved by login.
+	// holds an API key set in the environment, and "store" for an account
+	// saved by login.
 	Source agent.CredentialSource `json:"source"`
 }
 

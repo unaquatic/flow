@@ -15,7 +15,7 @@ import (
 )
 
 // fileMode is the permission set of a new File, private to its user because
-// files such as config.json and auth.json can hold API keys.
+// files such as auth.json hold credentials.
 const fileMode = 0o600
 
 // File is a JSON object file that processes share and change one top-level

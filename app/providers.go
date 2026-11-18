@@ -12,11 +12,10 @@ import (
 )
 
 // newAccounts returns the accounts of the providers, which authorize their
-// requests from the auth.json file in the data directory of conf, the
-// configuration's API keys and the environment variables the catalog that
-// cat returns names for each provider, all read anew for every request,
-// with the login flows that the extension.LoginHook of each of exts adds, in
-// order.
+// requests from the auth.json file in the data directory of conf and the
+// environment variables the catalog that cat returns names for each
+// provider, both read anew for every request, with the login flows that the
+// extension.LoginHook of each of exts adds, in order.
 func newAccounts(conf *config.Service, cat func() *gateway.Catalog, exts []extension.Extension) *agent.Accounts {
 	flows := make(map[agent.ProviderID]agent.LoginFlow)
 	for h := range extension.Hooks[extension.LoginHook](exts) {
@@ -24,7 +23,7 @@ func newAccounts(conf *config.Service, cat func() *gateway.Catalog, exts []exten
 	}
 	return agent.NewAccounts(agent.AccountsConfig{
 		Store: agent.AuthFile{Dir: conf.Dir},
-		Keys:  configKeys(conf, cat),
+		Keys:  envKeys(cat),
 		Flows: flows,
 	})
 }
@@ -90,21 +89,13 @@ func providerSettings(conf *config.Service) func(agent.ProviderID) agent.Setting
 	}
 }
 
-// configKeys returns an APIKeyFunc that reads the API key of a provider, on
-// every call: the configuration's, from conf, or else the first of the
-// environment variables the catalog that cat returns names for the provider that
-// holds a key and is set, as gateway.Endpoint.KeyEnv lists them, leaving
-// out a cloud resource's name and the cloud credentials that requests are signed
-// or authorized with.
-func configKeys(conf *config.Service, cat func() *gateway.Catalog) agent.APIKeyFunc {
+// envKeys returns an APIKeyFunc that reads the API key of a provider, on
+// every call: the first of the environment variables the catalog that cat
+// returns names for the provider that holds a key and is set, as
+// gateway.Endpoint.KeyEnv lists them, leaving out a cloud resource's name
+// and the cloud credentials that requests are signed or authorized with.
+func envKeys(cat func() *gateway.Catalog) agent.APIKeyFunc {
 	return func(t agent.ProviderID) (agent.APIKey, error) {
-		cfg, err := conf.Get()
-		if err != nil {
-			return "", err
-		}
-		if pc := cfg.Provider[string(t)]; pc != nil && pc.APIKey != "" {
-			return agent.APIKey(pc.APIKey), nil
-		}
 		p, ok := cat().Providers[t]
 		if !ok {
 			return "", nil

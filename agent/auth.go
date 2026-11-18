@@ -19,8 +19,8 @@ var (
 	ErrUnknownAccount = errors.New("unknown account")
 
 	// ErrReadOnlyAccount reports a change to the config account, which the
-	// configuration and environment define.
-	ErrReadOnlyAccount = errors.New("the config account is set in the configuration or environment")
+	// environment defines.
+	ErrReadOnlyAccount = errors.New("the config account is set in the environment")
 
 	// ErrNoAuthCode reports an OAuth redirect without an authorization code.
 	ErrNoAuthCode = errors.New("no authorization code")
@@ -145,7 +145,7 @@ func (p LoginPrompt) String() string {
 type AccountID string
 
 // ConfigAccount is the ID of the read-only account holding the API key set in
-// the configuration or environment: the Nil UUID, which no added account gets.
+// the environment: the Nil UUID, which no added account gets.
 const ConfigAccount AccountID = "00000000-0000-0000-0000-000000000000"
 
 // NewAccountID returns the ID of a new account, a version 7 UUID.
@@ -182,8 +182,8 @@ func (id *AccountID) UnmarshalText(text []byte) error {
 type CredentialSource string
 
 const (
-	// CredentialSourceConfig is an API key set in the configuration files or the
-	// environment, which the config account holds.
+	// CredentialSourceConfig is an API key set in the environment, which the
+	// config account holds.
 	CredentialSourceConfig CredentialSource = "config"
 	// CredentialSourceStore is a credential saved in auth.json by login or SetKey.
 	CredentialSourceStore CredentialSource = "store"
