@@ -308,7 +308,7 @@ func TestCountBelow(t *testing.T) {
 // "[queued]", and after the first, sent next, the key that sends it now.
 func TestQueueBoxes(t *testing.T) {
 	ui := newInputTestUI(t)
-	ui.ShowQueue([]string{"also update the README", "then run go vet\nand fix what it finds"})
+	ui.ShowQueue(queuedPrompts("also update the README", "then run go vet\nand fix what it finds"))
 	if got := len(ui.queueBox.Children()); got != 2 || !ui.queueBox.Visible() {
 		t.Fatalf("queue shows %d boxes, shown %v; want 2 shown", got, ui.queueBox.Visible())
 	}

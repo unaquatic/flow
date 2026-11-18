@@ -68,15 +68,19 @@ func (e *Extension) SlashCommands() []ui.SlashCommand {
 // gives it. Picked from the menu, or typed alone or with what to do after
 // it, as in "/review main.go", it sends "/skill:review main.go", which the
 // skills extension expands into the skill's instructions as the prompt is
-// sent. The UI runs it only while no other command takes its name, as
-// ui.CommandsWith leaves such a command out.
+// sent. While it waits in the queue, the queue shows it as it was typed,
+// marked Hint as in the menu: "/review [skill] main.go". The UI runs it only
+// while no other command takes its name, as ui.CommandsWith leaves such a
+// command out.
 func SkillCommand(sk skills.Skill) ui.SlashCommand {
+	name := ui.Command(sk.Name)
 	send := func(s *ui.Service, args string) []ui.UIEvent {
 		text := strings.TrimSpace(skills.CommandPrefix + sk.Name + " " + args)
-		return slices.Concat(s.QueuePrompt(text), s.SendQueued())
+		p := ui.QueuedPrompt{Text: text, Command: name, Hint: Hint, Args: args}
+		return slices.Concat(s.Enqueue(p), s.SendQueued())
 	}
 	return ui.SlashCommand{
-		Name:    ui.Command(sk.Name),
+		Name:    name,
 		Desc:    OneLine(sk.Description),
 		Hint:    Hint,
 		Run:     func(s *ui.Service) []ui.UIEvent { return send(s, "") },

@@ -36,20 +36,20 @@ type UI struct {
 	inputFooter      *widget.Box   // the row right under the input box
 	footerHints      *KeyHintsView // the open panel's keys, in the footer while KeyHintsMode is KeyHintsFooter
 	slashMenu        *widget.Select
-	slashMenuRow     *widget.Box  // slashMenu with its header and dividers, at the top of the input box
-	slashStatus      *widget.Text // the status line shown while the slash menu is open, as StatusLine gives it
-	slashStatusBox   *widget.Box  // slashStatus in a box of its own above the input box, with a gap under it
-	statusRow        *StatusRow   // the Usage box, which shows as tool calls do
-	statusHeader     *PanelHeader // the Usage box's title, with the key that pins it
-	statusBounded    bool         // reports that a short terminal leaves slashStatusBox no room
-	statusModel      string       // the model the status row names, in "provider/model:option:effort" format
-	statusUsage      SessionUsage // the token use the status row shows
-	slashHeader      *PanelHeader // the slash menu's title, which counts no rows, unlike other lists' titles
-	inputMiddleCol   *widget.Box  // middleCol of input StreamableMessageBox
-	inputContentRow  *widget.Box  // input content row used as the queue insert anchor
-	queueBox         *widget.Box  // a box for each queued prompt, above the input box
-	queuePrompts     []string     // the queued prompts, the first sent next
-	queueLimit       int          // the most queued prompts shown, or zero for all
+	slashMenuRow     *widget.Box    // slashMenu with its header and dividers, at the top of the input box
+	slashStatus      *widget.Text   // the status line shown while the slash menu is open, as StatusLine gives it
+	slashStatusBox   *widget.Box    // slashStatus in a box of its own above the input box, with a gap under it
+	statusRow        *StatusRow     // the Usage box, which shows as tool calls do
+	statusHeader     *PanelHeader   // the Usage box's title, with the key that pins it
+	statusBounded    bool           // reports that a short terminal leaves slashStatusBox no room
+	statusModel      string         // the model the status row names, in "provider/model:option:effort" format
+	statusUsage      SessionUsage   // the token use the status row shows
+	slashHeader      *PanelHeader   // the slash menu's title, which counts no rows, unlike other lists' titles
+	inputMiddleCol   *widget.Box    // middleCol of input StreamableMessageBox
+	inputContentRow  *widget.Box    // input content row used as the queue insert anchor
+	queueBox         *widget.Box    // a box for each queued prompt, above the input box
+	queuePrompts     []QueuedPrompt // the queued prompts, the first sent next
+	queueLimit       int            // the most queued prompts shown, or zero for all
 	sessionMenu      *widget.Select
 	sessionPanel     *widget.Box // session list with its header and dividers, at the top of the input box
 	sessionText      *widget.Text

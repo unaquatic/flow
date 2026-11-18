@@ -67,6 +67,25 @@ func TestSkillCommandSends(t *testing.T) {
 	}
 }
 
+// TestSkillCommandQueuesAsTyped checks that a skill's command queues its
+// prompt marked as the command that was typed, with Hint and what followed
+// it, for the queue to show as the slash menu names it.
+func TestSkillCommandQueuesAsTyped(t *testing.T) {
+	s := newTestService(t)
+	s.Commands = ui.CommandsWith([]ui.Extension{New(review)})
+	for _, tt := range []struct {
+		typed string
+		want  ui.QueuedPrompt
+	}{
+		{"/review", ui.QueuedPrompt{Text: "/skill:review", Command: "review", Hint: Hint}},
+		{"/review  check main.go", ui.QueuedPrompt{Text: "/skill:review check main.go", Command: "review", Hint: Hint, Args: "check main.go"}},
+	} {
+		if got := queuedPrompts(s.HandleSubmit(tt.typed)); !slices.Contains(got, tt.want) {
+			t.Errorf("typing %q queued %+v, want %+v", tt.typed, got, tt.want)
+		}
+	}
+}
+
 // TestSkillNeverShadowsCommand checks that a skill named as one of the UI's
 // own commands, or as one of its aliases, never runs in its place: typed
 // alone the command runs, and typed with text after it the text is sent as
@@ -110,10 +129,20 @@ func TestSkillNeverShadowsExtensionCommand(t *testing.T) {
 	}
 }
 
-// queued returns every prompt a queue change among events holds, as the
-// queue may be sent and emptied in the same events.
+// queued returns the text of every prompt a queue change among events
+// holds, as the queue may be sent and emptied in the same events.
 func queued(events []ui.UIEvent) []string {
 	var out []string
+	for _, p := range queuedPrompts(events) {
+		out = append(out, p.Text)
+	}
+	return out
+}
+
+// queuedPrompts returns every prompt a queue change among events holds, as
+// queued does.
+func queuedPrompts(events []ui.UIEvent) []ui.QueuedPrompt {
+	var out []ui.QueuedPrompt
 	for _, e := range events {
 		if q, ok := e.(ui.EventQueueChanged); ok {
 			out = append(out, q.Prompts...)

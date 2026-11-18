@@ -310,9 +310,9 @@ func TestFitInputBoxBoundsTheInput(t *testing.T) {
 // all of them once the terminal has room.
 func TestFitInputBoxBoundsTheQueue(t *testing.T) {
 	ui := newBuiltTestUI(t, true)
-	prompts := make([]string, 30)
+	prompts := make([]QueuedPrompt, 30)
 	for i := range prompts {
-		prompts[i] = fmt.Sprintf("prompt %d", i+1)
+		prompts[i] = QueuedPrompt{Text: fmt.Sprintf("prompt %d", i+1)}
 	}
 	ui.ShowQueue(prompts)
 	if got := fitInputBox(ui, 14); got > 13 {

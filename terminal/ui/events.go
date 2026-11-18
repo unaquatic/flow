@@ -213,7 +213,7 @@ type EventInlineModeSet struct {
 // removes them when Prompts is empty.
 type EventQueueChanged struct {
 	// Prompts are the queued prompts, in the order they are sent.
-	Prompts []string
+	Prompts []QueuedPrompt
 }
 
 // EventTitleSet replaces the terminal window and tab title.

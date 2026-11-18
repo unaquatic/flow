@@ -8,22 +8,54 @@ import (
 	"github.com/unaquatic/flow/app"
 )
 
+// QueuedPrompt is a prompt in the queue, waiting to be sent.
+type QueuedPrompt struct {
+	// Text is the prompt as it is sent.
+	Text string
+	// Command, when set, is the slash command that queued Text, such as a
+	// skill's /review, which sends "/skill:review". The queue shows the
+	// prompt as the command was typed, with Hint after its name as the
+	// slash menu shows it, in place of Text.
+	Command Command
+	// Hint follows Command's name in grey, as in the slash menu, such as
+	// "[skill]".
+	Hint string
+	// Args is the text typed after Command, if any.
+	Args string
+}
+
+// Typed returns p as the user typed it: Command with Args after it, or Text
+// when no command queued it.
+func (p QueuedPrompt) Typed() string {
+	if p.Command == "" {
+		return p.Text
+	}
+	return strings.TrimSpace(p.Command.String() + " " + p.Args)
+}
+
 // QueuePrompt adds text to the end of the queue, to be sent once the session
 // is free, and clears the input.
 func (s *Service) QueuePrompt(text string) []UIEvent {
-	s.state.Queue = append(s.state.Queue, text)
+	return s.Enqueue(QueuedPrompt{Text: text})
+}
+
+// Enqueue adds p to the end of the queue, to be sent once the session is
+// free, and clears the input, as QueuePrompt does for a prompt shown as it
+// is sent.
+func (s *Service) Enqueue(p QueuedPrompt) []UIEvent {
+	s.state.Queue = append(s.state.Queue, p)
 	return slices.Concat(s.ClearInput(), s.QueueChanged())
 }
 
 // UnqueueLast takes the prompt queued last back out of the queue and puts it
-// in the input, as it was before it was queued, leaving the run in progress
-// going. An emptied queue is no longer paused.
+// in the input, as it was typed before it was queued, as Typed gives it,
+// leaving the run in progress going. An emptied queue is no longer paused.
 func (s *Service) UnqueueLast() []UIEvent {
 	n := len(s.state.Queue)
 	if n == 0 {
 		return nil
 	}
-	text := s.state.Queue[n-1]
+	text := s.state.Queue[n-1].Typed()
 	s.state.Queue = slices.Delete(s.state.Queue, n-1, n)
 	if len(s.state.Queue) == 0 {
 		s.state.QueuePaused = false
@@ -44,7 +76,7 @@ func (s *Service) SendQueued() []UIEvent {
 	if len(s.state.Queue) == 0 || s.state.QueuePaused || s.state.MovesPending > 0 || s.Streaming() {
 		return nil
 	}
-	if err := s.SendPrompt(s.state.Queue[0]); err != nil {
+	if err := s.SendPrompt(s.state.Queue[0].Text); err != nil {
 		s.state.QueuePaused = true
 		return s.ShowError(app.ErrorOf(err))
 	}
@@ -99,7 +131,7 @@ func (s *Service) HandleSendNow(text string) []UIEvent {
 		return s.HandleSubmit(text)
 	}
 	s.Stop()
-	s.state.Queue = slices.Insert(s.state.Queue, 0, text)
+	s.state.Queue = slices.Insert(s.state.Queue, 0, QueuedPrompt{Text: text})
 	s.state.QueuePaused = false
 	return slices.Concat(s.ClearInput(), s.QueueChanged(), s.SendQueued())
 }
