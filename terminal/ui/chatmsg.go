@@ -566,7 +566,8 @@ const (
 // calls, which shows them collapsed only while inline holds them, as
 // SyncHeld does.
 func (cm *ChatMessageBox) GroupRows() {
-	group := cm.GroupSteps && !cm.ToolsExpanded && cm.role == message.RoleAgent
+	steps := cm.GroupSteps && cm.role == message.RoleAgent
+	group := steps && !cm.ToolsExpanded
 	cm.Step = nil
 	var run []*PartBox
 	// flush shows run as end says, and reports whether it hid it whole.
@@ -575,7 +576,10 @@ func (cm *ChatMessageBox) GroupRows() {
 			return false
 		}
 		open := cm.OpenRuns[run[0]]
-		hide := group && (end == RunEndWorking || end == RunEndFooter && !open)
+		// The step at work hides under the indicator, which names it, while
+		// Ctrl+O expands the steps too: inline holds it as a row until it
+		// ends, and it would blink beside the indicator's marker.
+		hide := steps && end == RunEndWorking || group && end == RunEndFooter && !open
 		summarize := group && !hide && end == RunEndRow && !open
 		for i, b := range run {
 			last := i == len(run)-1
@@ -629,6 +633,21 @@ func (cm *ChatMessageBox) GroupRows() {
 	} else {
 		flush(RunEndRow)
 	}
+}
+
+// StepStart returns when the step at work that the bubble hides began, as
+// its Span gives it, or zero while it hides none or its start is not known,
+// as before a tool call runs.
+func (cm *ChatMessageBox) StepStart() time.Time {
+	if cm.Step == nil {
+		return time.Time{}
+	}
+	t, ok := cm.Step.Content.(Timed)
+	if !ok {
+		return time.Time{}
+	}
+	start, _ := t.Span()
+	return start
 }
 
 // StepLabel returns the header of the step at work that the bubble hides, as

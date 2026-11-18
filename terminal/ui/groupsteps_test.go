@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,5 +114,35 @@ func TestReasoningLabel(t *testing.T) {
 	b.SetBusy(false)
 	if got := b.Header.PlainText(); got != ReasonedLabel {
 		t.Errorf("ended again: header %q, want %q", got, ReasonedLabel)
+	}
+}
+
+// TestWorkingTextStepTime checks that the indicator times the step at work
+// from its own start, not the turn's.
+func TestWorkingTextStepTime(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.AddMessage(agentParts("a1", message.ReasoningPart{ID: "r1", Text: "Look.",
+		StartedAt: time.Now().Add(-4 * time.Second), EndedAt: time.Now()}))
+	cm := ui.messageWidgets["a1"]
+	cm.SetWorking(true)
+	if got := ui.WorkingText(26 * time.Second); !strings.HasSuffix(got, " [4s]") {
+		t.Errorf("step at work: %q, want its own 4s", got)
+	}
+}
+
+// TestWorkingStepHiddenExpanded checks that, while Ctrl+O expands the steps,
+// a step at work shown as a row, as inline holds a live one, still hides
+// under the indicator, which names it.
+func TestWorkingStepHiddenExpanded(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.AddMessage(agentParts("a1", message.ToolPart{ID: "c1", CallID: "c1", Name: "bash", State: message.ToolStateRunning{
+		Input: json.RawMessage(`{"command":"go test ./...","description":"Run the tests"}`)}}))
+	cm := ui.messageWidgets["a1"]
+	cm.SetToolsExpanded(true)
+	b := partBoxes(cm)[0]
+	b.SetHeld(true)
+	cm.SetWorking(true)
+	if !b.Grouped || cm.StepLabel() != "Run the tests" {
+		t.Errorf("grouped %v, step %q; want it hidden and named", b.Grouped, cm.StepLabel())
 	}
 }

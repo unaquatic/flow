@@ -27,13 +27,18 @@ func (ui *UI) ShowIndicator(e EventIndicatorShow) {
 
 // WorkingText returns the indicator's text for the turn in progress, which
 // has taken elapsed so far: the step at work, which the transcript hides as
-// ChatMessageBox.GroupRows does, and then the time, such as
-// "Run the tests [4s]", or FormatWorking's "Working [4s]" while no step is
-// hidden.
+// ChatMessageBox.GroupRows does, and then how long that step has taken, such
+// as "Thinking [4s]", or the turn's elapsed when the step's start is not
+// known; or FormatWorking's "Working [26s]", the turn's time, while no step
+// is hidden.
 func (ui *UI) WorkingText(elapsed time.Duration) string {
 	for cm := range ui.Bubbles() {
 		if label := cm.StepLabel(); cm.Working && label != "" {
-			return label + " [" + FormatDuration(elapsed) + "]"
+			took := elapsed
+			if start := cm.StepStart(); !start.IsZero() {
+				took = time.Since(start)
+			}
+			return label + " [" + FormatDuration(took) + "]"
 		}
 	}
 	return FormatWorking(elapsed)
