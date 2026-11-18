@@ -1,0 +1,38 @@
+=== text ===
+|■ Run all tests                                             |
+|                                                            |
+|  $ go test ./...                                           |
+|                                                            |
+|  ok      pkg/0                                             |
+|  ok      pkg/1                                             |
+|  ok      pkg/2                                             |
+|  ok      pkg/3                                             |
+|  ok      pkg/4                                             |
+|  ok      pkg/5                                             |
+|  ok      pkg/6                                             |
+|                                                            |
+|  [truncated]                                               |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|A AAA AAA AAAAA                                             |
+|                                                            |
+|  B CC CCCC BBBBB                                           |
+|                                                            |
+|  BB      BBBBB                                             |
+|  BB      BBBBB                                             |
+|  BB      BBBBB                                             |
+|  BB      BBBBB                                             |
+|  BB      BBBBB                                             |
+|  BB      BBBBB                                             |
+|  BB      BBBBB                                             |
+|                                                            |
+|  AAAAAAAAAAA                                               |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #ffb642

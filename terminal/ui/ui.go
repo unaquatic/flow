@@ -143,6 +143,10 @@ type UI struct {
 
 	// fitHeight is the terminal height the input box was last fitted to.
 	fitHeight int
+	// restHeight is the terminal height restInputRows was taken at, and
+	// restInputRows the fewest rows the input box has taken since, as
+	// RestInputRows records them.
+	restHeight, restInputRows int
 	// liveReserve is the rows FitInputBox last kept for the live rows of
 	// the transcript, as ReserveLiveRows keeps them.
 	liveReserve int
