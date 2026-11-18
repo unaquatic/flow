@@ -399,7 +399,7 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_error", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Reading the file.")
 			ui.AddMessage(msg)
-			msg.Error = errors.New("connection reset by peer")
+			msg.Error = new(app.ErrorOf(errors.New("connection reset by peer")))
 			ui.UpdateMessage(msg)
 		}},
 		// An error response reads as the indicator shows it: the provider
@@ -408,8 +408,8 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_response_error", h: 14, add: func(ui *UI) {
 			msg := agentText("a1", "Reading the file.")
 			ui.AddMessage(msg)
-			msg.Error = &agent.ResponseError{Provider: "gw", StatusCode: 401,
-				ResponseBody: `{"error":{"type":"authentication_error","message":"invalid key"}}`}
+			msg.Error = new(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 401,
+				ResponseBody: `{"error":{"type":"authentication_error","message":"invalid key"}}`}))
 			ui.UpdateMessage(msg)
 		}},
 		// The system message a session opens with shows above its first
@@ -1284,6 +1284,28 @@ func TestWorkedFrames(t *testing.T) {
 				app.EventMessageStarted{EventBase: at(time.Second), Message: app.Message{Content: reply}},
 				app.EventMessageEnded{EventBase: at(65 * time.Second), Message: app.Message{Content: done}},
 				app.EventAgentEnded{EventBase: at(65 * time.Second)},
+			} {
+				ui.Apply(ui.service.ApplyAgentEvent(ev))
+			}
+		}},
+		// A run that fails shows its error in its last reply, the body
+		// right under its line, and then the footer that names the turn as
+		// failed, the indicator showing nothing.
+		{name: "worked_run_failed", h: 14, add: func(ui *UI) {
+			prompt := message.Content{ID: "u1", Role: message.RoleUser,
+				Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "Run the tests"}}}
+			reply := message.Content{ID: "a1", Role: message.RoleAgent, Provider: "provider", Model: "model"}
+			partial := reply
+			partial.Parts = []message.ContentPart{message.TextPart{ID: "a1-text", Text: "Running the tests."}}
+			failed := app.ErrorOf(&agent.ResponseError{Provider: "provider-a", StatusCode: 529,
+				ResponseBody: `{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}`})
+			for _, ev := range []app.Event{
+				app.EventAgentStarted{EventBase: at(0)},
+				app.EventMessageStarted{EventBase: at(0), Message: app.Message{Content: prompt}},
+				app.EventMessageEnded{EventBase: at(0), Message: app.Message{Content: prompt}},
+				app.EventMessageStarted{EventBase: at(time.Second), Message: app.Message{Content: reply}},
+				app.EventMessageEnded{EventBase: at(112 * time.Second), Message: app.Message{Content: partial}},
+				app.EventAgentEnded{EventBase: at(112 * time.Second), Error: &failed},
 			} {
 				ui.Apply(ui.service.ApplyAgentEvent(ev))
 			}

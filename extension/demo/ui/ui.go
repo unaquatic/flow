@@ -145,7 +145,7 @@ const MessageErrorText = "Reading the file."
 // its text. The reply is not stored in the session.
 func ShowMessageError(s *ui.Service) []ui.UIEvent {
 	id := message.NewID()
-	msg := ui.ChatMessage{ID: id, Role: message.RoleAgent, Provider: demo.Provider, Model: demo.ModelName, Error: demo.KeyExpiredError()}
+	msg := ui.ChatMessage{ID: id, Role: message.RoleAgent, Provider: demo.Provider, Model: demo.ModelName, Error: new(app.ErrorOf(demo.KeyExpiredError()))}
 	// The error shows once the message updates, as its first part does.
 	text := message.TextPart{ID: message.NewPartID(), Text: MessageErrorText}
 	return append(s.AddMessage(msg), s.ApplyPart(id, text, false)...)

@@ -332,7 +332,7 @@ func TestSnapshotPatchBounds(t *testing.T) {
 
 	// The inline test UI has no slash menu to show the turn's time in, so
 	// only the update of the reply that ends the turn applies.
-	for _, ev := range u.Service().EndTurn(time.Now(), ui.TurnDone) {
+	for _, ev := range u.Service().EndTurn(time.Now(), ui.TurnDone, nil) {
 		if up, ok := ev.(ui.EventMessageUpdated); ok {
 			u.UpdateMessage(up.Msg)
 		}

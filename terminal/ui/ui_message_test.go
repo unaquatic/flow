@@ -112,9 +112,9 @@ func TestMessageErrorKeepsOneView(t *testing.T) {
 	ui := newInlineTestUI(t)
 	msg := agentText("a1", "Reading the file.")
 	ui.AddMessage(msg)
-	msg.Error = errors.New("connection reset by peer")
+	msg.Error = new(app.ErrorOf(errors.New("connection reset by peer")))
 	ui.UpdateMessage(msg)
-	msg.Error = &agent.ResponseError{Provider: "gw", StatusCode: 401, ResponseBody: `{"error":"bad key"}`}
+	msg.Error = new(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 401, ResponseBody: `{"error":"bad key"}`}))
 	ui.UpdateMessage(msg)
 
 	var views []*ErrorView

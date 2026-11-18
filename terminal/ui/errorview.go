@@ -16,12 +16,12 @@ const TypeError message.ContentType = "error"
 // most, which each update of the message replaces.
 const ErrorPartID message.PartID = "error"
 
-// ErrorPart is the error a message failed with, which UpdateMessage shows
-// after the message's parts, in an ErrorView. It is not stored with the
-// message.
+// ErrorPart is the error a message failed with, which shows after the
+// message's parts, as ChatMessage.ShownParts puts it, in an ErrorView. It is
+// not stored with the message.
 type ErrorPart struct {
 	// Err is the error the message failed with.
-	Err error
+	Err app.Error
 }
 
 // PartType returns TypeError.
@@ -94,10 +94,10 @@ func NewErrorView(p ErrorPart, theme *style.Theme, shape MarkerShape) *ErrorView
 // SetPart shows part, when it is an ErrorPart.
 func (v *ErrorView) SetPart(part message.ContentPart) {
 	p, ok := part.(ErrorPart)
-	if !ok || p.Err == nil {
+	if !ok {
 		return
 	}
-	ind := ErrorIndicator(app.ErrorOf(p.Err))
+	ind := ErrorIndicator(p.Err)
 	v.Label.SetStyledContent(IndicatorText(ind, v.Theme.Danger))
 	v.Detail.SetGone(ind.Detail == "")
 	if ind.Detail != "" {

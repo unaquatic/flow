@@ -197,17 +197,17 @@ func TestLoadPatch_ReadsOnce(t *testing.T) {
 }
 
 // TestPatchHeader checks that a step's changes are headed like a tool call,
-// by "Diff", not bold, in the color of a panel's title, without brackets,
+// by "Changed", not bold, in the color of a panel's title, without brackets,
 // and counted as the notice of a history move counts them, in the same
 // colors.
 func TestPatchHeader(t *testing.T) {
 	header := PatchHeader(DiffStat{Files: 1, Additions: 0, Deletions: 205})
-	if got, want := header.PlainText(), "Diff 1 file  +0 -205"; got != want {
+	if got, want := header.PlainText(), "Changed 1 file  +0 -205"; got != want {
 		t.Fatalf("header = %q, want %q", got, want)
 	}
 	name := header.Chunks[0]
-	if title := ui.TitleChunk(PatchTitle); name.Text != "Diff" || name.Attributes&style.AttrBold != 0 || name.Fg != title.Fg {
-		t.Errorf("name = %+v, want \"Diff\", not bold, in the title color", name)
+	if title := ui.TitleChunk(PatchTitle); name.Text != "Changed" || name.Attributes&style.AttrBold != 0 || name.Fg != title.Fg {
+		t.Errorf("name = %+v, want \"Changed\", not bold, in the title color", name)
 	}
 	notice := ui.BuildDiffToastLines([]app.FileDiff{{File: "/abs/x.go", Deletions: 205}})[0]
 	fgs := func(chunks []style.TextChunk) []style.Color {

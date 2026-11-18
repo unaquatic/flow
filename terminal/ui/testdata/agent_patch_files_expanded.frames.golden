@@ -1,7 +1,7 @@
 === text ===
 |■ Updated the calculator.               |
 |                                        |
-|■ Diff                                  |
+|■ Changed                               |
 |  2 files  +2 -1                        |
 |                                        |
 |  calc.go  +2 -0                        |
@@ -20,7 +20,7 @@
 === fg ===
 |A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
-|B BBBB                                  |
+|B BBBBBBB                               |
 |  B BBBBB  CC DD                        |
 |                                        |
 |  BBBBBBB  CC DD                        |

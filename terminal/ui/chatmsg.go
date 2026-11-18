@@ -774,7 +774,9 @@ func (cm *ChatMessageBox) BuildSegment(msg ChatMessage) *MessageSegment {
 			widget.Children(append(children, cache, footer)...),
 		),
 	}
-	for _, part := range msg.Parts {
+	// A failed message rebuilt, as Ctrl+O or /config rebuild the transcript,
+	// shows its error again.
+	for _, part := range msg.ShownParts() {
 		sm := cm.NewContentPart(part)
 		contentBox.AddPart(part, sm)
 		if id := string(part.PartID()); id != "" {

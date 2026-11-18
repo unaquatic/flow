@@ -134,6 +134,78 @@ func TestTurnWorked(t *testing.T) {
 	}
 }
 
+// TestTurnFailedError checks where the error a run ends with shows: in the
+// reply that ends its turn, after its parts and so above the footer that
+// names the turn as failed, with the indicator hidden, or, when the run
+// added no reply to show it in, in the indicator.
+func TestTurnFailedError(t *testing.T) {
+	failed := &app.Error{Code: app.CodeProviderError, Message: "provider-a response error (400)",
+		Provider: "provider-a", Status: 400, Body: `{"error":"bad request"}`}
+	tests := []struct {
+		name   string
+		events []app.Event
+		// reply is the reply that shows the error, or "" for the indicator.
+		reply message.ID
+	}{
+		{name: "after a reply", reply: "a1", events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			openReply("a1", time.Second),
+			app.EventAgentEnded{EventBase: at(112 * time.Second), Error: failed},
+		}},
+		{name: "before a reply", events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			app.EventAgentEnded{EventBase: at(time.Second), Error: failed},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{state: &UIState{}}
+			var out []UIEvent
+			for _, ev := range tt.events {
+				out = s.ApplyAgentEvent(ev)
+			}
+			var updated *ChatMessage
+			var shown *EventIndicatorShow
+			hidden := false
+			for _, ev := range out {
+				switch e := ev.(type) {
+				case EventMessageUpdated:
+					updated = &e.Msg
+				case EventIndicatorShow:
+					shown = &e
+				case EventIndicatorHide:
+					hidden = true
+				}
+			}
+			if tt.reply == "" {
+				if updated != nil {
+					t.Errorf("the run's end updated reply %s, want none", updated.ID)
+				}
+				if want := ErrorIndicator(*failed); shown == nil || *shown != want {
+					t.Errorf("indicator = %+v, want %+v", shown, want)
+				}
+				return
+			}
+			if shown != nil || !hidden {
+				t.Errorf("indicator shows %+v (hidden %v), want it hidden", shown, hidden)
+			}
+			if updated == nil || updated.ID != tt.reply {
+				t.Fatalf("the run's end updated %+v, want reply %s", updated, tt.reply)
+			}
+			parts := updated.ShownParts()
+			if len(parts) == 0 || parts[len(parts)-1] != (ErrorPart{Err: *failed}) {
+				t.Errorf("reply %s shows %+v, want its error last", tt.reply, parts)
+			}
+			// The transcript records the error, so a rebuild shows it again.
+			if m := s.state.Messages[len(s.state.Messages)-1]; m.Error == nil || *m.Error != *failed {
+				t.Errorf("reply %s records error %+v, want %+v", tt.reply, m.Error, failed)
+			}
+		})
+	}
+}
+
 // TestTurnWorkedSessionSet checks that a run whose start came before its
 // session was made active, as one still ending in a session the terminal
 // opens, shows no time.

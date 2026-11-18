@@ -263,20 +263,16 @@ func (ui *UI) Bubbles() iter.Seq[*ChatMessageBox] {
 }
 
 // UpdateMessage applies the latest parts, which of them are live, and usage,
-// shows the message in the views extensions show under it, and appends any
-// error as an ErrorPart, which reads as the indicator's error does. A zero
-// Usage leaves the usage shown unchanged, since only the end of a message
-// carries it.
+// shows the message in the views extensions show under it, and shows any
+// error after its parts, as ShownParts gives them, which reads as the
+// indicator's error does. A zero Usage leaves the usage shown unchanged,
+// since only the end of a message carries it.
 func (ui *UI) UpdateMessage(msg ChatMessage) {
 	cm, ok := ui.messageWidgets[msg.ID]
 	if !ok {
 		return
 	}
-	parts := msg.Parts
-	if msg.Error != nil {
-		parts = append(slices.Clip(parts), ErrorPart{Err: msg.Error})
-	}
-	cm.SetSegmentParts(msg.ID, parts)
+	cm.SetSegmentParts(msg.ID, msg.ShownParts())
 	cm.SetSegmentLive(msg.ID, msg.Live)
 	cm.SetSegmentMessage(msg)
 	if msg.Usage != (message.Usage{}) {

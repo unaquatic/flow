@@ -42,8 +42,10 @@ type ChatMessage struct {
 	// the reply the turn's footer shows under. It is false for a prompt and
 	// while the turn is still running.
 	EndsTurn bool
-	// Error is an optional failure rendered with the message.
-	Error error
+	// Error is the error the message failed with, such as the one its run
+	// ended with, which shows after its parts, as ShownParts gives them, or
+	// is nil. It is not stored with the message.
+	Error *app.Error
 	// Provider is the provider of the model variant that produced the
 	// message, or that a prompt was sent to, as [message.Content.Provider]
 	// names it.
@@ -116,6 +118,17 @@ const (
 // HasParent reports whether the message belongs to another message's bubble.
 func (m ChatMessage) HasParent() bool {
 	return m.ParentID != "" && m.ParentID != m.ID
+}
+
+// ShownParts returns the parts the message shows: its Parts, then, when it
+// failed, an ErrorPart of its Error, so that the error shows after them and
+// above the footer of the turn the message ends. The slice shares storage
+// with Parts; appending the ErrorPart copies it.
+func (m ChatMessage) ShownParts() []message.ContentPart {
+	if m.Error == nil {
+		return m.Parts
+	}
+	return append(slices.Clip(m.Parts), ErrorPart{Err: *m.Error})
 }
 
 // Variant returns the model variant that produced the message, or that a

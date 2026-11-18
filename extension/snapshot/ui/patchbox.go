@@ -278,12 +278,12 @@ func GitDiffPath(rest string) string {
 
 // PatchTitle names the changes of a turn. The notice of a
 // history move names its changes ui.ChangesTitle instead.
-const PatchTitle = "Diff"
+const PatchTitle = "Changed"
 
 // PatchHeader summarizes st for a collapsed patch row, as a tool call's
 // header names its call: PatchTitle as ui.TitleChunk gives it, and then the
 // files changed as a history move's notice counts them, such as
-// "Diff 2 files  +15 -5".
+// "Changed 2 files  +15 -5".
 func PatchHeader(st DiffStat) style.StyledText {
 	chunks := append([]style.TextChunk{ui.TitleChunk(PatchTitle), style.Plain(" ")}, ui.DiffSummary(st.Files, st.Additions, st.Deletions)...)
 	return style.NewStyledText(chunks...)
