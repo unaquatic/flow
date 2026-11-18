@@ -276,8 +276,8 @@ func GitDiffPath(rest string) string {
 	return strings.TrimPrefix(rest, "a/")
 }
 
-// PatchTitle names the changes of a turn. The notice of a
-// history move names its changes ui.ChangesTitle instead.
+// PatchTitle names the changes of a turn. The notice of a history move is
+// headed by the move's name instead, as ui.MoveLines gives it.
 const PatchTitle = "Changed"
 
 // PatchHeader summarizes st for a collapsed patch row, as a tool call's

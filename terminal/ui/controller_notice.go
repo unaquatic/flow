@@ -149,19 +149,8 @@ func ModelNoticeLine(before, name string, provider agent.ProviderID, after strin
 	return style.NewStyledText(append(chunks, style.Plain(after))...)
 }
 
-// NoFileChangesText is the notice of a history move that changed no file.
-const NoFileChangesText = "No file changes"
-
-// ChangesTitle heads the summary of the files a history move changed while
-// prompts show in PromptBar, when the move checked nothing out.
-const ChangesTitle = "Changes"
-
-// ShortRefLen is how many characters of what a history move checked out,
-// such as a snapshot's hash, MoveTitle shows.
-const ShortRefLen = 8
-
-// The words that name a history move in the title of its notice, as
-// MoveTitle puts them: UndoVerb for /undo, RedoVerb for /redo, and
+// The words that name a history move at the start of its notice, as
+// MoveLines puts them: UndoVerb for /undo, RedoVerb for /redo, and
 // CheckoutVerb for a move to a message chosen in the session tree.
 const (
 	UndoVerb     = "Undo"
@@ -169,36 +158,29 @@ const (
 	CheckoutVerb = "Checkout"
 )
 
-// MoveTitle returns the title of the notice of a history move that verb
-// names and that checked out ref: the first ShortRefLen characters of ref in
-// brackets after verb, such as "Undo [c1d2e3f4]", or ChangesTitle when ref
-// is empty.
-func MoveTitle(verb, ref string) string {
-	if ref == "" {
-		return ChangesTitle
-	}
-	return verb + " [" + ref[:min(len(ref), ShortRefLen)] + "]"
-}
-
 // ShowDiffToast returns the notice of a move to a message chosen in the
 // session tree, as ShowMoveNotice shows it under CheckoutVerb.
 func (s *Service) ShowDiffToast(moved app.MoveResult) []UIEvent {
 	return s.ShowMoveNotice(CheckoutVerb, moved)
 }
 
-// ShowMoveNotice returns a transcript notice summarizing the files a history
-// move changed, titled MoveTitle of verb, which names the move, and of what
-// it checked out, or saying that it changed none: a single line when it
-// checked nothing out either, and under the title otherwise.
+// ShowMoveNotice returns a transcript notice of the files a history move
+// changed, headed by verb, which names the move, as MoveLines gives it.
 func (s *Service) ShowMoveNotice(verb string, moved app.MoveResult) []UIEvent {
-	title := MoveTitle(verb, moved.Checkout)
-	switch {
-	case len(moved.Files) > 0:
-		return s.AddNotice(Notice{Lines: BuildDiffToastLines(moved.Files), Title: title})
-	case moved.Checkout != "":
-		return s.AddNotice(Notice{Text: NoFileChangesText, Title: title})
+	return s.AddNotice(Notice{Lines: MoveLines(verb, moved.Files)})
+}
+
+// MoveLines returns the notice of a history move that verb names and that
+// changed files: verb and their summary on its first line, such as
+// "Undo 6 files  +293 -4", or "Undo 0 files" when it changed none, and then
+// a line for each file, as BuildDiffToastLines gives them.
+func MoveLines(verb string, files []app.FileDiff) []style.StyledText {
+	if len(files) == 0 {
+		return []style.StyledText{style.NewStyledText(style.Plain(verb + " 0 files"))}
 	}
-	return s.ShowToast(NoFileChangesText)
+	lines := BuildDiffToastLines(files)
+	lines[0].Chunks = append([]style.TextChunk{style.Plain(verb + " ")}, lines[0].Chunks...)
+	return lines
 }
 
 // DiffAddFg and DiffDelFg color the counts of added and deleted lines in a

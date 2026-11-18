@@ -60,40 +60,38 @@ func TestBuildDiffToastLines_SingleFileSingularLabel(t *testing.T) {
 }
 
 // TestCompleteUndoRedo checks that undo and redo report the files they
-// changed without wording before them, titled by their own name and the
-// short form of what they checked out, and say when they changed none: under that title when they
-// checked something out, and on a line of its own otherwise.
+// changed in a notice headed by their own name and the summary, without the
+// hash they checked out, and with "0 files" when they changed none.
 func TestCompleteUndoRedo(t *testing.T) {
 	const tree = "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0"
 	files := []app.FileDiff{{File: "/abs/x.go", Additions: 205, Status: "deleted"}}
 	for _, tt := range []struct {
 		name     string
 		complete func(*Service, app.MoveResult, error) []UIEvent
-		title    string
+		verb     string
 	}{
-		{"undo", (*Service).CompleteUndo, "Undo [c1d2e3f4]"},
-		{"redo", (*Service).CompleteRedo, "Redo [c1d2e3f4]"},
+		{"undo", (*Service).CompleteUndo, UndoVerb},
+		{"redo", (*Service).CompleteRedo, RedoVerb},
 	} {
 		complete := tt.complete
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Service{state: &UIState{}}
-			out := complete(s, app.MoveResult{Files: files, Checkout: tree}, nil)
-			toast, ok := toastOf(out[0])
-			if len(out) != 1 || !ok || len(toast.Lines) == 0 {
-				t.Fatalf("events = %#v, want one file summary", out)
-			}
-			if got, want := toast.Lines[0].PlainText(), "1 file  +205 -0"; got != want {
-				t.Errorf("summary = %q, want %q", got, want)
-			}
-			if got, want := toast.Title, tt.title; got != want {
-				t.Errorf("title = %q, want %q", got, want)
-			}
-			want := []UIEvent{noticeAdded(Notice{Text: NoFileChangesText, Title: tt.title})}
-			if got := complete(s, app.MoveResult{Checkout: tree}, nil); !sameEvents(got, want) {
-				t.Errorf("no files = %#v, want %q under the title", got, NoFileChangesText)
-			}
-			if got := complete(s, app.MoveResult{}, nil); !sameEvents(got, []UIEvent{noticeAdded(Notice{Text: NoFileChangesText})}) {
-				t.Errorf("nothing checked out = %#v, want %q", got, NoFileChangesText)
+			for _, c := range []struct {
+				moved app.MoveResult
+				want  string
+			}{
+				{app.MoveResult{Files: files, Checkout: tree}, tt.verb + " 1 file  +205 -0"},
+				{app.MoveResult{Checkout: tree}, tt.verb + " 0 files"},
+				{app.MoveResult{}, tt.verb + " 0 files"},
+			} {
+				out := complete(s, c.moved, nil)
+				notice, ok := toastOf(out[0])
+				if len(out) != 1 || !ok || len(notice.Lines) == 0 {
+					t.Fatalf("events = %#v, want one notice", out)
+				}
+				if got := notice.Lines[0].PlainText(); got != c.want || notice.Title != "" {
+					t.Errorf("%+v: first line %q, title %q; want %q and no title", c.moved, got, notice.Title, c.want)
+				}
 			}
 		})
 	}
@@ -141,20 +139,4 @@ func TestUndoPutsPromptBack(t *testing.T) {
 func isInputSet(e UIEvent) bool {
 	_, ok := e.(EventInputSet)
 	return ok
-}
-
-// TestMoveTitle checks that a history move's notice names the move and what
-// it checked out by its first ShortRefLen characters, whole when shorter,
-// and is titled ChangesTitle when it checked out nothing.
-func TestMoveTitle(t *testing.T) {
-	for _, tt := range []struct{ verb, ref, want string }{
-		{CheckoutVerb, "c1d2e3f4a5b6c7d8", "Checkout [c1d2e3f4]"},
-		{UndoVerb, "c1d2e3f4a5b6c7d8", "Undo [c1d2e3f4]"},
-		{RedoVerb, "abc", "Redo [abc]"},
-		{UndoVerb, "", ChangesTitle},
-	} {
-		if got := MoveTitle(tt.verb, tt.ref); got != tt.want {
-			t.Errorf("MoveTitle(%q, %q) = %q, want %q", tt.verb, tt.ref, got, tt.want)
-		}
-	}
 }
