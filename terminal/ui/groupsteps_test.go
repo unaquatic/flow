@@ -100,18 +100,18 @@ func TestWorkingTextNamesStep(t *testing.T) {
 }
 
 // TestReasoningLabel checks that reasoning reads Thinking while it streams,
-// and Thought once it ends.
+// and Reasoned once it ends.
 func TestReasoningLabel(t *testing.T) {
 	b := NewReasoningBox(message.ReasoningPart{Text: "Look."}, DefaultTheme(), mutedFg)
-	if got := b.Header.PlainText(); got != ThoughtLabel {
-		t.Errorf("ended: header %q, want %q", got, ThoughtLabel)
+	if got := b.Header.PlainText(); got != ReasonedLabel {
+		t.Errorf("ended: header %q, want %q", got, ReasonedLabel)
 	}
 	b.SetBusy(true)
 	if got := b.Header.PlainText(); got != ThinkingLabel {
 		t.Errorf("streaming: header %q, want %q", got, ThinkingLabel)
 	}
 	b.SetBusy(false)
-	if got := b.Header.PlainText(); got != ThoughtLabel {
-		t.Errorf("ended again: header %q, want %q", got, ThoughtLabel)
+	if got := b.Header.PlainText(); got != ReasonedLabel {
+		t.Errorf("ended again: header %q, want %q", got, ReasonedLabel)
 	}
 }

@@ -9,17 +9,17 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// ThinkingLabel heads reasoning while it streams, and ThoughtLabel once it
+// ThinkingLabel heads reasoning while it streams, and ReasonedLabel once it
 // has ended.
 const (
 	ThinkingLabel = "Thinking"
-	ThoughtLabel  = "Thought"
+	ReasonedLabel = "Reasoned"
 )
 
 // ReasoningBox is the PartBox of model reasoning: a box like a tool call's,
 // collapsed and expanded as Ctrl+O and /config show tool calls, with
 // ToolMarker as they have it. Its header is ThinkingLabel while it streams
-// and ThoughtLabel once it ends, with how long
+// and ReasonedLabel once it ends, with how long
 // the reasoning took after it as its Status, such as "[12s]", and its
 // details show the reasoning text as it streams.
 type ReasoningBox struct {
@@ -91,12 +91,12 @@ func (b *ReasoningBox) SetPart(part message.ReasoningPart) {
 }
 
 // ShowHeader writes ThinkingLabel while the reasoning streams, as Busy says,
-// and ThoughtLabel once it ends, in NameFg, as a tool call's header starts
+// and ReasonedLabel once it ends, in NameFg, as a tool call's header starts
 // with its name, and hides the header row while the box is open, so that
 // expanded reasoning shows its text alone.
 func (b *ReasoningBox) ShowHeader() {
 	b.HeaderRow.SetGone(b.Open())
-	label := ThoughtLabel
+	label := ReasonedLabel
 	if b.Busy {
 		label = ThinkingLabel
 	}
