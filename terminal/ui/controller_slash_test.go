@@ -374,6 +374,31 @@ func TestSlashMenuFindsAliases(t *testing.T) {
 	}
 }
 
+// TestSlashMenuExactFirst checks that a command typed in full comes first,
+// ahead of commands listed before it whose names it only starts, as /pr
+// does among skills named prisma-a and prisma-b.
+func TestSlashMenuExactFirst(t *testing.T) {
+	cmds := []SlashCommand{{Name: "prisma-a"}, {Name: "prisma-b"}, {Name: "pr"}, {Name: "x", Aliases: []Command{"pri"}}}
+	tests := []struct {
+		query string
+		want  []Command
+	}{
+		{query: "pr", want: []Command{"pr", "prisma-a", "prisma-b", "x"}},
+		// An exact alias comes first too; /pr follows as a typo of "pri".
+		{query: "pri", want: []Command{"x", "prisma-a", "prisma-b", "pr"}},
+		{query: "PR", want: []Command{"pr", "prisma-a", "prisma-b", "x"}},
+	}
+	for _, tt := range tests {
+		var got []Command
+		for _, c := range MatchSlashCommands(cmds, tt.query) {
+			got = append(got, c.Name)
+		}
+		if !slices.Equal(got, tt.want) {
+			t.Errorf("MatchSlashCommands(%q) = %q, want %q", tt.query, got, tt.want)
+		}
+	}
+}
+
 // TestSubmitAlias checks that a command typed by an alias runs.
 func TestSubmitAlias(t *testing.T) {
 	s, _ := newTestService(t)

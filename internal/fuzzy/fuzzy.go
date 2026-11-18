@@ -1,11 +1,11 @@
 // Package fuzzy matches short queries against strings as a user types,
 // tolerating skipped letters and typos.
 //
-// A query matches a string in one of three tiers, tried in order: a word of
-// the string starts with the query, the query's letters appear in the string
-// in order, or the query is a few edits away from the start of a word. Words
-// begin at the start of the string and after each separator: '/', '-', '.',
-// '_' or a space. Matching is case-sensitive.
+// A query matches a string in one of four tiers, tried in order: the query is
+// the whole string, a word of the string starts with the query, the query's
+// letters appear in the string in order, or the query is a few edits away
+// from the start of a word. Words begin at the start of the string and after
+// each separator: '/', '-', '.', '_' or a space. Matching is case-sensitive.
 package fuzzy
 
 import (
@@ -19,8 +19,11 @@ import (
 type Tier int
 
 const (
+	// Exact means the query is the whole string, so that "pr" offers "pr"
+	// ahead of "prisma".
+	Exact Tier = iota
 	// Prefix means a word of the string starts with the query.
-	Prefix Tier = iota
+	Prefix
 	// Subsequence means the query's letters appear in the string in order,
 	// with gaps.
 	Subsequence
@@ -32,10 +35,10 @@ const (
 type Result struct {
 	// Tier is the way the query matched.
 	Tier Tier
-	// Cost ranks results within a tier; lower is better. For a prefix it
-	// is the position of the word, counting from zero; for a subsequence,
-	// the letters skipped after the nearest word start; for a typo, the edit
-	// cost.
+	// Cost ranks results within a tier; lower is better. For an exact
+	// match it is zero; for a prefix, the position of the word, counting
+	// from zero; for a subsequence, the letters skipped after the nearest
+	// word start; for a typo, the edit cost.
 	Cost int
 }
 
@@ -46,6 +49,9 @@ func (r Result) Compare(o Result) int {
 
 // Match reports whether query matches s, and how well.
 func Match(query, s string) (Result, bool) {
+	if query == s {
+		return Result{Tier: Exact}, true
+	}
 	for i, word := range words(s) {
 		if strings.HasPrefix(word, query) {
 			return Result{Tier: Prefix, Cost: i}, true
