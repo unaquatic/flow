@@ -14,8 +14,10 @@ import (
 // PatchBox is the ui.PartBox of the workspace changes one turn made, from its
 // prompt to its last reply, shown at the bottom of the turn, above its
 // footer, as a tool call is: a row on the canvas, marked as /config marks
-// tool calls, whose header sums them up, as PatchHeader gives it, and which
-// Ctrl+O expands with the tool calls. Expanded, the header is PatchTitle
+// tool calls, whose header sums them up, as PatchHeader gives it. It stays
+// collapsed: neither Ctrl+O nor a click expands it, as NewPatchBox pins it.
+// Expanded, which SetExpanded shows once Expandable is set again, the header
+// is PatchTitle
 // alone, and the details show the summary under it, then the changes of each
 // file, as FileView shows them. It stays hidden until a nonempty patch is
 // set, which only the box of the reply that ends a turn gets.
@@ -49,8 +51,9 @@ var (
 	_ ui.BoxContent  = (*PatchBox)(nil)
 )
 
-// NewPatchBox creates a hidden, collapsed patch row, which expands into a
-// block on the theme's raised surface as a tool call does.
+// NewPatchBox creates a hidden patch row, pinned collapsed. Were it
+// expandable, it would expand into a block on the theme's raised surface as
+// a tool call does.
 func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	if theme == nil {
 		theme = ui.DefaultTheme()
@@ -77,6 +80,9 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	b.Details.Add(b.Summary)
 	b.Details.Add(b.Files)
 	b.SetGone(true)
+	// The changes show as their summary alone: Ctrl+O and a click leave the
+	// box collapsed, though it keeps its details to show expanded.
+	b.Pin()
 	b.ShowShape()
 	return b
 }

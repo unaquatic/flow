@@ -52,7 +52,7 @@ func TestKindOf(t *testing.T) {
 		{name: "row box", r: row, want: KindRow},
 		{name: "cache row", r: NewCacheBox(), want: KindBlock},
 		{name: "block box", r: block, want: KindBlock},
-		{name: "footer", r: NewFooterBox(0, textFg), want: KindFooter},
+		{name: "footer", r: NewFooterBox(0, TurnDone, textFg), want: KindFooter},
 		{name: "text", r: widget.NewText("x"), want: KindBlock},
 	}
 	for _, tt := range tests {
@@ -128,6 +128,8 @@ func checkBubbleSpacing(t *testing.T, mode CacheMode, worked bool, usage message
 	ui := newInputTestUI(t)
 	ui.inline = true
 	ui.Apply(ui.service.SetCacheMode(mode))
+	// Each row is spaced as it is, not grouped.
+	ui.Apply(ui.service.SetGroupSteps(false))
 
 	var want []spacedRow
 	n := 0

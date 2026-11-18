@@ -113,12 +113,13 @@ func (s *Service) StartTurn(start time.Time) {
 	s.state.TurnStart, s.state.TurnFrom = start, len(s.state.Messages)
 }
 
-// EndTurn closes the turn in progress at end. When the turn ends with a reply
-// it added, it records how long the turn took on that reply, marks it as
+// EndTurn closes the turn in progress at end, which ended as outcome says.
+// When the turn ends with a reply it added, it records how long the turn
+// took and how it ended on that reply, marks it as
 // ending the turn, and returns the events that show both there: the update
 // of the reply, which its views see EndsTurn in, and the time under it. It
 // does nothing while no turn is in progress.
-func (s *Service) EndTurn(end time.Time) []UIEvent {
+func (s *Service) EndTurn(end time.Time, outcome TurnOutcome) []UIEvent {
 	start := s.state.TurnStart
 	s.state.TurnStart = time.Time{}
 	last, i := s.LastMessage()
@@ -129,6 +130,7 @@ func (s *Service) EndTurn(end time.Time) []UIEvent {
 		return nil
 	}
 	last.Worked = end.Sub(start)
+	last.Outcome = outcome
 	last.EndsTurn = true
 	msg := *last
 	msg.Parts = slices.Clone(last.Parts)
@@ -136,7 +138,7 @@ func (s *Service) EndTurn(end time.Time) []UIEvent {
 	msg.Usage = message.Usage{}
 	return []UIEvent{
 		EventMessageUpdated{Msg: msg},
-		EventTurnEnded{MessageID: last.ID, Worked: last.Worked},
+		EventTurnEnded{MessageID: last.ID, Worked: last.Worked, Outcome: outcome},
 	}
 }
 
@@ -156,7 +158,7 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 		// A prompt opens a turn, and ends the turn before it in the same
 		// run, as a demo's prompts do.
 		if e.Message.Role == message.RoleUser {
-			out = s.EndTurn(e.Timestamp)
+			out = s.EndTurn(e.Timestamp, TurnDone)
 			s.StartTurn(e.Timestamp)
 		}
 		out = append(out, s.AddMessage(ChatMessageOf(e.Message.Content))...)
@@ -189,7 +191,15 @@ func (s *Service) ApplyAgentEvent(ev app.Event) []UIEvent {
 
 	case app.EventAgentEnded:
 		s.state.Running = false
-		out = slices.Concat(s.EndTurn(e.Timestamp), s.SetStatus(StatusHintStyled()), s.SetProgress(false))
+		outcome := TurnDone
+		switch {
+		case e.Error != nil:
+			outcome = TurnFailed
+		case s.state.Stopped:
+			outcome = TurnInterrupted
+		}
+		s.state.Stopped = false
+		out = slices.Concat(s.EndTurn(e.Timestamp, outcome), s.SetStatus(StatusHintStyled()), s.SetProgress(false))
 		if e.Error != nil {
 			out = append(out, s.ShowError(*e.Error)...)
 			// Queued prompts wait rather than meet the same failure.

@@ -1,12 +1,12 @@
 === text ===
-|  Bash [queued]                                             |
+|  Run calculator tests [queued]                             |
 |                                                            |
 |  $ go test ./calculator/... [timeout 120s]                 |
 |                                                            |
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAA AAAAAAAA                                             |
+|  AAA AAAAAAAAAA AAAAA AAAAAAAA                             |
 |                                                            |
 |  B CC CCCC BBBBBBBBBBBBBBBB AAAAAAAA AAAAA                 |
 |                                                            |

@@ -31,8 +31,7 @@
 |■ calc.go has no imports yet, so I'll add the import after    |
 |  the package clause.                                         |
 |                                                              |
-|■ Edit calculator/calc.go                                     |
-|■ Edit calculator/calc.go                                     |
+|■ Worked                                                      |
 |                                                              |
 |■ The method returns (float64, error) and rejects a zero      |
 |  divisor without changing the other operations. I'll check   |
@@ -48,7 +47,7 @@
 |                                                              |
 |■ I'll run just the new tests first.                          |
 |                                                              |
-|■ Bash go test [exit 1]                                       |
+|■ Run the divide tests [exit 1]                               |
 |                                                              |
 |■ TestDivide expected integer division, but Divide returns    |
 |  a float64. I'll fix the expectation.                        |
@@ -57,7 +56,7 @@
 |                                                              |
 |■ I'll run the whole package with verbose output.             |
 |                                                              |
-|■ Bash go test                                                |
+|■ Run calculator tests                                        |
 |                                                              |
 |■ The tests pass.                                             |
 |                                                              |
@@ -101,8 +100,7 @@
 |B DDDDDDD AAA AA AAAAAAA AAAA AA AAAA AAA AAA AAAAAA AAAAA    |
 |  AAA AAAAAAA AAAAAAA                                         |
 |                                                              |
-|C CCCC CCCCCCCCCCCCCCCCCC                                     |
-|C CCCC CCCCCCCCCCCCCCCCCC                                     |
+|C CCCCCC                                                      |
 |                                                              |
 |B AAA AAAAAA AAAAAAA DDDDDDDDD DDDDDD AAA AAAAAAA A AAAA      |
 |  AAAAAAA AAAAAAA AAAAAAAA AAA AAAAA AAAAAAAAAAA AAAA AAAAA   |
@@ -118,7 +116,7 @@
 |                                                              |
 |B AAAA AAA AAAA AAA AAA AAAAA AAAAAA                          |
 |                                                              |
-|C CCCC CC CCCC CCCCC CC                                       |
+|C CCC CCC CCCCCC CCCCC CCCCC CC                               |
 |                                                              |
 |B DDDDDDDDDD AAAAAAAA AAAAAAA AAAAAAAAA AAA DDDDDD AAAAAAA    |
 |  A DDDDDDDA AAAA AAA AAA AAAAAAAAAAAA                        |
@@ -127,7 +125,7 @@
 |                                                              |
 |B AAAA AAA AAA AAAAA AAAAAAA AAAA AAAAAAA AAAAAAA             |
 |                                                              |
-|C CCCC CC CCCC                                                |
+|C CCC CCCCCCCCCC CCCCC                                        |
 |                                                              |
 |B AAA AAAAA AAAAA                                             |
 |                                                              |
@@ -173,7 +171,6 @@
 |                                                              |
 |                                                              |
 |                                                              |
-|                                                              |
 |                     ░░░░░░░░░░░░░░░░                         |
 |                                                              |
 |                                                              |
@@ -210,7 +207,6 @@
 |                                                              |
 |                                                              |
 === attrs ===
-|                                                              |
 |                                                              |
 |                                                              |
 |                                                              |

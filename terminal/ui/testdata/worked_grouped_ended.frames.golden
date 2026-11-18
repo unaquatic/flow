@@ -1,0 +1,21 @@
+=== text ===
+|■ Run the tests                                                                 |
+|                                                                                |
+|■ Worked for 13s                                                                |
+|                                                                                |
+|■ Done [32s]                                                                    |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+=== fg ===
+|A AAA AAA AAAAA                                                                 |
+|                                                                                |
+|B BBBBBB BBB BBB                                                                |
+|                                                                                |
+|B BBBB BBBBB                                                                    |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+=== legend ===
+A #e6e6e6
+B #8a8a8a

@@ -39,6 +39,14 @@ func patchTurn(u *ui.UI) {
 	u.Bubble("a1").SyncRows()
 }
 
+// expandPatch expands the changes of message id, which stay collapsed
+// otherwise, so that the frames still draw them expanded.
+func expandPatch(u *ui.UI, id message.ID) {
+	b := patchBox(u, id)
+	b.Expandable = true
+	b.SetExpanded(true)
+}
+
 // patchBox returns the changes of message id.
 func patchBox(u *ui.UI, id message.ID) *snapshotui.PatchBox {
 	return u.Bubble(id).SegmentFor(id).Views[0].(*snapshotui.PatchBox)
@@ -142,7 +150,7 @@ func TestSnapshotFrames(t *testing.T) {
 		// over the diff.
 		{name: "agent_patch_expanded", h: 15, add: func(u *ui.UI) {
 			patchTurn(u)
-			ui.ExpandTools(u)
+			expandPatch(u, "a1")
 		}},
 		// The row drops the marker of the tool calls while /config hides
 		// it, as a tool call does.
@@ -159,7 +167,7 @@ func TestSnapshotFrames(t *testing.T) {
 				"diff --git a/calc.go b/calc.go\nindex ec677425..8586c259 100644\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n" +
 					"diff --git a/old.go b/old.go\ndeleted file mode 100644\n--- a/old.go\n+++ /dev/null\n@@ -1 +0,0 @@\n-package calc\n")
 			u.Bubble("a1").SyncRows()
-			ui.ExpandTools(u)
+			expandPatch(u, "a1")
 		}},
 		// A turn of two replies shows its changes once, at its bottom: under
 		// the last reply, right above the turn's footer, and none under the
@@ -178,7 +186,7 @@ func TestSnapshotFrames(t *testing.T) {
 		{name: "agent_patch_expanded_boxed", h: 17, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetExpandStyle(ui.ExpandedBoxed))
 			patchTurn(u)
-			ui.ExpandTools(u)
+			expandPatch(u, "a1")
 		}},
 	}
 	for _, tt := range tests {
@@ -324,7 +332,7 @@ func TestSnapshotPatchBounds(t *testing.T) {
 
 	// The inline test UI has no slash menu to show the turn's time in, so
 	// only the update of the reply that ends the turn applies.
-	for _, ev := range u.Service().EndTurn(time.Now()) {
+	for _, ev := range u.Service().EndTurn(time.Now(), ui.TurnDone) {
 		if up, ok := ev.(ui.EventMessageUpdated); ok {
 			u.UpdateMessage(up.Msg)
 		}
@@ -386,17 +394,17 @@ func TestSnapshotsSet(t *testing.T) {
 	check("off again", false, false, false)
 }
 
-// TestSnapshotTogglesToolsCountsShownChanges checks that a step's changes
-// count toward what Ctrl+O would toggle once they are shown, and not while
-// the step has none, since toggling a hidden block changes nothing on screen.
-func TestSnapshotTogglesToolsCountsShownChanges(t *testing.T) {
+// TestSnapshotChangesStayCollapsed checks that a turn's changes never count
+// toward what Ctrl+O would toggle, and stay collapsed as it expands the tool
+// calls.
+func TestSnapshotChangesStayCollapsed(t *testing.T) {
 	u := ui.NewInputTestUI(t, snapshotViews())
-	u.AddMessage(ui.AgentText("a1", "Done."))
-	if u.TogglesTools(true) {
-		t.Error("TogglesTools(true) = true for a reply without tool calls or changes")
-	}
 	patchTurn(u)
-	if !u.TogglesTools(true) {
-		t.Error("TogglesTools(true) = false for a reply whose changes are shown collapsed")
+	if u.TogglesTools(true) {
+		t.Error("TogglesTools(true) = true for a reply whose only box is its changes")
+	}
+	ui.ExpandTools(u)
+	if patchBox(u, "a1").Open() {
+		t.Error("changes expanded with Ctrl+O, want them collapsed")
 	}
 }

@@ -1,5 +1,5 @@
 === text ===
-|  Bash [executing]                                          |
+|  Run calculator tests [executing]                          |
 |                                                            |
 |  $ go test ./calculator/...                                |
 |                                                            |
@@ -8,7 +8,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAA AAAAAAAAAAA                                          |
+|  AAA AAAAAAAAAA AAAAA AAAAAAAAAAA                          |
 |                                                            |
 |  B CC CCCC BBBBBBBBBBBBBBBB                                |
 |                                                            |

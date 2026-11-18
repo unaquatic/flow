@@ -3,10 +3,11 @@
 // call in a ui.ToolBox; this package tells the boxes what the built-in tools'
 // calls hold, as a ui.ToolFormatter:
 //
-//   - bash: in the header, the names of the commands it runs and the
-//     operators between them, as BashSummary gives them; in the details,
-//     the command as a command line, and its timeout when it is not the
-//     default; never its description;
+//   - bash: in the header, its description, and how long it ran once it
+//     ends, as BashStatus gives it, or without a description the names of
+//     the commands it runs and the operators between them, as BashSummary
+//     gives them; in the details, the command as a command line, and its
+//     timeout when it is not the default;
 //   - read: the file as code in its language, and the lines it reads;
 //   - write and edit: the change as a diff;
 //   - grep: the number of matches once it completes;
@@ -21,6 +22,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/extension/tools/internal/builtin"
@@ -50,14 +52,19 @@ func (*Extension) FormatTool(call message.ToolPart) (ui.ToolView, bool) {
 	switch call.Name {
 	case "bash":
 		command, timeout := BashCommand(args)
-		return ui.ToolView{
+		view := ui.ToolView{
 			Summary:  BashSummary(command),
 			ParamKey: "command",
 			Param:    command,
 			Shell:    true,
 			Notes:    nonEmpty(timeout),
 			Unnoted:  []string{"description", "timeout_ms"},
-		}, true
+		}
+		if desc := ui.FirstLine(strings.TrimSpace(ui.StringField(args, "description"))); desc != "" {
+			view.Title = desc
+			view.Status = BashStatus(call)
+		}
+		return view, true
 	case "read":
 		lines := ReadLines(call)
 		return ui.ToolView{
@@ -143,6 +150,32 @@ func BashCommand(args map[string]any) (command, note string) {
 		note = "[timeout " + builtin.FormatSeconds(timeout) + "]"
 	}
 	return command, note
+}
+
+// BashStatus returns the status of a bash call shown by its description:
+// how long it ran once it ends, as "[12s]", after the reason a failed call
+// failed, as "[exit 1] [12s]", or "" for the status its state gives, as
+// while it runs or when its times are not known.
+func BashStatus(call message.ToolPart) string {
+	var started, ended time.Time
+	var failed string
+	switch state := call.State.(type) {
+	case message.ToolStateCompleted:
+		started, ended = state.StartedAt, state.EndedAt
+	case message.ToolStateError:
+		started, ended = state.StartedAt, state.EndedAt
+		failed, _ = ui.ErrorStatus(state.Error)
+	default:
+		return ""
+	}
+	if started.IsZero() || ended.IsZero() {
+		return failed
+	}
+	took := "[" + ui.FormatDuration(ended.Sub(started)) + "]"
+	if failed != "" {
+		return failed + " " + took
+	}
+	return took
 }
 
 // BashSummary returns the header's summary of command: the names of the

@@ -65,6 +65,10 @@ type ChatMessage struct {
 	// to the end of the reply. It is zero for a message that does not end a
 	// turn, and for a turn whose time is not known.
 	Worked time.Duration
+	// Outcome is how the turn that this reply ends ended, which its footer
+	// names. It is TurnDone for a message that does not end a turn, and for
+	// a loaded one, whose outcome is not stored.
+	Outcome TurnOutcome
 	// Window is the most tokens a prompt of the model that produced this
 	// reply holds, as the catalog lists it, which its footer shows its
 	// context as a share of. It is zero for a reply without usage, and when
@@ -637,6 +641,9 @@ type UIState struct {
 	// TurnFrom is the index in Messages of the first message of the turn in
 	// progress.
 	TurnFrom int
+	// Stopped reports that Service.Stop stopped the run in progress, so that
+	// its turn ends as interrupted. Service.StartRun and the run's end clear it.
+	Stopped bool
 	// Working reports whether the indicator shows how long the turn in
 	// progress has taken, which Service.TickIndicator keeps current.
 	Working bool
@@ -689,6 +696,15 @@ type UIState struct {
 	// config file saves. Off, the default, a snapshot shows only while it
 	// is being taken.
 	ShowSnapshots bool
+	// ExpandReasoning shows model reasoning expanded whatever Ctrl+O says,
+	// which /config sets and the config file saves. Off, the default,
+	// reasoning collapses to its label and time, as tool calls do.
+	ExpandReasoning bool
+	// ShowSteps shows each collapsed step of a reply as a row of its own,
+	// which /config sets and the config file saves. Off, the default, the
+	// steps that stack group into one row, as ChatMessageBox.GroupRows
+	// groups them.
+	ShowSteps bool
 	// Debug shows what helps debug flow, which /config sets, such as the
 	// style settings of /config and the debug commands. It is off by
 	// default.

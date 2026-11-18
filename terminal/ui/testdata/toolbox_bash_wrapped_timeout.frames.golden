@@ -1,5 +1,5 @@
 === text ===
-|  Bash [timeout after 120s]                                 |
+|  Run the divide tests [timeout after 120s]                 |
 |                                                            |
 |  $ go test ./calculator/... -run                           |
 |  'TestDivide|TestDivideByZero' -count=1 -v [timeout 120s]  |
@@ -7,7 +7,7 @@
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAA AAAAAAAA AAAAA AAAAA                                 |
+|  AAA AAA AAAAAA AAAAA AAAAAAAA AAAAA AAAAA                 |
 |                                                            |
 |  B CC CCCC BBBBBBBBBBBBBBBB BBBB                           |
 |  DDDDDDDDDDDDDDDDDDDDDDDDDDDDD BBBBBBBB BB AAAAAAAA AAAAA  |

@@ -57,6 +57,7 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 				ui.InsertTranscriptRow(row, above)
 			}
 			ui.messageWidgets[msg.ID] = cm
+			ui.SyncWorking(cm, msg)
 			return
 		}
 	}
@@ -70,6 +71,23 @@ func (ui *UI) AddMessage(msg ChatMessage) {
 		ui.AddTranscriptRow(row)
 	}
 	ui.messageWidgets[msg.ID] = cm
+	ui.SyncWorking(cm, msg)
+}
+
+// SyncWorking marks cm, the bubble msg shows in, as holding the turn in
+// progress when msg is a reply of it, as InTurn says.
+func (ui *UI) SyncWorking(cm *ChatMessageBox, msg ChatMessage) {
+	if msg.Role == message.RoleAgent && ui.service.InTurn(msg.ID) {
+		cm.SetWorking(true)
+	}
+}
+
+// EndWorking shows every row of the bubbles that held the turn in progress,
+// once it has ended.
+func (ui *UI) EndWorking() {
+	for cm := range ui.Bubbles() {
+		cm.SetWorking(false)
+	}
 }
 
 // PromptMarkerFg returns the color of the marker that the user's text starts
@@ -100,6 +118,8 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 		ChatMessageWithMarkerShape(ui.service.state.MarkerShape),
 		ChatMessageWithDebug(ui.service.state.Debug),
 		ChatMessageWithSnapshots(ui.service.state.ShowSnapshots),
+		ChatMessageWithReasoningExpanded(ui.service.state.ExpandReasoning),
+		ChatMessageWithGroupSteps(!ui.service.state.ShowSteps),
 		ChatMessageWithCacheMode(ui.service.state.CacheMode),
 		ChatMessageWithExtensions(ui.extensions),
 	}
@@ -166,6 +186,25 @@ func (ui *UI) ShowStatusMarker() {
 	ui.statusRow.SetNameFg(st.ToolColor.Fg(ui.theme))
 	ui.statusRow.SetMarkerShape(st.MarkerShape)
 	ui.SyncSlashStatus()
+}
+
+// SetGroupSteps groups the steps that stack in every reply of the
+// transcript into one row, or shows each as a row of its own, as group says.
+func (ui *UI) SetGroupSteps(group bool) {
+	for cm := range ui.Bubbles() {
+		cm.SetGroupSteps(group)
+	}
+	ui.ReprintCommitted()
+}
+
+// SetReasoningExpanded keeps the reasoning of every reply of the transcript
+// expanded whatever Ctrl+O says, or collapses it as tool calls are, as
+// expanded says.
+func (ui *UI) SetReasoningExpanded(expanded bool) {
+	for cm := range ui.Bubbles() {
+		cm.SetReasoningExpanded(expanded)
+	}
+	ui.ReprintCommitted()
 }
 
 // SetSnapshots keeps the snapshot every prompt and reply of the transcript
@@ -245,10 +284,11 @@ func (ui *UI) UpdateMessage(msg ChatMessage) {
 	}
 }
 
-// SetTurnEnd shows under reply msgID that the turn it ends took worked.
-func (ui *UI) SetTurnEnd(msgID message.ID, worked time.Duration) {
+// SetTurnEnd shows under reply msgID that the turn it ends took worked and
+// ended as outcome says.
+func (ui *UI) SetTurnEnd(msgID message.ID, worked time.Duration, outcome TurnOutcome) {
 	if cm, ok := ui.messageWidgets[msgID]; ok {
-		cm.SetTurnEnd(msgID, worked)
+		cm.SetTurnEnd(msgID, worked, outcome)
 	}
 }
 

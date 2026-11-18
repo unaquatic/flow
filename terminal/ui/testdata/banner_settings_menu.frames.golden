@@ -2,18 +2,18 @@
 |■ Settings [↑/↓ move] [←/→ change] [esc cancel]                         |
 |                                                                        |
 |  Fullscreen              On                                            |
+|  Collapse reasoning      On                                            |
+|  Group steps             On                                            |
 |  Snapshots               Off                                           |
 |  Debug                   Off                                           |
-|                                                                        |
-|■                                                                       |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
 |                                                                        |
 |  CCCCCCCCCC              CC                                            |
+|  AAAAAAAA AAAAAAAAA      BB                                            |
+|  AAAAA AAAAA             BB                                            |
 |  AAAAAAAAA               BBB                                           |
 |  AAAAA                   BBB                                           |
-|                                                                        |
-|A                                                                       |
 === bg ===
 |                                                                        |
 |                                                                        |

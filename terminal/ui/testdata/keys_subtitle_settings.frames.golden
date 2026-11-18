@@ -3,20 +3,20 @@
 |  esc cancel  ↑/↓ move  ←/→ change  type search                         |
 |                                                                        |
 |  Fullscreen              On                                            |
+|  Collapse reasoning      On                                            |
+|  Group steps             On                                            |
 |  Snapshots               Off                                           |
 |  Debug                   Off                                           |
-|                                                                        |
-|■                                                                       |
 |                                                                        |
 === fg ===
 |A AAAAAAAA                                                              |
 |  BBB BBBBBB  BBB BBBB  BBB BBBBBB  BBBB BBBBBB                         |
 |                                                                        |
 |  CCCCCCCCCC              CC                                            |
+|  AAAAAAAA AAAAAAAAA      BB                                            |
+|  AAAAA AAAAA             BB                                            |
 |  AAAAAAAAA               BBB                                           |
 |  AAAAA                   BBB                                           |
-|                                                                        |
-|A                                                                       |
 |                                                                        |
 === bg ===
 |                                                                        |

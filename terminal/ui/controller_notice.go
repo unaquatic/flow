@@ -420,6 +420,15 @@ func (s *Service) TurnElapsed() time.Duration {
 	return time.Since(s.state.TurnStart)
 }
 
+// InTurn reports whether message id is one of the turn in progress.
+func (s *Service) InTurn(id message.ID) bool {
+	if s.state.TurnStart.IsZero() {
+		return false
+	}
+	i := slices.IndexFunc(s.state.Messages, func(m ChatMessage) bool { return m.ID == id })
+	return i >= 0 && i >= s.state.TurnFrom
+}
+
 // SessionWorked returns how long the session's turns took: the time each
 // ended turn's last reply records, and the time the turn in progress has
 // taken so far.

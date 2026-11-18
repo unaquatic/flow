@@ -43,9 +43,11 @@ func turnsEnded(out []UIEvent) []EventTurnEnded {
 func TestTurnWorked(t *testing.T) {
 	failed := &app.Error{Code: app.CodeModelNotFound, Message: "no model"}
 	tests := []struct {
-		name   string
-		events []app.Event
-		want   []EventTurnEnded
+		name string
+		// stopped marks the run as Service.Stop stopped it.
+		stopped bool
+		events  []app.Event
+		want    []EventTurnEnded
 	}{
 		// The turn starts with its prompt, and ends with its run.
 		{name: "prompt and replies", events: []app.Event{
@@ -92,10 +94,24 @@ func TestTurnWorked(t *testing.T) {
 			app.EventAgentStarted{EventBase: at(time.Minute)},
 			app.EventAgentEnded{EventBase: at(time.Minute + time.Second), Error: failed},
 		}, want: []EventTurnEnded{{MessageID: "a1", Worked: 4 * time.Second}}},
+		// A run that fails after a reply ends its turn as failed.
+		{name: "failed after a reply", events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			openReply("a1", time.Second),
+			app.EventAgentEnded{EventBase: at(5 * time.Second), Error: failed},
+		}, want: []EventTurnEnded{{MessageID: "a1", Worked: 5 * time.Second, Outcome: TurnFailed}}},
+		// A run that is stopped ends its turn as interrupted.
+		{name: "interrupted", stopped: true, events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			openReply("a1", time.Second),
+			app.EventAgentEnded{EventBase: at(6 * time.Second)},
+		}, want: []EventTurnEnded{{MessageID: "a1", Worked: 6 * time.Second, Outcome: TurnInterrupted}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{state: &UIState{}}
+			s := &Service{state: &UIState{Stopped: tt.stopped}}
 			var got []EventTurnEnded
 			for _, ev := range tt.events {
 				got = append(got, turnsEnded(s.ApplyAgentEvent(ev))...)
@@ -110,8 +126,8 @@ func TestTurnWorked(t *testing.T) {
 				if i < 0 {
 					t.Fatalf("no reply %s in the transcript", e.MessageID)
 				}
-				if m := s.state.Messages[i]; m.Worked != e.Worked || !m.EndsTurn {
-					t.Errorf("reply %s records worked %v, ends turn %v, want %v ending it", e.MessageID, m.Worked, m.EndsTurn, e.Worked)
+				if m := s.state.Messages[i]; m.Worked != e.Worked || m.Outcome != e.Outcome || !m.EndsTurn {
+					t.Errorf("reply %s records worked %v %v, ends turn %v, want %v %v ending it", e.MessageID, m.Worked, m.Outcome, m.EndsTurn, e.Worked, e.Outcome)
 				}
 			}
 		})

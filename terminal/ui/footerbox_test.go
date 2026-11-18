@@ -7,23 +7,26 @@ import (
 
 func TestFormatWorked(t *testing.T) {
 	tests := []struct {
-		d    time.Duration
-		want string
+		d       time.Duration
+		outcome TurnOutcome
+		want    string
 	}{
-		{0, "Done [0s]"},
-		{-time.Second, "Done [0s]"},
-		{400 * time.Millisecond, "Done [0s]"},
-		{500 * time.Millisecond, "Done [1s]"},
-		{42 * time.Second, "Done [42s]"},
-		{59*time.Second + 600*time.Millisecond, "Done [1m 00s]"},
-		{65 * time.Second, "Done [1m 05s]"},
-		{59*time.Minute + 59*time.Second, "Done [59m 59s]"},
-		{time.Hour + 2*time.Minute + 5*time.Second, "Done [1h 02m 05s]"},
-		{26 * time.Hour, "Done [26h 00m 00s]"},
+		{0, TurnDone, "Done [0s]"},
+		{-time.Second, TurnDone, "Done [0s]"},
+		{400 * time.Millisecond, TurnDone, "Done [0s]"},
+		{500 * time.Millisecond, TurnDone, "Done [1s]"},
+		{42 * time.Second, TurnDone, "Done [42s]"},
+		{59*time.Second + 600*time.Millisecond, TurnDone, "Done [1m 00s]"},
+		{65 * time.Second, TurnDone, "Done [1m 05s]"},
+		{59*time.Minute + 59*time.Second, TurnDone, "Done [59m 59s]"},
+		{time.Hour + 2*time.Minute + 5*time.Second, TurnDone, "Done [1h 02m 05s]"},
+		{26 * time.Hour, TurnDone, "Done [26h 00m 00s]"},
+		{42 * time.Second, TurnFailed, "Error [42s]"},
+		{65 * time.Second, TurnInterrupted, "Interrupted [1m 05s]"},
 	}
 	for _, tt := range tests {
-		if got := FormatWorked(tt.d); got != tt.want {
-			t.Errorf("FormatWorked(%v) = %q, want %q", tt.d, got, tt.want)
+		if got := FormatWorked(tt.d, tt.outcome); got != tt.want {
+			t.Errorf("FormatWorked(%v, %v) = %q, want %q", tt.d, tt.outcome, got, tt.want)
 		}
 	}
 }
@@ -33,22 +36,25 @@ func TestFormatWorked(t *testing.T) {
 // reply whose time rounds to zero, as one that does not end a turn, has none.
 func TestFooterText(t *testing.T) {
 	tests := []struct {
-		name   string
-		worked time.Duration
-		cache  string
-		want   string
+		name    string
+		worked  time.Duration
+		outcome TurnOutcome
+		cache   string
+		want    string
 	}{
 		{name: "seconds", worked: 42 * time.Second, want: "Done [42s]"},
 		{name: "minutes", worked: 107 * time.Second, want: "Done [1m 47s]"},
 		{name: "cache use", worked: 39 * time.Second, cache: "[cache 22K write 0K]", want: "Done [39s] [cache 22K write 0K]"},
+		{name: "failed", worked: 42 * time.Second, outcome: TurnFailed, want: "Error [42s]"},
+		{name: "interrupted", worked: 42 * time.Second, outcome: TurnInterrupted, cache: "[cache 1K write 0K]", want: "Interrupted [42s] [cache 1K write 0K]"},
 		{name: "not the turn's end", cache: "[cache 22K write 0K]"},
 		{name: "under half a second", worked: 400 * time.Millisecond},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			text := FooterText(tt.worked, tt.cache)
+			text := FooterText(tt.worked, tt.outcome, tt.cache)
 			if got := text.PlainText(); got != tt.want {
-				t.Errorf("FooterText(%v, %q) = %q, want %q", tt.worked, tt.cache, got, tt.want)
+				t.Errorf("FooterText(%v, %v, %q) = %q, want %q", tt.worked, tt.outcome, tt.cache, got, tt.want)
 			}
 			for _, c := range text.Chunks {
 				if !c.Fg.IsTransparent() {
@@ -64,20 +70,20 @@ func TestFooterText(t *testing.T) {
 // turn's time from then on, in the color it is given.
 func TestFooterBoxShowsOnceTurnEnds(t *testing.T) {
 	textFg := mutedFg
-	b := NewFooterBox(0, textFg)
+	b := NewFooterBox(0, TurnDone, textFg)
 	b.SetCache("[cache 1.0K write 0K]")
 	if b.Visible() {
 		t.Errorf("footer %q shown before the turn ended", b.Text.PlainText())
 	}
 	b.SetCache("")
-	b.SetTurnEnd(42 * time.Second)
+	b.SetTurnEnd(42*time.Second, TurnDone)
 	if got, want := b.Text.PlainText(), "Done [42s]"; !b.Visible() || got != want {
 		t.Errorf("footer = %q, shown %v; want %q shown", got, b.Visible(), want)
 	}
 	if got := b.Text.Fg(); got != textFg {
 		t.Errorf("footer fg = %v; want %v", got, textFg)
 	}
-	b.SetTurnEnd(0)
+	b.SetTurnEnd(0, TurnDone)
 	if b.Visible() {
 		t.Error("footer still shown once the reply no longer ends a turn")
 	}

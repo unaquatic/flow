@@ -1,21 +1,31 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/layout"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
-// ReasoningBox displays model reasoning as plain streamed text, without a
-// header.
+// ReasoningLabel names model reasoning at the start of its box's header.
+const ReasoningLabel = "Reasoning"
+
+// ReasoningBox is the PartBox of model reasoning: a box like a tool call's,
+// collapsed and expanded as Ctrl+O and /config show tool calls, with
+// ToolMarker as they have it. Its header is ReasoningLabel, with how long
+// the reasoning took after it as its Status, such as "[12s]", and its
+// details show the reasoning text as it streams.
 type ReasoningBox struct {
-	*widget.Box
+	*PartBox
 	// Part is the reasoning content being rendered.
 	Part message.ReasoningPart
 	// Body renders the reasoning text as it streams.
 	Body *widget.StreamMarkdown
 }
+
+var _ BoxContent = (*ReasoningBox)(nil)
 
 // ReasoningCodeFg returns the color of inline code in reasoning: the hue of
 // the theme's inline code, as bright as the theme's TextMuted, which
@@ -33,23 +43,15 @@ func ReasoningCodeFg(theme *style.Theme) style.Color {
 	return code.ToColor()
 }
 
-// NewReasoningBox creates a reasoning block, padded by PaddingX at the sides,
-// that is transparent and sits flush against the surrounding rows, without
-// vertical padding. Its text is in the theme's TextMuted, as tool rows are,
-// and its inline code in the color ReasoningCodeFg gives, on the theme's
-// code background; fenced code keeps the theme's colors.
-func NewReasoningBox(part message.ReasoningPart, theme *style.Theme) *ReasoningBox {
+// NewReasoningBox creates a collapsed reasoning box, its header in fg and
+// its block on the theme's raised surface. Its text is in the theme's
+// TextMuted, as tool rows are, and its inline code in the color
+// ReasoningCodeFg gives, on the theme's code background; fenced code keeps
+// the theme's colors.
+func NewReasoningBox(part message.ReasoningPart, theme *style.Theme, fg style.Color) *ReasoningBox {
 	theme = themeOrDefault(theme)
 	b := &ReasoningBox{
-		Box: widget.NewBox(
-			widget.BoxWithLayout(
-				layout.WithFlexDirection(layout.DirectionColumn),
-				layout.WithAlignItems(layout.AlignStretch),
-				layout.WithPaddingLeft(layout.Points(PaddingX)),
-				layout.WithPaddingRight(layout.Points(PaddingX)),
-			),
-			widget.BoxWithBg(style.ColorTransparent),
-		),
+		PartBox: NewPartBox(theme, fg, theme.ResolveSurfaceRaised()),
 		Body: widget.NewStreamMarkdown(
 			widget.StreamMarkdownWithTheme(theme),
 			widget.StreamMarkdownWithCode(theme.ResolveMarkdownCode().WithFg(ReasoningCodeFg(theme))),
@@ -58,22 +60,49 @@ func NewReasoningBox(part message.ReasoningPart, theme *style.Theme) *ReasoningB
 			widget.StreamMarkdownWithLayout(layout.WithWidth(layout.Percent(100))),
 		),
 	}
-	b.Add(b.Body)
+	b.Content = b
+	b.Details.Add(b.Body)
 	b.SetGone(true)
+	b.ShowHeader()
 	b.SetPart(part)
+	b.ShowShape()
 	return b
 }
 
-// SetPart replaces the reasoning part, and its content unless the part
-// already shown has the same text, as a change of its metadata alone
-// leaves it. Reasoning without text, such as a signed block that streamed
-// none, takes no rows.
+// SetPart replaces the reasoning part, shows how long it took in Status as
+// ReasoningTime gives it, and replaces the text unless the part already
+// shown has the same, as a change of its metadata alone leaves it.
+// Reasoning without text, such as a signed block that streamed none, takes
+// no rows.
 func (b *ReasoningBox) SetPart(part message.ReasoningPart) {
 	same := part.Text == b.Part.Text
 	b.Part = part
+	b.SetStatus(ReasoningTime(part))
 	if same {
 		return
 	}
 	b.Body.SetContent(part.Text)
 	b.SetGone(part.Text == "")
+}
+
+// ShowHeader writes ReasoningLabel in NameFg, as a tool call's header starts
+// with its name, and hides the header row while the box is open, so that
+// expanded reasoning shows its text alone.
+func (b *ReasoningBox) ShowHeader() {
+	b.HeaderRow.SetGone(b.Open())
+	b.Header.SetStyledContent(style.NewStyledText(ToolNameChunk(ReasoningLabel, b.NameFg)))
+}
+
+// Span returns when the reasoning started and last streamed, either zero
+// when not known.
+func (b *ReasoningBox) Span() (start, end time.Time) { return b.Part.StartedAt, b.Part.EndedAt }
+
+// ReasoningTime returns how long part took to stream, as FormatDuration
+// gives it in brackets, such as "[12s]", or "" when that is not known, as
+// for reasoning stored before flow recorded its times.
+func ReasoningTime(part message.ReasoningPart) string {
+	if part.StartedAt.IsZero() || part.EndedAt.IsZero() {
+		return ""
+	}
+	return "[" + FormatDuration(part.Duration()) + "]"
 }
