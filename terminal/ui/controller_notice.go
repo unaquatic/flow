@@ -95,6 +95,11 @@ func checkoutErrorMessage(verb string, err error) string {
 	return fmt.Sprintf("%s failed: %v", verb, err)
 }
 
+// Messages returns the transcript of the active session, its notices
+// included, in order. The slice shares the transcript's storage, so the
+// caller must not change it.
+func (s *Service) Messages() []ChatMessage { return s.state.Messages }
+
 // AddNotice adds notices to the transcript, under its messages, each in a
 // ChatMessage of its own, and returns the events that show them.
 func (s *Service) AddNotice(notices ...Notice) []UIEvent {
@@ -188,6 +193,14 @@ func MoveLines(verb string, files []app.FileDiff) []style.StyledText {
 var (
 	DiffAddFg = style.ColorFromInts(95, 200, 130, 255)
 	DiffDelFg = style.ColorFromInts(220, 100, 110, 255)
+)
+
+// DiffAddBg and DiffDelBg fill the lines a side by side diff adds and
+// deletes in DiffColorBackground: dark tints of DiffAddFg and DiffDelFg, on
+// which text keeps its own color.
+var (
+	DiffAddBg = style.ColorFromInts(30, 62, 42, 255)
+	DiffDelBg = style.ColorFromInts(72, 34, 38, 255)
 )
 
 // DiffCounts returns the counts of added and deleted lines, "+add -del", in

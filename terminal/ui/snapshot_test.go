@@ -11,7 +11,9 @@ import (
 	"github.com/unaquatic/flow/extension/snapshot"
 	snapshotui "github.com/unaquatic/flow/extension/snapshot/ui"
 	"github.com/unaquatic/flow/terminal/ui"
+	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/layout"
+	"github.com/unaquatic/fluid/widget"
 )
 
 // These tests show the widgets of the snapshot extension in the transcript:
@@ -37,14 +39,6 @@ func patchTurn(u *ui.UI) {
 	patchBox(u, "a1").SetPatch(
 		"diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n")
 	u.Bubble("a1").SyncRows()
-}
-
-// expandPatch expands the changes of message id, which stay collapsed
-// otherwise, so that the frames still draw them expanded.
-func expandPatch(u *ui.UI, id message.ID) {
-	b := patchBox(u, id)
-	b.Expandable = true
-	b.SetExpanded(true)
 }
 
 // patchBox returns the changes of message id.
@@ -150,7 +144,45 @@ func TestSnapshotFrames(t *testing.T) {
 		// over the diff.
 		{name: "agent_patch_expanded", h: 15, add: func(u *ui.UI) {
 			patchTurn(u)
-			expandPatch(u, "a1")
+			ui.ExpandTools(u)
+		}},
+		// A changed line shows its old form beside its new one, and a line
+		// too long for its side wraps there, the other side keeping its row.
+		{name: "agent_patch_side_by_side", h: 14, add: func(u *ui.UI) {
+			u.SetInlineMode(ui.EventInlineModeSet{Inline: true})
+			u.AddMessage(ui.AgentText("a1", "Fixed the guard."))
+			patchBox(u, "a1").SetPatch("diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -8,3 +8,3 @@\n func Divide(a, b int) int {\n-\treturn a / b\n+\tif b == 0 { return 0 } // a zero divisor returns zero\n }\n")
+			u.Bubble("a1").SyncRows()
+			ui.ExpandTools(u)
+		}},
+		// With /config's diff color on Text, changed lines show in the
+		// change's color, with no tint.
+		{name: "agent_patch_side_by_side_text", h: 14, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetDiffColor(ui.DiffColorText))
+			u.AddMessage(ui.AgentText("a1", "Fixed the guard."))
+			patchBox(u, "a1").SetPatch("diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -8,3 +8,3 @@\n func Divide(a, b int) int {\n-\treturn a / b\n+\tif b == 0 { return 0 }\n }\n")
+			u.Bubble("a1").SyncRows()
+			ui.ExpandTools(u)
+		}},
+		// A step's changes show on a row of their own, a blank row apart
+		// from the steps above and below them.
+		{name: "agent_patch_between_steps", h: 8, add: func(u *ui.UI) {
+			bash := func(id message.PartID) message.ToolPart {
+				return message.ToolPart{ID: id, CallID: string(id), Name: "bash", State: message.ToolStateCompleted{
+					Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}
+			}
+			u.AddMessage(ui.AgentParts("a1", bash("a1-bash")))
+			patchBox(u, "a1").SetPatch(
+				"diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n")
+			u.Bubble("a1").SyncRows()
+			next := ui.AgentParts("a2", bash("a2-bash"))
+			next.ParentID = "a1"
+			u.AddMessage(next)
+		}},
+		// Inline too, the changes show collapsed to their summary.
+		{name: "agent_patch_inline", h: 15, add: func(u *ui.UI) {
+			u.SetInlineMode(ui.EventInlineModeSet{Inline: true})
+			patchTurn(u)
 		}},
 		// The row drops the marker of the tool calls while /config hides
 		// it, as a tool call does.
@@ -167,11 +199,11 @@ func TestSnapshotFrames(t *testing.T) {
 				"diff --git a/calc.go b/calc.go\nindex ec677425..8586c259 100644\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n" +
 					"diff --git a/old.go b/old.go\ndeleted file mode 100644\n--- a/old.go\n+++ /dev/null\n@@ -1 +0,0 @@\n-package calc\n")
 			u.Bubble("a1").SyncRows()
-			expandPatch(u, "a1")
+			ui.ExpandTools(u)
 		}},
-		// A turn of two replies shows its changes once, at its bottom: under
-		// the last reply, right above the turn's footer, and none under the
-		// reply before it.
+		// A step that changed files shows its changes under its reply, right
+		// above the turn's footer when it ends the turn, and a step that
+		// changed none, as the reply before it, shows none.
 		{name: "turn_patch_at_bottom", h: 8, add: func(u *ui.UI) {
 			u.AddMessage(ui.AgentText("a1", "Reading the calculator."))
 			last := ui.AgentText("a2", "Updated the calculator.")
@@ -186,7 +218,7 @@ func TestSnapshotFrames(t *testing.T) {
 		{name: "agent_patch_expanded_boxed", h: 17, add: func(u *ui.UI) {
 			u.Apply(u.Service().SetExpandStyle(ui.ExpandedBoxed))
 			patchTurn(u)
-			expandPatch(u, "a1")
+			ui.ExpandTools(u)
 		}},
 	}
 	for _, tt := range tests {
@@ -313,10 +345,9 @@ func TestSnapshotIndicatorFrames(t *testing.T) {
 	ui.AssertIndicatorFrames(t, u, "user_message_indexing_indicator", 48, 8)
 }
 
-// TestSnapshotPatchBounds checks that a turn's changes show under its last
-// reply alone, once the turn ends, bounded by the tree its prompt ended with
-// and the tree of that reply's snapshot part, and that the replies before it
-// show none.
+// TestSnapshotPatchBounds checks that each step of a turn shows its own
+// changes under its reply, bounded by the tree the message before it ended
+// with and the tree of its own snapshot part.
 func TestSnapshotPatchBounds(t *testing.T) {
 	u := ui.NewInlineTestUI(t, snapshotViews())
 	prompt := ui.UserText("u1", "Run the tests")
@@ -326,22 +357,13 @@ func TestSnapshotPatchBounds(t *testing.T) {
 	mid := mustTree("1111111111111111111111111111111111111111")
 	u.Apply(u.Service().AddMessage(ui.AgentParts("a1", snapshot.SnapshotPart{ID: "a1-step", Tree: mid})))
 	u.Apply(u.Service().AddMessage(ui.AgentParts("a2", snapshot.SnapshotPart{ID: "a2-step", Tree: ui.ToolTurnTree})))
-	if box := patchBox(u, "a2"); !box.From.IsZero() || !box.To.IsZero() {
-		t.Errorf("patch bounds before the turn ended = %s..%s, want none", box.From, box.To)
+	// Each step's changes run from the message before it, as soon as it
+	// ends, whether or not the turn has.
+	if box := patchBox(u, "a1"); box.From != ui.ToolTurnBase || box.To != mid {
+		t.Errorf("the first step's bounds = %s..%s, want the prompt's tree and its own", box.From, box.To)
 	}
-
-	// The inline test UI has no slash menu to show the turn's time in, so
-	// only the update of the reply that ends the turn applies.
-	for _, ev := range u.Service().EndTurn(time.Now(), ui.TurnDone, nil) {
-		if up, ok := ev.(ui.EventMessageUpdated); ok {
-			u.UpdateMessage(up.Msg)
-		}
-	}
-	if box := patchBox(u, "a1"); !box.From.IsZero() || !box.To.IsZero() {
-		t.Errorf("the first reply's patch bounds = %s..%s, want none", box.From, box.To)
-	}
-	if box := patchBox(u, "a2"); box.From != ui.ToolTurnBase || box.To != ui.ToolTurnTree {
-		t.Errorf("patch bounds = %s..%s, want the prompt's tree and the last reply's", box.From, box.To)
+	if box := patchBox(u, "a2"); box.From != mid || box.To != ui.ToolTurnTree {
+		t.Errorf("the second step's bounds = %s..%s, want the first step's tree and its own", box.From, box.To)
 	}
 }
 
@@ -394,17 +416,56 @@ func TestSnapshotsSet(t *testing.T) {
 	check("off again", false, false, false)
 }
 
-// TestSnapshotChangesStayCollapsed checks that a turn's changes never count
-// toward what Ctrl+O would toggle, and stay collapsed as it expands the tool
-// calls.
-func TestSnapshotChangesStayCollapsed(t *testing.T) {
+// TestSnapshotChangesFollowCtrlO checks that a step's changes show
+// collapsed to their summary, that Ctrl+O expands them to each file's diff
+// under the same summary, and collapses them again, and that a click on a
+// file's row hides its diff and a second shows it again.
+func TestSnapshotChangesFollowCtrlO(t *testing.T) {
 	u := ui.NewInputTestUI(t, snapshotViews())
+	u.SetInlineMode(ui.EventInlineModeSet{Inline: true})
 	patchTurn(u)
-	if u.TogglesTools(true) {
-		t.Error("TogglesTools(true) = true for a reply whose only box is its changes")
+	b := patchBox(u, "a1")
+	header := b.Header.PlainText()
+	if b.Open() || header != "Changed 1 file  +2 -0" {
+		t.Fatalf("open %v, header %q; want collapsed to its summary", b.Open(), header)
+	}
+	if !u.TogglesTools(true) {
+		t.Error("TogglesTools(true) = false for a reply whose changes Ctrl+O would expand")
 	}
 	ui.ExpandTools(u)
-	if patchBox(u, "a1").Open() {
-		t.Error("changes expanded with Ctrl+O, want them collapsed")
+	if !b.Open() || !b.Diffs[0].Visible() || b.Header.PlainText() != header {
+		t.Errorf("after Ctrl+O: open %v, diff %v, header %q; want the diff under the summary", b.Open(), b.Diffs[0].Visible(), b.Header.PlainText())
 	}
+	row := b.Files.Children()[0].Children()[0].(*widget.Text)
+	click := &input.MouseEvent{Button: input.ButtonLeft}
+	row.OnMouseDownHandler(click)
+	if b.Diffs[0].Visible() {
+		t.Error("diff shown after a click on its row, want it hidden")
+	}
+	row.OnMouseDownHandler(click)
+	if !b.Diffs[0].Visible() {
+		t.Error("diff hidden after a second click, want it shown")
+	}
+	ui.CollapseTools(u)
+	if b.Open() {
+		t.Error("changes open after Ctrl+O again, want them collapsed")
+	}
+}
+
+// TestDiffCommandFrames draws the notice /diff prints of what the last turn
+// changed: its summary, and each file under it.
+func TestDiffCommandFrames(t *testing.T) {
+	ext := snapshotui.New(context.Background(), &snapshot.Extension{})
+	ext.ReadPatch = func(context.Context, snapshot.Hash, snapshot.Hash) (string, error) {
+		return "diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -1,2 +1,3 @@\n package calc\n+\n+import \"errors\"\n" +
+			"diff --git a/old.go b/old.go\ndeleted file mode 100644\n--- a/old.go\n+++ /dev/null\n@@ -1 +0,0 @@\n-package calc\n", nil
+	}
+	u := ui.NewInlineTestUI(t, ext)
+	prompt := ui.UserText("u1", "Run the tests")
+	prompt.Parts = append(prompt.Parts, snapshot.SnapshotPart{ID: "u1-step", Tree: ui.ToolTurnBase})
+	u.Apply(u.Service().AddMessage(prompt))
+	reply := ui.AgentParts("a1", message.TextPart{ID: "a1-text", Text: "Done."}, snapshot.SnapshotPart{ID: "a1-step", Tree: ui.ToolTurnTree})
+	u.Apply(u.Service().AddMessage(reply))
+	u.Apply(ext.ShowDiff(u.Service()))
+	ui.AssertTranscriptFrames(t, u, "diff_command", 40, 10)
 }

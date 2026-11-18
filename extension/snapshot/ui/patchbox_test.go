@@ -48,3 +48,26 @@ func TestSplitPatch(t *testing.T) {
 		t.Errorf("ParseDiffStat = %+v, want %+v", got, want)
 	}
 }
+
+// TestSideBySide checks that kept lines show on both sides, that a run of
+// deleted lines shows beside the added lines after it, the longer run's
+// extra lines beside blank sides, and that lines are numbered from each
+// hunk's header.
+func TestSideBySide(t *testing.T) {
+	hunks := "@@ -3,4 +3,5 @@\n keep\n-old a\n-old b\n+new a\n+new b\n+new c\n tail\n\\ No newline at end of file"
+	got := SideBySide(hunks)
+	want := []DiffRow{
+		{Note: "@@ -3,4 +3,5 @@"},
+		{Old: DiffLine{3, "keep", LineContext}, New: DiffLine{3, "keep", LineContext}},
+		{Old: DiffLine{4, "old a", LineDeleted}, New: DiffLine{4, "new a", LineAdded}},
+		{Old: DiffLine{5, "old b", LineDeleted}, New: DiffLine{5, "new b", LineAdded}},
+		{New: DiffLine{6, "new c", LineAdded}},
+		{Old: DiffLine{6, "tail", LineContext}, New: DiffLine{7, "tail", LineContext}},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("SideBySide =\n%+v\nwant\n%+v", got, want)
+	}
+	if old, new := HunkStarts("@@ -0,0 +1,2 @@"); old != 1 || new != 1 {
+		t.Errorf("HunkStarts of a new file = %d, %d; want 1, 1", old, new)
+	}
+}

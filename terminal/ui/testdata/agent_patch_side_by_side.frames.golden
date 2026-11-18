@@ -1,0 +1,55 @@
+=== text ===
+|■ Fixed the guard.                      |
+|                                        |
+|■ Changed 1 file  +1 -1                 |
+|                                        |
+|  calc.go  +1 -1                        |
+|  @@ -8,3 +8,3 @@                       |
+|   8 func Divide(a,   8 func Divide(a,  |
+|      b int) int {       b int) int {   |
+|   9     return a /   9     if b == 0   |
+|      b                 { return 0 } /  |
+|                        / a zero        |
+|                        divisor         |
+|                        returns zero    |
+|  10 }               10 }               |
+=== fg ===
+|A BBBBB BBB BBBBBB                      |
+|                                        |
+|B BBBBBBB B BBBB  CC DD                 |
+|                                        |
+|  BBBBBBB  CC DD                        |
+|  EE EEEE EEEE EE                       |
+|   E BBBB BBBBBBBBB   E BBBB BBBBBBBBB  |
+|      B BBBB BBB B       B BBBB BBB B   |
+|   E     BBBBBB B B   E     BB B BB B   |
+|      B                 B BBBBBB B B B  |
+|                        B B BBBB        |
+|                        BBBBBBB         |
+|                        BBBBBBB BBBB    |
+|  EE B               EE B               |
+=== bg ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
+|  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
+|  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
+|  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
+|  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
+|                                        |
+=== legend ===
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e
+E #8a8a8a
+░ #3d181c
+▒ #482226
+▓ #133420
+█ #1e3e2a

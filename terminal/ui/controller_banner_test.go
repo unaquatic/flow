@@ -318,7 +318,7 @@ func TestSettingsMenuDebug(t *testing.T) {
 		t.Fatalf("settings = %+v, want %q with debug off", settings.Items, plain)
 	}
 	debugged := []string{fullscreenSetting, cacheUsageSetting, expandedSetting, toolMarkerSetting, markerShapeSetting,
-		toolColorSetting, keyHintsSetting, listCountSetting, selectionSetting, promptSetting, inputSetting, reasoningSetting, stepsSetting, snapshotsSetting, debugSetting}
+		toolColorSetting, keyHintsSetting, listCountSetting, selectionSetting, promptSetting, inputSetting, diffColorSetting, reasoningSetting, stepsSetting, snapshotsSetting, debugSetting}
 	for _, tt := range []struct {
 		on    bool
 		names []string
@@ -406,6 +406,7 @@ func TestSettingsPersist(t *testing.T) {
 		func() []UIEvent { return s.SetSelectionStyle(SelectionArrow) },
 		func() []UIEvent { return s.SetPromptStyle(PromptFilled) },
 		func() []UIEvent { return s.SetInputStyle(InputFilled) },
+		func() []UIEvent { return s.SetDiffColor(DiffColorText) },
 	} {
 		for _, ev := range change() {
 			if toast, ok := toastOf(ev); ok {

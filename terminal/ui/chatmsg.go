@@ -94,6 +94,8 @@ type ChatMessageBox struct {
 	// Snapshots reports that the bubble keeps the snapshot each message
 	// ends with once taken.
 	Snapshots bool
+	// DiffColor is how the bubble's side by side diffs mark changed lines.
+	DiffColor DiffColor
 	// Working reports that the bubble holds the turn in progress, so that
 	// GroupRows shows the run of rows at its bottom as its last row alone.
 	Working bool
@@ -196,6 +198,12 @@ func ChatMessageWithToolColor(c ToolNameColor) ChatMessageOption {
 // It does not by default.
 func ChatMessageWithDebug(on bool) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.Debug = on }
+}
+
+// ChatMessageWithDiffColor sets how the bubble's side by side diffs mark
+// changed lines. They tint their background by default.
+func ChatMessageWithDiffColor(c DiffColor) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.DiffColor = c }
 }
 
 // ChatMessageWithSnapshots sets whether the bubble keeps the snapshot each
@@ -1464,6 +1472,18 @@ func (cm *ChatMessageBox) SetReasoningExpanded(expanded bool) {
 	cm.SyncRows()
 }
 
+// SetDiffColor marks the changed lines of the bubble's side by side diffs,
+// and of those added to it later, as c says, in the views that follow the
+// ViewStyle.
+func (cm *ChatMessageBox) SetDiffColor(c DiffColor) {
+	if c == cm.DiffColor {
+		return
+	}
+	cm.DiffColor = c
+	cm.RestyleViews()
+	cm.SyncRows()
+}
+
 // SetSnapshots keeps the snapshot each message of the bubble ends with once
 // taken, in the views that follow the ViewStyle and in those added to it
 // later, or shows it only while it is being taken, as show says.
@@ -1491,7 +1511,7 @@ func (cm *ChatMessageBox) SetDebug(on bool) {
 // ViewStyle returns how the bubble shows its parts, which the views of
 // extensions follow.
 func (cm *ChatMessageBox) ViewStyle() ViewStyle {
-	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots}
+	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots, DiffColor: cm.DiffColor}
 }
 
 // RestyleViews shows the bubble's StyledViews in its ViewStyle.

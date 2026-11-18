@@ -54,6 +54,7 @@ func (e *Extension) NewPartView(part message.ContentPart, host ui.ViewHost) ui.P
 // while there are none.
 func (e *Extension) NewSegmentView(msg ui.ChatMessage, host ui.ViewHost) ui.SegmentView {
 	box := NewPatchBox(host.Theme, host.Fg)
+	box.DiffColor = host.Style.DiffColor
 	if host.Enqueue != nil {
 		box.Load = func(from, to snapshot.Hash) { e.LoadPatch(box, from, to, host) }
 	}
@@ -68,15 +69,10 @@ func (e *Extension) NewSegmentView(msg ui.ChatMessage, host ui.ViewHost) ui.Segm
 // writes it, reads none. A patch that arrived later would change a row that
 // may have scrolled into the scrollback, which keeps the row as it was.
 func (e *Extension) LoadPatch(box *PatchBox, from, to snapshot.Hash, host ui.ViewHost) {
-	key := [2]snapshot.Hash{from, to}
-	patch, ok := e.Patches[key]
-	if !ok {
-		var err error
-		if patch, err = e.ReadPatch(e.ctx, from, to); err != nil {
-			slog.Warn("turn patch", "from", from, "to", to, "err", err)
-			return
-		}
-		e.Patches[key] = patch
+	patch, err := e.Patch(from, to)
+	if err != nil {
+		slog.Warn("step patch", "from", from, "to", to, "err", err)
+		return
 	}
 	box.SetPatch(patch)
 	host.Relayout()

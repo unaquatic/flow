@@ -66,6 +66,8 @@ type ViewStyle struct {
 	// Snapshots keeps the snapshot each message ends with once taken,
 	// rather than only while it is being taken.
 	Snapshots bool
+	// DiffColor is how side by side diffs mark changed lines.
+	DiffColor DiffColor
 }
 
 // ViewHost is the bubble an extension's view shows in.

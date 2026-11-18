@@ -118,6 +118,7 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 		ChatMessageWithMarkerShape(ui.service.state.MarkerShape),
 		ChatMessageWithDebug(ui.service.state.Debug),
 		ChatMessageWithSnapshots(ui.service.state.ShowSnapshots),
+		ChatMessageWithDiffColor(ui.service.state.DiffColor),
 		ChatMessageWithReasoningExpanded(ui.service.state.ExpandReasoning),
 		ChatMessageWithGroupSteps(!ui.service.state.ShowSteps),
 		ChatMessageWithCacheMode(ui.service.state.CacheMode),
@@ -203,6 +204,15 @@ func (ui *UI) SetGroupSteps(group bool) {
 func (ui *UI) SetReasoningExpanded(expanded bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetReasoningExpanded(expanded)
+	}
+	ui.ReprintCommitted()
+}
+
+// SetDiffColor marks the changed lines of every side by side diff of the
+// transcript as c says.
+func (ui *UI) SetDiffColor(c DiffColor) {
+	for cm := range ui.Bubbles() {
+		cm.SetDiffColor(c)
 	}
 	ui.ReprintCommitted()
 }

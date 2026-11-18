@@ -356,6 +356,13 @@ type EventInputStyleSet struct {
 	Style InputStyle
 }
 
+// EventDiffColorSet marks the changed lines of every side by side diff of the
+// transcript, and of those added later, as Color says.
+type EventDiffColorSet struct {
+	// Color is how changed lines are marked.
+	Color DiffColor
+}
+
 // EventSelectionStyleSet marks the selected row of every menu as Style says.
 type EventSelectionStyleSet struct {
 	// Style is how the menus mark their selected row.
@@ -437,6 +444,7 @@ func (EventKeyHintsModeSet) uiEvent()      {}
 func (EventUsagePinnedSet) uiEvent()       {}
 func (EventCountPlaceSet) uiEvent()        {}
 func (EventSelectionStyleSet) uiEvent()    {}
+func (EventDiffColorSet) uiEvent()         {}
 func (EventPromptStyleSet) uiEvent()       {}
 func (EventInputStyleSet) uiEvent()        {}
 func (EventInputHintChanged) uiEvent()     {}

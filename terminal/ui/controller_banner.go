@@ -247,6 +247,7 @@ const NoMatchesText = "[no matches]"
 // listCountSetting the row that sets the CountPlace, selectionSetting the
 // row that sets the SelectionStyle, promptSetting the row that sets the
 // PromptStyle, inputSetting the row that sets the InputStyle,
+// diffColorSetting the row that sets the DiffColor,
 // reasoningSetting the row that collapses reasoning or keeps it expanded,
 // stepsSetting the row that groups the steps of a reply or shows each,
 // snapshotsSetting the row that shows or hides the snapshots once taken, and
@@ -263,6 +264,7 @@ const (
 	selectionSetting   = "Selection"
 	promptSetting      = "Prompt style"
 	inputSetting       = "Input style"
+	diffColorSetting   = "Diff color"
 	reasoningSetting   = "Collapse reasoning"
 	stepsSetting       = "Group steps"
 	snapshotsSetting   = "Snapshots"
@@ -336,6 +338,9 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			}),
 			setting(inputSetting, s.state.InputStyle.String(), func(step int) []UIEvent {
 				return s.SetInputStyle(s.state.InputStyle.Next(step))
+			}),
+			setting(diffColorSetting, s.state.DiffColor.String(), func(step int) []UIEvent {
+				return s.SetDiffColor(s.state.DiffColor.Next(step))
 			}),
 			reasoning,
 			steps,
@@ -411,6 +416,13 @@ func (s *Service) SetPromptStyle(style PromptStyle) []UIEvent {
 func (s *Service) SetInputStyle(style InputStyle) []UIEvent {
 	s.state.InputStyle = style
 	return []UIEvent{EventInputStyleSet{Style: style}}
+}
+
+// SetDiffColor marks the changed lines of every side by side diff of the
+// transcript, and of those added later, as c says.
+func (s *Service) SetDiffColor(c DiffColor) []UIEvent {
+	s.state.DiffColor = c
+	return []UIEvent{EventDiffColorSet{Color: c}}
 }
 
 // SetSelectionStyle marks the selected row of every menu as style says: with

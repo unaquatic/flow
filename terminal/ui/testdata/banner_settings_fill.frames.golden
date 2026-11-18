@@ -12,8 +12,8 @@
 |  Selection               Fill                                          |
 |  Prompt style            Bar                                           |
 |  Input style             Bar                                           |
-|  Collapse reasoning      On                                            |
-|  [9/15]                                                                |
+|  Diff color              Background                                    |
+|  [9/16]                                                                |
 |                                                                        |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
@@ -29,7 +29,7 @@
 |  CCCCCCCCC               CCCC                                          |
 |  AAAAAA AAAAA            BBB                                           |
 |  AAAAA AAAAA             BBB                                           |
-|  AAAAAAAA AAAAAAAAA      BB                                            |
+|  AAAA AAAAA              BBBBBBBBBB                                    |
 |  BBBBBB                                                                |
 |                                                                        |
 === bg ===

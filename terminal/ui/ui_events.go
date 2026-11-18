@@ -89,6 +89,8 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnUsagePinnedSet(e)
 	case EventCountPlaceSet:
 		ui.OnCountPlaceSet(e)
+	case EventDiffColorSet:
+		ui.SetDiffColor(e.Color)
 	case EventSelectionStyleSet:
 		ui.OnSelectionStyleSet(e)
 	case EventPromptStyleSet:

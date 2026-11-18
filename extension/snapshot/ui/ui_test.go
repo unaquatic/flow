@@ -103,16 +103,16 @@ func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 	var loads [][2]snapshot.Hash
 	box := NewPatchBox(nil, style.Color{})
 	box.Load = func(from, to snapshot.Hash) { loads = append(loads, [2]snapshot.Hash{from, to}) }
+	// A step's changes run from the message before it, whatever its turn
+	// started from.
 	reply := ui.ChatMessage{ID: "a2", Role: message.RoleAgent,
-		Prev:     []message.ContentPart{snapshot.SnapshotPart{Tree: mustHash("1111111111111111111111111111111111111111")}},
-		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}}}
-	box.SetMessage(reply)
-	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
+		Prev:     []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: mustHash("1111111111111111111111111111111111111111")}}}
 	box.SetMessage(reply)
 	if len(loads) != 0 {
-		t.Fatalf("loaded %v before the turn ended", loads)
+		t.Fatalf("loaded %v before the step ended", loads)
 	}
-	reply.EndsTurn = true
+	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
 	box.SetMessage(reply)
 	box.SetMessage(reply)
 	if want := [][2]snapshot.Hash{{base, tree}}; len(loads) != 1 || loads[0] != want[0] {
@@ -152,14 +152,14 @@ func TestNewSegmentView_ShowsThePatchAtOnce(t *testing.T) {
 	e, _ := readPatches(stepPatch, nil)
 	relayouts := 0
 	host := ui.ViewHost{Enqueue: func(func()) {}, Relayout: func() { relayouts++ }}
-	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent, EndsTurn: true,
-		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
-		Parts:    []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
+	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
+		Prev:  []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		Parts: []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
 
 	box := e.NewSegmentView(reply, host).(*PatchBox)
 
 	if box.Patch != stepPatch || !box.Visible() {
-		t.Errorf("the view shows patch %q, visible %v, want the turn's patch shown", box.Patch, box.Visible())
+		t.Errorf("the view shows patch %q, visible %v, want the step's patch shown", box.Patch, box.Visible())
 	}
 	if relayouts != 1 {
 		t.Errorf("the bubble was laid out again %d times, want once", relayouts)

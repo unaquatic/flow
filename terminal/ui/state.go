@@ -546,6 +546,34 @@ const (
 	SelectionArrow
 )
 
+// DiffColor is how a side by side diff marks the lines a change deletes and
+// adds, which /config sets while debug is on.
+type DiffColor int
+
+const (
+	// DiffColorBackground draws a deleted or added line, its number
+	// included, in the box's color on DiffDelBg or DiffAddBg. It is the
+	// default.
+	DiffColorBackground DiffColor = iota
+	// DiffColorText draws a deleted line's text in DiffDelFg and an added
+	// one's in DiffAddFg.
+	DiffColorText
+)
+
+// DiffColors lists the diff colors in the order /config offers them.
+var DiffColors = [...]DiffColor{DiffColorBackground, DiffColorText}
+
+// Next returns the color step places after c in DiffColors, going round.
+func (c DiffColor) Next(step int) DiffColor { return Cycle(DiffColors[:], c, step) }
+
+// String returns the name /config shows for c: "Text" or "Background".
+func (c DiffColor) String() string {
+	if c == DiffColorText {
+		return "Text"
+	}
+	return "Background"
+}
+
 // SelectionStyles lists the selection styles in the order /config offers
 // them.
 var SelectionStyles = [...]SelectionStyle{SelectionFullWidth, SelectionFill, SelectionArrow}
@@ -737,6 +765,9 @@ type UIState struct {
 	// Selection is how the menus mark their selected row, which /config
 	// sets. It is SelectionFullWidth by default.
 	Selection SelectionStyle
+	// DiffColor is how side by side diffs mark changed lines, which /config
+	// sets while debug is on. It is DiffColorBackground by default.
+	DiffColor DiffColor
 	// PromptStyle is how the transcript marks a prompt, which /config
 	// sets. It is PromptBar by default.
 	PromptStyle PromptStyle
