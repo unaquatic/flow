@@ -100,6 +100,10 @@ type ChatMessageBox struct {
 	// GroupSteps groups the rows that stack, as GroupRows does. It is off
 	// by default.
 	GroupSteps bool
+	// Step is the box of the step at work, which GroupRows hides at the
+	// bottom of the bubble while it is Working, for the indicator to name
+	// as StepLabel does, or nil.
+	Step *PartBox
 	// OpenRuns holds the first box of each run of rows that a click on its
 	// summary opened, which GroupRows then shows whole.
 	OpenRuns map[*PartBox]bool
@@ -524,35 +528,58 @@ func (cm *ChatMessageBox) SetWorking(working bool) {
 	cm.SyncRows()
 }
 
+// RunEnd is what ends a run of rows that stack, which decides how
+// ChatMessageBox.GroupRows shows it.
+type RunEnd int
+
+const (
+	// RunEndRow is a row that shows under the run, such as text: the run is
+	// done, and shows as its summary.
+	RunEndRow RunEnd = iota
+	// RunEndFooter is the footer of the turn: the footer stands for the run,
+	// which shows no row.
+	RunEndFooter
+	// RunEndWorking is the bottom of a bubble at work: the run's last step
+	// is at work, which the indicator names, and the run shows no row.
+	RunEndWorking
+)
+
 // GroupRows shows each run of rows that stack, such as collapsed reasoning
-// and tool calls with no blank row between them, as one row, hiding the rows
-// above its last, as PartBox.SetGrouped does:
+// and tool calls with no blank row between them, as one row or none, hiding
+// its rows as PartBox.SetGrouped does, as what ends it says:
 //
-//   - while the bubble is Working, the run at its bottom shows its last row,
-//     the one at work, as it is;
-//   - any other run of two rows or more is done, and its last row shows
+//   - while the bubble is Working, the run at its bottom shows no row, and
+//     StepLabel names its last step, which the indicator shows in place of
+//     "Working";
+//   - the run right above the turn's footer shows no row either, as the
+//     footer stands for it;
+//   - any other run, even of one row, is done, and its last row shows
 //     instead what the run sums up to, as WorkedSummary gives it, such as
-//     "Worked for 32s", until a click on it opens the run, as OpenRuns
+//     "Worked [32s]", until a click on it opens the run, as OpenRuns
 //     records it.
 //
 // Only the parts of a message group: a view, such as a turn's changes, the
 // cache row, or the footer ends a run, as any other row that shows does.
-// The last row of a run changes in place, so that inline the run takes the
-// same row once done as it did while at work.
 //
-// Nothing groups unless GroupSteps is set, nor while Ctrl+O expands the tool
+// Only a reply groups, a system message's context staying as it is, and
+// nothing does unless GroupSteps is set, nor while Ctrl+O expands the tool
 // calls, which shows them collapsed only while inline holds them, as
 // SyncHeld does.
 func (cm *ChatMessageBox) GroupRows() {
-	group := cm.GroupSteps && !cm.ToolsExpanded
+	group := cm.GroupSteps && !cm.ToolsExpanded && cm.role == message.RoleAgent
+	cm.Step = nil
 	var run []*PartBox
-	flush := func(working bool) {
-		working = working && group
-		done := group && !working && len(run) > 1 && !cm.OpenRuns[run[0]]
+	flush := func(end RunEnd) {
+		if len(run) == 0 {
+			return
+		}
+		open := cm.OpenRuns[run[0]]
+		hide := group && (end == RunEndWorking || end == RunEndFooter && !open)
+		summarize := group && !hide && end == RunEndRow && !open
 		for i, b := range run {
 			last := i == len(run)-1
-			b.SetGrouped((working || done) && !last)
-			if !last || !done {
+			b.SetGrouped(hide || summarize && !last)
+			if !last || !summarize {
 				b.SetSummary("")
 				continue
 			}
@@ -560,11 +587,14 @@ func (cm *ChatMessageBox) GroupRows() {
 			b.SetSummary(WorkedSummary(run))
 			b.OnSummaryClick = func() { cm.OpenRun(first) }
 		}
+		if hide && end == RunEndWorking {
+			cm.Step = run[len(run)-1]
+		}
 		run = run[:0]
 	}
-	breaks := func(r render.Renderable) {
+	breaks := func(r render.Renderable, end RunEnd) {
 		if r.Visible() {
-			flush(false)
+			flush(end)
 		}
 	}
 	for _, seg := range cm.segments {
@@ -579,15 +609,29 @@ func (cm *ChatMessageBox) GroupRows() {
 				f.Frame().SetGrouped(false)
 				f.Frame().SetSummary("")
 			}
-			breaks(r)
+			breaks(r, RunEndRow)
 		}
 		for _, v := range seg.Views {
-			breaks(v)
+			breaks(v, RunEndRow)
 		}
-		breaks(seg.Cache)
-		breaks(seg.Footer)
+		breaks(seg.Cache, RunEndRow)
+		breaks(seg.Footer, RunEndFooter)
 	}
-	flush(cm.Working)
+	if cm.Working {
+		flush(RunEndWorking)
+	} else {
+		flush(RunEndRow)
+	}
+}
+
+// StepLabel returns the header of the step at work that the bubble hides, as
+// it reads now, such as "Thinking" or a command's description, or "" while
+// it hides none.
+func (cm *ChatMessageBox) StepLabel() string {
+	if cm.Step == nil {
+		return ""
+	}
+	return cm.Step.Header.PlainText()
 }
 
 // SetGroupSteps groups the rows of the bubble that stack, as GroupRows does,
@@ -610,9 +654,10 @@ func (cm *ChatMessageBox) OpenRun(first *PartBox) {
 	cm.SyncRows()
 }
 
-// WorkedSummary returns what run, rows that stack, sums up to: "Worked for"
+// WorkedSummary returns what run, rows that stack, sums up to: "Worked" and
 // the time from the earliest start to the latest end of their work, as
-// FormatDuration gives it, such as "Worked for 32s", or "Worked" when no row
+// FormatDuration gives it in brackets, such as "Worked [32s]", or "Worked"
+// alone when no row
 // knows both, as for a session stored before flow recorded them.
 func WorkedSummary(run []*PartBox) string {
 	var first, last time.Time
@@ -632,7 +677,7 @@ func WorkedSummary(run []*PartBox) string {
 	if first.IsZero() || last.IsZero() || last.Before(first) {
 		return "Worked"
 	}
-	return "Worked for " + FormatDuration(last.Sub(first))
+	return "Worked [" + FormatDuration(last.Sub(first)) + "]"
 }
 
 // GroupableBox returns the PartBox of r when r is one, shows as a row that

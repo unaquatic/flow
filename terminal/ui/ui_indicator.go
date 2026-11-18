@@ -14,12 +14,35 @@ const IndicatorTick = time.Second
 // input, with e's detail right under it, and while it shows the time of a
 // run in progress, blinks the markers.
 func (ui *UI) ShowIndicator(e EventIndicatorShow) {
+	if e.Working {
+		e.Text = ui.WorkingText(e.Elapsed)
+	}
 	ui.indicatorError = e.Error
 	ui.indicatorLabel.SetStyledContent(IndicatorText(e, ui.ErrorFg()))
 	ui.ShowIndicatorDetail(e)
 	ui.indicatorBox.SetGone(false)
 	ui.ShowIndicatorMarker()
 	ui.SyncBlink()
+}
+
+// WorkingText returns the indicator's text for the turn in progress, which
+// has taken elapsed so far: the step at work, which the transcript hides as
+// ChatMessageBox.GroupRows does, and then the time, such as
+// "Run the tests [4s]", or FormatWorking's "Working [4s]" while no step is
+// hidden.
+func (ui *UI) WorkingText(elapsed time.Duration) string {
+	for cm := range ui.Bubbles() {
+		if label := cm.StepLabel(); cm.Working && label != "" {
+			return label + " [" + FormatDuration(elapsed) + "]"
+		}
+	}
+	return FormatWorking(elapsed)
+}
+
+// SyncWorkingIndicator shows the step at work in the indicator at once, as
+// it changes, rather than at the next tick.
+func (ui *UI) SyncWorkingIndicator() {
+	ui.Apply(ui.service.TickIndicator())
 }
 
 // ErrorFg returns the color of the marker and the "Error" an error starts

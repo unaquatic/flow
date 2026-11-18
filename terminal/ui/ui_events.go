@@ -221,10 +221,16 @@ func (ui *UI) OnClearMessages(EventClearMessages) { ui.ResetTranscript() }
 
 // OnMessageAdded appends a message, merging it into the preceding
 // bubble when they share a parent, or a notice.
-func (ui *UI) OnMessageAdded(e EventMessageAdded) { ui.AddMessage(e.Msg) }
+func (ui *UI) OnMessageAdded(e EventMessageAdded) {
+	ui.AddMessage(e.Msg)
+	ui.SyncWorkingIndicator()
+}
 
 // OnMessageUpdated applies the latest parts and usage to a message.
-func (ui *UI) OnMessageUpdated(e EventMessageUpdated) { ui.UpdateMessage(e.Msg) }
+func (ui *UI) OnMessageUpdated(e EventMessageUpdated) {
+	ui.UpdateMessage(e.Msg)
+	ui.SyncWorkingIndicator()
+}
 
 // OnTurnEnded shows how long a turn took under its last reply, and in the
 // worked time of the slash menu's status row.

@@ -386,6 +386,8 @@ func TestClickKeepsHeaderInPlace(t *testing.T) {
 		t.Run(tt.style.String(), func(t *testing.T) {
 			ui := newInputTestUI(t)
 			ui.Apply(ui.service.SetExpandStyle(tt.style))
+			// Each call shows its own header, to be clicked.
+			showSteps(ui)
 			for i := range 4 {
 				ui.AddMessage(userText(message.ID(fmt.Sprintf("u%d", i)), "Run the tests"))
 			}
@@ -585,6 +587,8 @@ func TestFooterSpacedFromRowAbove(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ui := newInlineTestUI(t)
 			ui.Apply(ui.service.SetCacheMode(tt.mode))
+			// The call shows as a row of its own, not folded into the footer.
+			ui.Apply(ui.service.SetGroupSteps(false))
 			msg := agentParts("a1", tt.parts...)
 			msg.Usage, msg.Worked = usage, 3*time.Second
 			ui.AddMessage(msg)
@@ -604,6 +608,8 @@ func TestFooterSpacedFromRowAbove(t *testing.T) {
 // in the same column with the marker and without it.
 func TestToolMarkersSet(t *testing.T) {
 	ui := newInlineTestUI(t)
+	// Each call shows its own header, which the marker sits before.
+	showSteps(ui)
 	bash := func(id message.PartID) message.ContentPart {
 		return message.ToolPart{ID: id, CallID: string(id), Name: "bash", State: message.ToolStateCompleted{
 			Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}

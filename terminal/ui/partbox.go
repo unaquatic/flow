@@ -142,7 +142,7 @@ type PartBox struct {
 	// stands for the run of rows it stacks in.
 	Grouped bool
 	// Summary shows, in place of Header and Status, what the run of rows
-	// the box ends sums up to, such as "Worked for 32s", while SetSummary
+	// the box ends sums up to, such as "Worked [32s]", while SetSummary
 	// sets it.
 	Summary *widget.Text
 	// SummaryText is the text Summary shows, or "" while the box shows its

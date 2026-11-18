@@ -9,12 +9,17 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// ReasoningLabel names model reasoning at the start of its box's header.
-const ReasoningLabel = "Reasoning"
+// ThinkingLabel heads reasoning while it streams, and ThoughtLabel once it
+// has ended.
+const (
+	ThinkingLabel = "Thinking"
+	ThoughtLabel  = "Thought"
+)
 
 // ReasoningBox is the PartBox of model reasoning: a box like a tool call's,
 // collapsed and expanded as Ctrl+O and /config show tool calls, with
-// ToolMarker as they have it. Its header is ReasoningLabel, with how long
+// ToolMarker as they have it. Its header is ThinkingLabel while it streams
+// and ThoughtLabel once it ends, with how long
 // the reasoning took after it as its Status, such as "[12s]", and its
 // details show the reasoning text as it streams.
 type ReasoningBox struct {
@@ -85,12 +90,27 @@ func (b *ReasoningBox) SetPart(part message.ReasoningPart) {
 	b.SetGone(part.Text == "")
 }
 
-// ShowHeader writes ReasoningLabel in NameFg, as a tool call's header starts
+// ShowHeader writes ThinkingLabel while the reasoning streams, as Busy says,
+// and ThoughtLabel once it ends, in NameFg, as a tool call's header starts
 // with its name, and hides the header row while the box is open, so that
 // expanded reasoning shows its text alone.
 func (b *ReasoningBox) ShowHeader() {
 	b.HeaderRow.SetGone(b.Open())
-	b.Header.SetStyledContent(style.NewStyledText(ToolNameChunk(ReasoningLabel, b.NameFg)))
+	label := ThoughtLabel
+	if b.Busy {
+		label = ThinkingLabel
+	}
+	b.Header.SetStyledContent(style.NewStyledText(ToolNameChunk(label, b.NameFg)))
+}
+
+// SetBusy records whether the reasoning streams, which its marker shows by
+// blinking, as PartBox.SetBusy does, and its header by its label.
+func (b *ReasoningBox) SetBusy(busy bool) {
+	if busy == b.Busy {
+		return
+	}
+	b.PartBox.SetBusy(busy)
+	b.ShowHeader()
 }
 
 // Span returns when the reasoning started and last streamed, either zero

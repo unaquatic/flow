@@ -343,6 +343,7 @@ func TestTranscriptFrames(t *testing.T) {
 		// Reasoning shows collapsed to its label and how long it took, as a
 		// tool call shows collapsed.
 		{name: "agent_reasoning", h: 6, add: func(ui *UI) {
+			showSteps(ui)
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard.",
 					StartedAt: turnT0, EndedAt: turnT0.Add(12 * time.Second)},
@@ -352,6 +353,7 @@ func TestTranscriptFrames(t *testing.T) {
 		// Reasoning stored before its times were recorded shows its label
 		// alone.
 		{name: "agent_reasoning_untimed", h: 6, add: func(ui *UI) {
+			showSteps(ui)
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard."},
 				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
@@ -455,6 +457,16 @@ func TestTranscriptFrames(t *testing.T) {
 		// Collapsed calls are rows on the canvas, with no blank row between
 		// two of them, whether one step makes both or the next step does.
 		{name: "agent_tool_rows", h: 10, add: toolRowsTurn},
+		// A single step, once done, shows as one row of the time it took.
+		{name: "agent_step_single", h: 6, add: func(ui *UI) {
+			ui.AddMessage(agentParts("a1",
+				message.ToolPart{ID: "c1", CallID: "c1", Name: "bash", State: message.ToolStateCompleted{
+					Input:     json.RawMessage(`{"command":"go test ./...","description":"Regenerate reasoning frames"}`),
+					Output:    "ok",
+					StartedAt: turnT0, EndedAt: turnT0.Add(11 * time.Second)}},
+				message.TextPart{ID: "a1-text", Text: "All tests pass."},
+			))
+		}},
 		// By default the steps that stack, once done, show as one row that
 		// spans their work.
 		{name: "agent_steps_grouped", h: 10, add: func(ui *UI) {
@@ -1289,7 +1301,8 @@ func TestWorkedFrames(t *testing.T) {
 			ui.AddMessage(msg)
 		}},
 		// While the turn runs, the rows that stack at the bottom of its reply
-		// show as the last of them alone; once it ends, they all show.
+		// show none, the indicator naming the step at work; once it ends, the
+		// footer stands for them.
 		{name: "worked_grouped_running", h: 4, add: func(ui *UI) { groupedTurn(ui, false) }},
 		{name: "worked_grouped_ended", h: 8, add: func(ui *UI) { groupedTurn(ui, true) }},
 		// A reply that read and wrote no cache shows no cache use.
@@ -1304,6 +1317,7 @@ func TestWorkedFrames(t *testing.T) {
 		// shows, such as its snapshot part, and so counted no tokens, is parted
 		// from the reply above it by one blank row, as a reply is.
 		{name: "worked_alone", h: 7, add: func(ui *UI) {
+			showSteps(ui)
 			ui.AddMessage(agentParts("a1", bash))
 			last := agentParts("a2", snapshot.SnapshotPart{ID: "a2-step"})
 			last.ParentID, last.Worked = "a1", 3*time.Second

@@ -200,6 +200,12 @@ type EventIndicatorShow struct {
 	Detail string
 	// JSON reports that Detail is JSON.
 	JSON bool
+	// Working reports that Text is the time the turn in progress has taken
+	// so far, Elapsed, which the indicator shows after the step at work in
+	// place of Text, when the transcript hides it, as UI.WorkingText says.
+	Working bool
+	// Elapsed is how long the turn in progress has taken, when Working.
+	Elapsed time.Duration
 }
 
 // EventIndicatorHide dismisses the status indicator.

@@ -319,7 +319,7 @@ func WorkingIndicator(elapsed time.Duration, expanded bool) EventIndicatorShow {
 	if expanded {
 		toggle = CollapseHint
 	}
-	return EventIndicatorShow{Text: FormatWorking(elapsed), Hint: CancelHint + " " + toggle}
+	return EventIndicatorShow{Text: FormatWorking(elapsed), Hint: CancelHint + " " + toggle, Working: true, Elapsed: elapsed}
 }
 
 // ShowIndicator displays text, or when text is empty the WorkingIndicator of
