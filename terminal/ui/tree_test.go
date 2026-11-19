@@ -15,6 +15,10 @@ import (
 	"github.com/unaquatic/fluid/style"
 )
 
+// testTreeRows is the window the session tree's tests draw it in, which
+// fits forkedTree whole, apart from the panel's own treeMaxRows.
+const testTreeRows = 12
+
 // treeMsg returns a stored message continuing parent, holding text when it
 // is not empty and then parts.
 func treeMsg(id, parent message.ID, role message.Role, text string, parts ...message.ContentPart) message.Content {
@@ -230,7 +234,7 @@ func TestSessionTreeNarrowing(t *testing.T) {
 			if got := selectedID(st); got != tt.selected {
 				t.Errorf("selected %q, want %q", got, tt.selected)
 			}
-			if got := st.View(treeMaxRows).Status; got != tt.status {
+			if got := st.View(testTreeRows).Status; got != tt.status {
 				t.Errorf("status = %q, want %q", got, tt.status)
 			}
 		})
@@ -286,8 +290,8 @@ func TestSessionTreeNavigation(t *testing.T) {
 		{name: "down", from: "a1", move: func(t *SessionTree) { t.Move(1) }, want: "u2"},
 		{name: "up wraps", from: "u1", move: func(t *SessionTree) { t.Move(-1) }, want: "a4"},
 		{name: "down wraps", from: "a4", move: func(t *SessionTree) { t.Move(1) }, want: "u1"},
-		{name: "page down stops at the end", from: "u1", move: func(t *SessionTree) { t.Page(1, treeMaxRows) }, want: "a4"},
-		{name: "page up stops at the start", from: "a2", move: func(t *SessionTree) { t.Page(-1, treeMaxRows) }, want: "u1"},
+		{name: "page down stops at the end", from: "u1", move: func(t *SessionTree) { t.Page(1, testTreeRows) }, want: "a4"},
+		{name: "page up stops at the start", from: "a2", move: func(t *SessionTree) { t.Page(-1, testTreeRows) }, want: "u1"},
 		{name: "fork down to the first branch", from: "u1", move: func(t *SessionTree) { t.JumpFork(1) }, want: "u2"},
 		{name: "fork down to the end", from: "u2", move: func(t *SessionTree) { t.JumpFork(1) }, want: "a2"},
 		{name: "fork up to the branch start", from: "a4", move: func(t *SessionTree) { t.JumpFork(-1) }, want: "u3"},
@@ -323,11 +327,11 @@ func TestSessionTreeWindow(t *testing.T) {
 	for _, tt := range tests {
 		st := NewSessionTree(app.Tree{Messages: msgs})
 		st.Select(tt.selected)
-		start, end := st.Window(treeMaxRows)
+		start, end := st.Window(testTreeRows)
 		if start != tt.start || end != tt.end {
 			t.Errorf("window around %d = [%d, %d), want [%d, %d)", tt.selected, start, end, tt.start, tt.end)
 		}
-		v := st.View(treeMaxRows)
+		v := st.View(testTreeRows)
 		if v.Rows[v.Selected].Entry.ID != msgs[tt.selected].ID {
 			t.Errorf("view around %d selects %s", tt.selected, v.Rows[v.Selected].Entry.ID)
 		}
@@ -426,11 +430,11 @@ func TestTreeLinesDimOtherBranches(t *testing.T) {
 	theme := DefaultTheme()
 	st := NewSessionTree(forkedTree("a2"))
 	selectID(t, st, "u3")
-	lines := TreeLines(st.View(treeMaxRows), theme)
+	lines := TreeLines(st.View(testTreeRows), theme)
 
 	// labelFg returns the color of the role label of the row of id, which
 	// follows the cursor and the prefix, past the insert line above it.
-	v := st.View(treeMaxRows)
+	v := st.View(testTreeRows)
 	labelFg := func(id message.ID) style.Color {
 		line := st.RowIndex[id]
 		if line >= v.InsertLine() {
@@ -669,7 +673,7 @@ func TestTreeInsertLine(t *testing.T) {
 		t.Run(string(tt.id), func(t *testing.T) {
 			st := NewSessionTree(forkedTree("a2"))
 			selectID(t, st, tt.id)
-			v := st.View(treeMaxRows)
+			v := st.View(testTreeRows)
 			var lines []string
 			for _, line := range TreeLines(v, DefaultTheme()) {
 				lines = append(lines, strings.TrimRight(line.PlainText(), " "))
@@ -688,7 +692,7 @@ func TestTreeInsertLine(t *testing.T) {
 func TestTreeLinesLabels(t *testing.T) {
 	st := NewSessionTree(forkedTree("a4"))
 	var got []string
-	for _, line := range TreeLines(st.View(treeMaxRows), DefaultTheme()) {
+	for _, line := range TreeLines(st.View(testTreeRows), DefaultTheme()) {
 		got = append(got, strings.TrimSpace(strings.TrimLeft(line.PlainText(), " →│├└─")))
 	}
 	// The insert line, under the head, is empty.

@@ -2,7 +2,6 @@
 |■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
 |               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
-|  User add a Divide method to the calculator                            |
 |  Agent I'll add Divide with a zero check.                              |
 |  ├─ User also add tests                                                |
 |  │  Agent Added TestDivide.                                            |
@@ -11,6 +10,7 @@
 |                                                                        |
 |     Edit calc_test.go                                                  |
 |     Agent Rewrote the tests as a table.                                |
+|  [6/8]                                                                 |
 |                                                                        |
 |■                                                                       |
 |                                                                        |
@@ -18,7 +18,6 @@
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  AAAA BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
 |  CCCCC BBBB BBB BBBBBB BBBB B BBBB BBBBBB                              |
 |  BB AAAA BBBB BBB BBBBB                                                |
 |  B  CCCCC BBBBB BBBBBBBBBBB                                            |
@@ -27,6 +26,7 @@
 |                                                                        |
 |     DDDD DDDDDDDDDDDD                                                  |
 |     DDDDD DDDDDDD DDD DDDDD DD D DDDDDD                                |
+|  BBBBB                                                                 |
 |                                                                        |
 |A                                                                       |
 |                                                                        |
@@ -39,8 +39,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |
