@@ -13,8 +13,10 @@ import (
 )
 
 // maxPooledBuffer is the capacity of the largest buffer kept for reuse.
-// Larger buffers are left to the garbage collector.
-const maxPooledBuffer = 64 << 20
+// Larger buffers are left to the garbage collector, so that a snapshot of a
+// few large files does not leave a buffer the size of each one in the pool,
+// where it outlives the next collection. Most source files fit.
+const maxPooledBuffer = 1 << 20
 
 // fileJob is a stale file for the pipeline to store.
 type fileJob struct {

@@ -1,7 +1,5 @@
 === text ===
-|■ # Review                              |
-|                                        |
-|  Read scripts/check.sh.                |
+|■ Read scripts/check.sh.                |
 |                                        |
 |  check main.go                         |
 |                                        |
@@ -15,29 +13,14 @@
 |                                        |
 |                                        |
 |                                        |
-=== fg ===
-|A B BBBBBB                              |
 |                                        |
-|  AAAA AAAAAAAAAAAAAAAAA                |
+|                                        |
+=== fg ===
+|A AAAA AAAAAAAAAAAAAAAAA                |
 |                                        |
 |  AAAAA AAAAAAA                         |
 |                                        |
 |B AAAAAAAA AAAAAAAA                     |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
-=== attrs ===
-|  BBBBBBBB                              |
-|                                        |
-|                                        |
-|                                        |
-|                                        |
 |                                        |
 |                                        |
 |                                        |

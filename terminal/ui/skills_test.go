@@ -25,7 +25,9 @@ func skillViews() ui.Extension {
 // extension stores it, as any prompt shows: the whole text it was sent as,
 // the skill's instructions and then what it asks, in one message.
 func TestSkillFrames(t *testing.T) {
-	b := skills.Block{Body: "# Review\n\nRead scripts/check.sh.", Args: "check main.go"}
+	// The instructions are short, so that the prompt shows whole, within
+	// ui.PromptRows.
+	b := skills.Block{Body: "Read scripts/check.sh.", Args: "check main.go"}
 	u := ui.NewInlineTestUI(t, skillViews())
 	u.AddMessage(ui.UserText("u1", b.Text()))
 	u.AddMessage(ui.AgentText("a1", "Reviewed main.go."))

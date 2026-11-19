@@ -87,6 +87,11 @@ type PartBox struct {
 	// Expandable reports whether a click on the header and Ctrl+O expand
 	// the box. A box that is not stays collapsed.
 	Expandable bool
+	// Empty reports that Details show nothing, as SetEmpty sets it, as for
+	// an edit, whose changes the turn's changes show. The box then shows as
+	// its header alone, as it does collapsed, whatever Expanded says, and a
+	// click on its header does nothing.
+	Empty bool
 	// KeepExpanded shows the box expanded whatever Ctrl+O says, as for a
 	// todo list, which is read whole: the transcript adopts it expanded,
 	// and Ctrl+O leaves it as it is. A click on its header still expands
@@ -254,15 +259,15 @@ func (b *PartBox) OnHeaderClick(e *input.MouseEvent) {
 		e.StopPropagation()
 		return
 	}
-	if e.Button == input.ButtonLeft && b.Expandable {
+	if e.Button == input.ButtonLeft && b.Expandable && !b.Empty {
 		b.ToggleInPlace()
 		e.StopPropagation()
 	}
 }
 
-// Open reports whether the box shows Details: while it is Expanded and not
-// Held.
-func (b *PartBox) Open() bool { return b.Expanded && !b.Held }
+// Open reports whether the box shows Details: while it is Expanded, and
+// neither Held nor Empty.
+func (b *PartBox) Open() bool { return b.Expanded && !b.Held && !b.Empty }
 
 // Row reports whether the box shows as its header alone, one row on the
 // canvas: always when its Shape is ShapeRow, never when it is ShapeBlock,
@@ -398,6 +403,16 @@ func (b *PartBox) SetHeld(held bool) {
 		return
 	}
 	b.Held = held
+	b.ShowOpen()
+}
+
+// SetEmpty records whether Details show nothing, as empty says, and shows
+// the box as Open then says, as ShowOpen does.
+func (b *PartBox) SetEmpty(empty bool) {
+	if empty == b.Empty {
+		return
+	}
+	b.Empty = empty
 	b.ShowOpen()
 }
 

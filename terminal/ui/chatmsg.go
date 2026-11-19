@@ -70,6 +70,9 @@ type ChatMessageBox struct {
 	// nil for a reply's bubble, whose segments are rows of their own.
 	Frame     *widget.Box
 	middleCol *widget.Box
+	// PromptCut ends a prompt that SyncPin cuts short with TruncatedNote. It
+	// is nil for a bubble of another role.
+	PromptCut *PromptCut
 	// TailRow is the row of the transcript under Box that holds the parts of
 	// a prompt that scroll away while its text stays pinned, such as its
 	// snapshot, as PartsBox says. It is nil for a bubble of another role,
@@ -360,8 +363,18 @@ func (cm *ChatMessageBox) build(msg ChatMessage) {
 		// stays until the next prompt takes its place. Only its text pins:
 		// the rest of it, in TailRow, scrolls as any row does.
 		cm.Box.LayoutNode().Sticky = layout.StickyTop
+		// The blank row that ends a prompt is the Box's padding, not the
+		// Frame's, so that a prompt cut short, as SyncPin says, still ends
+		// in it: the Box clips its Frame inside its padding.
+		cm.Frame.LayoutNode().PaddingBottom = layout.Points(0)
+		cm.Box.LayoutNode().PaddingBottom = layout.Points(1)
+		// The segment column keeps its whole height, past the Frame's, which
+		// tells PromptCut that the prompt is cut short.
+		cm.middleCol.LayoutNode().FlexShrink = 0
+		cm.PromptCut = NewPromptCut(cm.Frame, cm.middleCol, cm.bg, themeOrDefault(cm.theme).TextMuted, 1+cm.FillPaddingY())
+		cm.Frame.Add(cm.PromptCut)
 		cm.Box.RenderBeforeHook = cm.ClearPinned
-		cm.SyncPinGap()
+		cm.SyncPin()
 	}
 	cm.SyncRows()
 	cm.SyncHeld()
@@ -374,13 +387,26 @@ func (cm *ChatMessageBox) Pins() bool {
 	return cm.role == message.RoleUser && cm.Box != nil && !cm.Filled() && !cm.Holds
 }
 
-// SyncPinGap gives a Box that Pins a blank row above its text, as it has one
-// under it, so that its text stays a row apart from the rows that scroll
-// under it once pinned. The row lies over the blank row that ends the row
-// above, which it takes the place of, so the transcript shows the rows
-// around the prompt as it did.
-func (cm *ChatMessageBox) SyncPinGap() {
-	if cm.Box == nil {
+// PromptRows is the most rows of its text a prompt shows in the transcript,
+// inline or fullscreen, where it pins to the top, so that a long prompt
+// leaves room for the reply under it. A longer prompt shows TruncatedNote
+// under them, in a row of its own.
+const PromptRows = 3
+
+// SyncPin readies the Box of a prompt to pin.
+//
+// A Box that Pins gets a blank row above its text, as it has one under it,
+// so that its text stays a row apart from the rows that scroll under it once
+// pinned. The row lies over the blank row that ends the row above, which it
+// takes the place of, so the transcript shows the rows around the prompt as
+// it did.
+//
+// The Box shows at most PromptRows rows of its text, pinned or not, and
+// clips the rest, which PromptCut then notes in the row under them, above
+// the padding of a filled prompt and the blank row that end it. A prompt one
+// row longer shows whole, in the rows the note would take.
+func (cm *ChatMessageBox) SyncPin() {
+	if cm.Box == nil || cm.role != message.RoleUser {
 		return
 	}
 	gap := 0
@@ -389,6 +415,71 @@ func (cm *ChatMessageBox) SyncPinGap() {
 	}
 	SetEdge(cm.Box, &cm.Box.LayoutNode().PaddingTop, gap)
 	SetEdge(cm.Box, &cm.Box.LayoutNode().MarginTop, -gap)
+	// The text, its note, the padding around them, and the blank row.
+	n := cm.Box.LayoutNode()
+	maxHeight := layout.Points(gap + 2*cm.FillPaddingY() + PromptRows + 1 + 1)
+	if n.MaxHeight != maxHeight || n.Overflow != layout.OverflowHidden {
+		n.MaxHeight, n.Overflow = maxHeight, layout.OverflowHidden
+		n.MarkDirty()
+		cm.Box.RequestRender()
+	}
+}
+
+// FillPaddingY returns the blank rows above and below the text of the
+// bubble inside its background: proseBlockPaddingY when it is Filled, and
+// none otherwise.
+func (cm *ChatMessageBox) FillPaddingY() int {
+	if cm.Filled() {
+		return proseBlockPaddingY
+	}
+	return 0
+}
+
+// PromptCut ends a prompt cut short, as ChatMessageBox.SyncPin cuts it: laid
+// over the last rows the Frame shows, apart from its rows, it shows
+// TruncatedNote, in Fg, on its first row, and its other rows, the padding of
+// a filled prompt, blank, all on Bg, the prompt's background, over the text
+// they hide. It shows nothing while the prompt shows whole.
+type PromptCut struct {
+	*widget.Box
+	// Frame is the container the cut lies at the bottom of, which the
+	// prompt's Box cuts short.
+	Frame *widget.Box
+	// Content is the column of the prompt's segments, which keeps its whole
+	// height, past the Frame's once the Box cuts it short.
+	Content *widget.Box
+	// Bg is the prompt's background, transparent for a prompt that fills
+	// none.
+	Bg style.Color
+	// Fg is the color of TruncatedNote.
+	Fg style.Color
+}
+
+// NewPromptCut returns a PromptCut rows tall at the bottom of frame, which
+// content, a prompt's segments, may be taller than, on bg, its note in fg.
+func NewPromptCut(frame, content *widget.Box, bg, fg style.Color, rows int) *PromptCut {
+	c := &PromptCut{Box: widget.NewBox(), Frame: frame, Content: content, Bg: bg, Fg: fg}
+	n := c.LayoutNode()
+	n.Position = layout.PositionAbsolute
+	n.Left, n.Right, n.Bottom = layout.Points(0), layout.Points(0), layout.Points(0)
+	n.Height = layout.Points(rows)
+	c.RenderAfterHook = c.Draw
+	return c
+}
+
+// Cut reports whether the prompt is cut short: whether its segments are
+// taller than the Frame shows.
+func (c *PromptCut) Cut() bool { return c.Content.Height() > c.Frame.Height() }
+
+// Draw paints the cut over the rows of text under it, while the prompt is
+// cut short.
+func (c *PromptCut) Draw(buf *buffer.Buffer, _ time.Duration) {
+	if !c.Cut() {
+		return
+	}
+	x, y := c.X(), c.Y()
+	buf.FillRect(x, y, c.Width(), c.Height(), c.Bg)
+	buf.DrawText(TruncatedNote, x+PaddingX, y, c.Fg, buffer.WithBg(c.Bg))
 }
 
 // ClearPinned blanks the cells of the Box while it Pins and is pinned, before
@@ -403,12 +494,13 @@ func (cm *ChatMessageBox) ClearPinned(buf *buffer.Buffer, _ time.Duration) {
 
 // PromptRail is the column at the left edge of a prompt that PromptBar
 // marks it with: one cell wide, laid over the left edge of the bubble's
-// container, from its top down to the blank row that ends it, which is the
-// container's padding and so outside the bar, in the padding before its
-// prose. It is laid out apart from the bubble's rows, so it moves none of
-// them. Its first row shows Shape in Color, the marker shape /config sets,
-// filled with Color for a filled shape, and its other rows show nothing, so
-// that a prompt of many rows has one marker, as a one-row prompt has.
+// container, from its top down to its bottom, above the blank row that ends
+// the prompt, which is the padding of the bubble's Box and so outside the
+// bar, in the padding before its prose. It is laid out apart from the
+// bubble's rows, so it moves none of them. Its first row shows Shape in
+// Color, the marker shape /config sets, filled with Color for a filled shape,
+// and its other rows show nothing, so that a prompt of many rows has one
+// marker, as a one-row prompt has.
 type PromptRail struct {
 	*widget.Box
 	// Color is the bar's color.
@@ -936,7 +1028,7 @@ func (cm *ChatMessageBox) SetHolds(holds bool) {
 	}
 	cm.Holds = holds
 	cm.SyncHeld()
-	cm.SyncPinGap()
+	cm.SyncPin()
 }
 
 // SyncHeld shows each part of the bubble whole, or, while the bubble Holds,

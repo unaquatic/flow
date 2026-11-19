@@ -1,9 +1,9 @@
 === text ===
 |  Edit calc.go [executing]                                  |
 |                                                            |
-|  @@ -1,1 +1,1 @@                                           |
-|  -old line                                                 |
-|  +new line                                                 |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -12,9 +12,9 @@
 === fg ===
 |  AAAA AAAAAAA AAAAAAAAAAA                                  |
 |                                                            |
-|  BB BBBB BBBB BB                                           |
-|  CCCC CCCC                                                 |
-|  DDDD DDDD                                                 |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -22,6 +22,3 @@
 |                                                            |
 === legend ===
 A #8a8a8a
-B #e6e6e6
-C #ff7c78
-D #91b557

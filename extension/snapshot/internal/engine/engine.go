@@ -174,7 +174,10 @@ func (s *Service) ready(trees ...Hash) error {
 
 // transactWorktree runs fn in a transaction on the store, with the worktree
 // open and its skipped directories left out, and commits when fn succeeds.
+// Once the transaction ends, it returns the memory to the operating system
+// if the call allocated [ReleaseThreshold] bytes or more.
 func (s *Service) transactWorktree(ctx context.Context, fn func(*Tx, *Worktree) error) error {
+	defer ReleaseMemory(HeapAllocs())
 	tx, err := s.Store.Begin(ctx)
 	if err != nil {
 		return err
