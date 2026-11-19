@@ -90,6 +90,28 @@ func TestFormatContentPart_AllPartsRenderNonEmpty(t *testing.T) {
 	}
 }
 
+// TestPromptMarkdown checks that each line break of a prompt shows as one,
+// that paragraphs, lines that end in a hard line break already, and fenced
+// code blocks are left as they are.
+func TestPromptMarkdown(t *testing.T) {
+	for _, tt := range []struct {
+		name, text, want string
+	}{
+		{"one line", "Run the tests", "Run the tests"},
+		{"lines", "first line\nsecond line\nthird line", "first line  \nsecond line  \nthird line"},
+		{"trailing newline", "first line\nsecond line\n", "first line  \nsecond line\n"},
+		{"paragraphs", "first\n\nsecond", "first\n\nsecond"},
+		{"hard breaks", "spaces  \nbackslash\\\nlast", "spaces  \nbackslash\\\nlast"},
+		{"fenced code", "see:\n```go\na := 1\nb := 2\n```\nthen\nmore", "see:  \n```go\na := 1\nb := 2\n```\nthen  \nmore"},
+		{"fence of tildes", "~~~\na\n```\nb\n~~~\nc\nd", "~~~\na\n```\nb\n~~~\nc  \nd"},
+		{"unclosed fence", "```\na\nb", "```\na\nb"},
+	} {
+		if got := PromptMarkdown(tt.text); got != tt.want {
+			t.Errorf("%s: PromptMarkdown(%q) = %q, want %q", tt.name, tt.text, got, tt.want)
+		}
+	}
+}
+
 // TestUsageBox_GoneUntilShown checks that a usage block is gone as it is
 // made, stays gone as its part changes, and keeps its counts up to date, so
 // that it shows the latest once shown.

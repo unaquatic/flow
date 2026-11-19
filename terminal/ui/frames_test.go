@@ -537,6 +537,12 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "fix the divide test, then run the calculator tests again"))
 			ui.AddMessage(agentText("a1", "Fixed the divide-by-zero check."))
 		}},
+		// A prompt keeps its line breaks, as it was typed or pasted, where a
+		// reply's text joins the lines of a paragraph, as Markdown does.
+		{name: "prompt_line_breaks", h: 8, add: func(ui *UI) {
+			ui.AddMessage(userText("u1", "Fullscreen    On\nDebug         Off"))
+			ui.AddMessage(agentText("a1", "Both are\nsaved."))
+		}},
 		// With the prompt style filled, a prompt shows as a block on the box
 		// background, padded by a row above and below.
 		{name: "prompt_filled", h: 10, add: func(ui *UI) {
