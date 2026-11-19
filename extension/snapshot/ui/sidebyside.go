@@ -293,3 +293,60 @@ func (b *PatchBox) DiffText(line DiffLine) *widget.Text {
 	Tint(text, bg)
 	return text
 }
+
+// RowByRow returns rows, a diff side by side as SideBySide gives it, as the
+// lines of one column, each in a DiffRow's Old, in the order of a unified
+// diff: a kept line once, numbered as in the new file, and each run of
+// changes as its deleted lines and then its added ones. Notes stay as they
+// are, and so does the Code Highlight gave each side.
+func RowByRow(rows []DiffRow) []DiffRow {
+	var out, added []DiffRow
+	flush := func() {
+		out = append(out, added...)
+		added = added[:0]
+	}
+	for _, r := range rows {
+		switch {
+		case r.Note != "":
+			flush()
+			out = append(out, r)
+		case r.Old.Kind == LineContext && r.New.Kind == LineContext && r.Old.Number > 0:
+			flush()
+			out = append(out, DiffRow{Old: r.New})
+		default:
+			if r.Old.Number > 0 {
+				out = append(out, DiffRow{Old: r.Old})
+			}
+			if r.New.Number > 0 {
+				added = append(added, DiffRow{Old: r.New})
+			}
+		}
+	}
+	flush()
+	return out
+}
+
+// RowByRowView returns rows, as RowByRow gives them, as one column the width
+// of the box: each line after its number, as SideBySideView shows a side,
+// and each Note across it, muted.
+func (b *PatchBox) RowByRowView(rows []DiffRow) *widget.Box {
+	view := widget.NewBox(widget.BoxWithLayout(
+		layout.WithFlexDirection(layout.DirectionColumn),
+		layout.WithAlignItems(layout.AlignStretch),
+	))
+	width := NumberWidth(rows)
+	for _, r := range rows {
+		if r.Note != "" {
+			view.Add(widget.NewText(r.Note, widget.TextWithFg(b.Theme.TextMuted), widget.TextWithBg(style.ColorTransparent),
+				widget.TextWithWrapMode(textbuf.WrapWord)))
+			continue
+		}
+		text := b.DiffText(r.Old)
+		text.LayoutNode().Width = layout.Percent(100)
+		view.Add(widget.NewBox(
+			widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow)),
+			widget.Children(b.DiffNumber(r.Old, width), b.DiffSpace(r.Old), text),
+		))
+	}
+	return view
+}

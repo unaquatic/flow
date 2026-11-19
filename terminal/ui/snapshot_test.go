@@ -155,6 +155,15 @@ func TestSnapshotFrames(t *testing.T) {
 			u.Bubble("a1").SyncRows()
 			ui.ExpandTools(u)
 		}},
+		// With /config's diff layout on Row by row, the lines show in one
+		// column, a change's deleted lines above its added ones.
+		{name: "agent_patch_row_by_row", h: 12, add: func(u *ui.UI) {
+			u.Apply(u.Service().SetDiffLayout(ui.DiffRowByRow))
+			u.AddMessage(ui.AgentText("a1", "Fixed the guard."))
+			patchBox(u, "a1").SetPatch("diff --git a/calc.go b/calc.go\n--- a/calc.go\n+++ b/calc.go\n@@ -8,3 +8,3 @@\n func Divide(a, b int) int {\n-\treturn a / b\n+\tif b == 0 { return 0 }\n }\n")
+			u.Bubble("a1").SyncRows()
+			ui.ExpandTools(u)
+		}},
 		// With /config's diff color on Text, changed lines show in the
 		// change's color, with no tint.
 		{name: "agent_patch_side_by_side_text", h: 14, add: func(u *ui.UI) {

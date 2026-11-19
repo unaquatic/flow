@@ -68,6 +68,8 @@ type ViewStyle struct {
 	Snapshots bool
 	// DiffColor is how side by side diffs mark changed lines.
 	DiffColor DiffColor
+	// DiffLayout is how diffs lay their lines out.
+	DiffLayout DiffLayout
 }
 
 // ViewHost is the bubble an extension's view shows in.

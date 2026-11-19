@@ -546,6 +546,35 @@ const (
 	SelectionArrow
 )
 
+// DiffLayout is how a step's diff lays its old and new lines out, which
+// /config sets while debug is on.
+type DiffLayout int
+
+const (
+	// DiffSideBySide shows the old file's lines on the left and the new
+	// file's on the right, a changed line beside what replaces it. It is the
+	// default.
+	DiffSideBySide DiffLayout = iota
+	// DiffRowByRow shows the lines in one column, in the order of a unified
+	// diff: the deleted lines of a change above the added ones.
+	DiffRowByRow
+)
+
+// DiffLayouts lists the diff layouts in the order /config offers them.
+var DiffLayouts = [...]DiffLayout{DiffSideBySide, DiffRowByRow}
+
+// Next returns the layout step places after l in DiffLayouts, going round.
+func (l DiffLayout) Next(step int) DiffLayout { return Cycle(DiffLayouts[:], l, step) }
+
+// String returns the name /config shows for l: "Side by side" or
+// "Row by row".
+func (l DiffLayout) String() string {
+	if l == DiffRowByRow {
+		return "Row by row"
+	}
+	return "Side by side"
+}
+
 // DiffColor is how a side by side diff marks the lines a change deletes and
 // adds, which /config sets while debug is on.
 type DiffColor int
@@ -768,6 +797,9 @@ type UIState struct {
 	// DiffColor is how side by side diffs mark changed lines, which /config
 	// sets while debug is on. It is DiffColorBackground by default.
 	DiffColor DiffColor
+	// DiffLayout is how diffs lay their lines out, which /config sets while
+	// debug is on. It is DiffSideBySide by default.
+	DiffLayout DiffLayout
 	// PromptStyle is how the transcript marks a prompt, which /config
 	// sets. It is PromptBar by default.
 	PromptStyle PromptStyle

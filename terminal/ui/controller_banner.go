@@ -247,7 +247,8 @@ const NoMatchesText = "[no matches]"
 // listCountSetting the row that sets the CountPlace, selectionSetting the
 // row that sets the SelectionStyle, promptSetting the row that sets the
 // PromptStyle, inputSetting the row that sets the InputStyle,
-// diffColorSetting the row that sets the DiffColor,
+// diffColorSetting the row that sets the DiffColor, diffLayoutSetting the
+// row that sets the DiffLayout,
 // reasoningSetting the row that collapses reasoning or keeps it expanded,
 // stepsSetting the row that groups the steps of a reply or shows each,
 // snapshotsSetting the row that shows or hides the snapshots once taken, and
@@ -265,6 +266,7 @@ const (
 	promptSetting      = "Prompt style"
 	inputSetting       = "Input style"
 	diffColorSetting   = "Diff color"
+	diffLayoutSetting  = "Diff layout"
 	reasoningSetting   = "Collapse reasoning"
 	stepsSetting       = "Group steps"
 	snapshotsSetting   = "Snapshots"
@@ -342,6 +344,9 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			setting(diffColorSetting, s.state.DiffColor.String(), func(step int) []UIEvent {
 				return s.SetDiffColor(s.state.DiffColor.Next(step))
 			}),
+			setting(diffLayoutSetting, s.state.DiffLayout.String(), func(step int) []UIEvent {
+				return s.SetDiffLayout(s.state.DiffLayout.Next(step))
+			}),
 			reasoning,
 			steps,
 			snapshots,
@@ -416,6 +421,13 @@ func (s *Service) SetPromptStyle(style PromptStyle) []UIEvent {
 func (s *Service) SetInputStyle(style InputStyle) []UIEvent {
 	s.state.InputStyle = style
 	return []UIEvent{EventInputStyleSet{Style: style}}
+}
+
+// SetDiffLayout lays every diff of the transcript, and those added later,
+// out as l says.
+func (s *Service) SetDiffLayout(l DiffLayout) []UIEvent {
+	s.state.DiffLayout = l
+	return []UIEvent{EventDiffLayoutSet{Layout: l}}
 }
 
 // SetDiffColor marks the changed lines of every side by side diff of the

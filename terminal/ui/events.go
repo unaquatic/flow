@@ -356,6 +356,13 @@ type EventInputStyleSet struct {
 	Style InputStyle
 }
 
+// EventDiffLayoutSet lays every diff of the transcript, and those added
+// later, out as Layout says.
+type EventDiffLayoutSet struct {
+	// Layout is how diffs lay their lines out.
+	Layout DiffLayout
+}
+
 // EventDiffColorSet marks the changed lines of every side by side diff of the
 // transcript, and of those added later, as Color says.
 type EventDiffColorSet struct {
@@ -445,6 +452,7 @@ func (EventUsagePinnedSet) uiEvent()       {}
 func (EventCountPlaceSet) uiEvent()        {}
 func (EventSelectionStyleSet) uiEvent()    {}
 func (EventDiffColorSet) uiEvent()         {}
+func (EventDiffLayoutSet) uiEvent()        {}
 func (EventPromptStyleSet) uiEvent()       {}
 func (EventInputStyleSet) uiEvent()        {}
 func (EventInputHintChanged) uiEvent()     {}

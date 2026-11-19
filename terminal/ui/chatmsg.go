@@ -96,6 +96,8 @@ type ChatMessageBox struct {
 	Snapshots bool
 	// DiffColor is how the bubble's side by side diffs mark changed lines.
 	DiffColor DiffColor
+	// DiffLayout is how the bubble's diffs lay their lines out.
+	DiffLayout DiffLayout
 	// Working reports that the bubble holds the turn in progress, so that
 	// GroupRows shows the run of rows at its bottom as its last row alone.
 	Working bool
@@ -198,6 +200,12 @@ func ChatMessageWithToolColor(c ToolNameColor) ChatMessageOption {
 // It does not by default.
 func ChatMessageWithDebug(on bool) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.Debug = on }
+}
+
+// ChatMessageWithDiffLayout sets how the bubble's diffs lay their lines out.
+// They show side by side by default.
+func ChatMessageWithDiffLayout(l DiffLayout) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.DiffLayout = l }
 }
 
 // ChatMessageWithDiffColor sets how the bubble's side by side diffs mark
@@ -1472,6 +1480,17 @@ func (cm *ChatMessageBox) SetReasoningExpanded(expanded bool) {
 	cm.SyncRows()
 }
 
+// SetDiffLayout lays the bubble's diffs, and those added to it later, out
+// as l says, in the views that follow the ViewStyle.
+func (cm *ChatMessageBox) SetDiffLayout(l DiffLayout) {
+	if l == cm.DiffLayout {
+		return
+	}
+	cm.DiffLayout = l
+	cm.RestyleViews()
+	cm.SyncRows()
+}
+
 // SetDiffColor marks the changed lines of the bubble's side by side diffs,
 // and of those added to it later, as c says, in the views that follow the
 // ViewStyle.
@@ -1511,7 +1530,7 @@ func (cm *ChatMessageBox) SetDebug(on bool) {
 // ViewStyle returns how the bubble shows its parts, which the views of
 // extensions follow.
 func (cm *ChatMessageBox) ViewStyle() ViewStyle {
-	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots, DiffColor: cm.DiffColor}
+	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots, DiffColor: cm.DiffColor, DiffLayout: cm.DiffLayout}
 }
 
 // RestyleViews shows the bubble's StyledViews in its ViewStyle.

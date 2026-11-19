@@ -119,6 +119,7 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 		ChatMessageWithDebug(ui.service.state.Debug),
 		ChatMessageWithSnapshots(ui.service.state.ShowSnapshots),
 		ChatMessageWithDiffColor(ui.service.state.DiffColor),
+		ChatMessageWithDiffLayout(ui.service.state.DiffLayout),
 		ChatMessageWithReasoningExpanded(ui.service.state.ExpandReasoning),
 		ChatMessageWithGroupSteps(!ui.service.state.ShowSteps),
 		ChatMessageWithCacheMode(ui.service.state.CacheMode),
@@ -204,6 +205,14 @@ func (ui *UI) SetGroupSteps(group bool) {
 func (ui *UI) SetReasoningExpanded(expanded bool) {
 	for cm := range ui.Bubbles() {
 		cm.SetReasoningExpanded(expanded)
+	}
+	ui.ReprintCommitted()
+}
+
+// SetDiffLayout lays every diff of the transcript out as l says.
+func (ui *UI) SetDiffLayout(l DiffLayout) {
+	for cm := range ui.Bubbles() {
+		cm.SetDiffLayout(l)
 	}
 	ui.ReprintCommitted()
 }

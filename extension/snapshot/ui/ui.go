@@ -55,6 +55,7 @@ func (e *Extension) NewPartView(part message.ContentPart, host ui.ViewHost) ui.P
 func (e *Extension) NewSegmentView(msg ui.ChatMessage, host ui.ViewHost) ui.SegmentView {
 	box := NewPatchBox(host.Theme, host.Fg)
 	box.DiffColor = host.Style.DiffColor
+	box.DiffLayout = host.Style.DiffLayout
 	if host.Enqueue != nil {
 		box.Load = func(from, to snapshot.Hash) { e.LoadPatch(box, from, to, host) }
 	}

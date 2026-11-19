@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"github.com/unaquatic/flow/terminal/ui"
 	"github.com/unaquatic/fluid/widget"
 	"reflect"
@@ -99,5 +100,24 @@ func TestHighlight(t *testing.T) {
 	Highlight(plain, "notes.unknownext", h, fg)
 	if plain[1].Old.Code != nil {
 		t.Errorf("unknown language highlighted: %+v", plain[1].Old.Code)
+	}
+}
+
+// TestRowByRow checks that a diff side by side reads row by row as a unified
+// diff does: a kept line once, by its new number, and a change's deleted
+// lines above its added ones, the hunk's header kept.
+func TestRowByRow(t *testing.T) {
+	rows := RowByRow(SideBySide("@@ -3,4 +3,5 @@\n keep\n-old a\n-old b\n+new a\n+new b\n+new c\n tail"))
+	var got []string
+	for _, r := range rows {
+		if r.Note != "" {
+			got = append(got, r.Note)
+			continue
+		}
+		got = append(got, fmt.Sprintf("%d %s", r.Old.Number, r.Old.Text))
+	}
+	want := []string{"@@ -3,4 +3,5 @@", "3 keep", "4 old a", "5 old b", "4 new a", "5 new b", "6 new c", "7 tail"}
+	if !slices.Equal(got, want) {
+		t.Errorf("RowByRow = %q, want %q", got, want)
 	}
 }

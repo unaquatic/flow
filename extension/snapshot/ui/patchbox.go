@@ -55,6 +55,9 @@ type PatchBox struct {
 	Highlighter *widget.Highlighter
 	// DiffColor is how the diffs mark changed lines, as SetViewStyle sets it.
 	DiffColor ui.DiffColor
+	// DiffLayout is how the diffs lay their lines out, as SetViewStyle sets
+	// it.
+	DiffLayout ui.DiffLayout
 }
 
 var (
@@ -100,12 +103,13 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 }
 
 // SetViewStyle marks the changed lines of the diffs as st's DiffColor says,
-// drawing them again when that changes.
+// and lays them out as its DiffLayout does, drawing them again when either
+// changes.
 func (b *PatchBox) SetViewStyle(st ui.ViewStyle) {
-	if st.DiffColor == b.DiffColor {
+	if st.DiffColor == b.DiffColor && st.DiffLayout == b.DiffLayout {
 		return
 	}
-	b.DiffColor = st.DiffColor
+	b.DiffColor, b.DiffLayout = st.DiffColor, st.DiffLayout
 	if b.Patch != "" {
 		b.SetPatch(b.Patch)
 	}
@@ -187,7 +191,12 @@ func (b *PatchBox) FileView(f FilePatch) *widget.Box {
 		// plain.
 		rows := SideBySide(f.Hunks)
 		Highlight(rows, f.Path, b.Highlighter, b.Fg)
-		diff := b.SideBySideView(rows)
+		var diff *widget.Box
+		if b.DiffLayout == ui.DiffRowByRow {
+			diff = b.RowByRowView(RowByRow(rows))
+		} else {
+			diff = b.SideBySideView(rows)
+		}
 		diff.LayoutNode().MarginBottom = layout.Points(1)
 		b.Diffs = append(b.Diffs, diff)
 		heading.OnMouseDownHandler = func(e *input.MouseEvent) {
