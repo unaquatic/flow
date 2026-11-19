@@ -763,18 +763,17 @@ type UIState struct {
 	// /config sets. It is ToolNameGray by default.
 	ToolColor ToolNameColor
 	// ShowSnapshots keeps the snapshot each prompt and reply ends with in
-	// the transcript once taken, by its hash, which /config sets and the
-	// config file saves. Off, the default, a snapshot shows only while it
-	// is being taken.
+	// the transcript once taken, by its hash, which /config sets while
+	// debug is on. Off, the default, a snapshot shows only while it is being
+	// taken.
 	ShowSnapshots bool
-	// ExpandReasoning shows model reasoning expanded whatever Ctrl+O says,
-	// which /config sets and the config file saves. Off, the default,
-	// reasoning collapses to its label and time, as tool calls do.
-	ExpandReasoning bool
+	// CollapseReasoning collapses model reasoning to its label and time, as
+	// tool calls collapse, which /config sets while debug is on. Off, the
+	// default, reasoning shows expanded whatever Ctrl+O says.
+	CollapseReasoning bool
 	// ShowSteps shows each collapsed step of a reply as a row of its own,
-	// which /config sets and the config file saves. Off, the default, the
-	// steps that stack group into one row, as ChatMessageBox.GroupRows
-	// groups them.
+	// which /config sets while debug is on. Off, the default, the steps that
+	// stack group into one row, as ChatMessageBox.GroupRows groups them.
 	ShowSteps bool
 	// Debug shows what helps debug flow, which /config sets, such as the
 	// style settings of /config and the debug commands. It is off by

@@ -1138,8 +1138,12 @@ func PendingTop(sm *widget.StreamMarkdown) int {
 // UpsertContentPart updates the widget that seg keys by id, or adds one
 // when there is none. An empty id always adds a widget.
 func (cm *ChatMessageBox) UpsertContentPart(seg *MessageSegment, id string, part message.ContentPart) {
-	if sm, ok := seg.Parts[id]; ok && id != "" {
-		UpdateContentPart(sm, part)
+	if view, ok := seg.Parts[id]; ok && id != "" {
+		if sm, ok := view.(*widget.StreamMarkdown); ok {
+			sm.SetContent(cm.ContentText(part))
+			return
+		}
+		UpdateContentPart(view, part)
 		return
 	}
 	sm := cm.NewContentPart(part)
@@ -1214,7 +1218,7 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		sm.LayoutNode().PaddingTop = layout.Points(proseBlockPaddingY)
 		sm.LayoutNode().PaddingBottom = layout.Points(proseBlockPaddingY)
 	}
-	sm.SetContent(FormatContentPart(part))
+	sm.SetContent(cm.ContentText(part))
 	if cm.role == message.RoleAgent {
 		// A reply's text starts with the marker, as its tool calls do. Its
 		// first block paints its first row, so it draws the marker after it.
@@ -1223,6 +1227,18 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		}
 	}
 	return sm
+}
+
+// ContentText returns part as Markdown, as FormatContentPart formats it, and
+// for the text of a prompt as PromptMarkdown keeps its line breaks: a prompt
+// shows as it was typed or pasted, while a reply's text follows Markdown,
+// which joins the lines of a paragraph.
+func (cm *ChatMessageBox) ContentText(part message.ContentPart) string {
+	text := FormatContentPart(part)
+	if _, ok := part.(message.TextPart); ok && cm.role == message.RoleUser {
+		return PromptMarkdown(text)
+	}
+	return text
 }
 
 // TextMarkerHost returns the child of sm that paints its first row, which

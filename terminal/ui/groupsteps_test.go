@@ -117,10 +117,11 @@ func TestReasoningLabel(t *testing.T) {
 	}
 }
 
-// TestWorkingTextStepTime checks that the indicator times the step at work
-// from its own start, not the turn's.
+// TestWorkingTextStepTime checks that the indicator times the step at work,
+// collapsed reasoning, from its own start, not the turn's.
 func TestWorkingTextStepTime(t *testing.T) {
 	ui := newInputTestUI(t)
+	collapseReasoning(ui)
 	ui.AddMessage(agentParts("a1", message.ReasoningPart{ID: "r1", Text: "Look.",
 		StartedAt: time.Now().Add(-4 * time.Second), EndedAt: time.Now()}))
 	cm := ui.messageWidgets["a1"]

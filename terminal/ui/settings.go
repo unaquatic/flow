@@ -21,16 +21,13 @@ type SettingsStore interface {
 // on keep their defaults, as the config file saves none of them.
 func (st *UIState) ApplyConfig(t config.Terminal, debug bool) {
 	st.Inline = !t.Fullscreen
-	st.ShowSnapshots = t.Snapshots
-	st.ExpandReasoning = t.ExpandReasoning
-	st.ShowSteps = t.ShowSteps
 	st.Debug = debug
 }
 
 // TerminalConfig returns the terminal's settings in st as the config file
 // saves them.
 func (st *UIState) TerminalConfig() config.Terminal {
-	return config.Terminal{Fullscreen: !st.Inline, Snapshots: st.ShowSnapshots, ExpandReasoning: st.ExpandReasoning, ShowSteps: st.ShowSteps}
+	return config.Terminal{Fullscreen: !st.Inline}
 }
 
 // PersistTerminal saves the terminal's settings as they are now in Settings,

@@ -120,7 +120,7 @@ func (ui *UI) ChatMessageOptions(role message.Role) []ChatMessageOption {
 		ChatMessageWithSnapshots(ui.service.state.ShowSnapshots),
 		ChatMessageWithDiffColor(ui.service.state.DiffColor),
 		ChatMessageWithDiffLayout(ui.service.state.DiffLayout),
-		ChatMessageWithReasoningExpanded(ui.service.state.ExpandReasoning),
+		ChatMessageWithReasoningExpanded(!ui.service.state.CollapseReasoning),
 		ChatMessageWithGroupSteps(!ui.service.state.ShowSteps),
 		ChatMessageWithCacheMode(ui.service.state.CacheMode),
 		ChatMessageWithExtensions(ui.extensions),

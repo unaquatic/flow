@@ -37,22 +37,11 @@ func (ui *UI) ShowQueue(prompts []QueuedPrompt) {
 }
 
 // QueueLine returns the first line of p as its box in the queue shows it:
-// the command that queued it as the slash menu names it, its hint in
-// mutedFg, and then the first line of what was typed after it, as in
-// "/review [skill] main.go", or else the first line of its text.
+// the first line of its text, as it is sent, whatever command queued it,
+// such as the first line of a skill's instructions.
 func QueueLine(p QueuedPrompt) style.StyledText {
-	if p.Command == "" {
-		first, _, _ := strings.Cut(p.Text, "\n")
-		return style.NewStyledText(style.Plain(first))
-	}
-	chunks := []style.TextChunk{style.Plain(p.Command.String())}
-	if p.Hint != "" {
-		chunks = append(chunks, style.TextChunk{Text: " " + p.Hint, Fg: mutedFg})
-	}
-	if first, _, _ := strings.Cut(strings.TrimSpace(p.Args), "\n"); first != "" {
-		chunks = append(chunks, style.Plain(" "+first))
-	}
-	return style.NewStyledText(chunks...)
+	first, _, _ := strings.Cut(p.Text, "\n")
+	return style.NewStyledText(style.Plain(first))
 }
 
 // QueueHints returns the hints after the queued prompt at index i, as

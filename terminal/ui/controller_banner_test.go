@@ -305,16 +305,15 @@ func TestSettingsMenuInputStyle(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuDebug checks that /config shows fullscreen, collapse
-// reasoning, snapshots and debug alone while debug is off, debug off by default as the last row, that
-// choosing it switches debug on and shows the style settings between
-// fullscreen and collapse reasoning, and that choosing it again hides them, keeping
-// the menu open on the setting.
+// TestSettingsMenuDebug checks that /config shows fullscreen and debug alone
+// while debug is off, debug off by default as the last row, that choosing it
+// switches debug on and shows the style settings between them, and that
+// choosing it again hides them, keeping the menu open on the setting.
 func TestSettingsMenuDebug(t *testing.T) {
 	s := &Service{state: &UIState{}}
 	settings := bannerShown(t, s.HandleSubmit("/config"))
-	plain := []string{fullscreenSetting, reasoningSetting, stepsSetting, snapshotsSetting, debugSetting}
-	if names := bannerNames(settings); !slices.Equal(names, plain) || settings.Items[4].Description != "Off" {
+	plain := []string{fullscreenSetting, debugSetting}
+	if names := bannerNames(settings); !slices.Equal(names, plain) || settings.Items[1].Description != "Off" {
 		t.Fatalf("settings = %+v, want %q with debug off", settings.Items, plain)
 	}
 	debugged := []string{fullscreenSetting, cacheUsageSetting, expandedSetting, toolMarkerSetting, markerShapeSetting,
@@ -337,11 +336,11 @@ func TestSettingsMenuDebug(t *testing.T) {
 }
 
 // TestSettingsMenuSnapshots checks that /config shows snapshots off by
-// default, that choosing it keeps the snapshots once taken, and that
-// choosing it again shows them only while taken, keeping the menu open on
-// the setting.
+// default while debug is on, that choosing it keeps the snapshots once
+// taken, and that choosing it again shows them only while taken, keeping the
+// menu open on the setting.
 func TestSettingsMenuSnapshots(t *testing.T) {
-	s := &Service{state: &UIState{}}
+	s := &Service{state: &UIState{Debug: true}}
 	settings := bannerShown(t, s.HandleSubmit("/config"))
 	row := slices.Index(bannerNames(settings), snapshotsSetting)
 	if row < 0 || settings.Items[row].Description != "Off" {
@@ -359,20 +358,21 @@ func TestSettingsMenuSnapshots(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuReasoning checks that /config shows collapse reasoning on
-// by default, that choosing it keeps reasoning expanded, and that choosing
-// it again collapses it, keeping the menu open on the setting.
+// TestSettingsMenuReasoning checks that /config shows collapse reasoning off
+// by default while debug is on, that choosing it collapses reasoning, and
+// that choosing it again keeps it expanded, keeping the menu open on the
+// setting.
 func TestSettingsMenuReasoning(t *testing.T) {
-	s := &Service{state: &UIState{}}
+	s := &Service{state: &UIState{Debug: true}}
 	settings := bannerShown(t, s.HandleSubmit("/config"))
 	row := slices.Index(bannerNames(settings), reasoningSetting)
-	if row < 0 || settings.Items[row].Description != "On" {
-		t.Fatalf("settings = %+v, want collapse reasoning on", settings.Items)
+	if row < 0 || settings.Items[row].Description != "Off" {
+		t.Fatalf("settings = %+v, want collapse reasoning off", settings.Items)
 	}
-	for _, expanded := range []bool{true, false} {
+	for _, expanded := range []bool{false, true} {
 		out := choose(reasoningSetting)(s)
-		if !slices.Contains(out, UIEvent(EventReasoningExpandedSet{Expanded: expanded})) || s.state.ExpandReasoning != expanded {
-			t.Errorf("events %v with reasoning expanded %v, want %v", out, s.state.ExpandReasoning, expanded)
+		if !slices.Contains(out, UIEvent(EventReasoningExpandedSet{Expanded: expanded})) || s.state.CollapseReasoning == expanded {
+			t.Errorf("events %v with reasoning collapsed %v, want expanded %v", out, s.state.CollapseReasoning, expanded)
 		}
 		settings = bannerShown(t, out)
 		if settings.SelectedIdx != row || settings.Items[row].Description != onOff(!expanded) {
@@ -381,10 +381,33 @@ func TestSettingsMenuReasoning(t *testing.T) {
 	}
 }
 
-// TestSettingsPersist checks that fullscreen, snapshots, reasoning and debug are saved in the
-// config file as /config changes them, that the style settings are not,
-// and that the next terminal starts with the saved settings and the style
-// settings' defaults.
+// TestSettingsMenuSteps checks that /config shows group steps on by default
+// while debug is on, that choosing it shows each step as a row of its own,
+// and that choosing it again groups them, keeping the menu open on the
+// setting.
+func TestSettingsMenuSteps(t *testing.T) {
+	s := &Service{state: &UIState{Debug: true}}
+	settings := bannerShown(t, s.HandleSubmit("/config"))
+	row := slices.Index(bannerNames(settings), stepsSetting)
+	if row < 0 || settings.Items[row].Description != "On" {
+		t.Fatalf("settings = %+v, want group steps on", settings.Items)
+	}
+	for _, group := range []bool{false, true} {
+		out := choose(stepsSetting)(s)
+		if !slices.Contains(out, UIEvent(EventGroupStepsSet{Group: group})) || s.state.ShowSteps == group {
+			t.Errorf("events %v with steps shown %v, want grouped %v", out, s.state.ShowSteps, group)
+		}
+		settings = bannerShown(t, out)
+		if settings.SelectedIdx != row || settings.Items[row].Description != onOff(group) {
+			t.Errorf("banner selects %d of %+v, want group steps %s selected", settings.SelectedIdx, settings.Items, onOff(group))
+		}
+	}
+}
+
+// TestSettingsPersist checks that fullscreen and debug are saved in the
+// config file as /config changes them, that the style settings, reasoning,
+// steps and snapshots among them, are not, and that the next terminal starts
+// with the saved settings and the style settings' defaults.
 func TestSettingsPersist(t *testing.T) {
 	t.Setenv("DEBUG", "")
 	s, a := newTestService(t)
@@ -421,8 +444,8 @@ func TestSettingsPersist(t *testing.T) {
 	}
 	var next UIState
 	next.ApplyConfig(conf.Terminal, conf.Debug)
-	if want := (UIState{Inline: false, ShowSnapshots: true, ExpandReasoning: true, ShowSteps: true, Debug: true}); !reflect.DeepEqual(next, want) {
-		t.Errorf("next terminal starts with %+v, want fullscreen, snapshots, expanded reasoning and debug on, and the style defaults", next)
+	if want := (UIState{Inline: false, Debug: true}); !reflect.DeepEqual(next, want) {
+		t.Errorf("next terminal starts with %+v, want fullscreen and debug on, and the style defaults", next)
 	}
 }
 
@@ -438,9 +461,6 @@ func TestSettingsPersistFailure(t *testing.T) {
 	s := &Service{state: &UIState{}, Settings: failingSettings{}}
 	for name, out := range map[string][]UIEvent{
 		"fullscreen": s.ToggleInlineMode(),
-		"snapshots":  s.SetSnapshots(true),
-		"reasoning":  s.SetReasoningExpanded(true),
-		"steps":      s.SetGroupSteps(false),
 		"debug":      s.SetDebug(true),
 	} {
 		toasts := 0
@@ -453,8 +473,8 @@ func TestSettingsPersistFailure(t *testing.T) {
 			t.Errorf("%s: events %v, want the change and one toast that reports the failure", name, out)
 		}
 	}
-	if !s.state.Inline || !s.state.ShowSnapshots || !s.state.Debug {
-		t.Errorf("inline %v, snapshots %v, debug %v, want all changed", s.state.Inline, s.state.ShowSnapshots, s.state.Debug)
+	if !s.state.Inline || !s.state.Debug {
+		t.Errorf("inline %v, debug %v, want both changed", s.state.Inline, s.state.Debug)
 	}
 }
 

@@ -10,16 +10,12 @@ import (
 
 // QueuedPrompt is a prompt in the queue, waiting to be sent.
 type QueuedPrompt struct {
-	// Text is the prompt as it is sent.
+	// Text is the prompt as it is sent, which the queue shows.
 	Text string
 	// Command, when set, is the slash command that queued Text, such as a
-	// skill's /review, which sends "/skill:review". The queue shows the
-	// prompt as the command was typed, with Hint after its name as the
-	// slash menu shows it, in place of Text.
+	// skill's /review, which sends the skill's instructions. Typed gives the
+	// prompt back as the command was typed.
 	Command Command
-	// Hint follows Command's name in grey, as in the slash menu, such as
-	// "[skill]".
-	Hint string
 	// Args is the text typed after Command, if any.
 	Args string
 }

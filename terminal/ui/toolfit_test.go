@@ -75,6 +75,23 @@ func TestFitToolBoxes(t *testing.T) {
 	})
 }
 
+// TestFitToolBoxesFullscreen checks that an expanded call taller than the
+// screen is cut short with TruncatedNote in the fullscreen transcript too,
+// as inline.
+func TestFitToolBoxesFullscreen(t *testing.T) {
+	ui := newInputTestUI(t)
+	showSteps(ui)
+	ui.AddMessage(agentParts("a1", completed("c1", "bash", `{"command":"ls"}`, numberedLines(100, func(i int) string { return fmt.Sprint(i) }))))
+	expandTools(ui)
+	ui.renderer.Root().CalculateLayout()
+	ui.FitToolBoxes(30)
+	ui.renderer.Root().CalculateLayout()
+	b, limit := partBoxesOf(ui, "a1")[0], ui.ToolRowLimit(30)
+	if got := b.LayoutNode().Computed.Height; got > limit || got < limit-1 || !b.Truncated.Visible() {
+		t.Errorf("call takes %d rows, truncated %v; want %d or one fewer, truncated", got, b.Truncated.Visible(), limit)
+	}
+}
+
 // TestFitToolBoxesTaller checks that a call cut short shows whole again once
 // a taller terminal leaves it room.
 func TestFitToolBoxesTaller(t *testing.T) {

@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/style"
@@ -58,6 +59,50 @@ func FormatContentPart(part message.ContentPart) string {
 	default:
 		return Tag(string(part.PartType()))
 	}
+}
+
+// PromptMarkdown returns text, a prompt as it was typed or pasted, as
+// Markdown that shows each of its line breaks: a line that another line
+// follows in the same paragraph ends in a hard line break, two spaces, where
+// Markdown would join the two lines with a space. A line that ends in one
+// already is left as it is, as are the lines of a fenced code block, which
+// show as they are.
+func PromptMarkdown(text string) string {
+	lines := strings.Split(text, "\n")
+	fence := ""
+	for i, line := range lines {
+		if marker := FenceMarker(line); marker != "" {
+			switch {
+			case fence == "":
+				fence = marker
+			case strings.HasPrefix(marker, fence) && strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), fence[:1])) == "":
+				fence = ""
+			}
+			continue
+		}
+		if fence != "" || i == len(lines)-1 || strings.TrimSpace(line) == "" || strings.TrimSpace(lines[i+1]) == "" {
+			continue
+		}
+		if !strings.HasSuffix(line, "  ") && !strings.HasSuffix(line, "\\") {
+			lines[i] = line + "  "
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// FenceMarker returns the run of three or more backticks or tildes that
+// line, a line of Markdown, opens or closes a fenced code block with, after
+// an indent of up to three spaces, or "" when it is no fence.
+func FenceMarker(line string) string {
+	rest := strings.TrimLeft(line, " ")
+	if len(line)-len(rest) > 3 || rest == "" || rest[0] != '`' && rest[0] != '~' {
+		return ""
+	}
+	n := len(rest) - len(strings.TrimLeft(rest, rest[:1]))
+	if n < 3 {
+		return ""
+	}
+	return rest[:n]
 }
 
 // Tag formats name as a bracketed content label.

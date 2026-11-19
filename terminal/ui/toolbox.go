@@ -52,7 +52,7 @@ type ToolBox struct {
 	// KeepRows, when above zero, is the most rows of the call's tallest
 	// block that the details show, as KeepRows the function cuts text to:
 	// its output, its body, or its Lines, whichever takes the most rows at
-	// WrapWidth. Zero shows them whole. UI.FitToolBoxes sets it inline, so
+	// WrapWidth. Zero shows them whole. UI.FitToolBoxes sets it, so
 	// that an expanded call fits the screen.
 	KeepRows int
 	// WrapWidth is the width, in columns, that KeepRows counts rows at.
