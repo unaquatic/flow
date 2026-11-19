@@ -747,7 +747,8 @@ type UIState struct {
 	// token use.
 	Usage SessionUsage
 	// ToolsExpanded reports whether tool calls and the changes of each step
-	// show their details, which Ctrl+O toggles. They start collapsed.
+	// show their details, which Ctrl+O toggles. The terminal starts with
+	// them expanded.
 	ToolsExpanded bool
 	// ExpandStyle is how expanded tool calls show, which /config sets. It
 	// is ExpandedPlain by default.

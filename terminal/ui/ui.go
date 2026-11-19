@@ -278,7 +278,8 @@ func Run(ctx context.Context, a *app.App, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	state := &UIState{Model: model, KeepModel: opts.Model != ""}
+	// Tool calls start expanded, until Ctrl+O collapses them.
+	state := &UIState{Model: model, KeepModel: opts.Model != "", ToolsExpanded: true}
 	state.ApplyConfig(conf.Terminal, conf.Debug)
 
 	cfg := terminal.Config{
