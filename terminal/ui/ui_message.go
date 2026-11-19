@@ -34,6 +34,8 @@ func (ui *UI) DropTranscript() {
 	clear(ui.blink.Rows)
 	ui.committed = false
 	ui.trimmed = false
+	ui.earlier = nil
+	ui.freshBuild = false
 }
 
 // LoadTranscript replaces the active transcript with msgs, as

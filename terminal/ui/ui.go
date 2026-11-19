@@ -130,9 +130,24 @@ type UI struct {
 	// CommitScrolledRows commits them.
 	committed bool
 	// trimmed reports that the transcript was built without the rows of the
-	// earliest messages, which the terminal never showed, as TrimTranscript
-	// leaves them out.
+	// earliest messages: inline, which the terminal never showed, as
+	// TrimTranscript leaves them out, and in fullscreen mode, which the user
+	// has not scrolled up to, as earlier holds them.
 	trimmed bool
+	// earlier are the first messages of the transcript, and the notices
+	// among them, whose rows the fullscreen transcript does not hold yet, as
+	// BuildTranscript leaves them out, for BuildEarlierInView to build as
+	// the user scrolls up to them. It is a copy, taken as the transcript was
+	// built: the service may reuse its own slice for the next one.
+	earlier []ChatMessage
+	// prependBefore, while PrependMessages adds the rows of earlier
+	// messages, is the row that showed first, which they go above.
+	prependBefore *widget.Box
+	// freshBuild reports that BuildTranscript built the fullscreen
+	// transcript since the last frame was laid out, so that the scroll box's
+	// offset is still that of the transcript before it, as
+	// BuildEarlierInView must not read it.
+	freshBuild bool
 
 	// extensions add the widgets of what extensions add to messages.
 	extensions []Extension
@@ -773,6 +788,9 @@ func (ui *UI) BuildUI() {
 	// before the frame is laid out, while they are where the last frame put
 	// them.
 	root.AddLifecyclePass(ui.CommitScrolledRows)
+	// In fullscreen, the rows of earlier messages are built before the frame
+	// that would scroll up to them is laid out.
+	root.AddLifecyclePass(ui.BuildEarlierInView)
 	// Every frame fits the input box to the terminal before it is laid out,
 	// whatever changed it: a menu, the input text, the queue, or a resize.
 	root.AddLifecyclePass(ui.SyncInputGap)

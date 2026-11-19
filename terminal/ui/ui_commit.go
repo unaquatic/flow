@@ -99,8 +99,13 @@ func (ui *UI) RebuildTranscript() {
 }
 
 // BuildTranscript adds the rows of msgs, messages and the notices among them,
-// to the empty transcript: in fullscreen mode those of every message, and
-// inline the last TailRows of them, as TrimTranscript keeps them.
+// to the empty transcript: inline the last TailRows of them, as TrimTranscript
+// keeps them, and in fullscreen mode the last BuiltScreens screens of them,
+// as BuildEarlier builds them, leaving the earlier ones for
+// BuildEarlierInView to build as the transcript scrolls up to them. A history
+// move builds the transcript again, so that what it costs depends on the
+// last bubbles that fill those screens, which it builds whole, not on how
+// long the session is.
 //
 // Inline, it builds the rows of the last messages alone: first of tailBatch
 // of them, then of as many as those suggest add up to TailRows, and a quarter
@@ -108,17 +113,17 @@ func (ui *UI) RebuildTranscript() {
 // long the session, and starts with a message that starts a bubble, as
 // BubbleStart picks it.
 func (ui *UI) BuildTranscript(msgs []ChatMessage) {
-	n := len(msgs)
-	if ui.inline {
-		n = min(n, tailBatch)
+	if !ui.inline {
+		ui.earlier = slices.Clone(msgs)
+		ui.BuildEarlier(BuiltScreens * ui.ScreenRows())
+		ui.freshBuild = true
+		return
 	}
+	n := min(len(msgs), tailBatch)
 	for {
 		start := BubbleStart(msgs, len(msgs)-n)
 		for _, msg := range msgs[start:] {
 			ui.AddMessage(msg)
-		}
-		if !ui.inline {
-			return
 		}
 		height := ui.TranscriptHeight()
 		if start == 0 || height >= TailRows {
@@ -155,9 +160,9 @@ func BubbleStart(msgs []ChatMessage, i int) int {
 	return i
 }
 
-// TranscriptHeight lays out the inline transcript, in the root as it is now
-// sized, and returns the rows it takes: from the top margin of its first row
-// that takes part in layout to the bottom margin of its last.
+// TranscriptHeight lays out the transcript, in the root as it is now sized,
+// and returns the rows it takes: from the top margin of its first row that
+// takes part in layout to the bottom margin of its last.
 func (ui *UI) TranscriptHeight() int {
 	ui.renderer.Root().CalculateLayout()
 	top, bottom := -1, 0
@@ -178,8 +183,9 @@ func (ui *UI) TranscriptHeight() int {
 	return bottom - top
 }
 
-// RowBottom returns the first terminal row under row, a row of the inline
-// transcript, and its bottom margin, as last laid out.
+// RowBottom returns the first row under row, a row of the transcript, and its
+// bottom margin, as last laid out, before any scroll: inline, a row of the
+// terminal.
 func RowBottom(row *widget.Box) int {
 	n := row.LayoutNode()
 	margin, _ := n.MarginBottom.Resolve(0)

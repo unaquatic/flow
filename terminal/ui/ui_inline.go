@@ -8,7 +8,9 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// AddTranscriptRow appends a bubble or notice to the transcript.
+// AddTranscriptRow appends a bubble or notice to the transcript, or, while
+// PrependMessages adds the rows of earlier messages, adds it above the row
+// that showed first.
 //
 // Fullscreen mode puts rows in a scroll container. Inline mode puts them
 // directly under the root, because a container sized to its children reports
@@ -16,6 +18,12 @@ import (
 // the entire transcript on every frame. The root's height is fixed, so it
 // reports nothing and the damage stays at the rows that changed.
 func (ui *UI) AddTranscriptRow(row *widget.Box) {
+	if before := ui.prependBefore; before != nil {
+		i := slices.Index(ui.transcriptRows, before)
+		ui.transcriptRows = slices.Insert(ui.transcriptRows, i, row)
+		before.Parent().InsertBefore(row, before)
+		return
+	}
 	ui.transcriptRows = append(ui.transcriptRows, row)
 	if ui.inline {
 		ui.renderer.Root().InsertBefore(row, ui.indicatorBox)
@@ -52,9 +60,10 @@ func (ui *UI) ClearTranscriptRows() {
 // back what of their parts may still change, as ChatMessageBox.SyncHeld says.
 //
 // Rows are reparented rather than rebuilt, so streaming content, tool state,
-// and the widget index all survive the switch. Rows committed to the terminal
-// or trimmed left the transcript, though, so while any did, the switch to the
-// alternate screen builds the transcript again, as RebuildTranscript does.
+// and the widget index all survive the switch. Rows committed to the terminal,
+// and those the transcript was built without, as trimmed records, are not in
+// it, though, so while any are missing, the switch builds the transcript
+// again in the new mode, as RebuildTranscript does.
 // The switch to inline keeps the last TailRows rows, as TrimTranscript keeps
 // them, as BuildTranscript would build it. Like every UI event, this runs on
 // the renderer's event loop, which is where the renderer expects mode
@@ -69,6 +78,13 @@ func (ui *UI) SetInlineMode(e EventInlineModeSet) {
 
 	ui.inline = e.Inline
 	ui.messageBox.SetGone(e.Inline)
+	if !e.Inline {
+		// Inline, the renderer lays the root out far taller than the
+		// screen. The fullscreen transcript built below counts the rows it
+		// builds in screens of the root, so the root takes the terminal's
+		// size now, as the renderer gives it once it switches.
+		ui.renderer.Root().Resize(ui.renderer.Width(), ui.renderer.Height())
+	}
 
 	if ui.committed || ui.trimmed {
 		ui.RebuildTranscript()
