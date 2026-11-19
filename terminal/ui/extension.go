@@ -149,15 +149,13 @@ type ToolView struct {
 	// Unnoted are the params that get no note, since the box shows them
 	// otherwise, or not at all.
 	Unnoted []string
-	// Body is shown under the params, as code in BodyLang, such as the diff
-	// of an edit.
+	// Body is shown under the params, as code in BodyLang, such as a diff.
 	Body string
 	// BodyLang is the language of Body, or of the output when OutputInBody
 	// is set.
 	BodyLang string
 	// OutputInBody shows the call's output in place of Body, as code in
-	// BodyLang, rather than under it as text, such as the file a read
-	// reads.
+	// BodyLang, rather than under it as text, such as a file's contents.
 	OutputInBody bool
 	// Lines, when set, show in place of Body, and so of the output when
 	// OutputInBody is set, as lines of text, each in the box's text color
@@ -171,6 +169,11 @@ type ToolView struct {
 	// PartBox.KeepExpanded describes, such as a todo list, which is read
 	// whole.
 	KeepExpanded bool
+	// HeaderOnly shows the call as its header alone, expanded or not, such
+	// as an edit, whose changes the turn's changes show, or a read: its
+	// details show nothing of its input or output, but why it failed when
+	// it fails.
+	HeaderOnly bool
 }
 
 // ToolLine is one of the Lines a ToolView shows.

@@ -1,0 +1,26 @@
+=== text ===
+|■ Running the tests.                    |
+|                                        |
+|■ Bash go test [exit 1]                 |
+|■ Read calc.go                          |
+|■ Grep Divide [1 match]                 |
+|                                        |
+|■ Fixed the zero check.                 |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A BBBBBBB BBB BBBBBB                    |
+|                                        |
+|C CCCC CC CCCC CCCCC CC                 |
+|C CCCC CCCCCCC                          |
+|C CCCC CCCCCC CC CCCCCC                 |
+|                                        |
+|A BBBBB BBB BBBB BBBBBB                 |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #eb7513
+B #e6e6e6
+C #8a8a8a

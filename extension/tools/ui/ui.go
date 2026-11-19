@@ -8,8 +8,9 @@
 //     the commands it runs and the operators between them, as BashSummary
 //     gives them; in the details, the command as a command line, and its
 //     timeout when it is not the default;
-//   - read: the file as code in its language, and the lines it reads;
-//   - write and edit: the change as a diff;
+//   - read, write, and edit: their header alone, the path and the lines a
+//     read reads, expanded or not, but why a call failed, as the changes of
+//     the turn show what an edit or a write changes;
 //   - grep: the number of matches once it completes;
 //   - ls: the label "List";
 //   - todo: the list it writes, and how many of its items are done,
@@ -66,28 +67,10 @@ func (*Extension) FormatTool(call message.ToolPart) (ui.ToolView, bool) {
 		}
 		return view, true
 	case "read":
-		lines := ReadLines(call)
-		return ui.ToolView{
-			HeaderNote:    lines,
-			ParamInHeader: true,
-			Unnoted:       []string{"offset", "limit"},
-			BodyLang:      LangForPath(ui.StringField(args, "path")),
-			OutputInBody:  true,
-		}, true
-	case "write":
-		return ui.ToolView{
-			ParamInHeader: true,
-			Body:          Patch("", ui.StringField(args, "content")),
-			BodyLang:      "diff",
-			Unnoted:       []string{"content"},
-		}, true
-	case "edit":
-		return ui.ToolView{
-			ParamInHeader: true,
-			Body:          Patch(ui.StringField(args, "old_string"), ui.StringField(args, "new_string")),
-			BodyLang:      "diff",
-			Unnoted:       []string{"old_string", "new_string"},
-		}, true
+		return ui.ToolView{HeaderNote: ReadLines(call), ParamInHeader: true, HeaderOnly: true}, true
+	case "write", "edit":
+		// The changes of the turn show what they change.
+		return ui.ToolView{ParamInHeader: true, HeaderOnly: true}, true
 	case "grep":
 		view := ui.ToolView{ParamInHeader: true}
 		if state, ok := call.State.(message.ToolStateCompleted); ok {
@@ -254,46 +237,4 @@ func GrepMatches(output string) string {
 		return "[1 match]"
 	}
 	return "[" + count + " matches]"
-}
-
-// Patch formats the old and new snippets of an edit, or the content of a
-// write, as a unified diff hunk. It returns "" when both are empty.
-func Patch(oldText, newText string) string {
-	if oldText == "" && newText == "" {
-		return ""
-	}
-	var body strings.Builder
-	counts := [2]int{}
-	for i, text := range []string{oldText, newText} {
-		if text == "" {
-			continue
-		}
-		lines := strings.Split(strings.TrimSuffix(text, "\n"), "\n")
-		counts[i] = len(lines)
-		for _, line := range lines {
-			body.WriteByte("-+"[i])
-			body.WriteString(line)
-			body.WriteByte('\n')
-		}
-	}
-	// Positions describe the snippets, not their location in the full file.
-	header := fmt.Sprintf("@@ -%d,%d +%d,%d @@\n", min(counts[0], 1), counts[0], min(counts[1], 1), counts[1])
-	return header + strings.TrimSuffix(body.String(), "\n")
-}
-
-// LangForPath returns the lowercase extension of path, as the Markdown
-// language tag of the file's code. An extensionless base name is returned as
-// the tag, and an empty path as "".
-func LangForPath(path string) string {
-	if path == "" {
-		return ""
-	}
-	base := path
-	if _, after, ok := strings.CutLast(path, "/"); ok {
-		base = after
-	}
-	if _, ext, ok := strings.CutLast(base, "."); ok {
-		return strings.ToLower(ext)
-	}
-	return strings.ToLower(base)
 }

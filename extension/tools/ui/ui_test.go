@@ -41,84 +41,57 @@ func TestFormatTool_OnlyBuiltinTools(t *testing.T) {
 	}
 }
 
-// TestToolBox_WriteShowsAddedDiff checks write previews before execution.
-func TestToolBox_WriteShowsAddedDiff(t *testing.T) {
-	box := newBox(message.ToolPart{
-		Name: "write",
-		State: message.ToolStatePending{
-			Input: json.RawMessage(`{"path":"foo.go","content":"package x\n\nfunc Y() {}\n"}`),
-		},
-	})
-	got := box.Header.PlainText() + " " + box.Status.PlainText() + "\n" + box.Body.Content()
-	for _, want := range []string{"Write foo.go", "[queued]", "```diff", "@@ -0,0 +1,3 @@", "+package x", "+func Y() {}"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("write toolpart missing %q in output:\n%s", want, got)
-		}
+// TestToolBox_HeaderOnly checks that a call of read, write, or edit shows as
+// its header alone, expanded or not, in every state but failure, its input
+// unshown even while it streams, and that a failed call shows why it failed.
+func TestToolBox_HeaderOnly(t *testing.T) {
+	editInput := json.RawMessage(`{"path":"foo.go","old_string":"old line","new_string":"new line"}`)
+	tests := []struct {
+		name   string
+		call   message.ToolPart
+		header string
+	}{
+		{name: "write queued", header: "Write foo.go", call: message.ToolPart{Name: "write",
+			State: message.ToolStatePending{Input: json.RawMessage(`{"path":"foo.go","content":"package x\n"}`)}}},
+		{name: "edit streaming", header: "Edit", call: message.ToolPart{Name: "edit",
+			State: message.ToolStatePending{Input: json.RawMessage(`{"path":"foo.go","old_string":"old`)}}},
+		{name: "edit running", header: "Edit foo.go", call: message.ToolPart{Name: "edit",
+			State: message.ToolStateRunning{Input: editInput}}},
+		{name: "edit completed", header: "Edit foo.go", call: message.ToolPart{Name: "edit",
+			State: message.ToolStateCompleted{Input: editInput, Output: "edited"}}},
+		{name: "read running", header: "Read foo.go", call: message.ToolPart{Name: "read",
+			State: message.ToolStateRunning{Input: json.RawMessage(`{"path":"foo.go"}`), Output: "package x\n"}}},
+		{name: "read completed", header: "Read foo.go [8-9]", call: message.ToolPart{Name: "read",
+			State: message.ToolStateCompleted{Input: json.RawMessage(`{"path":"foo.go","offset":8,"limit":2}`),
+				Output: "a\nb\n\n[showing lines 8-9 of 29]"}}},
 	}
-	if box.Body.LineCount() < 3 {
-		t.Fatalf("diff did not render the additions: %d lines", box.Body.LineCount())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			box := newBox(tt.call)
+			box.SetExpanded(true)
+			if got := box.Header.PlainText(); got != tt.header {
+				t.Errorf("header = %q, want %q", got, tt.header)
+			}
+			if !box.Empty || box.Open() {
+				t.Errorf("empty %v, open %v; want the box empty, shown as its header alone", box.Empty, box.Open())
+			}
+			for name, w := range map[string]interface{ Visible() bool }{
+				"params": box.Params, "body": box.Body, "lines": box.Lines, "output": box.Output,
+			} {
+				if w.Visible() {
+					t.Errorf("%s shown, want only the header", name)
+				}
+			}
+		})
 	}
-}
 
-// TestToolBox_EditShowsUnifiedDiff checks removed and added lines.
-func TestToolBox_EditShowsUnifiedDiff(t *testing.T) {
-	box := newBox(message.ToolPart{
-		Name: "edit",
-		State: message.ToolStateRunning{
-			Input: json.RawMessage(`{"path":"foo.go","old_string":"old line","new_string":"new line"}`),
-		},
-	})
-	got := box.Header.PlainText() + " " + box.Status.PlainText() + "\n" + box.Body.Content()
-	for _, want := range []string{"Edit foo.go", "[executing]", "```diff", "-old line", "+new line"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("edit toolpart missing %q in output:\n%s", want, got)
-		}
-	}
-}
-
-// TestToolBox_ReadShowsContentOnCompletion checks that read output updates in place.
-func TestToolBox_ReadShowsContentOnCompletion(t *testing.T) {
-	pending := message.ToolPart{
-		Name: "read",
-		State: message.ToolStatePending{
-			Input: json.RawMessage(`{"path":"foo.go"}`),
-		},
-	}
-	box := newBox(pending)
-	code := box.Body
-	// Before it reads anything, the call shows its path alone, after its
-	// name in the header, whether expanded or not.
+	// A failed call shows why it failed, under its header.
+	box := newBox(message.ToolPart{Name: "edit", State: message.ToolStateError{Input: editInput,
+		Error: "old_string not found\n\n[tool execution failed]"}})
 	box.SetExpanded(true)
-	if got := box.Header.PlainText(); got != "Read foo.go" || box.Params.Visible() || code.Visible() {
-		t.Fatalf("pending read: header %q, params shown %v, body shown %v; want \"Read foo.go\" and neither", got, box.Params.Visible(), code.Visible())
-	}
-	box.SetTool(message.ToolPart{Name: "read", State: message.ToolStatePending{
-		Input: json.RawMessage(`{"path":"calc`),
-	}})
-	if got := code.Content(); got != "```json\n{\"path\":\"calc\n```" {
-		t.Fatalf("partial input = %q", got)
-	}
-	box.SetTool(message.ToolPart{Name: "read", State: message.ToolStateRunning{Input: pending.Input(), Output: "package x\n"}})
-	if got := code.Content(); got != "```go\npackage x\n```" {
-		t.Fatalf("read progress = %q", got)
-	}
-
-	completed := message.ToolPart{
-		Name: "read",
-		State: message.ToolStateCompleted{
-			Input:  json.RawMessage(`{"path":"foo.go"}`),
-			Output: "package x\n\nfunc Y() {}\n",
-		},
-	}
-	box.SetTool(completed)
-	if box.Body != code || !strings.HasPrefix(code.Content(), "```go\n") {
-		t.Fatal("read did not preserve the Markdown widget and filetype")
-	}
-	got := box.Header.PlainText() + "\n" + code.Content()
-	for _, want := range []string{"Read foo.go", "package x", "func Y() {}"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("completed read missing %q in output:\n%s", want, got)
-		}
+	if box.Empty || !box.Open() || box.Body.Visible() || !strings.Contains(box.Output.Content(), "old_string not found") {
+		t.Errorf("failed edit: empty %v, open %v, body shown %v, output %q; want why it failed alone",
+			box.Empty, box.Open(), box.Body.Visible(), box.Output.Content())
 	}
 }
 

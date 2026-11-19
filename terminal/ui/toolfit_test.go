@@ -43,9 +43,8 @@ func numberedLines(n int, line func(int) string) string {
 
 // TestFitToolBoxes checks that, inline, an expanded call taller than the
 // screen ends at the limit, or within a row of it, with TruncatedNote,
-// whatever its tallest block holds: short lines, lines that wrap, one line
-// that wraps past the screen, or an edit's diff, and that a call that fits
-// is left whole.
+// whatever its tallest block holds: short lines, lines that wrap, or one
+// line that wraps past the screen, and that a call that fits is left whole.
 func TestFitToolBoxes(t *testing.T) {
 	const height = 30
 	bash := `{"command":"go test ./..."}`
@@ -57,9 +56,6 @@ func TestFitToolBoxes(t *testing.T) {
 		{"short lines", completed("c1", "bash", bash, numberedLines(200, func(i int) string { return fmt.Sprintf("ok  \tpkg/%d", i) }))},
 		{"wrapping lines", completed("c1", "bash", bash, numberedLines(60, func(i int) string { return fmt.Sprint(i, " ", long) }))},
 		{"one huge line", completed("c1", "bash", bash, strings.Repeat("x", 8000))},
-		{"edit diff", completed("c1", "edit", fmt.Sprintf(`{"path":"a.go","old_string":%q,"new_string":%q}`,
-			numberedLines(80, func(i int) string { return fmt.Sprint("old ", i) }),
-			numberedLines(80, func(i int) string { return fmt.Sprint("new ", i) })), "ok")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

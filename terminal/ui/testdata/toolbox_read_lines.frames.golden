@@ -1,10 +1,10 @@
 === text ===
 |  Read calc.go [8-9]                                        |
 |                                                            |
-|  // Divide returns the quotient.                           |
-|  func (c *Calculator) Divide(a, b float64) float64 {       |
 |                                                            |
-|  [showing lines 8-9 of 29]                                 |
+|                                                            |
+|                                                            |
+|                                                            |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -12,19 +12,8 @@
 === fg ===
 |  AAAA AAAAAAA AAAAA                                        |
 |                                                            |
-|  AA AAAAAA AAAAAAA AAA AAAAAAAAA                           |
-|  BBBB CC CCCCCCCCCCCC DDDDDDCCC C BBBBBBBC BBBBBBB C       |
-|                                                            |
-|  CCCCCCCC CCCCC CCC CC CCC                                 |
 |                                                            |
 |                                                            |
-|                                                            |
-|                                                            |
-=== attrs ===
-|                                                            |
-|                                                            |
-|                                                            |
-|  BBBB                             BBBBBBB  BBBBBBB         |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -33,6 +22,3 @@
 |                                                            |
 === legend ===
 A #8a8a8a
-B #eb7513
-C #e6e6e6
-D #ffb642

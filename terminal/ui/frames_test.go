@@ -482,6 +482,12 @@ func TestTranscriptFrames(t *testing.T) {
 		// rows above and below it.
 		{name: "agent_tool_rows_clicked", h: 18, add: func(ui *UI) {
 			toolRowsTurn(ui)
+			clickTool(ui, "a1", 2)
+		}},
+		// A click on a call that shows its header alone, as a read does,
+		// leaves it a row.
+		{name: "agent_tool_rows_clicked_header_only", h: 10, add: func(ui *UI) {
+			toolRowsTurn(ui)
 			clickTool(ui, "a1", 1)
 		}},
 		// A todo call shows expanded though the calls are collapsed, as its

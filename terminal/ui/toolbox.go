@@ -16,11 +16,11 @@ import (
 )
 
 // ToolBox is the PartBox of a tool call. It writes the call's header and
-// status, and shows in its details the call's params, a body, such as an
-// edit's diff or the file a read reads, and its output, as the View that its
-// Formats give the call says, as ShowTool describes. The PartBox decides how
-// the call shows: as a row or a block, expanded or not, with a marker, which
-// blinks while the call executes.
+// status, and shows in its details the call's params, a body, such as its
+// input as JSON, and its output, as the View that its Formats give the call
+// says, as ShowTool describes. The PartBox decides how the call shows: as a
+// row or a block, expanded or not, with a marker, which blinks while the
+// call executes.
 type ToolBox struct {
 	*PartBox
 	// Tool contains the latest call state and input.
@@ -160,8 +160,10 @@ func (b *ToolBox) Format(tool message.ToolPart) ToolView {
 // not a JSON object yet, as while it streams, is shown as it is in the body
 // instead. A call whose params show nothing, and that has nothing else to
 // show, shows its input in the body, as InputJSON gives it, so that
-// expanding it shows something. The box is busy while the call executes, and
-// KeepExpanded as the View says.
+// expanding it shows something. A View that is HeaderOnly shows none of that,
+// but the output of a failed call. A call left with nothing to show is
+// Empty, and shows as its header alone. The box is busy while the call
+// executes, and KeepExpanded as the View says.
 func (b *ToolBox) ShowTool(tool message.ToolPart) {
 	b.Tool = tool
 	b.View = b.Format(tool)
@@ -199,6 +201,13 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 		content, filetype = InputJSON(tool.Input()), "json"
 	}
 	lines := view.Lines
+	if view.HeaderOnly {
+		// Only why a failed call failed shows under the header.
+		param, notes, hasParams, content, lines, hasLines = "", nil, false, "", nil, false
+		if _, failed := tool.State.(message.ToolStateError); !failed {
+			output = ""
+		}
+	}
 	cut := false
 	if b.KeepRows > 0 {
 		switch TallestBlock(output, content, lines, b.WrapWidth) {
@@ -220,6 +229,7 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 	b.Lines.SetGone(!hasLines)
 	b.Output.SetContent(ToolFence("text", output))
 	b.Output.SetGone(output == "")
+	b.SetEmpty(!hasParams && content == "" && !hasLines && output == "")
 	b.SetStatus(status)
 	// Only an executing call's marker blinks.
 	_, executing := tool.State.(message.ToolStateRunning)
@@ -254,7 +264,7 @@ const (
 	BlockNone Block = iota
 	// BlockOutput is the call's output, shown under its body.
 	BlockOutput
-	// BlockBody is the call's body, such as an edit's diff or a read's file.
+	// BlockBody is the call's body, such as its input as JSON.
 	BlockBody
 	// BlockLines is the view's Lines, such as a todo list.
 	BlockLines
