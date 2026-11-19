@@ -119,18 +119,13 @@ func TestLoginProviders_BuiltIn(t *testing.T) {
 	}
 }
 
-// TestConfigKeys checks that a provider's key is the configuration's, or
-// else the first environment variable the catalog names for it that its base
-// URL does not take, and that holds a key.
-func TestConfigKeys(t *testing.T) {
+// TestEnvKeys checks that a provider's key is the first environment
+// variable the catalog names for it that its base URL does not take, and
+// that holds a key.
+func TestEnvKeys(t *testing.T) {
 	home := t.TempDir()
-	settings := `{"catalog_source":"http://127.0.0.1:1"}`
-	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	gatewaytest.WriteCache(t, home, protocoltest.FromAPI(t, providersCatalog))
-	conf := config.NewService(home)
-	keys := configKeys(conf, catalog.NewStore(gateway.StoreOptions{Dir: home}).Get)
+	keys := envKeys(catalog.NewStore(gateway.StoreOptions{Dir: home}).Get)
 
 	t.Setenv("GW_HOST", "gw.example")
 	t.Setenv("GW_API_KEY", "sk-gw")
@@ -140,15 +135,6 @@ func TestConfigKeys(t *testing.T) {
 	t.Setenv("GW_API_KEY", "")
 	if k, err := keys("gw"); k != "" || err != nil {
 		t.Errorf("gw key without GW_API_KEY = %q, %v, want none", k, err)
-	}
-
-	settings = `{"catalog_source":"http://127.0.0.1:1","provider":{"gw":{"api_key":"sk-config"}}}`
-	if err := os.WriteFile(filepath.Join(home, config.FileName), []byte(settings), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("GW_API_KEY", "sk-gw")
-	if k, err := keys("gw"); k != "sk-config" || err != nil {
-		t.Errorf("gw key = %q, %v, want the configuration's, sk-config", k, err)
 	}
 }
 

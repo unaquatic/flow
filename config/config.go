@@ -123,11 +123,9 @@ type Config struct {
 	HomeDir string `json:"-"`
 }
 
-// Provider holds settings for a single LLM provider.
+// Provider holds settings for a single LLM provider. It holds no API key:
+// keys live in auth.json, or in the environment variables the catalog names.
 type Provider struct {
-	// APIKey is the configured provider API key.
-	APIKey string `json:"api_key,omitempty"`
-
 	// BaseURL moves the provider's endpoints: a host alone, such as
 	// https://proxy.example, takes each there with its own path, as
 	// https://proxy.example/v1 for https://api.provider-a.example/v1; a base URL with a path
@@ -349,9 +347,8 @@ func Defaults(dir string) *Config {
 }
 
 // LoadDir returns the configuration of data directory dir: its defaults,
-// with the config file in dir merged in selectively, and then the
-// environment variables, of which EnvDebug overrides the file while API-key
-// variables fill empty keys. It does not create dir.
+// with the config file in dir merged in selectively, and then EnvDebug,
+// which overrides the file. It does not create dir.
 func LoadDir(dir string) (*Config, error) {
 	cfg := Defaults(dir)
 
@@ -364,7 +361,7 @@ func LoadDir(dir string) (*Config, error) {
 	return cfg, nil
 }
 
-// applyEnvOverrides overrides the debug setting and fills empty API keys.
+// applyEnvOverrides overrides the debug setting.
 func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv(EnvDebug); v != "" {
 		switch strings.ToLower(v) {
@@ -372,15 +369,6 @@ func applyEnvOverrides(cfg *Config) {
 			cfg.Debug = true
 		case "0", "false", "no", "off":
 			cfg.Debug = false
-		}
-	}
-
-	// Use NAME_API_KEY for the configured providers. The app reads the
-	// environment variables the catalog names for each provider besides.
-	for name, pc := range cfg.Provider {
-		if pc.APIKey == "" {
-			envKey := strings.ToUpper(name) + "_API_KEY"
-			pc.APIKey = os.Getenv(envKey)
 		}
 	}
 }
@@ -430,9 +418,6 @@ func mergeFromFile(cfg *Config, f File) error {
 		}
 		for name, pc := range overlay.Provider {
 			if existing, ok := cfg.Provider[name]; ok {
-				if pc.APIKey != "" {
-					existing.APIKey = pc.APIKey
-				}
 				if pc.BaseURL != "" {
 					existing.BaseURL = pc.BaseURL
 				}
