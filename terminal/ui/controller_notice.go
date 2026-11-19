@@ -273,29 +273,6 @@ func RelPathForToast(absPath string) string {
 	return rel
 }
 
-// ExpandingToolsText and CollapsingToolsText are the indicator text while
-// Ctrl+O lays the transcript out again with the details of every tool call,
-// and of the changes of every step, shown or hidden.
-const (
-	ExpandingToolsText  = "Expanding"
-	CollapsingToolsText = "Collapsing"
-)
-
-// ToolsToggleText returns the indicator text while Ctrl+O shows the details
-// of the tool calls, as expanded says, or hides them: ExpandingToolsText or
-// CollapsingToolsText, and then, while a turn is in progress, the time it has
-// taken in brackets, as FormatWorking shows it, such as "Expanding [12s]".
-func ToolsToggleText(expanded bool, elapsed time.Duration) string {
-	text := CollapsingToolsText
-	if expanded {
-		text = ExpandingToolsText
-	}
-	if elapsed <= 0 {
-		return text
-	}
-	return text + " [" + FormatDuration(elapsed) + "]"
-}
-
 // The keys that act on a run in progress, as the indicator names them after
 // the run's time: CancelHint names the key that cancels the run, and
 // ExpandHint and CollapseHint what Ctrl+O does next to the details of the

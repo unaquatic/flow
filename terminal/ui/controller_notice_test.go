@@ -61,25 +61,6 @@ func TestWorkingIndicator(t *testing.T) {
 	}
 }
 
-// TestToolsToggleText checks that the indicator while Ctrl+O lays the
-// transcript out again names the toggle, and the time of a turn in progress.
-func TestToolsToggleText(t *testing.T) {
-	for _, tt := range []struct {
-		expanded bool
-		elapsed  time.Duration
-		want     string
-	}{
-		{expanded: true, want: "Expanding"},
-		{expanded: false, want: "Collapsing"},
-		{expanded: true, elapsed: 12 * time.Second, want: "Expanding [12s]"},
-		{expanded: false, elapsed: 65 * time.Second, want: "Collapsing [1m 05s]"},
-	} {
-		if got := ToolsToggleText(tt.expanded, tt.elapsed); got != tt.want {
-			t.Errorf("ToolsToggleText(%v, %v) = %q, want %q", tt.expanded, tt.elapsed, got, tt.want)
-		}
-	}
-}
-
 // TestSessionSelectSettlesIndicator checks that switching to a session with
 // no run in progress hides the working indicator, which the end of the run
 // of the session left would otherwise never hide.

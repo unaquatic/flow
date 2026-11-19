@@ -438,9 +438,6 @@ func TestSnapshotChangesFollowCtrlO(t *testing.T) {
 	if b.Open() || header != "Changed 1 file  +2 -0" {
 		t.Fatalf("open %v, header %q; want collapsed to its summary", b.Open(), header)
 	}
-	if !u.TogglesTools(true) {
-		t.Error("TogglesTools(true) = false for a reply whose changes Ctrl+O would expand")
-	}
 	ui.ExpandTools(u)
 	if !b.Open() || !b.Diffs[0].Visible() || b.Header.PlainText() != header {
 		t.Errorf("after Ctrl+O: open %v, diff %v, header %q; want the diff under the summary", b.Open(), b.Diffs[0].Visible(), b.Header.PlainText())

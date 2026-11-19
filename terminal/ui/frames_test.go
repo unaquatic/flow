@@ -1241,13 +1241,6 @@ func TestIndicatorFrames(t *testing.T) {
 			Provider: providerA, Account: "work",
 			Error: app.ErrorOf(&agent.TokenEndpointError{StatusCode: 401, Body: `{"error":"invalid_grant","error_description":"The code has expired."}`}),
 		}},
-		// Ctrl+O says what it is doing while it lays out a long transcript
-		// again with every tool call expanded.
-		{name: "indicator_expanding_tools", h: 13, add: func(ui *UI) {
-			ui.AddMessage(userText("u1", "Run the tests"))
-			ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
-				State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
-		}, show: EventIndicatorShow{Text: ExpandingToolsText, Marked: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -7,7 +7,6 @@ import (
 	"testing/synctest"
 	"time"
 
-	"github.com/unaquatic/flow/agent"
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/app"
 	"github.com/unaquatic/fluid/style"
@@ -104,22 +103,6 @@ func TestBlinkFollowsTheRun(t *testing.T) {
 	})
 }
 
-// TestBlinkSkipsOtherText checks that the marker does not blink before text
-// ShowIndicatorWhile shows during a run, and that the blink comes back with
-// the run's time.
-func TestBlinkSkipsOtherText(t *testing.T) {
-	ui := newBuiltTestUI(t, true)
-	ui.Apply(ui.service.ShowIndicator(""))
-	ui.ShowIndicatorWhile(ExpandingToolsText, func() {
-		if ui.blink.On.Load() {
-			t.Errorf("the marker blinks before %q", ExpandingToolsText)
-		}
-	})
-	if !ui.blink.On.Load() {
-		t.Error("the blink did not come back with the run's time")
-	}
-}
-
 // TestToolMarkerBlinks checks that the marker of a call blinks while the
 // call executes, the marker shows, and the blink runs, and that of no other
 // call: not a queued or ended one, not one whose marker is off, and not one
@@ -153,33 +136,5 @@ func TestToolMarkerBlinks(t *testing.T) {
 		if got := box.Blinks(); got != tt.want {
 			t.Errorf("%s: Blinks() = %v, want %v", tt.name, got, tt.want)
 		}
-	}
-}
-
-// TestShowIndicatorWhileKeepsError checks that a line shown for a moment, as
-// Ctrl+O shows one while it lays out the transcript, gives back the error it
-// stood in for: its body, its marker, and its line.
-func TestShowIndicatorWhileKeepsError(t *testing.T) {
-	ui := newInputTestUI(t)
-	ui.ShowIndicator(ErrorIndicator(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 400, ResponseBody: `{"a":1}`})))
-	line, body := ui.indicatorLabel.PlainText(), ui.indicatorDetailText.PlainText()
-
-	ui.ShowIndicatorWhile(ExpandingToolsText, func() {
-		if ui.indicatorDetail.Visible() {
-			t.Error("the error's body shows under the passing line")
-		}
-		// The passing line has a marker of its own, not the error's.
-		if !ui.indicatorMarker.Visible() || ui.indicatorMarker.Fg() == ui.ErrorFg() {
-			t.Errorf("marker shown %v in %v, want it shown, not in the error's color", ui.indicatorMarker.Visible(), ui.indicatorMarker.Fg())
-		}
-	})
-	if got := ui.indicatorLabel.PlainText(); got != line {
-		t.Errorf("line = %q, want the error's %q", got, line)
-	}
-	if got := ui.indicatorDetailText.PlainText(); got != body || !ui.indicatorDetail.Visible() {
-		t.Errorf("body = %q, visible %v; want the error's %q shown", got, ui.indicatorDetail.Visible(), body)
-	}
-	if !ui.indicatorMarker.Visible() {
-		t.Error("the error's marker is hidden")
 	}
 }

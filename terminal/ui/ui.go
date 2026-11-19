@@ -103,9 +103,6 @@ type UI struct {
 	// indicatorError reports that the indicator shows the error a run
 	// ended with, as EventIndicatorShow.Error says.
 	indicatorError bool
-	// indicatorMarked reports that the indicator shows its marker, as
-	// EventIndicatorShow.Marked asks.
-	indicatorMarked bool
 	// indicatorDetail is the plain box right under indicatorRow, with no
 	// fill or padding, that shows indicatorDetailText, in
 	// indicatorDetailRow, which the fit bounds: an error's body, as

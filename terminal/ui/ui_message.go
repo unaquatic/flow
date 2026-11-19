@@ -266,17 +266,6 @@ func (ui *UI) SetToolsExpanded(expanded bool) {
 	ui.ReprintCommitted()
 }
 
-// TogglesTools reports whether SetToolsExpanded(expanded) would show or hide
-// the details of any tool call or changes shown in the transcript.
-func (ui *UI) TogglesTools(expanded bool) bool {
-	for cm := range ui.Bubbles() {
-		if cm.TogglesTools(expanded) {
-			return true
-		}
-	}
-	return false
-}
-
 // Bubbles yields every bubble in the transcript. A bubble is yielded once
 // for each of its messages.
 func (ui *UI) Bubbles() iter.Seq[*ChatMessageBox] {

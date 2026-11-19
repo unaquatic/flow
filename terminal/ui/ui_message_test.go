@@ -262,8 +262,7 @@ func TestToolBoxSkipsEqualTool(t *testing.T) {
 
 // TestCtrlOLeavesKeptToolsExpanded checks that a call whose view keeps it
 // expanded, as a todo call's does, starts expanded among collapsed calls,
-// that Ctrl+O, expanding and collapsing the others, leaves it so, and that
-// TogglesTools does not count it.
+// and that Ctrl+O, expanding and collapsing the others, leaves it so.
 func TestCtrlOLeavesKeptToolsExpanded(t *testing.T) {
 	ui := newInputTestUI(t)
 	ui.AddMessage(agentParts("a1",
@@ -280,9 +279,6 @@ func TestCtrlOLeavesKeptToolsExpanded(t *testing.T) {
 		}
 	}
 	check("new", true, false)
-	if ui.TogglesTools(false) {
-		t.Error("TogglesTools(false) = true with only the todo call expanded")
-	}
 	press := func() {
 		t.Helper()
 		ui.HandleKey(input.NewParser().Parse([]byte("\x0f"))[0].Key) // Ctrl+O

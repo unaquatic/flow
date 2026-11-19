@@ -1459,18 +1459,6 @@ func (cm *ChatMessageBox) AdoptBox(box *PartBox) {
 	box.OnShapeChange = cm.SyncRows
 }
 
-// TogglesTools reports whether SetToolsExpanded(expanded) would show or hide
-// the details of any box shown in the bubble, such as a tool call's or a
-// step's changes. A KeepExpanded box is not among them.
-func (cm *ChatMessageBox) TogglesTools(expanded bool) bool {
-	for b := range cm.Boxes() {
-		if b.FollowsToolsExpanded() && b.Visible() && b.Expanded != expanded {
-			return true
-		}
-	}
-	return false
-}
-
 // SetToolsExpanded shows or hides the details of every box in the bubble
 // that follows Ctrl+O, as FollowsToolsExpanded reports, such as its tool
 // calls and the changes of its steps, and of those added to it later. A box
