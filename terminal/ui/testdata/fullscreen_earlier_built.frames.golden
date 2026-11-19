@@ -1,0 +1,53 @@
+=== text ===
+|                                                                                |
+|■ prompt 191                                                                    |
+|                                                                                |
+|                                                                                |
+|■ turn 191, step 1                                                              |
+|                                                                                |
+|■ turn 191, step 2                                                              |
+|                                                                                |
+|■ prompt 192                                                                    |
+|                                                                                |
+|■ turn 192, step 0                                                              |
+|                                                                                |
+|■ turn 192, step 1                                                              |
+|                                                                                |
+|■ turn 192, step 2                                                              |
+|                                                                                |
+|■ prompt 193                                                                    |
+|                                                                                |
+|■ turn 193, step 0                                                              |
+|                                                                                |
+|■ turn 193, step 1                                                              |
+|                                                                                |
+|■ turn 193, step 2                                                              |
+|                                                                                |
+=== fg ===
+|                                                                                |
+|A AAAAAA AAA                                                                    |
+|                                                                                |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|A AAAAAA AAA                                                                    |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|A AAAAAA AAA                                                                    |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+|B AAAA AAAA AAAA A                                                              |
+|                                                                                |
+=== legend ===
+A #e6e6e6
+B #eb7513

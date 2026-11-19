@@ -305,16 +305,17 @@ func TestBuildTranscript_KeepsTheLastRows(t *testing.T) {
 	}
 }
 
-// TestBuildTranscript_Whole checks that a transcript is built whole outside
-// inline mode, and inline when its rows add up to fewer than TailRows.
+// TestBuildTranscript_Whole checks that a transcript is built whole when its
+// rows add up to fewer than it builds of a long one: TailRows inline, and
+// BuiltScreens screens in fullscreen mode.
 func TestBuildTranscript_Whole(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
 		inline bool
 		turns  int
 	}{
-		{name: "fullscreen", turns: 200},
-		{name: "short session", inline: true, turns: 5},
+		{name: "fullscreen", turns: 5},
+		{name: "inline", inline: true, turns: 5},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			msgs := longSession(tt.turns, 3)
@@ -381,7 +382,8 @@ func TestBuildTranscript_ReplyContinues(t *testing.T) {
 // TestTrimmedTranscript_Rebuilds checks what a transcript loaded inline
 // without its first rows rebuilds: nothing for a reprint, which puts back
 // committed rows alone, the last TailRows rows when rows were committed too,
-// and every row in fullscreen mode.
+// and the last BuiltScreens screens of rows in fullscreen mode, as a load
+// there builds them.
 func TestTrimmedTranscript_Rebuilds(t *testing.T) {
 	msgs := longSession(200, 3)
 
@@ -407,8 +409,14 @@ func TestTrimmedTranscript_Rebuilds(t *testing.T) {
 	t.Run("fullscreen", func(t *testing.T) {
 		ui := loadSession(t, true, msgs)
 		ui.SetInlineMode(EventInlineModeSet{Inline: false})
-		if _, ok := ui.messageWidgets["u0"]; !ok || ui.trimmed {
-			t.Errorf("fullscreen shows the first prompt = %v, trimmed = %v, want every row", ok, ui.trimmed)
+		if _, ok := ui.messageWidgets["u0"]; ok || !ui.trimmed {
+			t.Errorf("fullscreen shows the first prompt = %v, trimmed = %v, want the last rows alone", ok, ui.trimmed)
+		}
+		if height, want := ui.TranscriptHeight(), BuiltScreens*ui.ScreenRows(); height < want {
+			t.Errorf("the transcript takes %d rows, want %d at least", height, want)
+		}
+		if _, ok := ui.messageWidgets[msgs[len(msgs)-1].ID]; !ok {
+			t.Error("fullscreen does not show the last reply")
 		}
 	})
 }
