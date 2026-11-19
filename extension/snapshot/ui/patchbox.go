@@ -6,25 +6,30 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/extension/snapshot"
 	"github.com/unaquatic/flow/terminal/ui"
+	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/layout"
 	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
-// PatchBox is the ui.PartBox of the workspace changes one turn made, from its
-// prompt to its last reply, shown at the bottom of the turn, above its
-// footer, as a tool call is: a row on the canvas, marked as /config marks
+// PatchBox is the ui.PartBox of the workspace changes one step made, a reply
+// and the tool calls it ran, from the message before it to the reply's end,
+// shown under the reply, as a tool call is: a row on the canvas, marked as /config marks
 // tool calls, whose header sums them up, as PatchHeader gives it, and which
-// Ctrl+O expands with the tool calls. Expanded, the header is PatchTitle
-// alone, and the details show the summary under it, then the changes of each
-// file, as FileView shows them. It stays hidden until a nonempty patch is
+// Ctrl+O and a click on the header expand and collapse as they do a tool
+// call. Collapsed, it lists the files it changed under the header, each by
+// its path and counts. Expanded, it shows under the same header the files, each
+// by its path and counts and then its diff, side by side; a click on a
+// file's row hides its diff, or shows it again. Its rows are not cut to the
+// screen as a tool call's are. Its header reads the same expanded or not, and the
+// details show the changes of each file under it, as FileView shows them. It stays hidden until a nonempty patch is
 // set, which only the box of the reply that ends a turn gets.
 type PatchBox struct {
 	*ui.PartBox
-	// From is the tree the turn started from, which the message before its
-	// first reply, usually its prompt, ended with.
+	// From is the tree the step started from, which the message before its
+	// reply ended with.
 	From snapshot.Hash
-	// To is the tree the turn ended with, which its last reply ended with.
+	// To is the tree the step ended with, which its reply ended with.
 	To snapshot.Hash
 	// Requested reports whether the patch between From and To was requested.
 	Requested bool
@@ -34,14 +39,25 @@ type PatchBox struct {
 	Load func(from, to snapshot.Hash)
 	// Patch is the unified diff shown, as SetPatch sets it.
 	Patch string
-	// Summary counts the changed files and lines, as ui.DiffSummary does,
-	// over Files while the box is expanded.
-	Summary *widget.Text
 	// Files holds a FileView for each file Patch changes, in its order.
 	Files *widget.Box
+	// Paths lists the files Patch changes, each by its path and counts,
+	// right under the header while the box is collapsed, as Files shows
+	// them with their diffs once it is expanded.
+	Paths *widget.Text
+	// Diffs holds the side by side diff of each file that has hunks, which
+	// shows under its row while ShowDiff toggles it on.
+	Diffs []*widget.Box
 	// Theme and Fg are the palette FileView draws with.
 	Theme *style.Theme
 	Fg    style.Color
+	// Highlighter colors the code of the diffs, as Highlight does.
+	Highlighter *widget.Highlighter
+	// DiffColor is how the diffs mark changed lines, as SetViewStyle sets it.
+	DiffColor ui.DiffColor
+	// DiffLayout is how the diffs lay their lines out, as SetViewStyle sets
+	// it.
+	DiffLayout ui.DiffLayout
 }
 
 var (
@@ -58,47 +74,65 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	surface := theme.ResolveSurfaceRaised()
 	b := &PatchBox{
 		PartBox: ui.NewPartBox(theme, fg, surface),
-		// The summary sits right under the header, closing the gap the box
-		// leaves between its header and its details.
-		Summary: widget.NewText("", widget.TextWithFg(fg), widget.TextWithLayout(layout.WithMarginTop(layout.Points(-1)))),
-		// A blank row parts the files, as it parts the box's details.
+		// The files list on rows of their own, and a diff that shows parts
+		// its file from the next by a blank row.
 		Files: widget.NewBox(widget.BoxWithLayout(
 			layout.WithFlexDirection(layout.DirectionColumn),
 			layout.WithAlignItems(layout.AlignStretch),
-			layout.WithGap(1),
 		)),
-		Theme: theme,
-		Fg:    fg,
+		// The list sits right under the header, closing the gap the box
+		// leaves between its header and what follows it.
+		Paths: widget.NewText("", widget.TextWithFg(fg), widget.TextWithBg(style.ColorTransparent),
+			widget.TextWithLayout(layout.WithMarginTop(layout.Points(-1)))),
+		Theme:       theme,
+		Fg:          fg,
+		Highlighter: widget.NewHighlighter(theme),
 	}
 	// The marker takes the color of the title it heads, as a panel's does.
 	b.MarkerFg = ui.TitleChunk(PatchTitle).Fg
 	b.SetMarkerShape(b.MarkerShape)
 	b.Content = b
-	b.Details.Add(b.Summary)
 	b.Details.Add(b.Files)
+	b.Add(b.Paths)
 	b.SetGone(true)
+	// Collapsed, the row is parted from the rows around it by a blank row,
+	// as a block is, rather than stacked with the steps above and below it.
+	b.Apart = true
 	b.ShowShape()
 	return b
 }
 
-// SetMessage records the trees bounding the turn that msg ends, as SetTrees
-// does, and loads its patch once both are known: the tree the message before
-// the turn's first reply ended with, and the one msg ended with itself. Only
-// the reply that ends a turn, as ui.ChatMessage.EndsTurn marks it, shows the
-// turn's changes, so the other replies of the turn show none, and a prompt,
-// which changes no files, has none either.
-func (b *PatchBox) SetMessage(msg ui.ChatMessage) {
-	if msg.Role != message.RoleAgent || !msg.EndsTurn {
+// SetViewStyle marks the changed lines of the diffs as st's DiffColor says,
+// and lays them out as its DiffLayout does, drawing them again when either
+// changes.
+func (b *PatchBox) SetViewStyle(st ui.ViewStyle) {
+	if st.DiffColor == b.DiffColor && st.DiffLayout == b.DiffLayout {
 		return
 	}
-	b.SetTrees(snapshot.TreeIn(msg.TurnPrev), snapshot.TreeIn(msg.Parts))
+	b.DiffColor, b.DiffLayout = st.DiffColor, st.DiffLayout
+	if b.Patch != "" {
+		b.SetPatch(b.Patch)
+	}
+}
+
+// SetMessage records the trees bounding the step that msg, a reply, took, as
+// SetTrees does, and loads its patch once both are known: the tree the
+// message before it ended with, and the one msg ended with itself. Each reply
+// so shows the changes of its own step, its tool calls, under it, and one
+// that changed nothing shows none, as a prompt, which changes no files,
+// never does.
+func (b *PatchBox) SetMessage(msg ui.ChatMessage) {
+	if msg.Role != message.RoleAgent {
+		return
+	}
+	b.SetTrees(snapshot.TreeIn(msg.Prev), snapshot.TreeIn(msg.Parts))
 	if b.Load != nil && b.Pending() {
 		b.Requested = true
 		b.Load(b.From, b.To)
 	}
 }
 
-// SetTrees records the trees bounding the turn. The zero Hash leaves the
+// SetTrees records the trees bounding the step. The zero Hash leaves the
 // recorded tree unchanged.
 func (b *PatchBox) SetTrees(from, to snapshot.Hash) {
 	if !from.IsZero() {
@@ -120,21 +154,27 @@ func (b *PatchBox) Pending() bool {
 func (b *PatchBox) SetPatch(patch string) {
 	b.Patch = patch
 	files := SplitPatch(patch)
-	st := StatOf(files)
-	b.Summary.SetStyledContent(style.NewStyledText(ui.DiffSummary(st.Files, st.Additions, st.Deletions)...))
+	b.Paths.SetStyledContent(ui.JoinStyledLines(DiffNotice(files)[1:]))
 	b.ShowHeader()
 	for _, child := range b.Files.Children() {
 		b.Files.Remove(child.ID())
 	}
+	b.Diffs = b.Diffs[:0]
 	for _, f := range files {
 		b.Files.Add(b.FileView(f))
+	}
+	// The last diff needs no row under it: the turn's footer is parted from
+	// the box anyway.
+	if n := len(b.Diffs); n > 0 && files[len(files)-1].Hunks != "" {
+		b.Diffs[n-1].LayoutNode().MarginBottom = layout.Points(0)
 	}
 	b.SetGone(patch == "")
 }
 
-// FileView returns the changes of f as a tool call's diff shows an edit:
-// its path in the box's color and its counts as ui.DiffCounts colors them,
-// and right under them its hunks, without Git's headers.
+// FileView returns the changes of f: its path in the box's color and its
+// counts as ui.DiffCounts colors them, and under them, until a click on
+// that row hides it, its hunks, without Git's headers, side by side, as
+// SideBySideView shows them, followed by a blank row.
 func (b *PatchBox) FileView(f FilePatch) *widget.Box {
 	heading := widget.NewStyledText(style.NewStyledText(
 		append([]style.TextChunk{{Text: f.Path, Fg: b.Fg}, style.Plain("  ")}, ui.DiffCounts(f.Additions, f.Deletions)...)...))
@@ -146,27 +186,40 @@ func (b *PatchBox) FileView(f FilePatch) *widget.Box {
 		widget.Children(heading),
 	)
 	if f.Hunks != "" {
-		// The hunks fill no background of their own, as a tool call's body
-		// does, so that the box's shows through them: its surface when
-		// boxed, and the canvas when plain.
-		body := ui.NewToolBody(b.Theme, b.Fg, style.ColorTransparent)
-		body.SetContent(ui.ToolFence("diff", f.Hunks))
-		view.Add(body)
+		// The hunks fill no background of their own, so that the box's
+		// shows through them: its surface when boxed, and the canvas when
+		// plain.
+		rows := SideBySide(f.Hunks)
+		Highlight(rows, f.Path, b.Highlighter, b.Fg)
+		var diff *widget.Box
+		if b.DiffLayout == ui.DiffRowByRow {
+			diff = b.RowByRowView(RowByRow(rows))
+		} else {
+			diff = b.SideBySideView(rows)
+		}
+		diff.LayoutNode().MarginBottom = layout.Points(1)
+		b.Diffs = append(b.Diffs, diff)
+		heading.OnMouseDownHandler = func(e *input.MouseEvent) {
+			if e.Button == input.ButtonLeft {
+				diff.SetGone(diff.Visible())
+				e.StopPropagation()
+			}
+		}
+		view.Add(diff)
 	}
 	return view
 }
 
-// ShowHeader writes the header once a patch is set: PatchTitle alone while
-// the box is open, where Summary counts the changes under it, and otherwise
-// PatchHeader of Patch.
+// ShowHeader writes PatchHeader of Patch once it is set, the same whether
+// the box is open or not, and shows Paths under it while the box is
+// collapsed.
 func (b *PatchBox) ShowHeader() {
-	switch {
-	case b.Patch == "":
-	case b.Open():
-		b.Header.SetStyledContent(style.NewStyledText(ui.TitleChunk(PatchTitle)))
-	default:
+	if b.Patch != "" {
 		b.Header.SetStyledContent(PatchHeader(ParseDiffStat(b.Patch)))
 	}
+	// Collapsed, the box lists its files under the header; expanded, Files
+	// shows them with their diffs instead.
+	b.Paths.SetGone(b.Patch == "" || b.Open())
 }
 
 // DiffStat counts the changes in a unified diff.
@@ -270,14 +323,14 @@ func GitDiffPath(rest string) string {
 	return strings.TrimPrefix(rest, "a/")
 }
 
-// PatchTitle names the changes of a turn. The notice of a
-// history move names its changes ui.ChangesTitle instead.
-const PatchTitle = "Diff"
+// PatchTitle names the changes of a turn. The notice of a history move is
+// headed by the move's name instead, as ui.MoveLines gives it.
+const PatchTitle = "Changed"
 
 // PatchHeader summarizes st for a collapsed patch row, as a tool call's
 // header names its call: PatchTitle as ui.TitleChunk gives it, and then the
 // files changed as a history move's notice counts them, such as
-// "Diff 2 files  +15 -5".
+// "Changed 2 files  +15 -5".
 func PatchHeader(st DiffStat) style.StyledText {
 	chunks := append([]style.TextChunk{ui.TitleChunk(PatchTitle), style.Plain(" ")}, ui.DiffSummary(st.Files, st.Additions, st.Deletions)...)
 	return style.NewStyledText(chunks...)

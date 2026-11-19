@@ -197,6 +197,7 @@ var (
 	AgentText      = agentText
 	StreamToolTurn = streamToolTurn
 	ExpandTools    = expandTools
+	CollapseTools  = collapseTools
 	ToolTurnBase   = toolTurnBase
 	ToolTurnTree   = toolTurnTree
 )

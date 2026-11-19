@@ -7,6 +7,7 @@ import (
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/buffer"
+	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/terminal"
 	"github.com/unaquatic/fluid/widget"
 )
@@ -61,9 +62,9 @@ func TestStepBlink(t *testing.T) {
 }
 
 // TestToolMarkerBlinkRepaints checks that frames that repaint only what
-// changed, as the inline renderer draws them, hide and show the marker of an
-// executing call as the blink says, without moving its header, and show it
-// once the call has ended. The blink keeps tracking the row until it has
+// changed, as the inline renderer draws them, turn the marker of an
+// executing call off, to its marker dimmed, and on again as the blink says,
+// without moving its header, and show it once the call has ended. The blink keeps tracking the row until it has
 // drawn the marker shown again.
 func TestToolMarkerBlinkRepaints(t *testing.T) {
 	const w = 40
@@ -106,15 +107,15 @@ func TestToolMarkerBlinkRepaints(t *testing.T) {
 
 	blink.Off = true
 	blink.SyncRows()
-	hidden := frame(false)
-	if []rune(hidden)[0] != ' ' || string([]rune(hidden)[1:]) != string([]rune(shown)[1:]) {
-		t.Errorf("blinked off: %q, want %q without its marker", hidden, shown)
+	off := frame(false)
+	if off != shown || !buf.Cell(0, 0).Attributes.Has(style.AttrDim) {
+		t.Errorf("blinked off: %q, dim %v; want %q dimmed", off, buf.Cell(0, 0).Attributes.Has(style.AttrDim), shown)
 	}
 
 	blink.Off = false
 	blink.SyncRows()
-	if got := frame(false); got != shown {
-		t.Errorf("blinked on: %q, want %q", got, shown)
+	if got := frame(false); got != shown || buf.Cell(0, 0).Attributes.Has(style.AttrDim) {
+		t.Errorf("blinked on: %q, dim %v; want %q, not dim", got, buf.Cell(0, 0).Attributes.Has(style.AttrDim), shown)
 	}
 
 	blink.Off = true
@@ -123,11 +124,34 @@ func TestToolMarkerBlinkRepaints(t *testing.T) {
 	box.SetTool(message.ToolPart{Name: "bash", State: message.ToolStateCompleted{Input: input, Output: "ok"}})
 	blink.SyncRows()
 	if got := frame(false); []rune(got)[0] != marker {
-		t.Errorf("call ended while hidden: %q, want the marker back", got)
+		t.Errorf("call ended while off: %q, want the marker back", got)
 	}
 	// The next step of the blink forgets the row it drew shown.
 	blink.SyncRows()
 	if _, ok := blink.Rows[box.PartBox]; ok {
 		t.Error("the blink still tracks the row once its call has ended and its marker shows")
+	}
+}
+
+// TestDimMarker checks that a marker the blink turns off keeps its symbol,
+// in its color, dimmed, over the background already there, and that a filled
+// shape dims as a full block.
+func TestDimMarker(t *testing.T) {
+	fg, bg := style.ColorWhite, style.ColorFromInts(10, 20, 30, 255)
+	for _, tt := range []struct {
+		shape MarkerShape
+		want  rune
+	}{
+		{MarkerSquare, '■'},
+		{MarkerCircleOutline, '○'},
+		{MarkerBlock, '█'},
+	} {
+		buf := buffer.New(1, 1)
+		buf.FillRect(0, 0, 1, 1, bg)
+		DimMarker(buf, 0, 0, tt.shape, fg)
+		c := buf.Cell(0, 0)
+		if c.Char != tt.want || c.Fg != fg || c.Bg != bg || !c.Attributes.Has(style.AttrDim) {
+			t.Errorf("%v: cell %q fg %v bg %v dim %v; want %q in %v on %v, dim", tt.shape, c.Char, c.Fg, c.Bg, c.Attributes.Has(style.AttrDim), tt.want, fg, bg)
+		}
 	}
 }

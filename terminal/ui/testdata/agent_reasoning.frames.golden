@@ -1,15 +1,15 @@
 === text ===
-|  The divisor can be zero, so Divide    |
-|  needs a guard.                        |
+|■ Reasoned [12s]                        |
 |                                        |
 |■ I'll add the guard.                   |
 |                                        |
 |                                        |
+|                                        |
 === fg ===
-|  AAA AAAAAAA AAA AA AAAAA AA AAAAAA    |
-|  AAAAA A AAAAAA                        |
+|A AAAAAAAA AAAAA                        |
 |                                        |
 |B CCCC CCC CCC CCCCCC                   |
+|                                        |
 |                                        |
 |                                        |
 === legend ===

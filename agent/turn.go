@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/unaquatic/flow/agent/message"
 )
@@ -63,6 +64,17 @@ type TurnState struct {
 	// Ended holds the call IDs of the tool calls whose input the provider
 	// ended, and so is complete.
 	Ended map[string]bool
+	// Now returns the time that a reasoning part records as it streams. It
+	// is time.Now when nil.
+	Now func() time.Time
+}
+
+// Time returns the current time in UTC, as Now gives it.
+func (s *TurnState) Time() time.Time {
+	if s.Now != nil {
+		return s.Now().UTC()
+	}
+	return time.Now().UTC()
 }
 
 // NewTurnState returns an empty turn state for message messageID, which model
@@ -169,7 +181,13 @@ func (s *TurnState) AppendText(kind BlockKind, block Block, chunk string) {
 	slot, ok := s.Blocks[key]
 	if !ok {
 		s.Blocks[key] = len(s.Parts)
-		s.StartPart(kind.Part(message.NewPartID(), chunk))
+		part := kind.Part(message.NewPartID(), chunk)
+		if rp, ok := part.(message.ReasoningPart); ok {
+			now := s.Time()
+			rp.StartedAt, rp.EndedAt = now, now
+			part = rp
+		}
+		s.StartPart(part)
 		return
 	}
 	switch p := s.Parts[slot].(type) {
@@ -178,6 +196,10 @@ func (s *TurnState) AppendText(kind BlockKind, block Block, chunk string) {
 		s.UpdatePart(slot, p)
 	case message.ReasoningPart:
 		p.Text += chunk
+		p.EndedAt = s.Time()
+		if p.StartedAt.IsZero() {
+			p.StartedAt = p.EndedAt
+		}
 		s.UpdatePart(slot, p)
 	}
 }

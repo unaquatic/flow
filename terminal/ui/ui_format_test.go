@@ -381,7 +381,9 @@ func TestToolBox_HeaderNameAndInput(t *testing.T) {
 		"read":  {"read", `{"path":"calculator/calc_test.go"}`, "Read calculator/calc_test.go"},
 		"edit":  {"edit", `{"path":"calc.go","old_string":"a","new_string":"b"}`, "Edit calc.go"},
 		"write": {"write", `{"path":"divide_test.go","content":"x"}`, "Write divide_test.go"},
-		"bash":  {"bash", `{"command":"go test ./...","description":"Run tests"}`, "Bash go test"},
+		// A bash call with a description is headed by it, as
+		// TestToolBox_BashDescription checks.
+		"bash": {"bash", `{"command":"go test ./..."}`, "Bash go test"},
 		// A search is summed up by what it looks for, not where.
 		"grep with path": {"grep", `{"pattern":"TODO","path":"internal","include":"*.go"}`, "Grep TODO"},
 		"glob with path": {"glob", `{"pattern":"**/*.go","path":"internal"}`, "Glob **/*.go"},

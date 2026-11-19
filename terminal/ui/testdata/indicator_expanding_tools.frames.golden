@@ -1,9 +1,9 @@
 === text ===
 |■ Run the tests                                                         |
 |                                                                        |
-|■ Bash go test                                                          |
+|■ Worked [ctrl+o expand]                                                |
 |                                                                        |
-|  Expanding                                                             |
+|■ Expanding                                                             |
 |                                                                        |
 |■                                                                       |
 |                                                                        |
@@ -15,9 +15,9 @@
 === fg ===
 |A AAA AAA AAAAA                                                         |
 |                                                                        |
-|B BBBB BB BBBB                                                          |
+|B BBBBBB BBBBBBB BBBBBBB                                                |
 |                                                                        |
-|  BBBBBBBBB                                                             |
+|B BBBBBBBBB                                                             |
 |                                                                        |
 |A                                                                       |
 |                                                                        |

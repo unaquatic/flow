@@ -1,42 +1,42 @@
 === text ===
 |■ Run the tests                                                                 |
 |                                                                                |
-|■ Bash go test                                                                  |
+|■ Worked [ctrl+o expand]                                                        |
 |                                                                                |
-|■ Cache read 0K write 0K                                                        |
+|■ Cache 0K Write 0K                                                             |
 |                                                                                |
 |■ All tests pass.                                                               |
 |                                                                                |
-|■ Cache read 1.0K write 0.2K                                                    |
+|■ Cache 1.0K Write 0.2K                                                         |
 |                                                                                |
-|■ Done [42s]                                                                    |
+|■ Worked 42s                                                                    |
 |                                                                                |
 |■ commit it                                                                     |
 |                                                                                |
 |■ Committed.                                                                    |
 |                                                                                |
-|■ Done [7s]                                                                     |
+|■ Worked 7s                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
 === fg ===
 |A AAA AAA AAAAA                                                                 |
 |                                                                                |
-|B BBBB BB BBBB                                                                  |
+|B BBBBBB BBBBBBB BBBBBBB                                                        |
 |                                                                                |
-|B BBBBB BBBB BB BBBBB BB                                                        |
+|B BBBBB AA BBBBB AA                                                             |
 |                                                                                |
 |C AAA AAAAA AAAAA                                                               |
 |                                                                                |
-|B BBBBB BBBB BBBB BBBBB BBBB                                                    |
+|B BBBBB AAAA BBBBB AAAA                                                         |
 |                                                                                |
-|B BBBB BBBBB                                                                    |
+|B BBBBBB BBB                                                                    |
 |                                                                                |
 |A AAAAAA AA                                                                     |
 |                                                                                |
 |C AAAAAAAAAA                                                                    |
 |                                                                                |
-|B BBBB BBBB                                                                     |
+|B BBBBBB BB                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |

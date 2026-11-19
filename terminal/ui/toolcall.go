@@ -127,7 +127,8 @@ func ToolNameChunk(label string, fg style.Color) style.TextChunk {
 // in nameFg and not bold, such as "Edit", and then, in inputFg, a one-line
 // summary of the input, such as its path, a search's pattern, or a command,
 // in every state of the call, as view.Summary gives it or else the first
-// line of ToolInputSummary's, and then view.HeaderNote. A transparent color
+// line of ToolInputSummary's, and then view.HeaderNote; or, when view.Title
+// is set, that alone in nameFg. A transparent color
 // leaves its part in the header's color. The status is view.Status when it is
 // set, and otherwise "[queued]" or "[executing]" before the call ends, the
 // reason a failed call failed as ErrorStatus gives it, and "" for a completed
@@ -146,6 +147,9 @@ func ToolHeaderOutput(tool message.ToolPart, view ToolView, nameFg, inputFg styl
 	}
 	if view.Status != "" {
 		status = view.Status
+	}
+	if view.Title != "" {
+		return style.NewStyledText(ToolNameChunk(view.Title, nameFg)), status, output
 	}
 	header = style.NewStyledText(ToolNameChunk(view.NameLabel(tool.Name), nameFg))
 	summary := view.Summary

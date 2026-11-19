@@ -14,12 +14,40 @@ const IndicatorTick = time.Second
 // input, with e's detail right under it, and while it shows the time of a
 // run in progress, blinks the markers.
 func (ui *UI) ShowIndicator(e EventIndicatorShow) {
-	ui.indicatorError = e.Error
+	if e.Working {
+		e.Text = ui.WorkingText(e.Elapsed)
+	}
+	ui.indicatorError, ui.indicatorMarked = e.Error, e.Marked
 	ui.indicatorLabel.SetStyledContent(IndicatorText(e, ui.ErrorFg()))
 	ui.ShowIndicatorDetail(e)
 	ui.indicatorBox.SetGone(false)
 	ui.ShowIndicatorMarker()
 	ui.SyncBlink()
+}
+
+// WorkingText returns the indicator's text for the turn in progress, which
+// has taken elapsed so far: the step at work, which the transcript hides as
+// ChatMessageBox.GroupRows does, and then how long that step has taken, such
+// as "Thinking [4s]", or the turn's elapsed when the step's start is not
+// known; or FormatWorking's "Working [26s]", the turn's time, while no step
+// is hidden.
+func (ui *UI) WorkingText(elapsed time.Duration) string {
+	for cm := range ui.Bubbles() {
+		if label := cm.StepLabel(); cm.Working && label != "" {
+			took := elapsed
+			if start := cm.StepStart(); !start.IsZero() {
+				took = time.Since(start)
+			}
+			return label + " [" + FormatDuration(took) + "]"
+		}
+	}
+	return FormatWorking(elapsed)
+}
+
+// SyncWorkingIndicator shows the step at work in the indicator at once, as
+// it changes, rather than at the next tick.
+func (ui *UI) SyncWorkingIndicator() {
+	ui.Apply(ui.service.TickIndicator())
 }
 
 // ErrorFg returns the color of the marker and the "Error" an error starts
@@ -98,7 +126,7 @@ func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {
 // HideIndicator dismisses the indicator.
 func (ui *UI) HideIndicator() {
 	ui.indicatorBox.SetGone(true)
-	ui.indicatorError = false
+	ui.indicatorError, ui.indicatorMarked = false, false
 	ui.SyncBlink()
 }
 
@@ -110,9 +138,9 @@ func (ui *UI) HideIndicator() {
 // transcript again.
 func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
 	content, shown, blink := ui.indicatorLabel.Content(), ui.indicatorBox.Visible(), ui.blink.On.Load()
-	wasError := ui.indicatorError
+	wasError, wasMarked := ui.indicatorError, ui.indicatorMarked
 	detail := ui.indicatorDetail != nil && ui.indicatorDetail.Visible()
-	ui.ShowIndicator(EventIndicatorShow{Text: text})
+	ui.ShowIndicator(EventIndicatorShow{Text: text, Marked: true})
 	// The blink marks the time of a run, not text.
 	ui.blink.On.Store(false)
 	ui.renderer.Render()
@@ -121,7 +149,7 @@ func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
 	if ui.indicatorDetail != nil {
 		ui.indicatorDetail.SetGone(!detail)
 	}
-	ui.indicatorError = wasError
+	ui.indicatorError, ui.indicatorMarked = wasError, wasMarked
 	ui.ShowIndicatorMarker()
 	ui.indicatorBox.SetGone(!shown)
 	ui.blink.On.Store(blink)
@@ -154,7 +182,7 @@ func (ui *UI) ShowIndicatorMarker() {
 		return
 	}
 	StyleMarker(ui.indicatorMarker, ui.service.state.MarkerShape, ui.IndicatorMarkerFg())
-	show := ui.service.state.Working || ui.indicatorError
+	show := ui.service.state.Working || ui.indicatorError || ui.indicatorMarked
 	if ui.indicatorMarker.Visible() == show {
 		return
 	}

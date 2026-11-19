@@ -48,9 +48,10 @@ func TestTickIndicator(t *testing.T) {
 
 // TestWorkingIndicator checks that the indicator of a run in progress shows
 // its time, followed by the key that cancels it and what Ctrl+O does next to
-// the details of the tool calls.
+// the details of the tool calls, and carries the time for the UI to show
+// after the step at work.
 func TestWorkingIndicator(t *testing.T) {
-	want := EventIndicatorShow{Text: "Working [1m 05s]", Hint: "[esc cancel] [ctrl+o expand]"}
+	want := EventIndicatorShow{Text: "Working [1m 05s]", Hint: "[esc cancel] [ctrl+o expand]", Working: true, Elapsed: 65 * time.Second}
 	if got := WorkingIndicator(65*time.Second, false); got != want {
 		t.Errorf("WorkingIndicator(65s, false) = %+v, want %+v", got, want)
 	}

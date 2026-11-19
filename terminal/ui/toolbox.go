@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/internal/shell"
@@ -100,6 +101,20 @@ func NewToolBody(theme *style.Theme, fg, bg style.Color) *widget.Markdown {
 	)
 }
 
+// Span returns when the call started executing and when it ended, either
+// zero when not known, as before it runs or while it does.
+func (b *ToolBox) Span() (start, end time.Time) {
+	switch s := b.Tool.State.(type) {
+	case message.ToolStateRunning:
+		return s.StartedAt, time.Time{}
+	case message.ToolStateCompleted:
+		return s.StartedAt, s.EndedAt
+	case message.ToolStateError:
+		return s.StartedAt, s.EndedAt
+	}
+	return time.Time{}, time.Time{}
+}
+
 // SetTool shows tool, unless it equals the call already shown.
 func (b *ToolBox) SetTool(tool message.ToolPart) {
 	if reflect.DeepEqual(b.Tool, tool) {
@@ -187,7 +202,7 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 // input, which the summary repeats, unless the view keeps the input in the
 // header, as ParamInHeader says.
 func (b *ToolBox) ShowHeader() {
-	if b.Open() && b.Params.Visible() && !b.View.ParamInHeader {
+	if b.Open() && b.Params.Visible() && !b.View.ParamInHeader && b.View.Title == "" {
 		b.Header.SetStyledContent(style.NewStyledText(ToolNameChunk(b.View.NameLabel(b.Tool.Name), b.NameFg)))
 		return
 	}

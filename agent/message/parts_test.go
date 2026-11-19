@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 	"uuid"
 )
 
@@ -185,6 +186,31 @@ func TestUsagePart_JSONRoundtrip(t *testing.T) {
 	}
 	if strings.Count(string(data), `"output_tokens"`) != 1 {
 		t.Errorf("stored form %s, want zero counts left out", data)
+	}
+}
+
+// TestReasoningPart_JSONRoundtrip checks that reasoning keeps the times it
+// streamed between through the stored form, to the millisecond, and that
+// reasoning without them stores none.
+func TestReasoningPart_JSONRoundtrip(t *testing.T) {
+	t0 := time.Date(2026, 1, 1, 12, 0, 0, 500_000_000, time.UTC)
+	parts := []ContentPart{
+		ReasoningPart{Text: "timed", StartedAt: t0, EndedAt: t0.Add(12 * time.Second)},
+		ReasoningPart{Text: "untimed"},
+	}
+	data, err := MarshalParts(parts)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	got, err := UnmarshalParts(data)
+	if err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !reflect.DeepEqual(stripPartIDs(got), parts) {
+		t.Fatalf("round-trip lost data: got %+v want %+v", got, parts)
+	}
+	if strings.Count(string(data), `"started_at"`) != 1 {
+		t.Errorf("stored form %s, want the untimed part's times left out", data)
 	}
 }
 

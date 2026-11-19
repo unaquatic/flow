@@ -1,8 +1,11 @@
 === text ===
-|  Working [12s] [esc cancel] [ctrl+o expand]            |
+|■ Working [12s] [esc cancel] [ctrl+o expand]            |
 |                                                        |
 === fg ===
-|  AAAAAAA AAAAA AAAA AAAAAAA AAAAAAA AAAAAAA            |
+|A AAAAAAA AAAAA AAAA AAAAAAA AAAAAAA AAAAAAA            |
+|                                                        |
+=== attrs ===
+|D                                                       |
 |                                                        |
 === legend ===
 A #8a8a8a

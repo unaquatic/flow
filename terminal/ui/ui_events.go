@@ -67,6 +67,10 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnToolsExpandedSet(e)
 	case EventExpandStyleSet:
 		ui.OnExpandStyleSet(e)
+	case EventGroupStepsSet:
+		ui.SetGroupSteps(e.Group)
+	case EventReasoningExpandedSet:
+		ui.SetReasoningExpanded(e.Expanded)
 	case EventToolMarkersSet:
 		ui.OnToolMarkersSet(e)
 	case EventToolColorSet:
@@ -85,6 +89,10 @@ func (ui *UI) ProcessEvent(evt UIEvent) {
 		ui.OnUsagePinnedSet(e)
 	case EventCountPlaceSet:
 		ui.OnCountPlaceSet(e)
+	case EventDiffLayoutSet:
+		ui.SetDiffLayout(e.Layout)
+	case EventDiffColorSet:
+		ui.SetDiffColor(e.Color)
 	case EventSelectionStyleSet:
 		ui.OnSelectionStyleSet(e)
 	case EventPromptStyleSet:
@@ -217,15 +225,24 @@ func (ui *UI) OnClearMessages(EventClearMessages) { ui.ResetTranscript() }
 
 // OnMessageAdded appends a message, merging it into the preceding
 // bubble when they share a parent, or a notice.
-func (ui *UI) OnMessageAdded(e EventMessageAdded) { ui.AddMessage(e.Msg) }
+func (ui *UI) OnMessageAdded(e EventMessageAdded) {
+	ui.AddMessage(e.Msg)
+	ui.SyncWorkingIndicator()
+}
 
 // OnMessageUpdated applies the latest parts and usage to a message.
-func (ui *UI) OnMessageUpdated(e EventMessageUpdated) { ui.UpdateMessage(e.Msg) }
+func (ui *UI) OnMessageUpdated(e EventMessageUpdated) {
+	ui.UpdateMessage(e.Msg)
+	ui.SyncWorkingIndicator()
+}
 
 // OnTurnEnded shows how long a turn took under its last reply, and in the
 // worked time of the slash menu's status row.
 func (ui *UI) OnTurnEnded(e EventTurnEnded) {
-	ui.SetTurnEnd(e.MessageID, e.Worked)
+	if cm, ok := ui.messageWidgets[e.MessageID]; ok {
+		cm.SetWorking(false)
+	}
+	ui.SetTurnEnd(e.MessageID, e.Worked, e.Outcome)
 	ui.SyncSlashStatus()
 }
 
@@ -245,8 +262,14 @@ func (ui *UI) OnQueueChanged(e EventQueueChanged) { ui.ShowQueue(e.Prompts) }
 // OnTitleSet replaces the terminal window and tab title.
 func (ui *UI) OnTitleSet(e EventTitleSet) { ui.renderer.SetTitle(e.Title) }
 
-// OnProgressSet shows or clears the progress indicator on the terminal tab.
-func (ui *UI) OnProgressSet(e EventProgressSet) { ui.renderer.SetProgress(e.Active) }
+// OnProgressSet shows or clears the progress indicator on the terminal tab,
+// and once the run ends shows every row its turn grouped, as EndWorking does.
+func (ui *UI) OnProgressSet(e EventProgressSet) {
+	ui.renderer.SetProgress(e.Active)
+	if !e.Active {
+		ui.EndWorking()
+	}
+}
 
 // OnUndoRequested starts a move back one turn off the event loop.
 func (ui *UI) OnUndoRequested(EventUndoRequested) { ui.RequestUndo() }

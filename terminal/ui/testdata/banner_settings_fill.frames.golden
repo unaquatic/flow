@@ -12,8 +12,8 @@
 |  Selection               Fill                                          |
 |  Prompt style            Bar                                           |
 |  Input style             Bar                                           |
-|  Snapshots               Off                                           |
-|  [9/13]                                                                |
+|  Diff color              Background                                    |
+|  [9/17]                                                                |
 |                                                                        |
 === fg ===
 |A AAAAAAAA BBBB BBBBB BBBB BBBBBBB BBBB BBBBBBB                         |
@@ -29,7 +29,7 @@
 |  CCCCCCCCC               CCCC                                          |
 |  AAAAAA AAAAA            BBB                                           |
 |  AAAAA AAAAA             BBB                                           |
-|  AAAAAAAAA               BBB                                           |
+|  AAAA AAAAA              BBBBBBBBBB                                    |
 |  BBBBBB                                                                |
 |                                                                        |
 === bg ===

@@ -12,7 +12,7 @@ import (
 // tool rows are.
 func TestReasoningFg(t *testing.T) {
 	theme := DefaultTheme()
-	box := NewReasoningBox(message.ReasoningPart{Text: "thinking"}, theme)
+	box := NewReasoningBox(message.ReasoningPart{Text: "thinking"}, theme, theme.TextMuted)
 	if got := box.Body.Fg(); !got.Equals(theme.TextMuted) {
 		t.Errorf("reasoning fg = %v, want TextMuted %v", got, theme.TextMuted)
 	}

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/flow/extension/tools/internal/builtin"
@@ -121,11 +122,52 @@ func TestToolBox_ReadShowsContentOnCompletion(t *testing.T) {
 	}
 }
 
-// TestToolBox_BashHeaderAndCommand checks that a bash call's header reads its
-// tool name, not bold, and the names of the commands it runs with the
-// operators between them, or the first line of a command bash would not run,
-// never its description,
-// with the status apart from it in the color the key hints give what a key
+// TestToolBox_BashDescription checks that a bash call with a description is
+// headed by it alone, in the tool name's color, collapsed or expanded, its
+// command still in the details, and that its status reads how long it ran
+// once it ends, after the reason it failed, if it did.
+func TestToolBox_BashDescription(t *testing.T) {
+	t0 := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	input := json.RawMessage(`{"command":"go test ./...","description":"Runs the tests\nin full"}`)
+	tests := map[string]struct {
+		state      message.ToolState
+		wantStatus string
+	}{
+		"queued":    {state: message.ToolStatePending{Input: input}, wantStatus: "[queued]"},
+		"executing": {state: message.ToolStateRunning{Input: input, StartedAt: t0}, wantStatus: "[executing]"},
+		"completed": {state: message.ToolStateCompleted{Input: input, Output: "ok", StartedAt: t0, EndedAt: t0.Add(12 * time.Second)}, wantStatus: "[12s]"},
+		"failed": {state: message.ToolStateError{Input: input, Error: "FAIL\n\n[exit 1]", StartedAt: t0, EndedAt: t0.Add(65 * time.Second)},
+			wantStatus: "[exit 1] [1m 05s]"},
+		"interrupted": {state: message.ToolStateError{Input: input, Error: message.InterruptedError, StartedAt: t0, EndedAt: t0.Add(3 * time.Second)},
+			wantStatus: "[interrupted] [3s]"},
+		"untimed": {state: message.ToolStateCompleted{Input: input, Output: "ok"}},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			box := newBox(message.ToolPart{Name: "bash", State: tt.state})
+			for _, expanded := range []bool{false, true} {
+				box.SetExpanded(expanded)
+				if got, want := box.Header.PlainText(), "Runs the tests…"; got != want {
+					t.Errorf("expanded %v: header = %q; want %q", expanded, got, want)
+				}
+			}
+			if got := box.Header.Content().Chunks[0].Fg; got != box.NameFg {
+				t.Errorf("header fg = %v; want the name's %v", got, box.NameFg)
+			}
+			if got := box.Status.PlainText(); got != tt.wantStatus {
+				t.Errorf("status = %q; want %q", got, tt.wantStatus)
+			}
+			if got, want := box.Params.PlainText(), "$ go test ./..."; got != want {
+				t.Errorf("command = %q; want %q", got, want)
+			}
+		})
+	}
+}
+
+// TestToolBox_BashHeaderAndCommand checks that a bash call without a
+// description has a header that reads its tool name, not bold, and the names
+// of the commands it runs with the operators between them, or the first line
+// of a command bash would not run, with the status apart from it in the color the key hints give what a key
 // does, and that its command line shows the timeout, in the muted text color,
 // only when it is not the default, and notes its other params but for its
 // description.
@@ -136,33 +178,28 @@ func TestToolBox_BashHeaderAndCommand(t *testing.T) {
 		wantCommand string
 		wantBody    string
 	}{
-		"description is hidden": {
-			input:       `{"command":"ls","description":"List files"}`,
-			wantHeader:  "Bash ls",
-			wantCommand: "$ ls",
-		},
 		"no description": {
 			input:       `{"command":"ls"}`,
 			wantHeader:  "Bash ls",
 			wantCommand: "$ ls",
 		},
 		"default timeout": {
-			input:       `{"command":"ls","description":"List files","timeout_ms":60000}`,
+			input:       `{"command":"ls","timeout_ms":60000}`,
 			wantHeader:  "Bash ls",
 			wantCommand: "$ ls",
 		},
 		"custom timeout": {
-			input:       `{"command":"ls","description":"List files","timeout_ms":120000}`,
+			input:       `{"command":"ls","timeout_ms":120000}`,
 			wantHeader:  "Bash ls",
 			wantCommand: "$ ls [timeout 120s]",
 		},
 		"fractional timeout": {
-			input:       `{"command":"ls","description":"List files","timeout_ms":1500}`,
+			input:       `{"command":"ls","timeout_ms":1500}`,
 			wantHeader:  "Bash ls",
 			wantCommand: "$ ls [timeout 1.5s]",
 		},
 		"capped timeout": {
-			input:       `{"command":"ls","description":"List files","timeout_ms":7200000}`,
+			input:       `{"command":"ls","timeout_ms":7200000}`,
 			wantHeader:  "Bash ls",
 			wantCommand: "$ ls [timeout 3600s]",
 		},
@@ -202,7 +239,7 @@ func TestToolBox_BashHeaderAndCommand(t *testing.T) {
 			wantCommand: "$ ls",
 		},
 		"shell": {
-			input:       `{"command":"ls","description":"List files","shell":"bash","timeout_ms":120000}`,
+			input:       `{"command":"ls","shell":"bash","timeout_ms":120000}`,
 			wantHeader:  "Bash ls",
 			wantCommand: "$ ls [timeout 120s] [shell bash]",
 		},

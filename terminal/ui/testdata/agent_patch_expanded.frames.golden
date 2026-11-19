@@ -1,14 +1,14 @@
 === text ===
 |■ Updated the calculator.               |
 |                                        |
-|■ Diff                                  |
-|  1 file  +2 -0                         |
+|■ Changed 1 file  +2 -0                 |
 |                                        |
 |  calc.go  +2 -0                        |
 |  @@ -1,2 +1,3 @@                       |
-|   package calc                         |
-|  +                                     |
-|  +import "errors"                      |
+|  1 package calc     1 package calc     |
+|                     2                  |
+|                     3 import "errors"  |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -17,14 +17,46 @@
 === fg ===
 |A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
-|B BBBB                                  |
-|  B BBBB  CC DD                         |
+|B BBBBBBB B BBBB  CC DD                 |
 |                                        |
 |  BBBBBBB  CC DD                        |
-|  BB BBBB BBBB BB                       |
-|   BBBBBBB BBBB                         |
-|  E                                     |
-|  EEEEEEE EEEEEEEE                      |
+|  EE EEEE EEEE EE                       |
+|  E AAAAAAA BBBB     E AAAAAAA BBBB     |
+|                     E                  |
+|                     E AAAAAA FFFFFFFF  |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== bg ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                     ░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  |
+|                     ░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|    BBBBBBB            BBBBBBB          |
+|                                        |
+|                       BBBBBB           |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -35,4 +67,7 @@ A #eb7513
 B #e6e6e6
 C #5fc882
 D #dc646e
-E #91b557
+E #8a8a8a
+F #91b557
+░ #133420
+▒ #1e3e2a

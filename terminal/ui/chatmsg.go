@@ -94,6 +94,26 @@ type ChatMessageBox struct {
 	// Snapshots reports that the bubble keeps the snapshot each message
 	// ends with once taken.
 	Snapshots bool
+	// DiffColor is how the bubble's side by side diffs mark changed lines.
+	DiffColor DiffColor
+	// DiffLayout is how the bubble's diffs lay their lines out.
+	DiffLayout DiffLayout
+	// Working reports that the bubble holds the turn in progress, so that
+	// GroupRows shows the run of rows at its bottom as its last row alone.
+	Working bool
+	// GroupSteps groups the rows that stack, as GroupRows does. It is off
+	// by default.
+	GroupSteps bool
+	// Step is the box of the step at work, which GroupRows hides at the
+	// bottom of the bubble while it is Working, for the indicator to name
+	// as StepLabel does, or nil.
+	Step *PartBox
+	// OpenRuns holds the first box of each run of rows that a click on its
+	// summary opened, which GroupRows then shows whole.
+	OpenRuns map[*PartBox]bool
+	// ReasoningExpanded keeps the bubble's reasoning expanded whatever
+	// Ctrl+O says, as PartBox.KeepExpanded does.
+	ReasoningExpanded bool
 	// Blink, when set, is the clock the markers of the bubble's tool calls
 	// blink by while they execute, and the marker of the text its reply is
 	// writing.
@@ -182,11 +202,36 @@ func ChatMessageWithDebug(on bool) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.Debug = on }
 }
 
+// ChatMessageWithDiffLayout sets how the bubble's diffs lay their lines out.
+// They show side by side by default.
+func ChatMessageWithDiffLayout(l DiffLayout) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.DiffLayout = l }
+}
+
+// ChatMessageWithDiffColor sets how the bubble's side by side diffs mark
+// changed lines. They tint their background by default.
+func ChatMessageWithDiffColor(c DiffColor) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.DiffColor = c }
+}
+
 // ChatMessageWithSnapshots sets whether the bubble keeps the snapshot each
 // message ends with once taken. It shows it only while it is being taken by
 // default.
 func ChatMessageWithSnapshots(show bool) ChatMessageOption {
 	return func(cm *ChatMessageBox) { cm.Snapshots = show }
+}
+
+// ChatMessageWithGroupSteps sets whether the bubble groups the rows that
+// stack, as GroupRows does. It shows each by default.
+func ChatMessageWithGroupSteps(group bool) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.GroupSteps = group }
+}
+
+// ChatMessageWithReasoningExpanded sets whether the bubble keeps its
+// reasoning expanded whatever Ctrl+O says. It collapses it, as tool calls,
+// by default.
+func ChatMessageWithReasoningExpanded(expanded bool) ChatMessageOption {
+	return func(cm *ChatMessageBox) { cm.ReasoningExpanded = expanded }
 }
 
 // ChatMessageWithToolMarkers sets whether the bubble's tool calls show
@@ -444,6 +489,7 @@ func ChatMessageContainer() (*widget.Box, *widget.Box) {
 // and the blank row below them; its TailRow shows its blank row only while
 // it shows a part, as SyncTail says.
 func (cm *ChatMessageBox) SyncRows() {
+	cm.GroupRows()
 	collapses := cm.role == message.RoleAgent || cm.role == message.RoleSystem
 	shown := 0
 	// lastShown is the last segment shown so far, and above the kind of its
@@ -488,6 +534,209 @@ func (cm *ChatMessageBox) SyncRows() {
 	cm.SyncTail()
 }
 
+// SetWorking records whether the bubble holds the turn in progress, and
+// groups its rows, or shows them all, as GroupRows says.
+func (cm *ChatMessageBox) SetWorking(working bool) {
+	if working == cm.Working {
+		return
+	}
+	cm.Working = working
+	cm.SyncRows()
+}
+
+// RunEnd is what ends a run of rows that stack, which decides how
+// ChatMessageBox.GroupRows shows it.
+type RunEnd int
+
+const (
+	// RunEndRow is a row that shows under the run, such as text: the run is
+	// done, and shows as its summary.
+	RunEndRow RunEnd = iota
+	// RunEndFooter is the footer of the turn: the footer stands for the run,
+	// which shows no row.
+	RunEndFooter
+	// RunEndWorking is the bottom of a bubble at work: the run's last step
+	// is at work, which the indicator names, and the run shows no row.
+	RunEndWorking
+)
+
+// GroupRows shows each run of rows that stack, such as collapsed reasoning
+// and tool calls with no blank row between them, as one row or none, hiding
+// its rows as PartBox.SetGrouped does, as what ends it says:
+//
+//   - while the bubble is Working, the run at its bottom shows no row, and
+//     StepLabel names its last step, which the indicator shows in place of
+//     "Working";
+//   - the run right above the turn's footer shows no row either, as the
+//     footer stands for it, followed by ExpandHint;
+//   - any other run, even of one row, is done, and its last row shows
+//     instead what the run sums up to, as WorkedSummary gives it, such as
+//     "Worked 32s", until a click on it opens the run, as OpenRuns
+//     records it.
+//
+// Only the parts of a message group: a view, such as a turn's changes, the
+// cache row, or the footer ends a run, as any other row that shows does.
+//
+// Only a reply groups, a system message's context staying as it is, and
+// nothing does unless GroupSteps is set, nor while Ctrl+O expands the tool
+// calls, which shows them collapsed only while inline holds them, as
+// SyncHeld does.
+func (cm *ChatMessageBox) GroupRows() {
+	steps := cm.GroupSteps && cm.role == message.RoleAgent
+	group := steps && !cm.ToolsExpanded
+	cm.Step = nil
+	var run []*PartBox
+	// flush shows run as end says, and reports whether it hid it whole.
+	flush := func(end RunEnd) bool {
+		if len(run) == 0 {
+			return false
+		}
+		open := cm.OpenRuns[run[0]]
+		// The step at work hides under the indicator, which names it, while
+		// Ctrl+O expands the steps too: inline holds it as a row until it
+		// ends, and it would blink beside the indicator's marker.
+		hide := steps && end == RunEndWorking || group && end == RunEndFooter && !open
+		summarize := group && !hide && end == RunEndRow && !open
+		for i, b := range run {
+			last := i == len(run)-1
+			b.SetGrouped(hide || summarize && !last)
+			if !last || !summarize {
+				b.SetSummary("")
+				continue
+			}
+			first := run[0]
+			b.SetSummary(WorkedSummary(run))
+			b.OnSummaryClick = func() { cm.OpenRun(first) }
+		}
+		if hide && end == RunEndWorking {
+			cm.Step = run[len(run)-1]
+		}
+		run = run[:0]
+		return hide
+	}
+	breaks := func(r render.Renderable, end RunEnd) {
+		if r.Visible() {
+			flush(end)
+		}
+	}
+	for _, seg := range cm.segments {
+		for _, r := range seg.ContentBox.Head.ChildrenRaw() {
+			if b := GroupableBox(r); b != nil {
+				run = append(run, b)
+				continue
+			}
+			// A box that no longer stacks, as one Ctrl+O expands, shows as
+			// it is.
+			if f, ok := r.(Framed); ok {
+				f.Frame().SetGrouped(false)
+				f.Frame().SetSummary("")
+			}
+			breaks(r, RunEndRow)
+		}
+		for _, v := range seg.Views {
+			breaks(v, RunEndRow)
+		}
+		breaks(seg.Cache, RunEndRow)
+		// The footer names what Ctrl+O shows of the steps it stands for.
+		hint := ""
+		if seg.Footer.Visible() && flush(RunEndFooter) {
+			hint = ExpandHint
+		}
+		seg.Footer.SetHint(hint)
+	}
+	if cm.Working {
+		flush(RunEndWorking)
+	} else {
+		flush(RunEndRow)
+	}
+}
+
+// StepStart returns when the step at work that the bubble hides began, as
+// its Span gives it, or zero while it hides none or its start is not known,
+// as before a tool call runs.
+func (cm *ChatMessageBox) StepStart() time.Time {
+	if cm.Step == nil {
+		return time.Time{}
+	}
+	t, ok := cm.Step.Content.(Timed)
+	if !ok {
+		return time.Time{}
+	}
+	start, _ := t.Span()
+	return start
+}
+
+// StepLabel returns the header of the step at work that the bubble hides, as
+// it reads now, such as "Thinking" or a command's description, or "" while
+// it hides none.
+func (cm *ChatMessageBox) StepLabel() string {
+	if cm.Step == nil {
+		return ""
+	}
+	return cm.Step.Header.PlainText()
+}
+
+// SetGroupSteps groups the rows of the bubble that stack, as GroupRows does,
+// or shows each, as group says.
+func (cm *ChatMessageBox) SetGroupSteps(group bool) {
+	if group == cm.GroupSteps {
+		return
+	}
+	cm.GroupSteps = group
+	cm.SyncRows()
+}
+
+// OpenRun shows the run of rows that first starts whole, in place of its
+// summary.
+func (cm *ChatMessageBox) OpenRun(first *PartBox) {
+	if cm.OpenRuns == nil {
+		cm.OpenRuns = make(map[*PartBox]bool)
+	}
+	cm.OpenRuns[first] = true
+	cm.SyncRows()
+}
+
+// WorkedSummary returns what run, rows that stack, sums up to: "Worked" and
+// the time from the earliest start to the latest end of their work, as
+// FormatDuration gives it, such as "Worked 32s", or "Worked"
+// alone when no row
+// knows both, as for a session stored before flow recorded them.
+func WorkedSummary(run []*PartBox) string {
+	var first, last time.Time
+	for _, b := range run {
+		t, ok := b.Content.(Timed)
+		if !ok {
+			continue
+		}
+		start, end := t.Span()
+		if !start.IsZero() && (first.IsZero() || start.Before(first)) {
+			first = start
+		}
+		if end.After(last) {
+			last = end
+		}
+	}
+	if first.IsZero() || last.IsZero() || last.Before(first) {
+		return "Worked"
+	}
+	return "Worked " + FormatDuration(last.Sub(first))
+}
+
+// GroupableBox returns the PartBox of r when r is one, shows as a row that
+// stacks with others, as KindRow says, and is not gone of its own accord,
+// though grouping may hide it, and nil otherwise.
+func GroupableBox(r render.Renderable) *PartBox {
+	f, ok := r.(Framed)
+	if !ok {
+		return nil
+	}
+	b := f.Frame()
+	if b.ID() != r.ID() || b.OwnGone || !b.Row() || b.Apart {
+		return nil
+	}
+	return b
+}
+
 // Flow returns the widgets seg shows in its Box, in display order: the parts
 // of its ContentBox that stay with the message's first row, then its Views,
 // its cache row, and its footer. A prompt's other parts show in the bubble's
@@ -528,7 +777,7 @@ func (cm *ChatMessageBox) BuildSegment(msg ChatMessage) *MessageSegment {
 	cm.AdoptBox(cache.PartBox)
 	// The turn's time and cache use show in the theme's TextMuted, as a tool
 	// call's status does.
-	footer := NewFooterBox(cm.TurnWorked(msg), cm.theme.TextMuted)
+	footer := NewFooterBox(cm.TurnWorked(msg), msg.Outcome, cm.theme.TextMuted)
 	// The footer takes the marker of the bubble's tool calls, in their color.
 	// It has nothing to expand, so it keeps the marker while they expand.
 	footer.SetMarker(cm.FooterMarker())
@@ -560,7 +809,9 @@ func (cm *ChatMessageBox) BuildSegment(msg ChatMessage) *MessageSegment {
 			widget.Children(append(children, cache, footer)...),
 		),
 	}
-	for _, part := range msg.Parts {
+	// A failed message rebuilt, as Ctrl+O or /config rebuild the transcript,
+	// shows its error again.
+	for _, part := range msg.ShownParts() {
 		sm := cm.NewContentPart(part)
 		contentBox.AddPart(part, sm)
 		if id := string(part.PartID()); id != "" {
@@ -717,7 +968,15 @@ func (cm *ChatMessageBox) SyncHeld() {
 		}
 		parts := seg.ContentBox.ChildrenRaw()
 		for i, w := range parts {
-			isLive := live[w] && w.LayoutNode().Visibility != layout.Gone
+			// A box that grouping hides under the indicator is still live:
+			// its own gone state says whether it takes rows, else releasing
+			// it would open it, ungroup it, and hold it again, frame after
+			// frame.
+			gone := w.LayoutNode().Visibility == layout.Gone
+			if f, ok := w.(Framed); ok {
+				gone = f.Frame().OwnGone
+			}
+			isLive := live[w] && !gone
 			switch w := w.(type) {
 			case *widget.StreamMarkdown:
 				isLive = isLive && i == len(parts)-1
@@ -725,6 +984,10 @@ func (cm *ChatMessageBox) SyncHeld() {
 			case *ReasoningBox:
 				isLive = isLive && i == len(parts)-1
 				w.Body.SetStreaming(held || isLive)
+				w.SetHeld(held || isLive)
+				// Its marker blinks while it streams, as a running tool
+				// call's does, until a part after it ends it.
+				w.SetBusy(i == len(parts)-1 && slices.Contains(seg.Live, w.Part.ID))
 			case Framed:
 				w.Frame().SetHeld(held || isLive)
 			}
@@ -747,12 +1010,21 @@ func (cm *ChatMessageBox) SyncHeld() {
 // LivePart, or for text, the row where the block it holds back will show,
 // as PendingTop finds it, since the blocks above it are whole.
 func (cm *ChatMessageBox) LiveRow() (int, bool) {
+	// A step hidden under the indicator, as GroupRows hides the one at work,
+	// takes no rows, and is not laid out, so its last position is stale: it
+	// would hold the input box's rows for the whole run.
+	if f, ok := cm.LivePart.(Framed); ok && f.Frame().Grouped {
+		return 0, false
+	}
 	switch w := cm.LivePart.(type) {
 	case nil:
 		return 0, false
 	case *widget.StreamMarkdown:
 		return PendingTop(w), true
 	case *ReasoningBox:
+		if w.Row() {
+			return w.LayoutNode().Computed.Y, true
+		}
 		return PendingTop(w.Body), true
 	default:
 		return w.LayoutNode().Computed.Y, true
@@ -804,7 +1076,10 @@ func (cm *ChatMessageBox) NewContentPart(part message.ContentPart) render.Render
 		cm.AdoptBox(box.PartBox)
 		return box
 	case message.ReasoningPart:
-		return NewReasoningBox(p, cm.theme)
+		box := NewReasoningBox(p, cm.theme, cm.fg)
+		box.KeepExpanded = cm.ReasoningExpanded
+		cm.AdoptBox(box.PartBox)
+		return box
 	case message.UsagePart:
 		box := NewUsageBox(p, cm.theme, cm.fg)
 		cm.AdoptBox(box.PartBox)
@@ -876,21 +1151,23 @@ func TextMarkerHost(sm *widget.StreamMarkdown) *render.BaseRenderable {
 // edge of the first row of sm, a text part of a reply, in the left padding
 // before its prose, while the tool marker shows: its MarkerShape in
 // RoleMarkerFg. A part that has yet to stream any text gets none, and one the
-// reply is writing gets none while the blink hides it, as TextMarkerBlinks
-// says.
+// reply is writing shows dimmed while the blink turns it off, as
+// TextMarkerBlinks says and DimMarker draws it.
 func (cm *ChatMessageBox) DrawTextMarker(buf *buffer.Buffer, sm *widget.StreamMarkdown) {
 	x, y := sm.X(), sm.Y()
 	if !cm.ToolMarkers || sm.Height() == 0 || strings.TrimSpace(sm.Content()) == "" {
 		return
 	}
+	shape := cm.MarkerShape
+	fg, bg := RoleMarkerFg(cm.theme, message.RoleAgent), buf.Cell(x, y).Bg
 	if cm.TextMarkerBlinks(sm) && cm.Blink.Off {
+		DimMarker(buf, x, y, shape, fg)
 		return
 	}
-	fg, bg := RoleMarkerFg(cm.theme, message.RoleAgent), buf.Cell(x, y).Bg
-	if cm.MarkerShape.Filled() {
+	if shape.Filled() {
 		bg = fg
 	}
-	buf.SetCell(x, y, []rune(cm.MarkerShape.Glyph())[0], fg, bg, 0)
+	buf.SetCell(x, y, []rune(shape.Glyph())[0], fg, bg, 0)
 }
 
 // TextParts returns the widgets of the bubble's text parts, which
@@ -1098,6 +1375,8 @@ func (cm *ChatMessageBox) SetToolsExpanded(expanded bool) {
 			b.SetExpanded(expanded)
 		}
 	}
+	// Steps group only while the tool calls are collapsed.
+	cm.SyncRows()
 }
 
 // FooterMarker reports whether the bubble's footers show ToolMarker: while
@@ -1182,6 +1461,48 @@ func (cm *ChatMessageBox) SetMarkerShape(m MarkerShape) {
 	cm.RestyleViews()
 }
 
+// SetReasoningExpanded keeps the bubble's reasoning, and that added to it
+// later, expanded whatever Ctrl+O says, or has it follow Ctrl+O as tool
+// calls do, as expanded says.
+func (cm *ChatMessageBox) SetReasoningExpanded(expanded bool) {
+	if expanded == cm.ReasoningExpanded {
+		return
+	}
+	cm.ReasoningExpanded = expanded
+	for _, seg := range cm.segments {
+		for _, child := range seg.ContentBox.ChildrenRaw() {
+			if rb, ok := child.(*ReasoningBox); ok {
+				rb.KeepExpanded = expanded
+				rb.SetExpanded(expanded || cm.ToolsExpanded)
+			}
+		}
+	}
+	cm.SyncRows()
+}
+
+// SetDiffLayout lays the bubble's diffs, and those added to it later, out
+// as l says, in the views that follow the ViewStyle.
+func (cm *ChatMessageBox) SetDiffLayout(l DiffLayout) {
+	if l == cm.DiffLayout {
+		return
+	}
+	cm.DiffLayout = l
+	cm.RestyleViews()
+	cm.SyncRows()
+}
+
+// SetDiffColor marks the changed lines of the bubble's side by side diffs,
+// and of those added to it later, as c says, in the views that follow the
+// ViewStyle.
+func (cm *ChatMessageBox) SetDiffColor(c DiffColor) {
+	if c == cm.DiffColor {
+		return
+	}
+	cm.DiffColor = c
+	cm.RestyleViews()
+	cm.SyncRows()
+}
+
 // SetSnapshots keeps the snapshot each message of the bubble ends with once
 // taken, in the views that follow the ViewStyle and in those added to it
 // later, or shows it only while it is being taken, as show says.
@@ -1209,7 +1530,7 @@ func (cm *ChatMessageBox) SetDebug(on bool) {
 // ViewStyle returns how the bubble shows its parts, which the views of
 // extensions follow.
 func (cm *ChatMessageBox) ViewStyle() ViewStyle {
-	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots}
+	return ViewStyle{ToolMarkers: cm.ToolMarkers, MarkerShape: cm.MarkerShape, NameFg: cm.ToolColor.Fg(cm.theme), Debug: cm.Debug, Snapshots: cm.Snapshots, DiffColor: cm.DiffColor, DiffLayout: cm.DiffLayout}
 }
 
 // RestyleViews shows the bubble's StyledViews in its ViewStyle.
@@ -1289,10 +1610,10 @@ func (cm *ChatMessageBox) SetUsage(msg ChatMessage) {
 }
 
 // SetTurnEnd shows in the footer of the segment rendering msgID that the
-// turn it ends took worked.
-func (cm *ChatMessageBox) SetTurnEnd(msgID message.ID, worked time.Duration) {
+// turn it ends took worked and ended as outcome says.
+func (cm *ChatMessageBox) SetTurnEnd(msgID message.ID, worked time.Duration, outcome TurnOutcome) {
 	if seg := cm.SegmentFor(msgID); seg != nil && cm.role == message.RoleAgent {
-		seg.Footer.SetTurnEnd(worked)
+		seg.Footer.SetTurnEnd(worked, outcome)
 		cm.SyncRows()
 	}
 }

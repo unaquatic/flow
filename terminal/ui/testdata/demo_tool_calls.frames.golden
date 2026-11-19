@@ -12,18 +12,18 @@
 |  Read calculator/calc.go [8-14]                            |
 |  Read calculator/calc_test.go                              |
 |  Write calculator/divide_test.go                           |
-|  Bash go test [exit 1]                                     |
+|  Run the divide tests [exit 1]                             |
 |  Edit calculator/divide_test.go                            |
-|  Bash go test                                              |
-|  Bash cd; test [exit 1]                                    |
-|  Bash gofmt && gofmt                                       |
+|  Run calculator tests                                      |
+|  Check that gofmt is clean [exit 1]                        |
+|  Format the calculator package                             |
 |  List calculator [interrupted]                             |
 |  List calculator                                           |
-|  Bash go test [timeout after 120s]                         |
-|  Bash watchexec go test [cancelled]                        |
+|  Benchmark Divide [timeout after 120s]                     |
+|  Rerun the tests on save [cancelled]                       |
 |  Write calculator/divide_cases_test.go                     |
-|  Bash go test                                              |
-|  Bash go test                                              |
+|  Run the division cases                                    |
+|  Check test coverage                                       |
 |                                                            |
 === fg ===
 |  AAAA AAAAAA                                               |
@@ -39,18 +39,18 @@
 |  AAAA AAAAAAAAAAAAAAAAAA AAAAAA                            |
 |  AAAA AAAAAAAAAAAAAAAAAAAAAAA                              |
 |  AAAAA AAAAAAAAAAAAAAAAAAAAAAAAA                           |
-|  AAAA AA AAAA AAAAA AA                                     |
+|  AAA AAA AAAAAA AAAAA AAAAA AA                             |
 |  AAAA AAAAAAAAAAAAAAAAAAAAAAAAA                            |
-|  AAAA AA AAAA                                              |
-|  AAAA AAA AAAA AAAAA AA                                    |
-|  AAAA AAAAA AA AAAAA                                       |
+|  AAA AAAAAAAAAA AAAAA                                      |
+|  AAAAA AAAA AAAAA AA AAAAA AAAAA AA                        |
+|  AAAAAA AAA AAAAAAAAAA AAAAAAA                             |
 |  AAAA AAAAAAAAAA AAAAAAAAAAAAA                             |
 |  AAAA AAAAAAAAAA                                           |
-|  AAAA AA AAAA AAAAAAAA AAAAA AAAAA                         |
-|  AAAA AAAAAAAAA AA AAAA AAAAAAAAAAA                        |
+|  AAAAAAAAA AAAAAA AAAAAAAA AAAAA AAAAA                     |
+|  AAAAA AAA AAAAA AA AAAA AAAAAAAAAAA                       |
 |  AAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA                     |
-|  AAAA AA AAAA                                              |
-|  AAAA AA AAAA                                              |
+|  AAA AAA AAAAAAAA AAAAA                                    |
+|  AAAAA AAAA AAAAAAAA                                       |
 |                                                            |
 === legend ===
 A #8a8a8a

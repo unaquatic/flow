@@ -405,7 +405,8 @@ func TestAgentEvents_ReasoningKeepsItsMetadata(t *testing.T) {
 		var got []message.ReasoningPart
 		for _, p := range parts {
 			if rp, ok := p.(message.ReasoningPart); ok {
-				rp.ID = ""
+				// The times it streamed between are TurnState's to test.
+				rp.ID, rp.StartedAt, rp.EndedAt = "", time.Time{}, time.Time{}
 				got = append(got, rp)
 			}
 		}

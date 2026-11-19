@@ -52,7 +52,7 @@ func TestKindOf(t *testing.T) {
 		{name: "row box", r: row, want: KindRow},
 		{name: "cache row", r: NewCacheBox(), want: KindBlock},
 		{name: "block box", r: block, want: KindBlock},
-		{name: "footer", r: NewFooterBox(0, textFg), want: KindFooter},
+		{name: "footer", r: NewFooterBox(0, TurnDone, textFg), want: KindFooter},
 		{name: "text", r: widget.NewText("x"), want: KindBlock},
 	}
 	for _, tt := range tests {
@@ -128,6 +128,8 @@ func checkBubbleSpacing(t *testing.T, mode CacheMode, worked bool, usage message
 	ui := newInputTestUI(t)
 	ui.inline = true
 	ui.Apply(ui.service.SetCacheMode(mode))
+	// Each row is spaced as it is, not grouped.
+	ui.Apply(ui.service.SetGroupSteps(false))
 
 	var want []spacedRow
 	n := 0
@@ -149,11 +151,11 @@ func checkBubbleSpacing(t *testing.T, mode CacheMode, worked bool, usage message
 		msg := agentParts(id, parts...)
 		msg.Usage = usage
 		if mode == CachePerMessage {
-			want = append(want, spacedRow{Marker: "Cache read"})
+			want = append(want, spacedRow{Marker: "Cache "})
 		}
 		if last && worked {
 			msg.Worked = 3 * time.Second
-			want = append(want, spacedRow{Marker: "Done ["})
+			want = append(want, spacedRow{Marker: "Worked "})
 		}
 		return msg
 	}

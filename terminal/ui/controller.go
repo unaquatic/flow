@@ -124,6 +124,7 @@ func (s *Service) Streaming() bool {
 // Stop cancels the run in progress on the active session, if any.
 func (s *Service) Stop() {
 	if sess, ok := s.ActiveSession(); ok {
+		s.state.Stopped = s.state.Running
 		sess.Stop()
 	}
 }
@@ -170,7 +171,7 @@ func (s *Service) StartRun(start func(app.Session) error) error {
 	if err := start(sess); err != nil {
 		return err
 	}
-	s.state.Running = true
+	s.state.Running, s.state.Stopped = true, false
 	return nil
 }
 

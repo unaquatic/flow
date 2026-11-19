@@ -43,9 +43,11 @@ func turnsEnded(out []UIEvent) []EventTurnEnded {
 func TestTurnWorked(t *testing.T) {
 	failed := &app.Error{Code: app.CodeModelNotFound, Message: "no model"}
 	tests := []struct {
-		name   string
-		events []app.Event
-		want   []EventTurnEnded
+		name string
+		// stopped marks the run as Service.Stop stopped it.
+		stopped bool
+		events  []app.Event
+		want    []EventTurnEnded
 	}{
 		// The turn starts with its prompt, and ends with its run.
 		{name: "prompt and replies", events: []app.Event{
@@ -92,10 +94,24 @@ func TestTurnWorked(t *testing.T) {
 			app.EventAgentStarted{EventBase: at(time.Minute)},
 			app.EventAgentEnded{EventBase: at(time.Minute + time.Second), Error: failed},
 		}, want: []EventTurnEnded{{MessageID: "a1", Worked: 4 * time.Second}}},
+		// A run that fails after a reply ends its turn as failed.
+		{name: "failed after a reply", events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			openReply("a1", time.Second),
+			app.EventAgentEnded{EventBase: at(5 * time.Second), Error: failed},
+		}, want: []EventTurnEnded{{MessageID: "a1", Worked: 5 * time.Second, Outcome: TurnFailed}}},
+		// A run that is stopped ends its turn as interrupted.
+		{name: "interrupted", stopped: true, events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			openReply("a1", time.Second),
+			app.EventAgentEnded{EventBase: at(6 * time.Second)},
+		}, want: []EventTurnEnded{{MessageID: "a1", Worked: 6 * time.Second, Outcome: TurnInterrupted}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Service{state: &UIState{}}
+			s := &Service{state: &UIState{Stopped: tt.stopped}}
 			var got []EventTurnEnded
 			for _, ev := range tt.events {
 				got = append(got, turnsEnded(s.ApplyAgentEvent(ev))...)
@@ -110,9 +126,81 @@ func TestTurnWorked(t *testing.T) {
 				if i < 0 {
 					t.Fatalf("no reply %s in the transcript", e.MessageID)
 				}
-				if m := s.state.Messages[i]; m.Worked != e.Worked || !m.EndsTurn {
-					t.Errorf("reply %s records worked %v, ends turn %v, want %v ending it", e.MessageID, m.Worked, m.EndsTurn, e.Worked)
+				if m := s.state.Messages[i]; m.Worked != e.Worked || m.Outcome != e.Outcome || !m.EndsTurn {
+					t.Errorf("reply %s records worked %v %v, ends turn %v, want %v %v ending it", e.MessageID, m.Worked, m.Outcome, m.EndsTurn, e.Worked, e.Outcome)
 				}
+			}
+		})
+	}
+}
+
+// TestTurnFailedError checks where the error a run ends with shows: in the
+// reply that ends its turn, after its parts and so above the footer that
+// names the turn as failed, with the indicator hidden, or, when the run
+// added no reply to show it in, in the indicator.
+func TestTurnFailedError(t *testing.T) {
+	failed := &app.Error{Code: app.CodeProviderError, Message: "provider-a response error (400)",
+		Provider: "provider-a", Status: 400, Body: `{"error":"bad request"}`}
+	tests := []struct {
+		name   string
+		events []app.Event
+		// reply is the reply that shows the error, or "" for the indicator.
+		reply message.ID
+	}{
+		{name: "after a reply", reply: "a1", events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			openReply("a1", time.Second),
+			app.EventAgentEnded{EventBase: at(112 * time.Second), Error: failed},
+		}},
+		{name: "before a reply", events: []app.Event{
+			app.EventAgentStarted{EventBase: at(0)},
+			openPrompt("u1", 0),
+			app.EventAgentEnded{EventBase: at(time.Second), Error: failed},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{state: &UIState{}}
+			var out []UIEvent
+			for _, ev := range tt.events {
+				out = s.ApplyAgentEvent(ev)
+			}
+			var updated *ChatMessage
+			var shown *EventIndicatorShow
+			hidden := false
+			for _, ev := range out {
+				switch e := ev.(type) {
+				case EventMessageUpdated:
+					updated = &e.Msg
+				case EventIndicatorShow:
+					shown = &e
+				case EventIndicatorHide:
+					hidden = true
+				}
+			}
+			if tt.reply == "" {
+				if updated != nil {
+					t.Errorf("the run's end updated reply %s, want none", updated.ID)
+				}
+				if want := ErrorIndicator(*failed); shown == nil || *shown != want {
+					t.Errorf("indicator = %+v, want %+v", shown, want)
+				}
+				return
+			}
+			if shown != nil || !hidden {
+				t.Errorf("indicator shows %+v (hidden %v), want it hidden", shown, hidden)
+			}
+			if updated == nil || updated.ID != tt.reply {
+				t.Fatalf("the run's end updated %+v, want reply %s", updated, tt.reply)
+			}
+			parts := updated.ShownParts()
+			if len(parts) == 0 || parts[len(parts)-1] != (ErrorPart{Err: *failed}) {
+				t.Errorf("reply %s shows %+v, want its error last", tt.reply, parts)
+			}
+			// The transcript records the error, so a rebuild shows it again.
+			if m := s.state.Messages[len(s.state.Messages)-1]; m.Error == nil || *m.Error != *failed {
+				t.Errorf("reply %s records error %+v, want %+v", tt.reply, m.Error, failed)
 			}
 		})
 	}

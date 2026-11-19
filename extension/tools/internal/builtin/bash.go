@@ -16,6 +16,11 @@ const DefaultBashTimeout = 60 * time.Second
 // MaxBashTimeout limits one shell command.
 const MaxBashTimeout = time.Hour
 
+// MaxDescriptionRunes is the most characters that the description of a bash
+// call is asked to keep to, as a session's title is, since the transcript
+// heads the call with it on one row. The description is not cut to it.
+const MaxDescriptionRunes = 36
+
 // Bash runs a shell command with DefaultShell, or with another installed
 // POSIX shell that the call names. The shells are found when Bash is
 // called. Where none is installed, as on Windows without Git for Windows,
@@ -37,7 +42,7 @@ func Bash() agent.Tool {
 			Type: "object",
 			Properties: map[string]agent.PropertySchema{
 				"command":     {Type: "string", Description: "Shell command to execute."},
-				"description": {Type: "string", Description: "Clear, concise description of what the command does in 5-10 words, shown to the user. Examples: \"Lists files in current directory\", \"Runs the calculator tests\"."},
+				"description": {Type: "string", Description: fmt.Sprintf("A status line the user reads while the command runs, as terse as a progress label, in at most %d characters of plain words, with no quotes, symbols, emoji, or special characters, and no names from the code, such as variables, functions, files, or paths: \"Run calculator tests\", \"List source files\", \"Install dependencies\", \"Show last 3 commits\", \"Build release binary\", \"Check git status\", \"Search for todo notes\", \"Format Go files\", \"Start dev server\", \"Remove build cache\".", MaxDescriptionRunes)},
 				"shell":       {Type: "string", Description: shellDescription, Enum: shells.Names()},
 				"timeout_ms":  {Type: "integer", Description: fmt.Sprintf("Optional per-command timeout in milliseconds. Defaults to %d, capped at %d.", DefaultBashTimeout.Milliseconds(), MaxBashTimeout.Milliseconds())},
 			},

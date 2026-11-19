@@ -88,7 +88,7 @@ func TestErrorItems(t *testing.T) {
 					continue
 				}
 				want := ui.EventIndicatorShow{Text: "provider-a response error (401)", Error: true, Detail: indented(demo.KeyExpiredBody), JSON: true}
-				if got := ui.ErrorIndicator(app.ErrorOf(updated.Msg.Error)); got != want {
+				if got := ui.ErrorIndicator(*updated.Msg.Error); got != want {
 					t.Errorf("ErrorIndicator = %#v, want %#v", got, want)
 				}
 				if !slices.Contains(updated.Msg.Parts, message.ContentPart(message.TextPart{ID: updated.Msg.Parts[0].PartID(), Text: MessageErrorText})) {

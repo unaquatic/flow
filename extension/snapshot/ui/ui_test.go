@@ -103,16 +103,16 @@ func TestPatchBox_LoadsOnceBothTreesAreKnown(t *testing.T) {
 	var loads [][2]snapshot.Hash
 	box := NewPatchBox(nil, style.Color{})
 	box.Load = func(from, to snapshot.Hash) { loads = append(loads, [2]snapshot.Hash{from, to}) }
+	// A step's changes run from the message before it, whatever its turn
+	// started from.
 	reply := ui.ChatMessage{ID: "a2", Role: message.RoleAgent,
-		Prev:     []message.ContentPart{snapshot.SnapshotPart{Tree: mustHash("1111111111111111111111111111111111111111")}},
-		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}}}
-	box.SetMessage(reply)
-	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
+		Prev:     []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: mustHash("1111111111111111111111111111111111111111")}}}
 	box.SetMessage(reply)
 	if len(loads) != 0 {
-		t.Fatalf("loaded %v before the turn ended", loads)
+		t.Fatalf("loaded %v before the step ended", loads)
 	}
-	reply.EndsTurn = true
+	reply.Parts = []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}
 	box.SetMessage(reply)
 	box.SetMessage(reply)
 	if want := [][2]snapshot.Hash{{base, tree}}; len(loads) != 1 || loads[0] != want[0] {
@@ -152,14 +152,14 @@ func TestNewSegmentView_ShowsThePatchAtOnce(t *testing.T) {
 	e, _ := readPatches(stepPatch, nil)
 	relayouts := 0
 	host := ui.ViewHost{Enqueue: func(func()) {}, Relayout: func() { relayouts++ }}
-	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent, EndsTurn: true,
-		TurnPrev: []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
-		Parts:    []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
+	reply := ui.ChatMessage{ID: "a1", Role: message.RoleAgent,
+		Prev:  []message.ContentPart{snapshot.SnapshotPart{Tree: base}},
+		Parts: []message.ContentPart{snapshot.SnapshotPart{Tree: tree}}}
 
 	box := e.NewSegmentView(reply, host).(*PatchBox)
 
 	if box.Patch != stepPatch || !box.Visible() {
-		t.Errorf("the view shows patch %q, visible %v, want the turn's patch shown", box.Patch, box.Visible())
+		t.Errorf("the view shows patch %q, visible %v, want the step's patch shown", box.Patch, box.Visible())
 	}
 	if relayouts != 1 {
 		t.Errorf("the bubble was laid out again %d times, want once", relayouts)
@@ -197,17 +197,17 @@ func TestLoadPatch_ReadsOnce(t *testing.T) {
 }
 
 // TestPatchHeader checks that a step's changes are headed like a tool call,
-// by "Diff", not bold, in the color of a panel's title, without brackets,
+// by "Changed", not bold, in the color of a panel's title, without brackets,
 // and counted as the notice of a history move counts them, in the same
 // colors.
 func TestPatchHeader(t *testing.T) {
 	header := PatchHeader(DiffStat{Files: 1, Additions: 0, Deletions: 205})
-	if got, want := header.PlainText(), "Diff 1 file  +0 -205"; got != want {
+	if got, want := header.PlainText(), "Changed 1 file  +0 -205"; got != want {
 		t.Fatalf("header = %q, want %q", got, want)
 	}
 	name := header.Chunks[0]
-	if title := ui.TitleChunk(PatchTitle); name.Text != "Diff" || name.Attributes&style.AttrBold != 0 || name.Fg != title.Fg {
-		t.Errorf("name = %+v, want \"Diff\", not bold, in the title color", name)
+	if title := ui.TitleChunk(PatchTitle); name.Text != "Changed" || name.Attributes&style.AttrBold != 0 || name.Fg != title.Fg {
+		t.Errorf("name = %+v, want \"Changed\", not bold, in the title color", name)
 	}
 	notice := ui.BuildDiffToastLines([]app.FileDiff{{File: "/abs/x.go", Deletions: 205}})[0]
 	fgs := func(chunks []style.TextChunk) []style.Color {

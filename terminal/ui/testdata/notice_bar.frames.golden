@@ -3,10 +3,10 @@
 |                                        |
 |■ Chat cleared                          |
 |                                        |
-|■ Checkout [c1d2e3f4]                   |
-|  2 files  +3 -1                        |
+|■ Checkout 2 files  +3 -1               |
 |  /work/calc/calc.go  +1 -0             |
 |  /work/calc/calc_test.go  +2 -1        |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -18,10 +18,10 @@
 |                                        |
 |A AAAA AAAAAAA                          |
 |                                        |
-|A AAAAAAAA AAAAAAAAAA                   |
-|  A AAAAA  BB CC                        |
+|A AAAAAAAA A AAAAA  BB CC               |
 |  AAAAAAAAAAAAAAAAAA  BB CC             |
 |  AAAAAAAAAAAAAAAAAAAAAAA  BB CC        |
+|                                        |
 |                                        |
 |                                        |
 |                                        |

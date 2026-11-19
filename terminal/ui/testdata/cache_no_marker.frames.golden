@@ -3,15 +3,15 @@
 |                                                            |
 |  Running the tests.                                        |
 |                                                            |
-|  Bash go test [exit 1]                                     |
+|  Worked [ctrl+o expand]                                    |
 |                                                            |
-|  Cache read 18K write 4.0K                                 |
+|  Cache 18K Write 4.0K                                      |
 |                                                            |
 |  Fixed the divide-by-zero check.                           |
 |                                                            |
-|  Cache read 22K write 0K                                   |
+|  Cache 22K Write 0K                                        |
 |                                                            |
-|  Done [39s]                                                |
+|  Worked 39s                                                |
 |                                                            |
 |                                                            |
 === fg ===
@@ -19,15 +19,15 @@
 |                                                            |
 |  AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|  BBBB BB BBBB BBBBB BB                                     |
+|  BBBBBB BBBBBBB BBBBBBB                                    |
 |                                                            |
-|  BBBBB BBBB BBB BBBBB BBBB                                 |
+|  BBBBB AAA BBBBB AAAA                                      |
 |                                                            |
 |  AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |
-|  BBBBB BBBB BBB BBBBB BB                                   |
+|  BBBBB AAA BBBBB AA                                        |
 |                                                            |
-|  BBBB BBBBB                                                |
+|  BBBBBB BBB                                                |
 |                                                            |
 |                                                            |
 === legend ===

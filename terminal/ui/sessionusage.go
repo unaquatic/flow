@@ -13,16 +13,35 @@ import (
 	"github.com/unaquatic/fluid/style"
 )
 
-// CacheText returns the cache use of a request that reported u in brackets,
-// as the reply it made shows it after its last part: the prompt tokens it
-// read from a prompt cache and those it wrote to one, such as "[cache 7.7K
-// write 0K]". A request that read and wrote none shows both as 0K. It returns
+// CacheText returns the cache use of a request that reported u, as the
+// reply it made shows it after its last part, and its cache row does: the prompt tokens it read from
+// a prompt cache and those it wrote to one, each after its label, such as
+// "Cache 7.7K Write 0K", which CacheChunks colors. A request that read and
+// wrote none shows both as 0K. It returns
 // "" only for a reply that reported no usage at all, as one still streaming.
 func CacheText(u message.Usage) string {
 	if u.IsZero() {
 		return ""
 	}
-	return fmt.Sprintf("[cache %s write %s]", FormatTokens(u.CachedInputTokens), FormatTokens(u.CacheCreationInputTokens))
+	return fmt.Sprintf("Cache %s Write %s", FormatTokens(u.CachedInputTokens), FormatTokens(u.CacheCreationInputTokens))
+}
+
+// CacheChunks returns cache, a cache use as CacheText gives it, with each
+// label in the row's color and each count after it in textFg, so that the
+// counts stand out from the muted labels.
+func CacheChunks(cache string) []style.TextChunk {
+	var chunks []style.TextChunk
+	for i, word := range strings.Fields(cache) {
+		if i > 0 {
+			chunks = append(chunks, style.Plain(" "))
+		}
+		if i%2 == 1 {
+			chunks = append(chunks, style.TextChunk{Text: word, Fg: textFg})
+		} else {
+			chunks = append(chunks, style.Plain(word))
+		}
+	}
+	return chunks
 }
 
 // Context shares of the window above which the slash menu's status row

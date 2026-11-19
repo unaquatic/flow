@@ -3,15 +3,15 @@
 |                                                            |
 |■ Running the tests.                                        |
 |                                                            |
-|■ Bash go test [exit 1]                                     |
+|■ Worked [ctrl+o expand]                                    |
 |                                                            |
-|■ Cache read 18K write 4.0K                                 |
+|■ Cache 18K Write 4.0K                                      |
 |                                                            |
 |■ Fixed the divide-by-zero check.                           |
 |                                                            |
-|■ Cache read 22K write 0K                                   |
+|■ Cache 22K Write 0K                                        |
 |                                                            |
-|■ Done [39s]                                                |
+|■ Worked 39s                                                |
 |                                                            |
 |                                                            |
 === fg ===
@@ -19,15 +19,15 @@
 |                                                            |
 |B AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|C CCCC CC CCCC CCCCC CC                                     |
+|C CCCCCC CCCCCCC CCCCCCC                                    |
 |                                                            |
-|C CCCCC CCCC CCC CCCCC CCCC                                 |
+|C CCCCC AAA CCCCC AAAA                                      |
 |                                                            |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |
-|C CCCCC CCCC CCC CCCCC CC                                   |
+|C CCCCC AAA CCCCC AA                                        |
 |                                                            |
-|C CCCC CCCCC                                                |
+|C CCCCCC CCC                                                |
 |                                                            |
 |                                                            |
 === legend ===

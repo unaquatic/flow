@@ -143,9 +143,14 @@ func collapseTools(ui *UI) {
 	ui.SetToolsExpanded(false)
 }
 
+// showSteps shows each step of the replies of ui as a row of its own, as
+// /config's Group steps does when off, for the frames that draw the rows.
+func showSteps(ui *UI) { ui.Apply(ui.service.SetGroupSteps(false)) }
+
 // todoTurn adds a reply, a1, that reads a file, writes its todo list, and
 // runs the tests.
 func todoTurn(ui *UI) {
+	showSteps(ui)
 	ui.AddMessage(agentParts("a1",
 		message.TextPart{ID: "a1-text", Text: "Planning the change."},
 		message.ToolPart{ID: "a1-read", CallID: "c1", Name: "read", State: message.ToolStateCompleted{
@@ -161,6 +166,7 @@ func todoTurn(ui *UI) {
 // toolRowsTurn adds a turn of three replies: a1, which says what it does and
 // makes two calls, a2, the next step, which makes one, and a3, which sums up.
 func toolRowsTurn(ui *UI) {
+	showSteps(ui)
 	call := func(id message.PartID, name, input string, state func(json.RawMessage) message.ToolState) message.ToolPart {
 		return message.ToolPart{ID: id, CallID: string(id), Name: name, State: state(json.RawMessage(input))}
 	}
@@ -334,11 +340,43 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_markdown", h: 8, add: func(ui *UI) {
 			ui.AddMessage(agentText("a1", "## Plan\n\n1. Read `calc.go`.\n2. Add **Divide** with a zero check.\n\n- Keep `Add` as it is.\n- Run the tests."))
 		}},
+		// Reasoning shows collapsed to its label and how long it took, as a
+		// tool call shows collapsed.
 		{name: "agent_reasoning", h: 6, add: func(ui *UI) {
+			showSteps(ui)
+			ui.AddMessage(agentParts("a1",
+				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard.",
+					StartedAt: turnT0, EndedAt: turnT0.Add(12 * time.Second)},
+				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
+			))
+		}},
+		// Reasoning stored before its times were recorded shows its label
+		// alone.
+		{name: "agent_reasoning_untimed", h: 6, add: func(ui *UI) {
+			showSteps(ui)
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard."},
 				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
 			))
+		}},
+		// With collapse reasoning off, reasoning shows expanded, its text
+		// alone, though tool calls are collapsed.
+		{name: "agent_reasoning_kept", h: 8, add: func(ui *UI) {
+			ui.Apply(ui.service.SetReasoningExpanded(true))
+			ui.AddMessage(agentParts("a1",
+				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard.",
+					StartedAt: turnT0, EndedAt: turnT0.Add(12 * time.Second)},
+				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
+			))
+		}},
+		// Ctrl+O shows the reasoning text alone, without its header.
+		{name: "agent_reasoning_expanded", h: 8, add: func(ui *UI) {
+			ui.AddMessage(agentParts("a1",
+				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard.",
+					StartedAt: turnT0, EndedAt: turnT0.Add(65 * time.Second)},
+				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
+			))
+			expandTools(ui)
 		}},
 		// Inline code in reasoning is as bright as the reasoning around it,
 		// not as bright as the same code in the reply under it.
@@ -347,6 +385,7 @@ func TestTranscriptFrames(t *testing.T) {
 				message.ReasoningPart{ID: "a1-think", Text: "Divide needs a guard in `calc.go`."},
 				message.TextPart{ID: "a1-text", Text: "I'll add the guard in `calc.go`."},
 			))
+			expandTools(ui)
 		}},
 		// Per message, a reply shows its cache use in a row under its text
 		// whether or not it ends a turn.
@@ -360,7 +399,7 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_error", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Reading the file.")
 			ui.AddMessage(msg)
-			msg.Error = errors.New("connection reset by peer")
+			msg.Error = new(app.ErrorOf(errors.New("connection reset by peer")))
 			ui.UpdateMessage(msg)
 		}},
 		// An error response reads as the indicator shows it: the provider
@@ -369,8 +408,8 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_response_error", h: 14, add: func(ui *UI) {
 			msg := agentText("a1", "Reading the file.")
 			ui.AddMessage(msg)
-			msg.Error = &agent.ResponseError{Provider: "gw", StatusCode: 401,
-				ResponseBody: `{"error":{"type":"authentication_error","message":"invalid key"}}`}
+			msg.Error = new(app.ErrorOf(&agent.ResponseError{Provider: "gw", StatusCode: 401,
+				ResponseBody: `{"error":{"type":"authentication_error","message":"invalid key"}}`}))
 			ui.UpdateMessage(msg)
 		}},
 		// The system message a session opens with shows above its first
@@ -418,6 +457,22 @@ func TestTranscriptFrames(t *testing.T) {
 		// Collapsed calls are rows on the canvas, with no blank row between
 		// two of them, whether one step makes both or the next step does.
 		{name: "agent_tool_rows", h: 10, add: toolRowsTurn},
+		// A single step, once done, shows as one row of the time it took.
+		{name: "agent_step_single", h: 6, add: func(ui *UI) {
+			ui.AddMessage(agentParts("a1",
+				message.ToolPart{ID: "c1", CallID: "c1", Name: "bash", State: message.ToolStateCompleted{
+					Input:     json.RawMessage(`{"command":"go test ./...","description":"Regenerate reasoning frames"}`),
+					Output:    "ok",
+					StartedAt: turnT0, EndedAt: turnT0.Add(11 * time.Second)}},
+				message.TextPart{ID: "a1-text", Text: "All tests pass."},
+			))
+		}},
+		// By default the steps that stack, once done, show as one row that
+		// spans their work.
+		{name: "agent_steps_grouped", h: 10, add: func(ui *UI) {
+			toolRowsTurn(ui)
+			ui.Apply(ui.service.SetGroupSteps(true))
+		}},
 		// A click expands a call into its block, a blank row apart from the
 		// rows above and below it.
 		{name: "agent_tool_rows_clicked", h: 18, add: func(ui *UI) {
@@ -490,11 +545,16 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
 		}},
-		// The notice of an undo is headed by the word undo and the snapshot
-		// it checked out, rather than by checkout.
+		// The notice of an undo is headed by the word undo and what it
+		// changed, without the snapshot it checked out.
 		{name: "notice_undo_bar", h: 7, add: func(ui *UI) {
 			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.Apply(ui.service.CompleteUndo(app.MoveResult{Files: movedFiles()[:2], Checkout: "31611124a5b6c7d8"}, nil))
+		}},
+		// An undo that changed no file says so in its header alone.
+		{name: "notice_undo_none", h: 4, add: func(ui *UI) {
+			ui.AddMessage(userText("u1", "Run the tests"))
+			ui.Apply(ui.service.CompleteUndo(app.MoveResult{Checkout: "31611124a5b6c7d8"}, nil))
 		}},
 		// With the prompt style filled, the same notices fill boxes on the
 		// box background, as the prompt does.
@@ -571,8 +631,10 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(msg)
 		}},
 		// While a run is in progress, the marker of a call that executes
-		// blinks, here hidden, and the call that has ended keeps its own.
+		// blinks, here off, showing □ for ■, and the call that has ended
+		// keeps its own.
 		{name: "agent_tool_marker_blink_off", h: 4, add: func(ui *UI) {
+			showSteps(ui)
 			ui.blink.On.Store(true)
 			ui.blink.Off = true
 			msg := agentParts("a1",
@@ -581,6 +643,15 @@ func TestTranscriptFrames(t *testing.T) {
 				message.ToolPart{ID: "a1-vet", CallID: "c2", Name: "bash", State: message.ToolStateCompleted{
 					Input: json.RawMessage(`{"command":"go vet ./..."}`), Output: "ok"}},
 			)
+			ui.AddMessage(msg)
+		}},
+		// The marker of the text a reply writes blinks, here off, showing ■
+		// dimmed, which the frames draw as they draw it on.
+		{name: "agent_text_marker_blink_dim", h: 4, add: func(ui *UI) {
+			ui.blink.On.Store(true)
+			ui.blink.Off = true
+			msg := agentText("a1", "Running the tests.")
+			msg.Live = []message.PartID{"a1-text"}
 			ui.AddMessage(msg)
 		}},
 		// Inline, the marker of the text a reply writes does not blink once
@@ -624,6 +695,14 @@ func TestToolBoxFrames(t *testing.T) {
 			State: message.ToolStatePending{Input: bashInput}}},
 		{name: "toolbox_bash_completed", h: 8, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStateCompleted{Input: bashInput, Output: "ok\texample/calculator\t0.003s"}}},
+		// A call headed by its description shows how long it ran once it
+		// ends, collapsed, and after the reason it failed.
+		{name: "toolbox_bash_timed_row", h: 2, collapsed: true, tool: message.ToolPart{Name: "bash",
+			State: message.ToolStateCompleted{Input: bashInput, Output: "ok",
+				StartedAt: turnT0, EndedAt: turnT0.Add(12 * time.Second)}}},
+		{name: "toolbox_bash_timed_error_row", h: 2, collapsed: true, tool: message.ToolPart{Name: "bash",
+			State: message.ToolStateError{Input: bashInput, Error: "FAIL\n\n[exit 1]",
+				StartedAt: turnT0, EndedAt: turnT0.Add(65 * time.Second)}}},
 		// A timeout other than the default follows the command.
 		{name: "toolbox_bash_timeout", h: 6, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStatePending{Input: json.RawMessage(
@@ -1149,7 +1228,7 @@ func TestIndicatorFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
 				State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
-		}, show: EventIndicatorShow{Text: ExpandingToolsText}},
+		}, show: EventIndicatorShow{Text: ExpandingToolsText, Marked: true}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1170,7 +1249,7 @@ func TestIndicatorFrames(t *testing.T) {
 }
 
 // TestIndicatorBlinkFrames draws the indicator of a run in progress, whose
-// marker before the time blinks: shown, and hidden, while the time stays
+// marker before the time blinks: shown, and off, as □, while the time stays
 // where it is. The time and the hint after it stay in their own colors.
 func TestIndicatorBlinkFrames(t *testing.T) {
 	for _, tt := range []struct {
@@ -1224,6 +1303,45 @@ func TestWorkedFrames(t *testing.T) {
 				ui.Apply(ui.service.ApplyAgentEvent(ev))
 			}
 		}},
+		// A run that fails shows its error in its last reply, the body
+		// right under its line, and then the footer that names the turn as
+		// failed, the indicator showing nothing.
+		{name: "worked_run_failed", h: 14, add: func(ui *UI) {
+			prompt := message.Content{ID: "u1", Role: message.RoleUser,
+				Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "Run the tests"}}}
+			reply := message.Content{ID: "a1", Role: message.RoleAgent, Provider: "provider", Model: "model"}
+			partial := reply
+			partial.Parts = []message.ContentPart{message.TextPart{ID: "a1-text", Text: "Running the tests."}}
+			failed := app.ErrorOf(&agent.ResponseError{Provider: "provider-a", StatusCode: 529,
+				ResponseBody: `{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}`})
+			for _, ev := range []app.Event{
+				app.EventAgentStarted{EventBase: at(0)},
+				app.EventMessageStarted{EventBase: at(0), Message: app.Message{Content: prompt}},
+				app.EventMessageEnded{EventBase: at(0), Message: app.Message{Content: prompt}},
+				app.EventMessageStarted{EventBase: at(time.Second), Message: app.Message{Content: reply}},
+				app.EventMessageEnded{EventBase: at(112 * time.Second), Message: app.Message{Content: partial}},
+				app.EventAgentEnded{EventBase: at(112 * time.Second), Error: &failed},
+			} {
+				ui.Apply(ui.service.ApplyAgentEvent(ev))
+			}
+		}},
+		// A turn whose run failed, or was stopped, names how it ended in
+		// place of "Worked".
+		{name: "worked_failed", h: 5, add: func(ui *UI) {
+			msg := agentText("a1", "Running the tests.")
+			msg.Worked, msg.Outcome = 42*time.Second, TurnFailed
+			ui.AddMessage(msg)
+		}},
+		{name: "worked_interrupted", h: 5, add: func(ui *UI) {
+			msg := agentText("a1", "Running the tests.")
+			msg.Worked, msg.Outcome = 65*time.Second, TurnInterrupted
+			ui.AddMessage(msg)
+		}},
+		// While the turn runs, the rows that stack at the bottom of its reply
+		// show none, the indicator naming the step at work; once it ends, the
+		// footer stands for them.
+		{name: "worked_grouped_running", h: 4, add: func(ui *UI) { groupedTurn(ui, false) }},
+		{name: "worked_grouped_ended", h: 8, add: func(ui *UI) { groupedTurn(ui, true) }},
 		// A reply that read and wrote no cache shows no cache use.
 		{name: "worked_cache_miss", h: 5, add: func(ui *UI) {
 			msg := agentText("a1", "Done.")
@@ -1236,6 +1354,7 @@ func TestWorkedFrames(t *testing.T) {
 		// shows, such as its snapshot part, and so counted no tokens, is parted
 		// from the reply above it by one blank row, as a reply is.
 		{name: "worked_alone", h: 7, add: func(ui *UI) {
+			showSteps(ui)
 			ui.AddMessage(agentParts("a1", bash))
 			last := agentParts("a2", snapshot.SnapshotPart{ID: "a2-step"})
 			last.ParentID, last.Worked = "a1", 3*time.Second
@@ -1277,6 +1396,40 @@ func TestWorkedFrames(t *testing.T) {
 			buf := renderFrames(80, tt.h, detachTranscript(ui)...)
 			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
 		})
+	}
+}
+
+// groupedTurn runs a turn whose reply reasons, runs one command, and starts
+// another, and ends the run when end is set.
+func groupedTurn(ui *UI, end bool) {
+	cmd := func(id, desc string, state func(json.RawMessage) message.ToolState) message.ToolPart {
+		input := json.RawMessage(`{"command":"go test ./...","description":"` + desc + `"}`)
+		return message.ToolPart{ID: message.PartID(id), CallID: id, Name: "bash", State: state(input)}
+	}
+	think := message.ReasoningPart{ID: "a1-think", Text: "Run the tests.", StartedAt: turnT0, EndedAt: turnT0.Add(time.Second)}
+	first := cmd("c1", "Run the tests", func(in json.RawMessage) message.ToolState {
+		return message.ToolStateCompleted{Input: in, Output: "ok", StartedAt: turnT0.Add(time.Second), EndedAt: turnT0.Add(13 * time.Second)}
+	})
+	second := cmd("c2", "Run the race tests", func(in json.RawMessage) message.ToolState {
+		return message.ToolStateRunning{Input: in, StartedAt: turnT0.Add(13 * time.Second)}
+	})
+	prompt := message.Content{ID: "u1", Role: message.RoleUser,
+		Parts: []message.ContentPart{message.TextPart{ID: "u1-text", Text: "Run the tests"}}}
+	reply := message.Content{ID: "a1", Role: message.RoleAgent}
+	events := []app.Event{
+		app.EventAgentStarted{EventBase: at(0)},
+		app.EventMessageStarted{EventBase: at(0), Message: app.Message{Content: prompt}},
+		app.EventMessageEnded{EventBase: at(0), Message: app.Message{Content: prompt}},
+		app.EventMessageStarted{EventBase: at(0), Message: app.Message{Content: reply}},
+		app.EventPartEnded{PartChange: app.PartChange{EventBase: at(time.Second), MessageID: "a1", Part: think}},
+		app.EventPartEnded{PartChange: app.PartChange{EventBase: at(13 * time.Second), MessageID: "a1", Part: first}},
+		app.EventPartStarted{PartChange: app.PartChange{EventBase: at(13 * time.Second), MessageID: "a1", Part: second}},
+	}
+	if end {
+		events = append(events, app.EventAgentEnded{EventBase: at(32 * time.Second)})
+	}
+	for _, ev := range events {
+		ui.Apply(ui.service.ApplyAgentEvent(ev))
 	}
 }
 

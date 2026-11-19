@@ -11,7 +11,8 @@ import (
 
 // FooterBox displays the footer of the reply that ends a turn as a single
 // row, cut short with an ellipsis when it does not fit: how long the turn
-// took, such as "Done [42s]", and then, in the CachePerTurn mode, the
+// took and how it ended, such as "Worked 42s", "Error 42s" or
+// "Interrupted 42s", and then, in the CachePerTurn mode, the
 // cache use of its last request. It is hidden under the other replies, and
 // until the turn has ended. While SetMarker shows it, ToolMarker starts the
 // row, in the box's left padding, as it starts a tool call's.
@@ -28,17 +29,22 @@ type FooterBox struct {
 	// Worked is how long the turn that the reply ends took, or zero when the
 	// reply does not end one.
 	Worked time.Duration
+	// Outcome is how the turn that the reply ends ended.
+	Outcome TurnOutcome
+	// Hint follows the time, such as ExpandHint while the footer stands for
+	// the steps above it, which it hides, or is "".
+	Hint string
 	// Cache is the cache use shown after the time, as CacheText gives it, or
 	// "".
 	Cache string
 }
 
 // NewFooterBox creates the footer row of a reply that ends a turn that took
-// worked. The row is transparent and carries the prose inset so that it
+// worked and ended as outcome says. The row is transparent and carries the prose inset so that it
 // lines up with the reply's text. It draws the time, and the cache use that
 // SetCache sets after it, in fg, and the marker SetMarker shows in fg too
 // until SetMarkerStyle styles it.
-func NewFooterBox(worked time.Duration, fg style.Color) *FooterBox {
+func NewFooterBox(worked time.Duration, outcome TurnOutcome, fg style.Color) *FooterBox {
 	text := widget.NewText("",
 		widget.TextWithFg(fg),
 		widget.TextWithBg(style.ColorTransparent),
@@ -54,7 +60,7 @@ func NewFooterBox(worked time.Duration, fg style.Color) *FooterBox {
 	// A leaf Text draws at its own origin, so a padded box insets it. Margins
 	// on the text would widen the bubble by their width instead of keeping
 	// the row inside it.
-	b := &FooterBox{Box: GutterRow(row), Row: row, Marker: marker, Text: text, Worked: worked}
+	b := &FooterBox{Box: GutterRow(row), Row: row, Marker: marker, Text: text, Worked: worked, Outcome: outcome}
 	b.Sync()
 	return b
 }
@@ -80,9 +86,19 @@ func (b *FooterBox) SetMarkerStyle(shape MarkerShape, fg style.Color) {
 	StyleMarker(b.Marker, shape, fg)
 }
 
-// SetTurnEnd updates how long the turn that the reply ends took.
-func (b *FooterBox) SetTurnEnd(worked time.Duration) {
-	b.Worked = worked
+// SetTurnEnd updates how long the turn that the reply ends took, and how it
+// ended.
+func (b *FooterBox) SetTurnEnd(worked time.Duration, outcome TurnOutcome) {
+	b.Worked, b.Outcome = worked, outcome
+	b.Sync()
+}
+
+// SetHint shows hint after the time, or none when hint is "".
+func (b *FooterBox) SetHint(hint string) {
+	if hint == b.Hint {
+		return
+	}
+	b.Hint = hint
 	b.Sync()
 }
 
@@ -99,7 +115,7 @@ func (b *FooterBox) SetCache(cache string) {
 // Sync shows FooterText of the recorded turn and cache use, and hides the
 // row when that is empty.
 func (b *FooterBox) Sync() {
-	text := FooterText(b.Worked, b.Cache)
+	text := FooterText(b.Worked, b.Outcome, b.Hint, b.Cache)
 	if len(text.Chunks) == 0 {
 		b.SetGone(true)
 		return
@@ -108,27 +124,58 @@ func (b *FooterBox) Sync() {
 	b.Text.SetStyledContent(text)
 }
 
-// FooterText returns the footer of a reply that ends a turn that took worked:
-// FormatWorked of the time, and then, when cache is not empty, a space and
-// cache, all in the row's color. A time that rounds to zero seconds, as that
+// FooterText returns the footer of a reply that ends a turn that took worked
+// and ended as outcome says: FormatWorked of both, then, when hint is not
+// empty, a space and hint, and then, when cache is not empty, a space and
+// cache, as CacheChunks colors it, all else in the row's color. A time that rounds to zero seconds, as that
 // of a reply that does not end a turn or of a run that failed at once, has no
 // footer.
-func FooterText(worked time.Duration, cache string) style.StyledText {
+func FooterText(worked time.Duration, outcome TurnOutcome, hint, cache string) style.StyledText {
 	if worked.Round(time.Second) <= 0 {
 		return style.StyledText{}
 	}
-	text := style.NewStyledText(style.Plain(FormatWorked(worked)))
+	text := style.NewStyledText(style.Plain(FormatWorked(worked, outcome)))
+	if hint != "" {
+		text.Chunks = append(text.Chunks, style.Plain(" "+hint))
+	}
 	if cache != "" {
-		text.Chunks = append(text.Chunks, style.Plain(" "+cache))
+		text.Chunks = append(append(text.Chunks, style.Plain(" ")), CacheChunks(cache)...)
 	}
 	return text
 }
 
-// FormatWorked returns the footer text for a turn that took d, as
-// FormatDuration gives it: "Done [42s]", "Done [1m 05s]", or
-// "Done [1h 02m 05s]".
-func FormatWorked(d time.Duration) string {
-	return "Done [" + FormatDuration(d) + "]"
+// TurnOutcome is how a turn ended, which the footer under its last reply
+// names.
+type TurnOutcome int
+
+const (
+	// TurnDone marks a turn whose run finished. It is the default, as for a
+	// turn of a loaded session, whose outcome is not stored.
+	TurnDone TurnOutcome = iota
+	// TurnFailed marks a turn whose run ended with an error.
+	TurnFailed
+	// TurnInterrupted marks a turn whose run was stopped, as Esc stops it.
+	TurnInterrupted
+)
+
+// String returns the footer's label for o: "Worked", "Error", or
+// "Interrupted".
+func (o TurnOutcome) String() string {
+	switch o {
+	case TurnFailed:
+		return "Error"
+	case TurnInterrupted:
+		return "Interrupted"
+	default:
+		return "Worked"
+	}
+}
+
+// FormatWorked returns the footer text for a turn that took d and ended as
+// outcome says, with d as FormatDuration gives it: "Worked 42s",
+// "Error 1m 05s", or "Interrupted 1h 02m 05s".
+func FormatWorked(d time.Duration, outcome TurnOutcome) string {
+	return outcome.String() + " " + FormatDuration(d)
 }
 
 // FormatWorking returns the indicator text for a turn in progress that has

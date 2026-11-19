@@ -247,6 +247,10 @@ const NoMatchesText = "[no matches]"
 // listCountSetting the row that sets the CountPlace, selectionSetting the
 // row that sets the SelectionStyle, promptSetting the row that sets the
 // PromptStyle, inputSetting the row that sets the InputStyle,
+// diffColorSetting the row that sets the DiffColor, diffLayoutSetting the
+// row that sets the DiffLayout,
+// reasoningSetting the row that collapses reasoning or keeps it expanded,
+// stepsSetting the row that groups the steps of a reply or shows each,
 // snapshotsSetting the row that shows or hides the snapshots once taken, and
 // debugSetting the row that switches Debug.
 const (
@@ -261,6 +265,10 @@ const (
 	selectionSetting   = "Selection"
 	promptSetting      = "Prompt style"
 	inputSetting       = "Input style"
+	diffColorSetting   = "Diff color"
+	diffLayoutSetting  = "Diff layout"
+	reasoningSetting   = "Collapse reasoning"
+	stepsSetting       = "Group steps"
 	snapshotsSetting   = "Snapshots"
 	debugSetting       = "Debug"
 )
@@ -292,8 +300,14 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 		snapshots := setting(snapshotsSetting, onOff(s.state.ShowSnapshots), func(int) []UIEvent {
 			return s.SetSnapshots(!s.state.ShowSnapshots)
 		})
+		reasoning := setting(reasoningSetting, onOff(!s.state.ExpandReasoning), func(int) []UIEvent {
+			return s.SetReasoningExpanded(!s.state.ExpandReasoning)
+		})
+		steps := setting(stepsSetting, onOff(!s.state.ShowSteps), func(int) []UIEvent {
+			return s.SetGroupSteps(s.state.ShowSteps)
+		})
 		if !s.state.Debug {
-			return []MenuItem{fullscreen, snapshots, debug}
+			return []MenuItem{fullscreen, reasoning, steps, snapshots, debug}
 		}
 		return []MenuItem{
 			fullscreen,
@@ -327,6 +341,14 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 			setting(inputSetting, s.state.InputStyle.String(), func(step int) []UIEvent {
 				return s.SetInputStyle(s.state.InputStyle.Next(step))
 			}),
+			setting(diffColorSetting, s.state.DiffColor.String(), func(step int) []UIEvent {
+				return s.SetDiffColor(s.state.DiffColor.Next(step))
+			}),
+			setting(diffLayoutSetting, s.state.DiffLayout.String(), func(step int) []UIEvent {
+				return s.SetDiffLayout(s.state.DiffLayout.Next(step))
+			}),
+			reasoning,
+			steps,
 			snapshots,
 			debug,
 		}
@@ -401,6 +423,20 @@ func (s *Service) SetInputStyle(style InputStyle) []UIEvent {
 	return []UIEvent{EventInputStyleSet{Style: style}}
 }
 
+// SetDiffLayout lays every diff of the transcript, and those added later,
+// out as l says.
+func (s *Service) SetDiffLayout(l DiffLayout) []UIEvent {
+	s.state.DiffLayout = l
+	return []UIEvent{EventDiffLayoutSet{Layout: l}}
+}
+
+// SetDiffColor marks the changed lines of every side by side diff of the
+// transcript, and of those added later, as c says.
+func (s *Service) SetDiffColor(c DiffColor) []UIEvent {
+	s.state.DiffColor = c
+	return []UIEvent{EventDiffColorSet{Color: c}}
+}
+
 // SetSelectionStyle marks the selected row of every menu as style says: with
 // a fill across the box, with a fill a cell in from the box's edges, or with
 // an arrow.
@@ -416,6 +452,23 @@ func (s *Service) SetSelectionStyle(style SelectionStyle) []UIEvent {
 func (s *Service) SetSnapshots(show bool) []UIEvent {
 	s.state.ShowSnapshots = show
 	return append([]UIEvent{EventSnapshotsSet{Show: show}}, s.PersistTerminal()...)
+}
+
+// SetReasoningExpanded keeps the reasoning of every reply of the transcript,
+// and of those added later, expanded whatever Ctrl+O says, or collapses it
+// as tool calls are, as expanded says, and saves the setting, as
+// PersistTerminal does.
+func (s *Service) SetReasoningExpanded(expanded bool) []UIEvent {
+	s.state.ExpandReasoning = expanded
+	return append([]UIEvent{EventReasoningExpandedSet{Expanded: expanded}}, s.PersistTerminal()...)
+}
+
+// SetGroupSteps groups the steps that stack in every reply of the
+// transcript, and in those added later, into one row, or shows each as a row
+// of its own, as group says, and saves the setting, as PersistTerminal does.
+func (s *Service) SetGroupSteps(group bool) []UIEvent {
+	s.state.ShowSteps = !group
+	return append([]UIEvent{EventGroupStepsSet{Group: group}}, s.PersistTerminal()...)
 }
 
 // SetDebug shows what helps debug flow, such as the style settings of

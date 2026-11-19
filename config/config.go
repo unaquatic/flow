@@ -173,6 +173,15 @@ type Terminal struct {
 	// once it is taken, showing its hash, rather than only while it is
 	// being taken.
 	Snapshots bool `json:"snapshots,omitempty"`
+	// ExpandReasoning shows model reasoning expanded whatever Ctrl+O says,
+	// rather than collapsed to its label and how long it took, which is
+	// the default.
+	ExpandReasoning bool `json:"expand_reasoning,omitempty"`
+	// ShowSteps shows each collapsed step of a reply, such as reasoning or a
+	// tool call, as a row of its own, rather than grouping the steps that
+	// stack into one row, "Worked 32s" once they are done, which is the
+	// default.
+	ShowSteps bool `json:"show_steps,omitempty"`
 }
 
 // versionKey is the key of the config file that holds its format version.

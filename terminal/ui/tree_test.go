@@ -576,13 +576,13 @@ func TestCompleteTreeMove(t *testing.T) {
 		{
 			name: "prompt", event: edit,
 			want: []UIEvent{
-				noticeAdded(Notice{Text: NoFileChangesText}),
+				noticeAdded(Notice{Lines: MoveLines(CheckoutVerb, nil)}),
 				EventInputSet{Text: "use tables\nplease"},
 			},
 		},
 		{
 			name: "reply", event: reply,
-			want: []UIEvent{noticeAdded(Notice{Text: NoFileChangesText})},
+			want: []UIEvent{noticeAdded(Notice{Lines: MoveLines(CheckoutVerb, nil)})},
 		},
 		{name: "reply the transcript ended at", event: reply, err: app.ErrAlreadyThere},
 		// The prompt stays out of the input, which would send it from the

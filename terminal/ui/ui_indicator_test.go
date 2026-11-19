@@ -165,8 +165,12 @@ func TestShowIndicatorWhileKeepsError(t *testing.T) {
 	line, body := ui.indicatorLabel.PlainText(), ui.indicatorDetailText.PlainText()
 
 	ui.ShowIndicatorWhile(ExpandingToolsText, func() {
-		if ui.indicatorDetail.Visible() || ui.indicatorMarker.Visible() {
-			t.Error("the body or the error's marker shows beside the passing line")
+		if ui.indicatorDetail.Visible() {
+			t.Error("the error's body shows under the passing line")
+		}
+		// The passing line has a marker of its own, not the error's.
+		if !ui.indicatorMarker.Visible() || ui.indicatorMarker.Fg() == ui.ErrorFg() {
+			t.Errorf("marker shown %v in %v, want it shown, not in the error's color", ui.indicatorMarker.Visible(), ui.indicatorMarker.Fg())
 		}
 	})
 	if got := ui.indicatorLabel.PlainText(); got != line {

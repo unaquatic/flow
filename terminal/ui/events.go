@@ -49,12 +49,15 @@ type EventMessageAdded struct {
 	Msg ChatMessage
 }
 
-// EventTurnEnded shows how long a turn took under its last reply.
+// EventTurnEnded shows how long a turn took, and how it ended, under its
+// last reply.
 type EventTurnEnded struct {
 	// MessageID identifies the reply that ends the turn.
 	MessageID message.ID
 	// Worked is how long the turn took.
 	Worked time.Duration
+	// Outcome is how the turn ended.
+	Outcome TurnOutcome
 }
 
 // EventStatusChanged replaces the status-line content.
@@ -197,6 +200,15 @@ type EventIndicatorShow struct {
 	Detail string
 	// JSON reports that Detail is JSON.
 	JSON bool
+	// Working reports that Text is the time the turn in progress has taken
+	// so far, Elapsed, which the indicator shows after the step at work in
+	// place of Text, when the transcript hides it, as UI.WorkingText says.
+	Working bool
+	// Elapsed is how long the turn in progress has taken, when Working.
+	Elapsed time.Duration
+	// Marked shows the indicator's marker before Text, as it shows while a
+	// turn is in progress, such as while Ctrl+O expands the tool calls.
+	Marked bool
 }
 
 // EventIndicatorHide dismisses the status indicator.
@@ -302,6 +314,22 @@ type EventSnapshotsSet struct {
 	Show bool
 }
 
+// EventReasoningExpandedSet shows the reasoning of every reply of the
+// transcript, and of those added later, expanded whatever Ctrl+O says, or
+// collapsed as tool calls are.
+type EventReasoningExpandedSet struct {
+	// Expanded keeps reasoning expanded when true.
+	Expanded bool
+}
+
+// EventGroupStepsSet groups the steps that stack in every reply of the
+// transcript, and in those added later, into one row, or shows each as a
+// row of its own.
+type EventGroupStepsSet struct {
+	// Group groups the steps when true.
+	Group bool
+}
+
 // EventDebugSet shows what helps debug flow, or hides it.
 type EventDebugSet struct {
 	// On shows it when true and hides it when false.
@@ -326,6 +354,20 @@ type EventPromptStyleSet struct {
 type EventInputStyleSet struct {
 	// Style is how the input box and its panels show.
 	Style InputStyle
+}
+
+// EventDiffLayoutSet lays every diff of the transcript, and those added
+// later, out as Layout says.
+type EventDiffLayoutSet struct {
+	// Layout is how diffs lay their lines out.
+	Layout DiffLayout
+}
+
+// EventDiffColorSet marks the changed lines of every side by side diff of the
+// transcript, and of those added later, as Color says.
+type EventDiffColorSet struct {
+	// Color is how changed lines are marked.
+	Color DiffColor
 }
 
 // EventSelectionStyleSet marks the selected row of every menu as Style says.
@@ -365,49 +407,53 @@ type EventClipboardCopy struct {
 	Text string
 }
 
-func (EventQuit) uiEvent()              {}
-func (EventQuitArmed) uiEvent()         {}
-func (EventInputClear) uiEvent()        {}
-func (EventInputSet) uiEvent()          {}
-func (EventClearMessages) uiEvent()     {}
-func (EventSlashMenuHide) uiEvent()     {}
-func (EventMessageUpdated) uiEvent()    {}
-func (EventMessageAdded) uiEvent()      {}
-func (EventTurnEnded) uiEvent()         {}
-func (EventStatusChanged) uiEvent()     {}
-func (EventModelLabelChanged) uiEvent() {}
-func (EventUsageChanged) uiEvent()      {}
-func (EventSlashMenuShow) uiEvent()     {}
-func (EventSessionMenuShow) uiEvent()   {}
-func (EventSessionMenuHide) uiEvent()   {}
-func (EventSessionPrompts) uiEvent()    {}
-func (EventSessionLoad) uiEvent()       {}
-func (EventBannerShow) uiEvent()        {}
-func (EventBannerUpdate) uiEvent()      {}
-func (EventBannerHide) uiEvent()        {}
-func (EventIndicatorShow) uiEvent()     {}
-func (EventIndicatorHide) uiEvent()     {}
-func (EventInlineModeSet) uiEvent()     {}
-func (EventQueueChanged) uiEvent()      {}
-func (EventTitleSet) uiEvent()          {}
-func (EventProgressSet) uiEvent()       {}
-func (EventUndoRequested) uiEvent()     {}
-func (EventRedoRequested) uiEvent()     {}
-func (EventTreeShow) uiEvent()          {}
-func (EventTreeMoveRequested) uiEvent() {}
-func (EventToolsExpandedSet) uiEvent()  {}
-func (EventExpandStyleSet) uiEvent()    {}
-func (EventToolMarkersSet) uiEvent()    {}
-func (EventToolColorSet) uiEvent()      {}
-func (EventMarkerShapeSet) uiEvent()    {}
-func (EventDebugSet) uiEvent()          {}
-func (EventSnapshotsSet) uiEvent()      {}
-func (EventCacheModeSet) uiEvent()      {}
-func (EventKeyHintsModeSet) uiEvent()   {}
-func (EventUsagePinnedSet) uiEvent()    {}
-func (EventCountPlaceSet) uiEvent()     {}
-func (EventSelectionStyleSet) uiEvent() {}
-func (EventPromptStyleSet) uiEvent()    {}
-func (EventInputStyleSet) uiEvent()     {}
-func (EventInputHintChanged) uiEvent()  {}
-func (EventClipboardCopy) uiEvent()     {}
+func (EventQuit) uiEvent()                 {}
+func (EventQuitArmed) uiEvent()            {}
+func (EventInputClear) uiEvent()           {}
+func (EventInputSet) uiEvent()             {}
+func (EventClearMessages) uiEvent()        {}
+func (EventSlashMenuHide) uiEvent()        {}
+func (EventMessageUpdated) uiEvent()       {}
+func (EventMessageAdded) uiEvent()         {}
+func (EventTurnEnded) uiEvent()            {}
+func (EventStatusChanged) uiEvent()        {}
+func (EventModelLabelChanged) uiEvent()    {}
+func (EventUsageChanged) uiEvent()         {}
+func (EventSlashMenuShow) uiEvent()        {}
+func (EventSessionMenuShow) uiEvent()      {}
+func (EventSessionMenuHide) uiEvent()      {}
+func (EventSessionPrompts) uiEvent()       {}
+func (EventSessionLoad) uiEvent()          {}
+func (EventBannerShow) uiEvent()           {}
+func (EventBannerUpdate) uiEvent()         {}
+func (EventBannerHide) uiEvent()           {}
+func (EventIndicatorShow) uiEvent()        {}
+func (EventIndicatorHide) uiEvent()        {}
+func (EventInlineModeSet) uiEvent()        {}
+func (EventQueueChanged) uiEvent()         {}
+func (EventTitleSet) uiEvent()             {}
+func (EventProgressSet) uiEvent()          {}
+func (EventUndoRequested) uiEvent()        {}
+func (EventRedoRequested) uiEvent()        {}
+func (EventTreeShow) uiEvent()             {}
+func (EventTreeMoveRequested) uiEvent()    {}
+func (EventToolsExpandedSet) uiEvent()     {}
+func (EventExpandStyleSet) uiEvent()       {}
+func (EventToolMarkersSet) uiEvent()       {}
+func (EventToolColorSet) uiEvent()         {}
+func (EventMarkerShapeSet) uiEvent()       {}
+func (EventDebugSet) uiEvent()             {}
+func (EventSnapshotsSet) uiEvent()         {}
+func (EventReasoningExpandedSet) uiEvent() {}
+func (EventGroupStepsSet) uiEvent()        {}
+func (EventCacheModeSet) uiEvent()         {}
+func (EventKeyHintsModeSet) uiEvent()      {}
+func (EventUsagePinnedSet) uiEvent()       {}
+func (EventCountPlaceSet) uiEvent()        {}
+func (EventSelectionStyleSet) uiEvent()    {}
+func (EventDiffColorSet) uiEvent()         {}
+func (EventDiffLayoutSet) uiEvent()        {}
+func (EventPromptStyleSet) uiEvent()       {}
+func (EventInputStyleSet) uiEvent()        {}
+func (EventInputHintChanged) uiEvent()     {}
+func (EventClipboardCopy) uiEvent()        {}

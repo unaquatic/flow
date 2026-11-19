@@ -6,6 +6,9 @@ package message
 import (
 	"encoding/json"
 	"maps"
+	"time"
+
+	"github.com/unaquatic/flow/internal/timestamp"
 )
 
 // ContentType identifies the kind of content part.
@@ -72,6 +75,21 @@ type ReasoningPart struct {
 	Metadata ProtocolMetadata `json:"metadata,omitempty"`
 	// CacheControl contains provider prompt-cache hints.
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
+	// StartedAt is when the first of the reasoning streamed, or zero when it
+	// is not known, as for reasoning stored before flow recorded it.
+	StartedAt time.Time `json:"started_at,omitzero"`
+	// EndedAt is when the last of the reasoning streamed so far did, or zero
+	// when it is not known.
+	EndedAt time.Time `json:"ended_at,omitzero"`
+}
+
+// Duration returns how long the reasoning took to stream, from StartedAt to
+// EndedAt, or zero when either is not known.
+func (p ReasoningPart) Duration() time.Duration {
+	if p.StartedAt.IsZero() || p.EndedAt.IsZero() {
+		return 0
+	}
+	return max(p.EndedAt.Sub(p.StartedAt), 0)
 }
 
 func (ReasoningPart) PartType() ContentType { return TypeReasoning }
@@ -329,9 +347,31 @@ type PartJSON struct {
 	Usage *Usage `json:"usage,omitempty"`
 	// CacheControl contains provider prompt-cache hints.
 	CacheControl *CacheControl `json:"cache_control,omitempty"`
+	// StartedAt is when a reasoning part started streaming, in
+	// timestamp.Layout, or nil when it is not known.
+	StartedAt *timestamp.Time `json:"started_at,omitempty"`
+	// EndedAt is when a reasoning part last streamed, in timestamp.Layout,
+	// or nil when it is not known.
+	EndedAt *timestamp.Time `json:"ended_at,omitempty"`
 	// Ext is a part of a type RegisterPart registered, which encodes its own
 	// fields beside Type. It is nil for a part of this package.
 	Ext ContentPart `json:"-"`
+}
+
+// timeJSON returns t as PartJSON stores it, or nil when t is zero.
+func timeJSON(t time.Time) *timestamp.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return new(timestamp.Time(t))
+}
+
+// timeOf returns the time t holds, or zero when t is nil.
+func timeOf(t *timestamp.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return time.Time(*t)
 }
 
 // ensurePartID returns id or generates a new part ID.
@@ -356,6 +396,7 @@ func PartToJSON(p ContentPart) PartJSON {
 		j.Text = v.Text
 		j.Metadata = v.Metadata
 		j.CacheControl = v.CacheControl
+		j.StartedAt, j.EndedAt = timeJSON(v.StartedAt), timeJSON(v.EndedAt)
 	case ToolUsePart:
 		j.PartID = ensurePartID(v.ID)
 		j.CallID = v.CallID
@@ -421,7 +462,8 @@ func PartFromJSON(j PartJSON) ContentPart {
 	case TypeText:
 		return TextPart{ID: id, Text: j.Text, CacheControl: j.CacheControl}
 	case TypeReasoning:
-		return ReasoningPart{ID: id, Text: j.Text, Metadata: j.Metadata, CacheControl: j.CacheControl}
+		return ReasoningPart{ID: id, Text: j.Text, Metadata: j.Metadata, CacheControl: j.CacheControl,
+			StartedAt: timeOf(j.StartedAt), EndedAt: timeOf(j.EndedAt)}
 	case TypeTool:
 		var state ToolState
 		if j.State != nil {

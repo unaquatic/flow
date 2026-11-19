@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/layout"
 	"github.com/unaquatic/fluid/render"
@@ -133,6 +135,30 @@ type PartBox struct {
 	OnShapeChange func()
 	// StatusText is the content's status, as SetStatus sets it.
 	StatusText string
+	// OwnGone reports that the box is gone as SetGone says, whatever
+	// Grouped says.
+	OwnGone bool
+	// Grouped hides the box, as SetGrouped sets it, under the row that
+	// stands for the run of rows it stacks in.
+	Grouped bool
+	// Summary shows, in place of Header and Status, what the run of rows
+	// the box ends sums up to, such as "Worked 32s", while SetSummary
+	// sets it.
+	Summary *widget.Text
+	// SummaryText is the text Summary shows, or "" while the box shows its
+	// own header.
+	SummaryText string
+	// OnSummaryClick, when set, is called on a left click on the header
+	// while it shows Summary, in place of expanding the box.
+	OnSummaryClick func()
+}
+
+// Timed is the Content of a box whose work has a start and an end, such as
+// a tool call or reasoning, which the summary of a run of rows spans.
+type Timed interface {
+	// Span returns when the work started and ended, either zero when it is
+	// not known, as the end of work still in progress is not.
+	Span() (start, end time.Time)
 }
 
 var _ Framed = (*PartBox)(nil)
@@ -167,6 +193,7 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 			widget.TextWithTruncate(true),
 			widget.TextWithLayout(layout.WithFlexShrink(0)),
 		),
+		Summary: widget.NewText("", widget.TextWithTruncate(true)),
 		Details: widget.NewBox(
 			widget.BoxWithLayout(
 				layout.WithFlexDirection(layout.DirectionColumn),
@@ -181,7 +208,8 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 	}
 	// Header shrinks, and Status does not, when the two do not fit.
 	b.Header.SetTruncate(true)
-	b.Marker.RenderBeforeHook, b.Marker.RenderAfterHook = BlinkHooks(b.Marker, b.HideMarker)
+	b.Marker.RenderBeforeHook, b.Marker.RenderAfterHook = BlinkHooks(b.Marker, b.HideMarker,
+		func() MarkerShape { return b.MarkerShape })
 	b.Header.OnMouseDownHandler = b.OnHeaderClick
 	b.HeaderRow.OnMouseDownHandler = b.OnHeaderClick
 	b.Add(b.HeaderRow)
@@ -191,6 +219,8 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 	b.HeaderRow.Add(b.Header)
 	b.HeaderRow.Add(b.Status)
 	b.Status.SetGone(true)
+	b.HeaderRow.Add(b.Summary)
+	b.Summary.SetGone(true)
 	b.Details.SetGone(true)
 	return b
 }
@@ -198,9 +228,32 @@ func NewPartBox(theme *style.Theme, fg, surface style.Color) *PartBox {
 // Frame returns b.
 func (b *PartBox) Frame() *PartBox { return b }
 
+// SetGone takes the box out of layout, as gone says, and shows it again once
+// neither gone nor Grouped hides it.
+func (b *PartBox) SetGone(gone bool) {
+	b.OwnGone = gone
+	b.Box.SetGone(gone || b.Grouped)
+}
+
+// SetGrouped hides the box, as grouped says, under the row that stands for
+// the run of rows it stacks in, as ChatMessageBox.GroupRows picks it, and
+// shows it again, unless SetGone keeps it gone.
+func (b *PartBox) SetGrouped(grouped bool) {
+	if grouped == b.Grouped {
+		return
+	}
+	b.Grouped = grouped
+	b.Box.SetGone(b.OwnGone || grouped)
+}
+
 // OnHeaderClick expands or collapses an Expandable box as a left click on its
 // header row asks, in place, as ToggleInPlace does.
 func (b *PartBox) OnHeaderClick(e *input.MouseEvent) {
+	if e.Button == input.ButtonLeft && b.SummaryText != "" && b.OnSummaryClick != nil {
+		b.OnSummaryClick()
+		e.StopPropagation()
+		return
+	}
 	if e.Button == input.ButtonLeft && b.Expandable {
 		b.ToggleInPlace()
 		e.StopPropagation()
@@ -284,6 +337,7 @@ func (b *PartBox) SetNameFg(fg style.Color) {
 	}
 	b.NameFg = fg
 	StyleMarker(b.Marker, b.MarkerShape, b.MarkerColor())
+	b.ShowSummary()
 	b.ShowHeader()
 }
 
@@ -385,7 +439,32 @@ func (b *PartBox) SetStatus(status string) {
 	}
 	b.StatusText = status
 	b.Status.SetContent(status)
-	b.Status.SetGone(status == "")
+	b.Status.SetGone(status == "" || b.SummaryText != "")
+}
+
+// SetSummary shows text, the summary of the run of rows the box ends, in
+// NameFg, and after it ExpandHint, what Ctrl+O shows of the run, in the
+// status's color, in place of Header and Status, or, when text is "", the
+// box's own header again.
+func (b *PartBox) SetSummary(text string) {
+	if text == b.SummaryText {
+		return
+	}
+	b.SummaryText = text
+	b.Header.SetGone(text != "")
+	b.Status.SetGone(text != "" || b.StatusText == "")
+	b.Summary.SetGone(text == "")
+	b.ShowSummary()
+}
+
+// ShowSummary writes SummaryText in NameFg, and then ExpandHint in the
+// status's color.
+func (b *PartBox) ShowSummary() {
+	if b.SummaryText == "" {
+		return
+	}
+	b.Summary.SetStyledContent(style.NewStyledText(ToolNameChunk(b.SummaryText, b.NameFg),
+		style.TextChunk{Text: " " + ExpandHint, Fg: b.Status.Fg()}))
 }
 
 // SetBusy records whether the content is at work, which Marker shows by

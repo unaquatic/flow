@@ -66,6 +66,10 @@ type ViewStyle struct {
 	// Snapshots keeps the snapshot each message ends with once taken,
 	// rather than only while it is being taken.
 	Snapshots bool
+	// DiffColor is how side by side diffs mark changed lines.
+	DiffColor DiffColor
+	// DiffLayout is how diffs lay their lines out.
+	DiffLayout DiffLayout
 }
 
 // ViewHost is the bubble an extension's view shows in.
@@ -116,6 +120,10 @@ type ToolFormatter interface {
 type ToolView struct {
 	// Label names the tool in the header, or is "" for ToolLabel's name.
 	Label string
+	// Title, when set, is the whole header, in the color of the tool's name,
+	// in place of the label and the summary of the input, collapsed or
+	// expanded, such as the description a bash call gives of its command.
+	Title string
 	// Summary, when set, sums up the input in the header in place of
 	// ToolInputSummary's first line, such as the outline of a command.
 	Summary string

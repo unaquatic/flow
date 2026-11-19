@@ -3,7 +3,7 @@
 |                                        |
 |  go test ./...                         |
 |                                        |
-|■ Cache read 7.7K write 0K              |
+|■ Cache 7.7K Write 0K                   |
 |                                        |
 |                                        |
 |                                        |
@@ -13,7 +13,7 @@
 |                                        |
 |  BB BBBB BBBBB                         |
 |                                        |
-|C CCCCC CCCC CCCC CCCCC CC              |
+|C CCCCC BBBB CCCCC BB                   |
 |                                        |
 |                                        |
 |                                        |

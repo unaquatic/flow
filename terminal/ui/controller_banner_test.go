@@ -305,20 +305,20 @@ func TestSettingsMenuInputStyle(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuDebug checks that /config shows fullscreen, snapshots and
-// debug alone while debug is off, debug off by default as the last row, that
+// TestSettingsMenuDebug checks that /config shows fullscreen, collapse
+// reasoning, snapshots and debug alone while debug is off, debug off by default as the last row, that
 // choosing it switches debug on and shows the style settings between
-// fullscreen and snapshots, and that choosing it again hides them, keeping
+// fullscreen and collapse reasoning, and that choosing it again hides them, keeping
 // the menu open on the setting.
 func TestSettingsMenuDebug(t *testing.T) {
 	s := &Service{state: &UIState{}}
 	settings := bannerShown(t, s.HandleSubmit("/config"))
-	plain := []string{fullscreenSetting, snapshotsSetting, debugSetting}
-	if names := bannerNames(settings); !slices.Equal(names, plain) || settings.Items[2].Description != "Off" {
+	plain := []string{fullscreenSetting, reasoningSetting, stepsSetting, snapshotsSetting, debugSetting}
+	if names := bannerNames(settings); !slices.Equal(names, plain) || settings.Items[4].Description != "Off" {
 		t.Fatalf("settings = %+v, want %q with debug off", settings.Items, plain)
 	}
 	debugged := []string{fullscreenSetting, cacheUsageSetting, expandedSetting, toolMarkerSetting, markerShapeSetting,
-		toolColorSetting, keyHintsSetting, listCountSetting, selectionSetting, promptSetting, inputSetting, snapshotsSetting, debugSetting}
+		toolColorSetting, keyHintsSetting, listCountSetting, selectionSetting, promptSetting, inputSetting, diffColorSetting, diffLayoutSetting, reasoningSetting, stepsSetting, snapshotsSetting, debugSetting}
 	for _, tt := range []struct {
 		on    bool
 		names []string
@@ -359,7 +359,29 @@ func TestSettingsMenuSnapshots(t *testing.T) {
 	}
 }
 
-// TestSettingsPersist checks that fullscreen, snapshots and debug are saved in the
+// TestSettingsMenuReasoning checks that /config shows collapse reasoning on
+// by default, that choosing it keeps reasoning expanded, and that choosing
+// it again collapses it, keeping the menu open on the setting.
+func TestSettingsMenuReasoning(t *testing.T) {
+	s := &Service{state: &UIState{}}
+	settings := bannerShown(t, s.HandleSubmit("/config"))
+	row := slices.Index(bannerNames(settings), reasoningSetting)
+	if row < 0 || settings.Items[row].Description != "On" {
+		t.Fatalf("settings = %+v, want collapse reasoning on", settings.Items)
+	}
+	for _, expanded := range []bool{true, false} {
+		out := choose(reasoningSetting)(s)
+		if !slices.Contains(out, UIEvent(EventReasoningExpandedSet{Expanded: expanded})) || s.state.ExpandReasoning != expanded {
+			t.Errorf("events %v with reasoning expanded %v, want %v", out, s.state.ExpandReasoning, expanded)
+		}
+		settings = bannerShown(t, out)
+		if settings.SelectedIdx != row || settings.Items[row].Description != onOff(!expanded) {
+			t.Errorf("banner selects %d of %+v, want collapse reasoning %s selected", settings.SelectedIdx, settings.Items, onOff(!expanded))
+		}
+	}
+}
+
+// TestSettingsPersist checks that fullscreen, snapshots, reasoning and debug are saved in the
 // config file as /config changes them, that the style settings are not,
 // and that the next terminal starts with the saved settings and the style
 // settings' defaults.
@@ -371,6 +393,8 @@ func TestSettingsPersist(t *testing.T) {
 	for _, change := range []func() []UIEvent{
 		s.ToggleInlineMode,
 		func() []UIEvent { return s.SetSnapshots(true) },
+		func() []UIEvent { return s.SetReasoningExpanded(true) },
+		func() []UIEvent { return s.SetGroupSteps(false) },
 		func() []UIEvent { return s.SetDebug(true) },
 		func() []UIEvent { return s.SetCacheMode(CachePerMessage) },
 		func() []UIEvent { return s.SetExpandStyle(ExpandedBoxed) },
@@ -382,6 +406,8 @@ func TestSettingsPersist(t *testing.T) {
 		func() []UIEvent { return s.SetSelectionStyle(SelectionArrow) },
 		func() []UIEvent { return s.SetPromptStyle(PromptFilled) },
 		func() []UIEvent { return s.SetInputStyle(InputFilled) },
+		func() []UIEvent { return s.SetDiffColor(DiffColorText) },
+		func() []UIEvent { return s.SetDiffLayout(DiffRowByRow) },
 	} {
 		for _, ev := range change() {
 			if toast, ok := toastOf(ev); ok {
@@ -395,8 +421,8 @@ func TestSettingsPersist(t *testing.T) {
 	}
 	var next UIState
 	next.ApplyConfig(conf.Terminal, conf.Debug)
-	if want := (UIState{Inline: false, ShowSnapshots: true, Debug: true}); !reflect.DeepEqual(next, want) {
-		t.Errorf("next terminal starts with %+v, want fullscreen, snapshots and debug on, and the style defaults", next)
+	if want := (UIState{Inline: false, ShowSnapshots: true, ExpandReasoning: true, ShowSteps: true, Debug: true}); !reflect.DeepEqual(next, want) {
+		t.Errorf("next terminal starts with %+v, want fullscreen, snapshots, expanded reasoning and debug on, and the style defaults", next)
 	}
 }
 
@@ -413,6 +439,8 @@ func TestSettingsPersistFailure(t *testing.T) {
 	for name, out := range map[string][]UIEvent{
 		"fullscreen": s.ToggleInlineMode(),
 		"snapshots":  s.SetSnapshots(true),
+		"reasoning":  s.SetReasoningExpanded(true),
+		"steps":      s.SetGroupSteps(false),
 		"debug":      s.SetDebug(true),
 	} {
 		toasts := 0

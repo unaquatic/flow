@@ -3,19 +3,19 @@
 |                                        |
 |■ Updated the calculator.               |
 |                                        |
-|■ Diff 1 file  +2 -0                    |
+|■ Changed 1 file  +2 -0                 |
+|  calc.go  +2 -0                        |
 |                                        |
-|■ Done [3s]                             |
-|                                        |
+|■ Worked 3s                             |
 === fg ===
 |A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
 |A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
-|B BBBB B BBBB  CC DD                    |
+|B BBBBBBB B BBBB  CC DD                 |
+|  BBBBBBB  CC DD                        |
 |                                        |
-|E EEEE EEEE                             |
-|                                        |
+|E EEEEEE EE                             |
 === legend ===
 A #eb7513
 B #e6e6e6

@@ -1,12 +1,12 @@
 === text ===
-|  Bash [interrupted]                                        |
+|  Run calculator tests [interrupted]                        |
 |                                                            |
 |  $ go test ./calculator/...                                |
 |                                                            |
 |                                                            |
 |                                                            |
 === fg ===
-|  AAAA AAAAAAAAAAAAA                                        |
+|  AAA AAAAAAAAAA AAAAA AAAAAAAAAAAAA                        |
 |                                                            |
 |  B CC CCCC BBBBBBBBBBBBBBBB                                |
 |                                                            |

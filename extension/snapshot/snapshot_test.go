@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -119,16 +120,22 @@ func TestTreeIn(t *testing.T) {
 	}
 }
 
-// TestTreeAt checks which tree a move restores: the newest the messages up
-// to the head recorded, or before the first message the tree of the prompt
-// that opens the branch, and that a point with none is refused.
+// TestTreeAt checks which tree a move restores: the tree of the prompt that
+// follows the head, which holds what changed between turns, or else the
+// newest the messages up to the head recorded, and that a point with none is
+// refused.
 func TestTreeAt(t *testing.T) {
 	sent := mustHash(t, "7a36b04ce429eb3326713c5689665b792179b206")
 	edited := mustHash(t, "c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0")
+	drifted := mustHash(t, "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3")
+	answered := mustHash(t, "e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4")
 	branch := []message.Content{
 		{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{SnapshotPart{Tree: sent}}},
 		{ID: "a1", Role: message.RoleAgent, Parts: []message.ContentPart{message.TextPart{Text: "thinking"}}},
 		{ID: "a2", Role: message.RoleAgent, Parts: []message.ContentPart{SnapshotPart{Tree: edited}}},
+		// The workspace changed outside the session before u2 was sent.
+		{ID: "u2", Role: message.RoleUser, Parts: []message.ContentPart{SnapshotPart{Tree: drifted}}},
+		{ID: "a3", Role: message.RoleAgent, Parts: []message.ContentPart{SnapshotPart{Tree: answered}}},
 	}
 	for _, tt := range []struct {
 		head message.ID
@@ -137,11 +144,23 @@ func TestTreeAt(t *testing.T) {
 		{"", sent},
 		{"u1", sent},
 		{"a1", sent},
-		{"a2", edited},
+		{"a2", drifted},
+		{"u2", drifted},
+		{"a3", answered},
 	} {
 		if got, err := TreeAt(branch, tt.head); err != nil || got != tt.want {
 			t.Errorf("TreeAt(%q) = %s, %v; want %s", tt.head, got, err, tt.want)
 		}
+	}
+	// The tree a reply ended with stands in for a prompt whose snapshot
+	// failed, and for the leaf, which no prompt follows.
+	unrecorded := slices.Clone(branch)
+	unrecorded[3].Parts = []message.ContentPart{SnapshotPart{}}
+	if got, err := TreeAt(unrecorded, "a2"); err != nil || got != edited {
+		t.Errorf("TreeAt before a prompt with no tree = %s, %v; want %s", got, err, edited)
+	}
+	if got, err := TreeAt(branch[:3], "a2"); err != nil || got != edited {
+		t.Errorf("TreeAt at the leaf = %s, %v; want %s", got, err, edited)
 	}
 	failed := []message.Content{{ID: "u1", Role: message.RoleUser, Parts: []message.ContentPart{SnapshotPart{}}}}
 	if _, err := TreeAt(failed, "u1"); !errors.Is(err, ErrNoSnapshot) || !errors.Is(err, extension.ErrRefused) {

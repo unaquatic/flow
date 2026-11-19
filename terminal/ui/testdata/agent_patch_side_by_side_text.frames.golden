@@ -1,0 +1,52 @@
+=== text ===
+|■ Fixed the guard.                      |
+|                                        |
+|■ Changed 1 file  +1 -1                 |
+|                                        |
+|  calc.go  +1 -1                        |
+|  @@ -8,3 +8,3 @@                       |
+|   8 func Divide(a,   8 func Divide(a,  |
+|      b int) int {       b int) int {   |
+|   9     return a /   9     if b == 0   |
+|      b                 { return 0 }    |
+|  10 }               10 }               |
+|                                        |
+|                                        |
+|                                        |
+=== fg ===
+|A BBBBB BBB BBBBBB                      |
+|                                        |
+|B BBBBBBB B BBBB  CC DD                 |
+|                                        |
+|  BBBBBBB  CC DD                        |
+|  EE EEEE EEEE EE                       |
+|   E AAAA FFFFFFBBB   E AAAA FFFFFFBBB  |
+|      B AAAB AAA B       B AAAB AAA B   |
+|   E     DDDDDD D D   E     CC C CC C   |
+|      D                 C CCCCCC C C    |
+|  EE B               EE B               |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|     BBBB               BBBB            |
+|        BBB  BBB           BBB  BBB     |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #eb7513
+B #e6e6e6
+C #5fc882
+D #dc646e
+E #8a8a8a
+F #ffb642

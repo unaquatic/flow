@@ -3,11 +3,11 @@
 |                                                            |
 |■ Running the tests.                                        |
 |                                                            |
-|■ Bash go test [exit 1]                                     |
+|■ Worked [ctrl+o expand]                                    |
 |                                                            |
 |■ Fixed the divide-by-zero check.                           |
 |                                                            |
-|■ Done [39s] [cache 22K write 0K]                           |
+|■ Worked 39s Cache 22K Write 0K                             |
 |                                                            |
 |                                                            |
 |                                                            |
@@ -17,11 +17,11 @@
 |                                                            |
 |B AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|C CCCC CC CCCC CCCCC CC                                     |
+|C CCCCCC CCCCCCC CCCCCCC                                    |
 |                                                            |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |
-|C CCCC CCCCC CCCCCC CCC CCCCC CCC                           |
+|C CCCCCC CCC CCCCC AAA CCCCC AA                             |
 |                                                            |
 |                                                            |
 |                                                            |

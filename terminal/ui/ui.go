@@ -104,6 +104,9 @@ type UI struct {
 	// indicatorError reports that the indicator shows the error a run
 	// ended with, as EventIndicatorShow.Error says.
 	indicatorError bool
+	// indicatorMarked reports that the indicator shows its marker, as
+	// EventIndicatorShow.Marked asks.
+	indicatorMarked bool
 	// indicatorDetail is the plain box right under indicatorRow, with no
 	// fill or padding, that shows indicatorDetailText, in
 	// indicatorDetailRow, which the fit bounds: an error's body, as
@@ -715,7 +718,8 @@ func (ui *UI) BuildUI() {
 	// padding, as a tool call's does, and blinks while the time shows.
 	ui.indicatorMarker = NewMarker(ui.service.state.MarkerShape, ui.theme.TextMuted)
 	ui.indicatorMarker.SetGone(true)
-	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden)
+	ui.indicatorMarker.RenderBeforeHook, ui.indicatorMarker.RenderAfterHook = BlinkHooks(ui.indicatorMarker, ui.IndicatorMarkerHidden,
+		func() MarkerShape { return ui.service.state.MarkerShape })
 	ui.indicatorRow = widget.NewBox(
 		widget.BoxWithLayout(layout.WithFlexDirection(layout.DirectionRow), layout.WithGap(1)),
 		widget.Children(ui.indicatorMarker, ui.indicatorLabel),

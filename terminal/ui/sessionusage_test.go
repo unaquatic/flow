@@ -3,6 +3,7 @@ package ui
 import (
 	"math"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -153,18 +154,18 @@ func TestCacheText(t *testing.T) {
 		want  string
 	}{
 		{name: "nothing"},
-		{name: "cache miss", usage: message.Usage{InputTokens: 1_200, OutputTokens: 300}, want: "[cache 0K write 0K]"},
+		{name: "cache miss", usage: message.Usage{InputTokens: 1_200, OutputTokens: 300}, want: "Cache 0K Write 0K"},
 		// A prompt only written to the cache read none of it.
-		{name: "cache write only", usage: message.Usage{InputTokens: 100, CacheCreationInputTokens: 900}, want: "[cache 0K write 0.9K]"},
-		{name: "cache hit", usage: message.Usage{InputTokens: 9_000, CachedInputTokens: 7_700, OutputTokens: 900}, want: "[cache 7.7K write 0K]"},
+		{name: "cache write only", usage: message.Usage{InputTokens: 100, CacheCreationInputTokens: 900}, want: "Cache 0K Write 0.9K"},
+		{name: "cache hit", usage: message.Usage{InputTokens: 9_000, CachedInputTokens: 7_700, OutputTokens: 900}, want: "Cache 7.7K Write 0K"},
 		{
 			name:  "cache hit and write",
 			usage: message.Usage{InputTokens: 9_000, CachedInputTokens: 7_700, CacheCreationInputTokens: 1_300},
-			want:  "[cache 7.7K write 1.3K]",
+			want:  "Cache 7.7K Write 1.3K",
 		},
-		{name: "small cache hit", usage: message.Usage{InputTokens: 1_200, CachedInputTokens: 176}, want: "[cache 0.2K write 0K]"},
+		{name: "small cache hit", usage: message.Usage{InputTokens: 1_200, CachedInputTokens: 176}, want: "Cache 0.2K Write 0K"},
 		// A reply that reports only its total read and wrote no cache.
-		{name: "total only", usage: message.Usage{TotalTokens: 10}, want: "[cache 0K write 0K]"},
+		{name: "total only", usage: message.Usage{TotalTokens: 10}, want: "Cache 0K Write 0K"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -175,24 +176,21 @@ func TestCacheText(t *testing.T) {
 	}
 }
 
-// TestCacheCounts checks that a cache row shows the prompt tokens a request
-// read from cache and wrote to cache, each also when it is none.
-func TestCacheCounts(t *testing.T) {
-	tests := []struct {
-		name  string
-		usage message.Usage
-		want  string
-	}{
-		{name: "none", usage: message.Usage{InputTokens: 1_200}, want: "read 0K write 0K"},
-		{name: "read", usage: message.Usage{InputTokens: 9_000, CachedInputTokens: 7_700}, want: "read 7.7K write 0K"},
-		{name: "read and write", usage: message.Usage{CachedInputTokens: 18_000, CacheCreationInputTokens: 4_000}, want: "read 18K write 4.0K"},
+// TestCacheBoxHeader checks that a cache row reads as the turn's footer
+// does, its label in the tool name's color and its counts in textFg.
+func TestCacheBoxHeader(t *testing.T) {
+	b := NewCacheBox()
+	b.SetUsage(message.Usage{InputTokens: 9_000, CachedInputTokens: 596_000, CacheCreationInputTokens: 1_500})
+	if got, want := b.Header.PlainText(), "Cache 596K Write 1.5K"; got != want {
+		t.Errorf("header = %q, want %q", got, want)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := CacheCounts(tt.usage); got != tt.want {
-				t.Errorf("CacheCounts(%+v) = %q, want %q", tt.usage, got, tt.want)
-			}
-		})
+	for _, c := range b.Header.Content().Chunks {
+		if strings.HasSuffix(c.Text, "K") && c.Fg != textFg {
+			t.Errorf("count %q in %v, want textFg", c.Text, c.Fg)
+		}
+	}
+	if c := b.Header.Content().Chunks[0]; c.Fg != b.NameFg {
+		t.Errorf("label %q in %v, want the name's %v", c.Text, c.Fg, b.NameFg)
 	}
 }
 

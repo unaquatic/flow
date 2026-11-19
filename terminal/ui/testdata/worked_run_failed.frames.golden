@@ -1,0 +1,36 @@
+=== text ===
+|■ Run the tests                                                                 |
+|                                                                                |
+|■ Running the tests.                                                            |
+|                                                                                |
+|■ Error provider-a response error (529)                                         |
+|  {                                                                             |
+|    "type": "error",                                                            |
+|    "error": {                                                                  |
+|      "type": "overloaded_error",                                               |
+|      "message": "Overloaded"                                                   |
+|    }                                                                           |
+|  }                                                                             |
+|                                                                                |
+|■ Error 1m 52s                                                                  |
+=== fg ===
+|A AAA AAA AAAAA                                                                 |
+|                                                                                |
+|B AAAAAAA AAA AAAAAA                                                            |
+|                                                                                |
+|C CCCCC DDDDDDDDDD DDDDDDDD DDDDD DDDDD                                         |
+|  A                                                                             |
+|    AAAAAAA EEEEEEEA                                                            |
+|    AAAAAAAA A                                                                  |
+|      AAAAAAA EEEEEEEEEEEEEEEEEEA                                               |
+|      AAAAAAAAAA EEEEEEEEEEEE                                                   |
+|    A                                                                           |
+|  A                                                                             |
+|                                                                                |
+|D DDDDD DD DDD                                                                  |
+=== legend ===
+A #e6e6e6
+B #eb7513
+C #ff7c78
+D #8a8a8a
+E #91b557
