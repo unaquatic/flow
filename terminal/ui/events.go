@@ -206,9 +206,6 @@ type EventIndicatorShow struct {
 	Working bool
 	// Elapsed is how long the turn in progress has taken, when Working.
 	Elapsed time.Duration
-	// Marked shows the indicator's marker before Text, as it shows while a
-	// turn is in progress, such as while Ctrl+O expands the tool calls.
-	Marked bool
 }
 
 // EventIndicatorHide dismisses the status indicator.

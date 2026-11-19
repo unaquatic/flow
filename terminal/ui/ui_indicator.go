@@ -17,7 +17,7 @@ func (ui *UI) ShowIndicator(e EventIndicatorShow) {
 	if e.Working {
 		e.Text = ui.WorkingText(e.Elapsed)
 	}
-	ui.indicatorError, ui.indicatorMarked = e.Error, e.Marked
+	ui.indicatorError = e.Error
 	ui.indicatorLabel.SetStyledContent(IndicatorText(e, ui.ErrorFg()))
 	ui.ShowIndicatorDetail(e)
 	ui.indicatorBox.SetGone(false)
@@ -105,8 +105,7 @@ func (ui *UI) Tick() {
 }
 
 // ShowIndicatorDetail shows e's detail right under the indicator's line,
-// JSON highlighted as code is, or hides it when e has none. A hidden detail
-// keeps what it showed, so that ShowIndicatorWhile can show it again.
+// JSON highlighted as code is, or hides it when e has none.
 func (ui *UI) ShowIndicatorDetail(e EventIndicatorShow) {
 	if ui.indicatorDetail == nil {
 		return
@@ -126,33 +125,8 @@ func (ui *UI) DetailText(detail string, isJSON bool) style.StyledText {
 // HideIndicator dismisses the indicator.
 func (ui *UI) HideIndicator() {
 	ui.indicatorBox.SetGone(true)
-	ui.indicatorError, ui.indicatorMarked = false, false
+	ui.indicatorError = false
 	ui.SyncBlink()
-}
-
-// ShowIndicatorWhile shows text in the indicator and draws a frame at once,
-// so that the terminal shows it, then runs fn and puts the indicator back as
-// it was. The terminal keeps showing text until the next
-// frame, the one that draws what fn changed, is drawn: text says what holds
-// the event loop when that frame is slow, as when it lays out a long
-// transcript again.
-func (ui *UI) ShowIndicatorWhile(text string, fn func()) {
-	content, shown, blink := ui.indicatorLabel.Content(), ui.indicatorBox.Visible(), ui.blink.On.Load()
-	wasError, wasMarked := ui.indicatorError, ui.indicatorMarked
-	detail := ui.indicatorDetail != nil && ui.indicatorDetail.Visible()
-	ui.ShowIndicator(EventIndicatorShow{Text: text, Marked: true})
-	// The blink marks the time of a run, not text.
-	ui.blink.On.Store(false)
-	ui.renderer.Render()
-	fn()
-	ui.indicatorLabel.SetStyledContent(content)
-	if ui.indicatorDetail != nil {
-		ui.indicatorDetail.SetGone(!detail)
-	}
-	ui.indicatorError, ui.indicatorMarked = wasError, wasMarked
-	ui.ShowIndicatorMarker()
-	ui.indicatorBox.SetGone(!shown)
-	ui.blink.On.Store(blink)
 }
 
 // SyncBlink blinks the markers while the indicator shows the time of a run
@@ -182,7 +156,7 @@ func (ui *UI) ShowIndicatorMarker() {
 		return
 	}
 	StyleMarker(ui.indicatorMarker, ui.service.state.MarkerShape, ui.IndicatorMarkerFg())
-	show := ui.service.state.Working || ui.indicatorError || ui.indicatorMarked
+	show := ui.service.state.Working || ui.indicatorError
 	if ui.indicatorMarker.Visible() == show {
 		return
 	}

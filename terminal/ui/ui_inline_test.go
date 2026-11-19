@@ -12,7 +12,6 @@ import (
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/input"
 	"github.com/unaquatic/fluid/render"
-	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/terminal"
 	"github.com/unaquatic/fluid/widget"
 )
@@ -366,65 +365,15 @@ func TestTranscriptWheelAccelerates(t *testing.T) {
 	}
 }
 
-// TestShowIndicatorWhile checks that the indicator shows the text while fn
-// runs, and then shows what it showed before, or nothing.
-func TestShowIndicatorWhile(t *testing.T) {
-	for _, tt := range []struct {
-		name   string
-		before EventIndicatorShow // the indicator before; no text means hidden
-		// shown is the indicator's text before, and after fn runs.
-		shown string
-	}{
-		{name: "hidden"},
-		{name: "working", before: WorkingIndicator(12*time.Second, false), shown: "Working [12s] [esc cancel] [ctrl+o expand]"},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			ui := newBuiltTestUI(t, true)
-			if tt.before.Text != "" {
-				ui.ShowIndicator(tt.before)
-			}
-			ran := false
-			ui.ShowIndicatorWhile(ExpandingToolsText, func() {
-				ran = true
-				if got := ui.indicatorLabel.PlainText(); got != ExpandingToolsText || !ui.indicatorBox.Visible() {
-					t.Errorf("indicator while fn runs = %q, visible %v; want %q shown", got, ui.indicatorBox.Visible(), ExpandingToolsText)
-				}
-				if chunk := ui.indicatorLabel.Content().Chunks[0]; chunk.Attributes&style.AttrBold != 0 {
-					t.Errorf("indicator while fn runs = %+v; want it not bold", chunk)
-				}
-			})
-			if !ran {
-				t.Fatal("fn did not run")
-			}
-			if got := ui.indicatorBox.Visible(); got != (tt.shown != "") {
-				t.Errorf("indicator visible after = %v, want %v", got, tt.shown != "")
-			}
-			if tt.shown == "" {
-				return
-			}
-			if got := ui.indicatorLabel.PlainText(); got != tt.shown {
-				t.Errorf("indicator after = %q, want %q as before", got, tt.shown)
-			}
-			if chunk := ui.indicatorLabel.Content().Chunks[0]; chunk.Text != tt.before.Text || chunk.Attributes&style.AttrBold != 0 {
-				t.Errorf("indicator after starts with %+v, want %q, not bold, as before", chunk, tt.before.Text)
-			}
-		})
-	}
-}
-
 // TestToolsExpandedSet checks that Ctrl+O shows or hides the details of every
 // tool call, leaving a bash call's header to its name, and the indicator as it
-// found it, and that TogglesTools tells whether it changes any call, which is
-// when it shows a hint.
+// found it.
 func TestToolsExpandedSet(t *testing.T) {
 	ui := newBuiltTestUI(t, true)
 	ui.AddMessage(agentParts("a1", message.ToolPart{CallID: "c1", Name: "bash",
 		State: message.ToolStateCompleted{Input: json.RawMessage(`{"command":"go test ./..."}`), Output: "ok"}}))
 	ui.ShowIndicator(WorkingIndicator(12*time.Second, false))
 	const working = "Working [12s] [esc cancel] [ctrl+o expand]"
-	if !ui.TogglesTools(true) || ui.TogglesTools(false) {
-		t.Fatalf("TogglesTools(true), TogglesTools(false) = %v, %v; want true, false", ui.TogglesTools(true), ui.TogglesTools(false))
-	}
 
 	ui.ProcessEvent(EventToolsExpandedSet{Expanded: true})
 
@@ -435,9 +384,6 @@ func TestToolsExpandedSet(t *testing.T) {
 		if got := box.Header.PlainText(); got != "Bash" {
 			t.Errorf("expanded header = %q; want the command left to the details", got)
 		}
-	}
-	if ui.TogglesTools(true) {
-		t.Error("TogglesTools(true) = true once every call is expanded")
 	}
 	if got := ui.indicatorLabel.PlainText(); got != working || !ui.indicatorBox.Visible() {
 		t.Errorf("indicator = %q, visible %v; want %q shown as before", got, ui.indicatorBox.Visible(), working)

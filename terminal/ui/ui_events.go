@@ -285,19 +285,8 @@ func (ui *UI) OnTreeShow(e EventTreeShow) { ui.ShowTree(e.Tree) }
 func (ui *UI) OnTreeMoveRequested(e EventTreeMoveRequested) { ui.RequestTreeMove(e) }
 
 // OnToolsExpandedSet shows or hides the details of every tool call and of the
-// changes of every step. Laying out a long transcript again and writing it to
-// the terminal holds the event loop for a while, so when that changes any
-// block, the indicator says so until the new frame is drawn. Rows committed to
-// the terminal are written again whatever they show, as ReprintCommitted
-// writes them.
-func (ui *UI) OnToolsExpandedSet(e EventToolsExpandedSet) {
-	if !ui.committed && !ui.TogglesTools(e.Expanded) {
-		ui.SetToolsExpanded(e.Expanded)
-		return
-	}
-	text := ToolsToggleText(e.Expanded, ui.service.TurnElapsed())
-	ui.ShowIndicatorWhile(text, func() { ui.SetToolsExpanded(e.Expanded) })
-}
+// changes of every step, as SetToolsExpanded does.
+func (ui *UI) OnToolsExpandedSet(e EventToolsExpandedSet) { ui.SetToolsExpanded(e.Expanded) }
 
 // OnIndicatorShow reveals the indicator below the message list.
 func (ui *UI) OnIndicatorShow(e EventIndicatorShow) { ui.ShowIndicator(e) }
