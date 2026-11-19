@@ -75,6 +75,126 @@ func TestFitToolBoxes(t *testing.T) {
 	})
 }
 
+// searchKeepRows returns the most rows of b's tallest block that leave b
+// within limit rows, laid out by layout, or zero when the block fits whole,
+// as a search of every count, one layout at a time, finds them.
+func searchKeepRows(b *ToolBox, limit int, layout func()) int {
+	height := func(rows int) int {
+		b.SetKeepRows(rows)
+		layout()
+		return b.LayoutNode().Computed.Height
+	}
+	whole := b.BlockRows()
+	if whole == 0 || height(0) <= limit {
+		return 0
+	}
+	lo, hi, best := 1, whole-1, 1
+	for lo <= hi {
+		mid := (lo + hi) / 2
+		if height(mid) <= limit {
+			best, lo = mid, mid+1
+		} else {
+			hi = mid - 1
+		}
+	}
+	return best
+}
+
+// fitReply adds a reply whose calls print outputs, expands them as Ctrl+O
+// does, and returns their boxes, laid out.
+func fitReply(t *testing.T, outputs ...string) (*UI, []*ToolBox) {
+	t.Helper()
+	ui := newInputTestUI(t)
+	showSteps(ui)
+	var calls []message.ContentPart
+	for i, output := range outputs {
+		calls = append(calls, completed(fmt.Sprint("c", i), "bash", `{"command":"ls"}`, output))
+	}
+	ui.AddMessage(agentParts("a1", calls...))
+	expandTools(ui)
+	ui.renderer.Root().CalculateLayout()
+	return ui, partBoxesOf(ui, "a1")
+}
+
+// TestFitCallsMatchesSearch checks that FitCalls keeps as many rows of each
+// call as a search of every count finds, for plain text, text that wraps,
+// wide characters, and a call that fits whole.
+func TestFitCallsMatchesSearch(t *testing.T) {
+	wide := strings.Repeat("漢字", 50)
+	ui, boxes := fitReply(t,
+		numberedLines(100, func(i int) string { return fmt.Sprint(i) }),
+		numberedLines(60, func(int) string { return strings.Repeat("x", 150) }),
+		numberedLines(60, func(int) string { return wide }),
+		numberedLines(80, func(i int) string {
+			if i%3 == 0 {
+				return wide
+			}
+			return fmt.Sprint(i)
+		}),
+		"ok",
+	)
+	root := ui.renderer.Root()
+	limit := ui.ToolRowLimit(30)
+	want := make([]int, len(boxes))
+	for i, b := range boxes {
+		b.WrapWidth = max(b.LayoutNode().Computed.Width-2*PaddingX, 1)
+		want[i] = searchKeepRows(b, limit, root.CalculateLayout)
+		b.SetKeepRows(0)
+	}
+	root.CalculateLayout()
+
+	FitCalls(boxes, limit, root.CalculateLayout)
+
+	for i, b := range boxes {
+		if b.KeepRows != want[i] {
+			t.Errorf("call %d keeps %d rows, want %d, as the search finds", i, b.KeepRows, want[i])
+		}
+	}
+}
+
+// TestFitCallsLayouts checks that FitCalls fits many tall calls of plain
+// text together, in two or three layouts of the screen, each to the limit or
+// a row short of it.
+func TestFitCallsLayouts(t *testing.T) {
+	var outputs []string
+	for i := range 20 {
+		outputs = append(outputs, numberedLines(50+7*i, func(j int) string { return fmt.Sprint(j) }))
+	}
+	ui, boxes := fitReply(t, outputs...)
+	root := ui.renderer.Root()
+	limit := ui.ToolRowLimit(30)
+	layouts := 0
+
+	FitCalls(boxes, limit, func() { layouts++; root.CalculateLayout() })
+	root.CalculateLayout()
+
+	if layouts > 3 {
+		t.Errorf("fitting %d calls took %d layouts, want 3 at most", len(boxes), layouts)
+	}
+	for i, b := range boxes {
+		if got := b.LayoutNode().Computed.Height; got > limit || got < limit-1 || !b.Truncated.Visible() {
+			t.Errorf("call %d takes %d rows, truncated %v; want %d or one fewer, truncated", i, got, b.Truncated.Visible(), limit)
+		}
+	}
+}
+
+// TestFitToolBoxesFullscreen checks that an expanded call taller than the
+// screen is cut short with TruncatedNote in the fullscreen transcript too,
+// as inline.
+func TestFitToolBoxesFullscreen(t *testing.T) {
+	ui := newInputTestUI(t)
+	showSteps(ui)
+	ui.AddMessage(agentParts("a1", completed("c1", "bash", `{"command":"ls"}`, numberedLines(100, func(i int) string { return fmt.Sprint(i) }))))
+	expandTools(ui)
+	ui.renderer.Root().CalculateLayout()
+	ui.FitToolBoxes(30)
+	ui.renderer.Root().CalculateLayout()
+	b, limit := partBoxesOf(ui, "a1")[0], ui.ToolRowLimit(30)
+	if got := b.LayoutNode().Computed.Height; got > limit || got < limit-1 || !b.Truncated.Visible() {
+		t.Errorf("call takes %d rows, truncated %v; want %d or one fewer, truncated", got, b.Truncated.Visible(), limit)
+	}
+}
+
 // TestFitToolBoxesTaller checks that a call cut short shows whole again once
 // a taller terminal leaves it room.
 func TestFitToolBoxesTaller(t *testing.T) {

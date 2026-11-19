@@ -91,8 +91,8 @@ func (ui *UI) KeepInputBoxInView() {
 // on a terminal too short to fit one otherwise.
 const MinToolRows = 6
 
-// ToolRowLimit returns the most rows an expanded call takes inline on a
-// terminal of height rows, so that the call's header still shows once it has
+// ToolRowLimit returns the most rows an expanded call takes on a terminal of
+// height rows, so that the call's header still shows once it has
 // finished, right above the input box: what the spare row FitInputBox keeps,
 // the indicator, and the input box at rest leave, as RestInputRows gives it.
 // It counts the indicator whether or not it shows, since a call that ends
@@ -126,63 +126,109 @@ func (ui *UI) RestInputRows(height int) int {
 	return ui.restInputRows
 }
 
-// FitToolBoxes fits each expanded call of the inline transcript to
-// ToolRowLimit rows, as FitToolBox does, cutting its tallest block short and
-// ending it with TruncatedNote. A call taller than the screen would push its
-// header into the scrollback, where it cannot be redrawn or seen with its
-// output. It does nothing outside inline mode.
+// FitToolBoxes fits each expanded call of the transcript, inline or
+// fullscreen, to ToolRowLimit rows, as FitCalls does, cutting its tallest
+// block short and ending it with TruncatedNote. Inline, a call taller than
+// the screen would push its header into the scrollback, where it cannot be
+// redrawn or seen with its output; fullscreen, it would take more than the
+// transcript shows at once.
 func (ui *UI) FitToolBoxes(height int) {
-	if !ui.inline {
-		return
-	}
-	limit := ui.ToolRowLimit(height)
-	root := ui.renderer.Root()
+	var boxes []*ToolBox
+	// A bubble is yielded once for each of its messages.
+	seen := make(map[*ChatMessageBox]bool)
 	for cm := range ui.Bubbles() {
-		for b := range cm.ToolBoxes() {
-			FitToolBox(b, limit, root.CalculateLayout)
+		if !seen[cm] {
+			seen[cm] = true
+			boxes = slices.AppendSeq(boxes, cm.ToolBoxes())
 		}
 	}
+	FitCalls(boxes, ui.ToolRowLimit(height), ui.renderer.Root().CalculateLayout)
 }
 
-// FitToolBox shows as many rows of the tallest block of b, an open call, as
-// leave it within limit rows, laid out by layout, or all of them when they
-// fit. It finds them by laying the call out with each count it tries, as a
-// row of the block may take more than one row of the screen, so that the
-// call ends at the limit, or as near as whole rows bring it. A call that
-// limit and its width fit already, as Fitted records, is left as it is, as
-// is a closed one, whose rows the cut does not change.
-func FitToolBox(b *ToolBox, limit int, layout func()) {
-	if !b.Open() {
-		return
-	}
-	width := max(b.LayoutNode().Computed.Width-2*PaddingX, 1)
-	if b.Fitted && b.FitLimit == limit && b.FitWidth == width {
-		return
-	}
-	b.Fitted, b.FitLimit, b.FitWidth = true, limit, width
-	b.WrapWidth = width
-	height := func(rows int) int {
-		b.SetKeepRows(rows)
-		layout()
-		return b.LayoutNode().Computed.Height
-	}
-	whole := b.BlockRows()
-	if whole == 0 || height(0) <= limit {
-		return
-	}
-	// The most rows that fit, between none, which may not, and the whole
-	// block, which does not.
-	lo, hi := 1, whole-1
-	best := 1
-	for lo <= hi {
-		mid := (lo + hi) / 2
-		if height(mid) <= limit {
-			best, lo = mid, mid+1
-		} else {
-			hi = mid - 1
+// FitSearchRounds is how many layouts FitCalls tries the count of rows that
+// each one predicts for, before it halves what is left to search.
+const FitSearchRounds = 2
+
+// CallFit is the search of FitCalls for the most rows of a call's tallest
+// block that leave the call within the limit: between Lo and Hi, the counts
+// not yet ruled out, of which Try is tried next, and Best, the most that fit
+// so far.
+type CallFit struct {
+	Box               *ToolBox
+	Lo, Hi, Best, Try int
+}
+
+// FitCalls shows as many rows of the tallest block of each open call of
+// boxes as leave it within limit rows, laid out by layout, or all of them
+// when they fit, so that each call ends at the limit, or as near as whole
+// rows bring it. A call that limit and its width fit already, as Fitted
+// records, is left as it is, as is a closed one, whose rows the cut does not
+// change.
+//
+// It fits the calls together, as each layout lays out the whole screen, which
+// takes about as long for one call as for all of them. A row of a block, as
+// Rows counts it, takes a row of the screen, or more where it holds wide
+// characters, so each count tried tells how far off the one that fits is.
+// The first is the whole block less the rows the call takes past the limit
+// and the row TruncatedNote takes, which fits a call of plain text at once.
+// It so lays the screen out two or three times, however many calls it fits,
+// and halves what is left to search after FitSearchRounds layouts.
+func FitCalls(boxes []*ToolBox, limit int, layout func()) {
+	var fits []*CallFit
+	for _, b := range boxes {
+		if !b.Open() {
+			continue
 		}
+		width := max(b.LayoutNode().Computed.Width-2*PaddingX, 1)
+		if b.Fitted && b.FitLimit == limit && b.FitWidth == width {
+			continue
+		}
+		b.Fitted, b.FitLimit, b.FitWidth = true, limit, width
+		b.WrapWidth = width
+		b.SetKeepRows(0)
+		fits = append(fits, &CallFit{Box: b})
 	}
-	height(best)
+	if len(fits) == 0 {
+		return
+	}
+	layout()
+	// The calls that fit whole, or have no block to cut, are done.
+	fits = slices.DeleteFunc(fits, func(f *CallFit) bool {
+		whole, full := f.Box.BlockRows(), f.Box.LayoutNode().Computed.Height
+		if whole == 0 || full <= limit {
+			return true
+		}
+		// The most rows that fit are between none, which may not, and the
+		// whole block, which does not.
+		f.Lo, f.Hi, f.Best = 1, whole-1, 1
+		f.Try = whole - (full - limit) - 1
+		return false
+	})
+	for round := 0; len(fits) > 0; round++ {
+		for _, f := range fits {
+			if round >= FitSearchRounds {
+				f.Try = (f.Lo + f.Hi + 1) / 2
+			}
+			f.Try = min(max(f.Try, f.Lo), f.Hi)
+			f.Box.SetKeepRows(f.Try)
+		}
+		layout()
+		fits = slices.DeleteFunc(fits, func(f *CallFit) bool {
+			h := f.Box.LayoutNode().Computed.Height
+			if h <= limit {
+				// Each row more takes a row of the screen at least.
+				f.Best, f.Lo, f.Hi = f.Try, f.Try+1, min(f.Hi, f.Try+limit-h)
+			} else {
+				f.Hi = f.Try - 1
+			}
+			f.Try += limit - h
+			if f.Lo <= f.Hi {
+				return false
+			}
+			f.Box.SetKeepRows(f.Best)
+			return true
+		})
+	}
 }
 
 // FitInputBox keeps the input box, with the indicator above it, within the

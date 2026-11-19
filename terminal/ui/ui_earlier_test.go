@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -226,6 +227,52 @@ func TestBuildEarlierInView_KeepsTheView(t *testing.T) {
 		t.Errorf("the frame that built earlier messages moved the view:\n%s\nwant:\n%s", g, w)
 	}
 	testutil.AssertGoldenFrames(t, "fullscreen_earlier_built", got, surfaceNames(ui))
+}
+
+// toolSession returns turns turns, each a prompt and a reply that ran a bash
+// call of 100 lines of output, which an expanded call shows taller than the
+// screen.
+func toolSession(turns int) []ChatMessage {
+	output := numberedLines(100, func(i int) string { return fmt.Sprint(i) })
+	var msgs []ChatMessage
+	for i := range turns {
+		n := fmt.Sprint(i)
+		msgs = append(msgs, userText(message.ID("u"+n), "prompt "+n),
+			agentParts(message.ID("a"+n), completed("c"+n, "bash", `{"command":"ls"}`, output)))
+	}
+	AssignParents(msgs)
+	AssignPrev(msgs)
+	return msgs
+}
+
+// TestBuildEarlierInView_KeepsTheViewOverCutCalls checks that the rows of
+// earlier messages built as the user scrolls up keep the view where it was,
+// though the frame that builds them cuts their expanded calls short to fit
+// the screen, as FitToolBoxes cuts them.
+func TestBuildEarlierInView_KeepsTheViewOverCutCalls(t *testing.T) {
+	msgs := toolSession(40)
+	ui := newFullscreenTestUI(t)
+	ui.service.state.ToolsExpanded = true
+	ui.service.state.Messages = msgs
+	ui.Apply([]UIEvent{EventSessionLoad{Messages: msgs}})
+	drawScreen(ui)
+	ui.messageBox.SetScrollY(ui.ScreenRows())
+
+	earlier := ui.earlier
+	ui.earlier = nil
+	want := drawScreen(ui)
+	ui.earlier = earlier
+
+	got := drawScreen(ui)
+	if len(ui.earlier) >= len(earlier) {
+		t.Fatal("scrolling up built no earlier messages")
+	}
+	if b := partBoxesOf(ui, msgs[len(ui.earlier)+1].ID)[0]; !b.Truncated.Visible() {
+		t.Error("the call of the first reply built is not cut short")
+	}
+	if g, w := framesOf(t, ui, got), framesOf(t, ui, want); g != w {
+		t.Errorf("the frame that built earlier messages moved the view:\n%s\nwant:\n%s", g, w)
+	}
 }
 
 // TestBuildEarlierInView_BuildsToTheTop checks that scrolling up to the top
