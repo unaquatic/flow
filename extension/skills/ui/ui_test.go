@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/unaquatic/catalog/gateway/gatewaytest"
@@ -52,37 +53,62 @@ func TestSlashCommands(t *testing.T) {
 	}
 }
 
-// TestSkillCommandSends checks that a skill's command sends /skill:name,
-// alone or with what is typed after it, for the skills extension to expand.
-func TestSkillCommandSends(t *testing.T) {
-	s := newTestService(t)
-	s.Commands = ui.CommandsWith([]ui.Extension{New(review)})
-	for _, tt := range []struct{ typed, want string }{
-		{"/review", "/skill:review"},
-		{"/review  check main.go", "/skill:review check main.go"},
-	} {
-		if got := queued(s.HandleSubmit(tt.typed)); !slices.Contains(got, tt.want) {
-			t.Errorf("typing %q queued %q, want %q", tt.typed, got, tt.want)
-		}
+// writeSkill writes the SKILL.md of sk, named and described as sk is, whose
+// instructions are body, to a new folder, and returns sk found there.
+func writeSkill(t *testing.T, sk skills.Skill, body string) skills.Skill {
+	t.Helper()
+	sk.Path = filepath.Join(t.TempDir(), sk.Name, skills.File)
+	if err := os.MkdirAll(filepath.Dir(sk.Path), 0o755); err != nil {
+		t.Fatal(err)
 	}
+	text := "---\nname: " + sk.Name + "\ndescription: Review code.\n---\n\n" + body + "\n"
+	if err := os.WriteFile(sk.Path, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return sk
 }
 
-// TestSkillCommandQueuesAsTyped checks that a skill's command queues its
-// prompt marked as the command that was typed, with Hint and what followed
-// it, for the queue to show as the slash menu names it.
-func TestSkillCommandQueuesAsTyped(t *testing.T) {
+// TestSkillCommandQueuesInstructions checks that a skill's command queues
+// the skill's instructions, without the frontmatter, and then what was typed
+// after it, as the skills extension expands /skill:name, marked as the
+// command that was typed, so that the queue shows the prompt as it is sent.
+func TestSkillCommandQueuesInstructions(t *testing.T) {
 	s := newTestService(t)
-	s.Commands = ui.CommandsWith([]ui.Extension{New(review)})
+	found := writeSkill(t, review, "# Review\n\nRead scripts/check.sh.")
+	s.Commands = ui.CommandsWith([]ui.Extension{New(found)})
 	for _, tt := range []struct {
 		typed string
 		want  ui.QueuedPrompt
 	}{
-		{"/review", ui.QueuedPrompt{Text: "/skill:review", Command: "review", Hint: Hint}},
-		{"/review  check main.go", ui.QueuedPrompt{Text: "/skill:review check main.go", Command: "review", Hint: Hint, Args: "check main.go"}},
+		{"/review", ui.QueuedPrompt{Text: "# Review\n\nRead scripts/check.sh.", Command: "review"}},
+		{"/review  check main.go", ui.QueuedPrompt{Text: "# Review\n\nRead scripts/check.sh.\n\ncheck main.go", Command: "review", Args: "check main.go"}},
 	} {
 		if got := queuedPrompts(s.HandleSubmit(tt.typed)); !slices.Contains(got, tt.want) {
 			t.Errorf("typing %q queued %+v, want %+v", tt.typed, got, tt.want)
 		}
+	}
+}
+
+// TestSkillCommandWithoutFile checks that the command of a skill whose file
+// can no longer be read queues nothing, says so in a toast, and puts what
+// was typed back in the input.
+func TestSkillCommandWithoutFile(t *testing.T) {
+	s := newTestService(t)
+	gone := skills.Skill{Name: "review", Description: "Gone.", Path: filepath.Join(t.TempDir(), "review", skills.File)}
+	s.Commands = ui.CommandsWith([]ui.Extension{New(gone)})
+	out := s.HandleSubmit("/review check main.go")
+	if got := queued(out); len(got) > 0 {
+		t.Errorf("queued %q, want nothing", got)
+	}
+	if !slices.Contains(out, ui.UIEvent(ui.EventInputSet{Text: "/review check main.go"})) {
+		t.Errorf("events %#v, want the command typed back in the input", out)
+	}
+	toast := func(e ui.UIEvent) bool {
+		m, ok := e.(ui.EventMessageAdded)
+		return ok && m.Msg.Notice != nil && strings.HasPrefix(m.Msg.Notice.Text, "Skill review: ")
+	}
+	if !slices.ContainsFunc(out, toast) {
+		t.Errorf("events %#v, want a toast that tells why", out)
 	}
 }
 

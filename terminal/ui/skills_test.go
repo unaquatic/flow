@@ -67,12 +67,12 @@ func TestSkillsMenuFrames(t *testing.T) {
 }
 
 // TestSkillQueuedFrames draws a skill's command waiting in the queue as the
-// slash menu names it: /review, marked [skill] in grey, then what was typed
-// after it, ahead of a prompt queued as it was typed.
+// prompt it sends, the skill's instructions, by their first line, as any
+// prompt shows there, ahead of a prompt queued as it was typed.
 func TestSkillQueuedFrames(t *testing.T) {
 	u := ui.NewInputTestUI(t, skillViews())
 	u.Apply(u.Service().Enqueue(ui.QueuedPrompt{
-		Text: "/skill:review main.go", Command: "review", Hint: skillsui.Hint, Args: "main.go",
+		Text: "Read scripts/check.sh.\n\nmain.go", Command: "review", Args: "main.go",
 	}))
 	u.Apply(u.Service().QueuePrompt("also update the README"))
 	ui.AssertInputFrames(t, u, "input_queued_skill", 60, 6)

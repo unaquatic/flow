@@ -1,8 +1,9 @@
 // Package ui is the terminal side of the skills extension: a /name command
-// of each skill, marked "[skill]" in the slash menu, and /skills, which
-// lists the skills to pick from, and fills the input with the instructions
-// of the one picked, for the user to say what to do under them and send. A
-// prompt sent so shows as any prompt does, as its text.
+// of each skill, marked "[skill]" in the slash menu, which sends the skill's
+// instructions, and /skills, which lists the skills to pick from, and fills
+// the input with the instructions of the one picked, for the user to say
+// what to do under them and send. A prompt sent either way shows as any
+// prompt does, as its text, in the queue too.
 package ui
 
 import (
@@ -66,17 +67,23 @@ func (e *Extension) SlashCommands() []ui.SlashCommand {
 // SkillCommand returns the slash command of sk: /name, marked Hint in the
 // menu and described by the first paragraph of its description, as OneLine
 // gives it. Picked from the menu, or typed alone or with what to do after
-// it, as in "/review main.go", it sends "/skill:review main.go", which the
-// skills extension expands into the skill's instructions as the prompt is
-// sent. While it waits in the queue, the queue shows it as it was typed,
-// marked Hint as in the menu: "/review [skill] main.go". The UI runs it only
-// while no other command takes its name, as ui.CommandsWith leaves such a
-// command out.
+// it, as in "/review main.go", it queues the skill's instructions, its
+// SKILL.md as it reads now, and then what was typed after it, as the skills
+// extension expands "/skill:review main.go", so that the queue shows the
+// prompt as it is sent, as it shows any other. Taken back out of the queue,
+// the prompt reads as it was typed. A skill whose file can no longer be read
+// queues nothing: a toast shows the error, and the input what was typed. The
+// UI runs the command only while no other command takes its name, as
+// ui.CommandsWith leaves such a command out.
 func SkillCommand(sk skills.Skill) ui.SlashCommand {
 	name := ui.Command(sk.Name)
 	send := func(s *ui.Service, args string) []ui.UIEvent {
-		text := strings.TrimSpace(skills.CommandPrefix + sk.Name + " " + args)
-		p := ui.QueuedPrompt{Text: text, Command: name, Hint: Hint, Args: args}
+		p := ui.QueuedPrompt{Command: name, Args: args}
+		b, err := skills.NewBlock(sk, args)
+		if err != nil {
+			return slices.Concat(s.SetInput(p.Typed()), s.ShowToast(fmt.Sprintf("Skill %s: %v", sk.Name, err)))
+		}
+		p.Text = b.Text()
 		return slices.Concat(s.Enqueue(p), s.SendQueued())
 	}
 	return ui.SlashCommand{

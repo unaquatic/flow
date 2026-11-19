@@ -219,7 +219,7 @@ func TestQueue_UndoTakesBackTheLastQueued(t *testing.T) {
 func TestQueue_UndoPutsBackTheCommandTyped(t *testing.T) {
 	q := newQueueTest(t)
 	q.startDemo()
-	q.s.Enqueue(QueuedPrompt{Text: "/skill:review main.go", Command: "review", Hint: "[skill]", Args: "main.go"})
+	q.s.Enqueue(QueuedPrompt{Text: "# Review\n\nmain.go", Command: "review", Args: "main.go"})
 
 	out := q.s.HandleSubmit("/undo")
 	q.wantQueue()
@@ -238,8 +238,8 @@ func TestQueuedPromptTyped(t *testing.T) {
 		want string
 	}{
 		{QueuedPrompt{Text: "fix the tests"}, "fix the tests"},
-		{QueuedPrompt{Text: "/skill:review", Command: "review", Hint: "[skill]"}, "/review"},
-		{QueuedPrompt{Text: "/skill:review main.go", Command: "review", Hint: "[skill]", Args: "main.go"}, "/review main.go"},
+		{QueuedPrompt{Text: "# Review", Command: "review"}, "/review"},
+		{QueuedPrompt{Text: "# Review\n\nmain.go", Command: "review", Args: "main.go"}, "/review main.go"},
 	} {
 		if got := tt.p.Typed(); got != tt.want {
 			t.Errorf("%+v.Typed() = %q, want %q", tt.p, got, tt.want)
