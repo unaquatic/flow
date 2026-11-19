@@ -52,12 +52,12 @@ type ToolBox struct {
 	// KeepRows, when above zero, is the most rows of the call's tallest
 	// block that the details show, as KeepRows the function cuts text to:
 	// its output, its body, or its Lines, whichever takes the most rows at
-	// WrapWidth. Zero shows them whole. UI.FitToolBoxes sets it inline, so
+	// WrapWidth. Zero shows them whole. UI.FitToolBoxes sets it, so
 	// that an expanded call fits the screen.
 	KeepRows int
 	// WrapWidth is the width, in columns, that KeepRows counts rows at.
 	WrapWidth int
-	// FitLimit and FitWidth are the rows and the width FitToolBox last fitted
+	// FitLimit and FitWidth are the rows and the width FitCalls last fitted
 	// the call to, and Fitted reports that it did, since the call last
 	// changed.
 	FitLimit, FitWidth int
@@ -237,7 +237,7 @@ func (b *ToolBox) ShowTool(tool message.ToolPart) {
 }
 
 // SetTool shows tool, unless it equals the call already shown, and has
-// FitToolBox fit it again, as its content may have grown.
+// FitCalls fit it again, as its content may have grown.
 func (b *ToolBox) SetTool(tool message.ToolPart) {
 	if reflect.DeepEqual(b.Tool, tool) {
 		return
@@ -304,7 +304,7 @@ func (b *ToolBox) BlockRows() int {
 // Rows returns the rows text takes at width: each of its lines one row for
 // every width columns it holds, or one row when it is blank. Any width below
 // one counts each line as a row. It counts characters, not the columns a wide
-// character takes, which is near enough for KeepRows, whose cut FitToolBox
+// character takes, which is near enough for KeepRows, whose cut FitCalls
 // measures as laid out.
 func Rows(text string, width int) int {
 	text = strings.TrimRight(text, "\n")
