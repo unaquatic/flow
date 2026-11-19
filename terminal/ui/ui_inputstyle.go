@@ -55,34 +55,55 @@ func (ui *UI) SetInputStyle(s InputStyle) {
 
 // SyncInputGap keeps a single blank row between the input box, with the
 // Usage box and the queued prompts above it, and what is above it, while
-// the input shows in InputBar: none of its own when that ends with a blank
-// row, as a message and the indicator do, and one when it does not, as at
-// the top of the screen with nothing above it. The filled box starts with a
-// blank row of its own, so it takes none. It runs before each frame is laid
-// out, as what is above the box changes.
+// its top row is on the canvas: while the input shows in InputBar, and in
+// fullscreen mode while the Usage box shows at its top. It keeps none of its
+// own when what is above ends with a blank row, as a message and the
+// indicator do, and one when it does not, as at the top of the screen with
+// nothing above it. The filled box starts with a blank row of its own, so it
+// takes none otherwise. It keeps the indicator's, as SyncIndicatorGap does,
+// first. It runs before each frame is laid out, as what is above the box
+// changes.
 func (ui *UI) SyncInputGap() {
 	if ui.indicatorBox == nil {
 		return // The UI is still being built; the first frame syncs it.
 	}
+	ui.SyncIndicatorGap()
+	canvas := ui.service.state.InputStyle == InputBar || !ui.inline && ui.slashStatusBox.Visible()
 	gap := 0
-	if ui.service.state.InputStyle == InputBar && !ui.AboveInputEndsBlank() {
+	if canvas && !ui.AboveInputEndsBlank() {
 		gap = 1
 	}
 	SetEdge(ui.inputWrapper, &ui.inputWrapper.LayoutNode().MarginTop, gap)
 }
 
+// SyncIndicatorGap keeps a blank row between the indicator and the
+// transcript above it in fullscreen mode, where the indicator stays over the
+// input box as the transcript scrolls: none of its own when the transcript
+// ends with one, as TranscriptEndsBlank says, and one when it does not.
+// Inline, the indicator takes none.
+func (ui *UI) SyncIndicatorGap() {
+	gap := 0
+	if !ui.inline && ui.indicatorBox.Visible() && !ui.TranscriptEndsBlank() {
+		gap = 1
+	}
+	SetEdge(ui.indicatorBox, &ui.indicatorBox.LayoutNode().MarginTop, gap)
+}
+
 // AboveInputEndsBlank reports whether what shows right above the input box
-// ends with a blank row: the indicator, or else the last row of the
-// transcript, which a blank row ends as a margin.
-// Nothing above the box, as an empty transcript, needs no blank row either.
+// ends with a blank row: the indicator, or else the transcript, as
+// TranscriptEndsBlank says.
+func (ui *UI) AboveInputEndsBlank() bool {
+	return ui.indicatorBox.Visible() || ui.TranscriptEndsBlank()
+}
+
+// TranscriptEndsBlank reports whether the transcript ends with a blank row,
+// as its last row does that a blank row ends as a margin.
+// Nothing, as an empty transcript, needs no blank row either.
 // A fullscreen transcript, or preview, ends with its last row only while it
 // is scrolled to its bottom; scrolled anywhere else, as when it keeps its
 // place while its last row grows, the row it ends with is any, so it counts
 // as one that is not blank.
-func (ui *UI) AboveInputEndsBlank() bool {
-	if ui.indicatorBox.Visible() {
-		return true
-	}
+func (ui *UI) TranscriptEndsBlank() bool {
 	var rows []render.Renderable
 	scroll := ui.messageBox
 	switch {

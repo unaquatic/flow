@@ -102,11 +102,15 @@ func (ui *UI) ToolRowLimit(height int) int {
 }
 
 // IndicatorRows returns the rows the indicator takes while it shows one
-// line: the line and its margins.
+// line: the line, the margin under it, and in fullscreen mode the blank row
+// above it that SyncIndicatorGap keeps, whether it keeps it or not, so that
+// the limit stays put as the indicator comes and goes.
 func (ui *UI) IndicatorRows() int {
-	n := ui.indicatorBox.LayoutNode()
-	top, _ := n.MarginTop.Resolve(0)
-	bottom, _ := n.MarginBottom.Resolve(0)
+	bottom, _ := ui.indicatorBox.LayoutNode().MarginBottom.Resolve(0)
+	top := 0
+	if !ui.inline {
+		top = 1
+	}
 	return top + 1 + bottom
 }
 
