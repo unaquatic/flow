@@ -47,8 +47,8 @@ func TestUsageAndHelpCommands(t *testing.T) {
 			t.Fatalf("%s added nothing", cmd)
 		}
 		n, ok := toastOf(out[len(out)-1])
-		if !ok || n.Title != title || n.Surface != NoticeSystem {
-			t.Errorf("%s = %+v, want a system notice titled %s", cmd, out[len(out)-1], title)
+		if !ok || n.Title != title || n.Surface != NoticeBar {
+			t.Errorf("%s = %+v, want a bar notice titled %s", cmd, out[len(out)-1], title)
 		}
 	}
 }

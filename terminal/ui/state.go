@@ -94,9 +94,9 @@ type Notice struct {
 	Lines []style.StyledText
 	// Surface is what the notice shows on.
 	Surface NoticeSurface
-	// Title, when set, heads the notice while prompts show in PromptBar,
-	// as UI.NewNoticeBarRow shows it, such as "Status" over the session
-	// info. Without one, the notice's first line heads it.
+	// Title, when set, heads the notice, as UI.NewNoticeBarRow shows it,
+	// such as "Status" over the session info. Without one, the notice's
+	// first line heads it.
 	Title string
 }
 
@@ -104,12 +104,9 @@ type Notice struct {
 type NoticeSurface int
 
 const (
-	// NoticeRaised shows a notice in a box on the raised surface. It is the
-	// default.
-	NoticeRaised NoticeSurface = iota
-	// NoticeSystem shows a notice in a box on the system surface, as the
-	// session info is.
-	NoticeSystem
+	// NoticeBar shows a notice on the canvas, headed by a marker, as
+	// UI.NewNoticeBarRow shows it. It is the default.
+	NoticeBar NoticeSurface = iota
 	// NoticeCanvas shows a notice's rows on the canvas, from the transcript's
 	// left edge, with no box around them, as the logo is.
 	NoticeCanvas
@@ -469,21 +466,23 @@ func (p CountPlace) String() string {
 	return "Below"
 }
 
-// PromptStyle is how the transcript marks a prompt, which /config sets.
+// PromptStyle is how the transcript marks a prompt, which /config sets. It
+// styles the user's messages alone; notices show as UI.NewNoticeRow makes
+// them, whatever the style.
 type PromptStyle int
 
 const (
+	// PromptFilled shows a prompt as a block on the box background, padded
+	// by a row above and below. It is the default.
+	PromptFilled PromptStyle = iota
 	// PromptBar shows a prompt on the canvas, with the marker shape in the
 	// product's primary color at the left edge of its first row, or for the
-	// block shape a cell filled with it. It is the default.
-	PromptBar PromptStyle = iota
-	// PromptFilled shows a prompt as a block on the box background, padded
-	// by a row above and below.
-	PromptFilled
+	// block shape a cell filled with it.
+	PromptBar
 )
 
 // PromptStyles lists the prompt styles in the order /config offers them.
-var PromptStyles = [...]PromptStyle{PromptBar, PromptFilled}
+var PromptStyles = [...]PromptStyle{PromptFilled, PromptBar}
 
 // Next returns the style step places after s in PromptStyles, going round.
 func (s PromptStyle) Next(step int) PromptStyle {
@@ -503,17 +502,18 @@ func (s PromptStyle) String() string {
 type InputStyle int
 
 const (
+	// InputFilled shows the input box and its panels on the box background.
+	// It is the default.
+	InputFilled InputStyle = iota
 	// InputBar shows the input box and its panels on the canvas, as a tool
 	// call's row is, with the marker shape at the left edge of the input's
 	// first row, in the primary color, and of each panel's title, in the
-	// color of the title. It is the default.
-	InputBar InputStyle = iota
-	// InputFilled shows the input box and its panels on the box background.
-	InputFilled
+	// color of the title.
+	InputBar
 )
 
 // InputStyles lists the input styles in the order /config offers them.
-var InputStyles = [...]InputStyle{InputBar, InputFilled}
+var InputStyles = [...]InputStyle{InputFilled, InputBar}
 
 // Next returns the style step places after s in InputStyles, going round.
 func (s InputStyle) Next(step int) InputStyle {
@@ -747,7 +747,8 @@ type UIState struct {
 	// token use.
 	Usage SessionUsage
 	// ToolsExpanded reports whether tool calls and the changes of each step
-	// show their details, which Ctrl+O toggles. They start collapsed.
+	// show their details, which Ctrl+O toggles. The terminal starts with
+	// them expanded.
 	ToolsExpanded bool
 	// ExpandStyle is how expanded tool calls show, which /config sets. It
 	// is ExpandedPlain by default.
@@ -801,10 +802,10 @@ type UIState struct {
 	// debug is on. It is DiffSideBySide by default.
 	DiffLayout DiffLayout
 	// PromptStyle is how the transcript marks a prompt, which /config
-	// sets. It is PromptBar by default.
+	// sets. It is PromptFilled by default.
 	PromptStyle PromptStyle
 	// InputStyle is how the input box and its panels show, which /config
-	// sets. It is InputBar by default.
+	// sets. It is InputFilled by default.
 	InputStyle InputStyle
 }
 

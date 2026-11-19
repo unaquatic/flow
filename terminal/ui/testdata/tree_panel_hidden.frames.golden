@@ -2,7 +2,6 @@
 |■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
 |               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
-|  User add a Divide method to the calculator                            |
 |  Agent I'll add Divide with a zero check.                              |
 |  ├─ User also add tests                                                |
 |  │  └─ [title] User Summarize the user request in this session         |
@@ -11,16 +10,16 @@
 |  │  Agent Added TestDivide.                                            |
 |  └─ User use table-driven tests instead                                |
 |     Read calc_test.go                                                  |
-|     Edit calc_test.go                                                  |
-|     Agent Rewrote the tests as a table.                                |
-|  [hidden]                                                              |
+|  [5/10] [hidden]                                                       |
 |                                                                        |
 |■                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  AAAA BBB B BBBBBB BBBBBB BB BBB BBBBBBBBBB                            |
 |  CCCCC BBBB BBB BBBBBB BBBB B BBBB BBBBBB                              |
 |  BB AAAA BBBB BBB BBBBB                                                |
 |  D  DD DDDDDDD DDDD DDDDDDDDD DDD DDDD DDDDDDD DD DDDD DDDDDDD         |
@@ -29,11 +28,12 @@
 |  B  CCCCC BBBBB BBBBBBBBBBB                                            |
 |  DD DDDD DDD DDDDDDDDDDDD DDDDD DDDDDDD                                |
 |     DDDD DDDDDDDDDDDD                                                  |
-|     DDDD DDDDDDDDDDDD                                                  |
-|     DDDDD DDDDDDD DDD DDDDD DD D DDDDDD                                |
-|  BBBBBBBB                                                              |
+|  BBBBBB BBBBBBBB                                                       |
 |                                                                        |
 |A                                                                       |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
@@ -42,8 +42,8 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |

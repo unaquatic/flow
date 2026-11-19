@@ -1,6 +1,8 @@
 === step: transcript ===
 === text ===
-|■ Add a Divide method that rejects a zero divisor             |
+|                                                              |
+|  Add a Divide method that rejects a zero divisor             |
+|                                                              |
 |                                                              |
 |■ I'll inspect the calculator package, add division with an   |
 |  explicit error for a zero divisor, then write tests and     |
@@ -69,7 +71,9 @@
 |                                                              |
 |■ Worked 36s                                                  |
 === fg ===
-|A AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
+|                                                              |
+|  AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
+|                                                              |
 |                                                              |
 |B AAAA AAAAAAA AAA AAAAAAAAAA AAAAAAAA AAA AAAAAAAA AAAA AA   |
 |  AAAAAAAA AAAAA AAA A AAAA AAAAAAAA AAAA AAAAA AAAAA AAA     |
@@ -138,6 +142,9 @@
 |                                                              |
 |C CCCCCC CCC                                                  |
 === bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                              |
 |                                                              |
 |                                                              |
@@ -155,24 +162,22 @@
 |                                                              |
 |                                                              |
 |                                                              |
-|                                                              |
-|                        ░░░░░░░                               |
-|                                                              |
-|                                                              |
-|                                                              |
-|                                                              |
-|                              ░░░░░░            ░░░░░░░       |
+|                        ▒▒▒▒▒▒▒                               |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
-|  ░░░░░░░                                                     |
+|                              ▒▒▒▒▒▒            ▒▒▒▒▒▒▒       |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
-|                     ░░░░░░░░░░░░░░░░                         |
+|  ▒▒▒▒▒▒▒                                                     |
 |                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+|                     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒                         |
 |                                                              |
 |                                                              |
 |                                                              |
@@ -187,8 +192,9 @@
 |                                                              |
 |                                                              |
 |                                                              |
-|  ░░░░░░░░░░                                ░░░░░░            |
-|    ░░░░░░░                                                   |
+|                                                              |
+|  ▒▒▒▒▒▒▒▒▒▒                                ▒▒▒▒▒▒            |
+|    ▒▒▒▒▒▒▒                                                   |
 |                                                              |
 |                                                              |
 |                                                              |
@@ -201,12 +207,14 @@
 |                                                              |
 |                                                              |
 |                                                              |
-|    ░░░░░░░░░░░░░░░░░░                                        |
-|    ░░░░░░░░░░░░░░░░░░░░░░░░░                                 |
+|    ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒                                        |
+|    ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒                                 |
 |                                                              |
 |                                                              |
 |                                                              |
 === attrs ===
+|                                                              |
+|                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
@@ -281,27 +289,35 @@ B #eb7513
 C #8a8a8a
 D #91b557
 E #2c2c2d
-░ #1a1a1a Bg
+░ #232323 BoxBg
+▒ #1a1a1a Bg
 === step: typed ===
 === text ===
-|■ Add a Divide method that rejects a zero divisor             |
 |                                                              |
+|  Add a Divide method that rejects a zero divisor             |
 |                                                              |
 |                                                              |
 |                                                              |
 === fg ===
-|A AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
+|                                                              |
+|  AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
 |                                                              |
 |                                                              |
+|                                                              |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                              |
 |                                                              |
 === legend ===
 A #e6e6e6
+░ #232323 BoxBg
 === step: running ===
 === text ===
 |■ Working [12s] [esc cancel] [ctrl+o expand]                  |
 |                                                              |
-|■                                                             |
+|                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
@@ -309,26 +325,34 @@ A #e6e6e6
 === fg ===
 |A AAAAAAA AAAAA AAAA AAAAAAA AAAAAAA AAAAAAA                  |
 |                                                              |
-|B                                                             |
 |                                                              |
 |                                                              |
+|                                                              |
+|                                                              |
+|                                                              |
+=== bg ===
+|                                                              |
+|                                                              |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                              |
 |                                                              |
 === legend ===
 A #8a8a8a
-B #e6e6e6
+░ #232323 BoxBg
 === step: idle ===
 === text ===
-|■                                                             |
 |                                                              |
 |                                                              |
 |                                                              |
 |                                                              |
-=== fg ===
-|A                                                             |
 |                                                              |
-|                                                              |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
 |                                                              |
 |                                                              |
 === legend ===
-A #e6e6e6
+░ #232323 BoxBg

@@ -28,7 +28,7 @@ func newInlineTestUI(t *testing.T) *UI {
 	ui := &UI{
 		renderer:       r,
 		theme:          DefaultTheme(),
-		service:        &Service{state: &UIState{}, Commands: builtinCommands(t)},
+		service:        &Service{state: &UIState{PromptStyle: PromptBar, InputStyle: InputBar}, Commands: builtinCommands(t)},
 		extensions:     builtinExtensions(t),
 		messageBox:     widget.NewScrollBox(widget.ScrollBoxWithID("messages")),
 		indicatorBox:   widget.NewBox(widget.BoxWithID("indicator-box")),

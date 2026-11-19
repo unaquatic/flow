@@ -143,6 +143,11 @@ func collapseTools(ui *UI) {
 	ui.SetToolsExpanded(false)
 }
 
+// barStyles shows prompts and the input box in their Bar styles, which the
+// tests that draw them were written for, rather than the Filled default,
+// which the /config settings tests and the frames that set it check.
+func barStyles(st *UIState) { st.PromptStyle, st.InputStyle = PromptBar, InputBar }
+
 // showSteps shows each step of the replies of ui as a row of its own, as
 // /config's Group steps does when off, for the frames that draw the rows.
 func showSteps(ui *UI) { ui.Apply(ui.service.SetGroupSteps(false)) }
@@ -299,10 +304,10 @@ func TestTranscriptFrames(t *testing.T) {
 			info.Provider, info.Model, info.Usage.Window = "", "", 0
 			ui.AddNotice(StatusNotice(StatusLines(info, nil)))
 		}},
-		// /usage shows the session's context, tokens, cost and worked time
-		// on the system surface, the context colored as /status colors it.
+		// /usage shows the session's context, tokens, cost and worked time,
+		// the context colored as /status colors it.
 		{name: "usage_notice", w: 48, h: 12, add: func(ui *UI) {
-			ui.AddNotice(Notice{Title: UsageTitle, Surface: NoticeSystem, Lines: UsageLines(UsageInfo{
+			ui.AddNotice(Notice{Title: UsageTitle, Lines: UsageLines(UsageInfo{
 				Model:  "lab-a/model-a:high",
 				Usage:  SessionUsage{Input: 120_000, Output: 8_400, CacheRead: 310_000, CacheWrite: 2_000, Cost: 0.42, Context: 300_000, Window: 400_000},
 				Worked: 3*time.Minute + 12*time.Second,
@@ -311,7 +316,7 @@ func TestTranscriptFrames(t *testing.T) {
 		// /help lists the commands and then the keys, names in the primary
 		// color.
 		{name: "help_notice", w: 72, h: 34, add: func(ui *UI) {
-			ui.AddNotice(Notice{Title: HelpTitle, Surface: NoticeSystem, Lines: HelpLines(SlashCommands)})
+			ui.AddNotice(Notice{Title: HelpTitle, Lines: HelpLines(SlashCommands)})
 		}},
 		// Startup heads the transcript with the product icon, a dark ƒ on
 		// an orange square, and under it the release, the model with its
@@ -556,18 +561,14 @@ func TestTranscriptFrames(t *testing.T) {
 			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.Apply(ui.service.CompleteUndo(app.MoveResult{Checkout: "31611124a5b6c7d8"}, nil))
 		}},
-		// With the prompt style filled, the same notices fill boxes on the
-		// box background, as the prompt does.
-		{name: "notice_filled", h: 16, add: func(ui *UI) {
+		// The prompt style styles prompts alone: filled, the prompt fills a
+		// block, and the notices and the session info under it still sit on
+		// the canvas headed by a marker, as with the prompt style a bar.
+		{name: "notice_prompt_filled", h: 16, add: func(ui *UI) {
 			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
 			ui.AddMessage(userText("u1", "Run the tests"))
 			ui.AddNotice(Notice{Text: "Chat cleared"})
 			ui.Apply(ui.service.ShowDiffToast(app.MoveResult{Files: movedFiles()[:2], Checkout: "c1d2e3f4a5b6c7d8"}))
-		}},
-		// With the prompt style filled, the session info fills a box,
-		// unmarked.
-		{name: "status_notice_filled", h: 6, add: func(ui *UI) {
-			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
 			ui.AddNotice(StatusNotice(statusLines()))
 		}},
 		// A marker shape and a tool name color set later reach a notice
@@ -901,6 +902,7 @@ func newInputTestUI(t *testing.T, loads ...extension.Load) *UI {
 		extensions:     builtinExtensions(t),
 		messageWidgets: make(map[message.ID]*ChatMessageBox),
 	}
+	barStyles(s.state)
 	ui.BuildUI()
 	ui.SetModelLabel("provider/model")
 	r.Root().Remove(ui.inputWrapper.ID())

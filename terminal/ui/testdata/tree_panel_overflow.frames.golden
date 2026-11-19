@@ -2,10 +2,6 @@
 |■ Session tree [↑/↓ move] [alt+←/→ fork] [ctrl+o filter]                |
 |               [ctrl+t hidden] [esc cancel]                             |
 |                                                                        |
-|  Agent message 20                                                      |
-|  User message 21                                                       |
-|  Agent message 22                                                      |
-|  User message 23                                                       |
 |  Agent message 24                                                      |
 |  User message 25                                                       |
 |  Agent message 26                                                      |
@@ -20,14 +16,14 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 === fg ===
 |A AAAAAAA AAAA BBBB BBBBB BBBBBBBB BBBBB BBBBBBB BBBBBBB                |
 |               BBBBBBB BBBBBBB BBBB BBBBBBB                             |
 |                                                                        |
-|  CCCCC BBBBBBB BB                                                      |
-|  AAAA BBBBBBB BB                                                       |
-|  CCCCC BBBBBBB BB                                                      |
-|  AAAA BBBBBBB BB                                                       |
 |  CCCCC BBBBBBB BB                                                      |
 |  AAAA BBBBBBB BB                                                       |
 |  CCCCC BBBBBBB BB                                                      |
@@ -42,6 +38,10 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 === bg ===
 |                                                                        |
 |                                                                        |
@@ -53,11 +53,11 @@
 |                                                                        |
 |                                                                        |
 |                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
-|                                                                        |
 |░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                                        |
+|                                                                        |
+|                                                                        |
+|                                                                        |
 |                                                                        |
 |                                                                        |
 |                                                                        |

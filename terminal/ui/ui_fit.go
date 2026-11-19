@@ -84,6 +84,105 @@ func (ui *UI) KeepInputBoxInView() {
 	}
 	ui.fitHeight = height
 	ui.FitInputBox(height)
+	ui.FitToolBoxes(height)
+}
+
+// MinToolRows is the fewest rows FitToolBoxes keeps for an expanded call,
+// on a terminal too short to fit one otherwise.
+const MinToolRows = 6
+
+// ToolRowLimit returns the most rows an expanded call takes inline on a
+// terminal of height rows, so that the call's header still shows once it has
+// finished, right above the input box: what the spare row FitInputBox keeps,
+// the indicator, and the input box at rest leave, as RestInputRows gives it.
+// It counts the indicator whether or not it shows, since a call that ends
+// during a run ends above it. It is at least MinToolRows.
+func (ui *UI) ToolRowLimit(height int) int {
+	return max(height-1-ui.IndicatorRows()-ui.RestInputRows(height), MinToolRows)
+}
+
+// IndicatorRows returns the rows the indicator takes while it shows one
+// line: the line and its margins.
+func (ui *UI) IndicatorRows() int {
+	n := ui.indicatorBox.LayoutNode()
+	top, _ := n.MarginTop.Resolve(0)
+	bottom, _ := n.MarginBottom.Resolve(0)
+	return top + 1 + bottom
+}
+
+// RestInputRows returns the rows the input box takes at rest on a terminal
+// of height rows: the fewest it has taken, as last laid out, since the
+// terminal took that height. A menu, the queue, or a long input grows the
+// box for a while, and a call cut short to fit that would stay short once
+// its rows scroll into the scrollback.
+func (ui *UI) RestInputRows(height int) int {
+	rows := 0
+	if ui.inputWrapper.Visible() {
+		rows = ui.inputWrapper.LayoutNode().Computed.Height
+	}
+	if height != ui.restHeight || rows < ui.restInputRows {
+		ui.restHeight, ui.restInputRows = height, rows
+	}
+	return ui.restInputRows
+}
+
+// FitToolBoxes fits each expanded call of the inline transcript to
+// ToolRowLimit rows, as FitToolBox does, cutting its tallest block short and
+// ending it with TruncatedNote. A call taller than the screen would push its
+// header into the scrollback, where it cannot be redrawn or seen with its
+// output. It does nothing outside inline mode.
+func (ui *UI) FitToolBoxes(height int) {
+	if !ui.inline {
+		return
+	}
+	limit := ui.ToolRowLimit(height)
+	root := ui.renderer.Root()
+	for cm := range ui.Bubbles() {
+		for b := range cm.ToolBoxes() {
+			FitToolBox(b, limit, root.CalculateLayout)
+		}
+	}
+}
+
+// FitToolBox shows as many rows of the tallest block of b, an open call, as
+// leave it within limit rows, laid out by layout, or all of them when they
+// fit. It finds them by laying the call out with each count it tries, as a
+// row of the block may take more than one row of the screen, so that the
+// call ends at the limit, or as near as whole rows bring it. A call that
+// limit and its width fit already, as Fitted records, is left as it is, as
+// is a closed one, whose rows the cut does not change.
+func FitToolBox(b *ToolBox, limit int, layout func()) {
+	if !b.Open() {
+		return
+	}
+	width := max(b.LayoutNode().Computed.Width-2*PaddingX, 1)
+	if b.Fitted && b.FitLimit == limit && b.FitWidth == width {
+		return
+	}
+	b.Fitted, b.FitLimit, b.FitWidth = true, limit, width
+	b.WrapWidth = width
+	height := func(rows int) int {
+		b.SetKeepRows(rows)
+		layout()
+		return b.LayoutNode().Computed.Height
+	}
+	whole := b.BlockRows()
+	if whole == 0 || height(0) <= limit {
+		return
+	}
+	// The most rows that fit, between none, which may not, and the whole
+	// block, which does not.
+	lo, hi := 1, whole-1
+	best := 1
+	for lo <= hi {
+		mid := (lo + hi) / 2
+		if height(mid) <= limit {
+			best, lo = mid, mid+1
+		} else {
+			hi = mid - 1
+		}
+	}
+	height(best)
 }
 
 // FitInputBox keeps the input box, with the indicator above it, within the

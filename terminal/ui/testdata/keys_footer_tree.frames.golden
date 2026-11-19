@@ -9,7 +9,7 @@
 |  └─ User use table-driven tests instead                                |
 |     Read calc_test.go                                                  |
 |     Edit calc_test.go                                                  |
-|     Agent Rewrote the tests as a table.                                |
+|  [4/8]                                                                 |
 |                                                                        |
 |■                                                                       |
 |  esc cancel  ↑/↓ move  alt+←/→ fork  ctrl+o filter  ctrl+t hidden      |
@@ -25,7 +25,7 @@
 |  EE EEEE EEE EEEEEEEEEEEE EEEEE EEEEEEE                                |
 |     EEEE EEEEEEEEEEEE                                                  |
 |     EEEE EEEEEEEEEEEE                                                  |
-|     EEEEE EEEEEEE EEE EEEEE EE E EEEEEE                                |
+|  BBBBB                                                                 |
 |                                                                        |
 |A                                                                       |
 |  BBB BBBBBB  BBB BBBB  BBBBBBB BBBB  BBBBBB BBBBBB  BBBBBB BBBBBB      |

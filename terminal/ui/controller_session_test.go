@@ -248,8 +248,8 @@ func TestInitSessionNoticeFirst(t *testing.T) {
 				t.Errorf("icon notice =\n%s\nwant\n%s", got, product.Icon)
 			}
 			start := loads[0].Messages[1].Notice
-			if want := StartTitle(product.Version()); start.Title != want || start.Surface != NoticeSystem {
-				t.Errorf("start notice title, surface = %q, %v; want %q, the system surface", start.Title, start.Surface, want)
+			if want := StartTitle(product.Version()); start.Title != want || start.Surface != NoticeBar {
+				t.Errorf("start notice title, surface = %q, %v; want %q, a bar notice", start.Title, start.Surface, want)
 			}
 			if got := plainLines(start.Lines); len(got) != 2 || !strings.HasPrefix(got[0], "Model ") || !strings.HasPrefix(got[1], "Directory ") {
 				t.Errorf("start notice = %q, want the model and then the directory", got)
@@ -281,8 +281,8 @@ func TestShowInfoIsSystemNotice(t *testing.T) {
 		t.Fatalf("ShowInfo returned %d events, want the notice alone", len(events))
 	}
 	toast, ok := toastOf(events[0])
-	if !ok || toast.Surface != NoticeSystem {
-		t.Fatalf("event is %+v, want a system notice", events[0])
+	if !ok || toast.Surface != NoticeBar {
+		t.Fatalf("event is %+v, want a bar notice", events[0])
 	}
 	n := len(toast.Lines)
 	if n < 2 || !strings.HasPrefix(toast.Lines[0].PlainText(), "Session") || !strings.HasPrefix(toast.Lines[n-1].PlainText(), "Directory") {
@@ -316,7 +316,7 @@ func TestClearMessagesShowsStatusFirst(t *testing.T) {
 			toasts = append(toasts, toast)
 		}
 	}
-	if len(toasts) == 0 || toasts[0].Surface != NoticeSystem {
+	if len(toasts) == 0 || toasts[0].Surface != NoticeBar {
 		t.Fatalf("notices = %+v, want the /status notice first", toasts)
 	}
 	session := fmt.Sprintf("%-10s%s [%s]", "Session", UntitledName, ShortSessionID(string(s.SessionID())))

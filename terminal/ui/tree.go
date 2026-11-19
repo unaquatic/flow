@@ -9,9 +9,10 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// treeMaxRows is the most session tree rows shown at once. A short terminal
-// shows fewer.
-const treeMaxRows = 12
+// treeMaxRows is the most session tree rows shown at once, as many as the
+// session list shows, so that /checkout opens as tall as /resume. A short
+// terminal shows fewer.
+const treeMaxRows = sessionMaxRows
 
 // HiddenLabel names, in the tree's status line, the forks off the
 // conversation that the tree shows while ShowHidden.

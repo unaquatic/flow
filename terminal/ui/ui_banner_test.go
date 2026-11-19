@@ -25,7 +25,7 @@ func newBuiltTestUI(t *testing.T, inline bool) *UI {
 	ui := &UI{
 		renderer:       r,
 		theme:          DefaultTheme(),
-		service:        &Service{state: &UIState{}, Commands: builtinCommands(t)},
+		service:        &Service{state: &UIState{PromptStyle: PromptBar, InputStyle: InputBar}, Commands: builtinCommands(t)},
 		extensions:     builtinExtensions(t),
 		inline:         inline,
 		messageWidgets: make(map[message.ID]*ChatMessageBox),

@@ -198,7 +198,9 @@ func TestStreamKeepsTheScrollback(t *testing.T) {
 			name:     "expanded tool call",
 			expanded: true,
 			events:   runBash("a1-bash", "go test ./...", output),
-			shows:    []string{"pkg/last", "pkg/39"},
+			// Taller than the screen, the call's output is cut short, so
+			// that its header stays in view.
+			shows: []string{"pkg/0", TruncatedNote},
 		},
 		{
 			// The second call ends first, while the first, above it, still
@@ -211,7 +213,7 @@ func TestStreamKeepsTheScrollback(t *testing.T) {
 				// the first runs and ends.
 				return append(append(first[:1:1], second...), first[1:]...)
 			}(),
-			shows: []string{"done", "pkg/last", "pkg/39"},
+			shows: []string{"done", "pkg/0", TruncatedNote},
 		},
 	}
 	for _, tt := range tests {
