@@ -54,11 +54,18 @@ type SlashCommand struct {
 	Aliases []Command
 	// Desc is the description shown beside the command.
 	Desc string
+	// Hint is shown in grey right after the command's name in the menu,
+	// such as "[skill]" for a command an extension adds for each skill.
+	Hint string
 	// Debug keeps the command out of the menu and /help unless debug is on
 	// in /config. Typed in full, it runs either way.
 	Debug bool
 	// Run performs the command. The input is cleared before it runs.
 	Run func(s *Service) []UIEvent
+	// RunArgs, when set, performs the command typed with text after its
+	// name, as in "/review main.go", given that text. Without it, such a
+	// prompt is sent as it was typed.
+	RunArgs func(s *Service, args string) []UIEvent
 }
 
 // Names yields the command's name and then its aliases.
@@ -122,11 +129,29 @@ func init() {
 // CommandsWith returns the slash commands of a UI that runs with exts, in the
 // order the menu offers them: SlashCommands, with the commands of each
 // CommandExtension among exts, in order, before /quit, which ends the menu.
+// An extension's command whose name or one of whose aliases a command before
+// it already takes is left out, so that no extension, a skill's command
+// among them, shadows one of the UI's own commands or another's.
 func CommandsWith(exts []Extension) []SlashCommand {
 	var added []SlashCommand
+	taken := func(c SlashCommand) bool {
+		for name := range c.Names() {
+			if _, ok := LookupCommand(SlashCommands, name); ok {
+				return true
+			}
+			if _, ok := LookupCommand(added, name); ok {
+				return true
+			}
+		}
+		return false
+	}
 	for _, e := range exts {
 		if c, ok := e.(CommandExtension); ok {
-			added = append(added, c.SlashCommands()...)
+			for _, cmd := range c.SlashCommands() {
+				if !taken(cmd) {
+					added = append(added, cmd)
+				}
+			}
 		}
 	}
 	if len(added) == 0 {
@@ -219,9 +244,9 @@ func MatchSlashCommands(cmds []SlashCommand, query string) []SlashCommand {
 }
 
 // Item returns c as a row of the slash menu, named as the user types it,
-// such as "/status".
+// such as "/status", with its Hint after the name.
 func (c SlashCommand) Item() widget.SelectItem {
-	return widget.SelectItem{Name: c.Name.String(), Description: c.Desc, Value: c.Name}
+	return widget.SelectItem{Name: c.Name.String(), Hint: c.Hint, Description: c.Desc, Value: c.Name}
 }
 
 // ShowSlashMenu offers the commands matching query, or hides the menu when

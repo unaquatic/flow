@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/unaquatic/fluid/layout"
+	"github.com/unaquatic/fluid/style"
 	"github.com/unaquatic/fluid/widget"
 )
 
@@ -27,12 +28,31 @@ func (ui *UI) QueueItemRows() int {
 // ShowQueue shows each of prompts in a box of its own above the input box,
 // the first sent next at the top, as DrawQueue draws them. It removes the
 // boxes when prompts is empty.
-func (ui *UI) ShowQueue(prompts []string) {
+func (ui *UI) ShowQueue(prompts []QueuedPrompt) {
 	ui.queuePrompts = prompts
 	if len(prompts) <= ui.queueLimit {
 		ui.queueLimit = 0
 	}
 	ui.DrawQueue()
+}
+
+// QueueLine returns the first line of p as its box in the queue shows it:
+// the command that queued it as the slash menu names it, its hint in
+// mutedFg, and then the first line of what was typed after it, as in
+// "/review [skill] main.go", or else the first line of its text.
+func QueueLine(p QueuedPrompt) style.StyledText {
+	if p.Command == "" {
+		first, _, _ := strings.Cut(p.Text, "\n")
+		return style.NewStyledText(style.Plain(first))
+	}
+	chunks := []style.TextChunk{style.Plain(p.Command.String())}
+	if p.Hint != "" {
+		chunks = append(chunks, style.TextChunk{Text: " " + p.Hint, Fg: mutedFg})
+	}
+	if first, _, _ := strings.Cut(strings.TrimSpace(p.Args), "\n"); first != "" {
+		chunks = append(chunks, style.Plain(" "+first))
+	}
+	return style.NewStyledText(chunks...)
 }
 
 // QueueHints returns the hints after the queued prompt at index i, as
@@ -47,8 +67,9 @@ func QueueHints(i int) string {
 // DrawQueue replaces the boxes of the queued prompts: within the bound a
 // short terminal sets, as QueuePart bounds it, the prompts sent first, each
 // in a box like the input box, followed by a row of the canvas. A box shows
-// the first line of its prompt, in the input's text color and cut to fit,
-// then its hints, as QueueHints gives them, in mutedFg.
+// the first line of its prompt, as QueueLine gives it, in the input's text
+// color and cut to fit, then its hints, as QueueHints gives them, in
+// mutedFg.
 func (ui *UI) DrawQueue() {
 	for _, child := range ui.queueBox.Children() {
 		ui.queueBox.Remove(child.ID())
@@ -58,8 +79,7 @@ func (ui *UI) DrawQueue() {
 		shown = shown[:min(len(shown), ui.queueLimit)]
 	}
 	for i, prompt := range shown {
-		first, _, _ := strings.Cut(prompt, "\n")
-		text := widget.NewText(first,
+		text := widget.NewStyledText(QueueLine(prompt),
 			widget.TextWithFg(textFg),
 			widget.TextWithTruncate(true),
 			widget.TextWithLayout(layout.WithFlexShrink(1)),

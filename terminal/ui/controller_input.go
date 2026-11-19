@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // HandleInputChange takes the input's text as it changes. While a banner or
@@ -137,7 +138,8 @@ func (s *Service) SetToolsExpanded(expanded bool) []UIEvent {
 }
 
 // HandleSubmit answers an open question, runs a recognized slash command,
-// typed by its name or an alias, or adds text to the queue, which sends it
+// typed by its name or an alias, alone or, for a command with RunArgs, with
+// text after it, or adds text to the queue, which sends it
 // as soon as the session is free. During a run, /demo stops the run;
 // commands that replace the session or move its history stop the run
 // themselves. Enter on an empty input resumes a paused queue.
@@ -159,6 +161,12 @@ func (s *Service) HandleSubmit(text string) []UIEvent {
 	if name, ok := CutCommand(text); ok {
 		if cmd, ok := LookupCommand(s.CommandList(), Command(name)); ok {
 			return slices.Concat(s.ClearInput(), cmd.Run(s))
+		}
+		if i := strings.IndexFunc(name, unicode.IsSpace); i > 0 {
+			cmd, ok := LookupCommand(s.CommandList(), Command(name[:i]))
+			if ok && cmd.RunArgs != nil {
+				return slices.Concat(s.ClearInput(), cmd.RunArgs(s, strings.TrimSpace(name[i:])))
+			}
 		}
 	}
 	return slices.Concat(s.QueuePrompt(text), s.SendQueued())

@@ -935,16 +935,16 @@ func TestInputFrames(t *testing.T) {
 		// Each queued prompt shows in a box of its own above the input box,
 		// the first with the key that sends it now.
 		{name: "input_queued", h: 13, open: func(ui *UI) {
-			ui.ShowQueue([]string{
+			ui.ShowQueue(queuedPrompts(
 				"also update the README",
 				"then run go vet on every package in the repository and report the result\nthen fix what it finds",
-			})
+			))
 		}},
 		// The queue's boxes sit between the Usage box and the input box, in
 		// which the menu opens.
 		{name: "input_slash_queued", h: 19, open: func(ui *UI) {
 			ui.ShowSlashMenu(ui.service.SlashMenuItems("/st"))
-			ui.ShowQueue([]string{"also update the README"})
+			ui.ShowQueue(queuedPrompts("also update the README"))
 		}},
 	}
 	for _, tt := range tests {
@@ -1698,7 +1698,7 @@ func TestMenuFrames(t *testing.T) {
 		// With the input hidden, the banner is the last row of the input box,
 		// under the queue's box.
 		{name: "banner_login_queued", h: 12, open: func(ui *UI) {
-			ui.ShowQueue([]string{"also update the README"})
+			ui.ShowQueue(queuedPrompts("also update the README"))
 			ui.ShowBanner(EventBannerShow{
 				Title: "Login with Provider A",
 			})

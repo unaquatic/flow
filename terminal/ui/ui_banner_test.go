@@ -146,6 +146,30 @@ func TestBannerSearchesFromTheInput(t *testing.T) {
 	}
 }
 
+// TestBannerArrowsWithNoMatches checks that ↑/↓ and Enter leave a banner
+// whose search matches no row open and its query in the input, rather than
+// panicking.
+func TestBannerArrowsWithNoMatches(t *testing.T) {
+	ui := newBannerTestUI(t)
+	ui.renderer.FocusRenderable(ui.input)
+	items := []MenuItem{{Name: "setting-a"}, {Name: "setting-b"}}
+	ui.Apply(ui.service.ShowSearchMenu(&SearchMenu{Items: func() []MenuItem { return items }}))
+	ui.input.InsertText("no row is named this")
+	if got := ui.bannerMenu.ItemCount(); got != 0 {
+		t.Fatalf("menu shows %d rows, want none", got)
+	}
+
+	for _, name := range []input.KeyName{input.KeyUp, input.KeyDown, input.KeyEnter} {
+		ui.HandleKey(&input.KeyEvent{Name: name})
+	}
+	if ui.service.state.Banner != MenuBanner {
+		t.Errorf("banner = %v, want the menu still open", ui.service.state.Banner)
+	}
+	if got, want := ui.input.Text(), "no row is named this"; got != want {
+		t.Errorf("input = %q, want the query %q", got, want)
+	}
+}
+
 // TestBannerArrowsChangeSetting checks that ←/→ without modifiers change the
 // value of the selected setting and keep it selected, and that they go to the
 // input, which moves its cursor, with a modifier and in a menu whose rows have

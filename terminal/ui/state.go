@@ -619,7 +619,7 @@ type UIState struct {
 	Running bool
 	// Queue holds the submitted prompts not yet sent, in the order they are
 	// sent, one each time the session becomes free.
-	Queue []string
+	Queue []QueuedPrompt
 	// QueuePaused stops the queue after a prompt that failed or could not
 	// start, until Enter on an empty input or Alt+Enter resumes it.
 	QueuePaused bool

@@ -14,7 +14,8 @@ func TestMatch(t *testing.T) {
 	}{
 		{name: "empty", query: "", s: "status", want: Result{Tier: Prefix}, wantOK: true},
 		{name: "prefix", query: "st", s: "status", want: Result{Tier: Prefix}, wantOK: true},
-		{name: "exact", query: "status", s: "status", want: Result{Tier: Prefix}, wantOK: true},
+		{name: "exact", query: "status", s: "status", want: Result{Tier: Exact}, wantOK: true},
+		{name: "exact empty", query: "", s: "", want: Result{Tier: Exact}, wantOK: true},
 		{name: "subsequence", query: "ck", s: "checkout", want: Result{Tier: Subsequence, Cost: 3}, wantOK: true},
 		{name: "subsequence fewer skips", query: "sts", s: "status", want: Result{Tier: Subsequence, Cost: 3}, wantOK: true},
 		{name: "subsequence more skips", query: "sts", s: "settings", want: Result{Tier: Subsequence, Cost: 5}, wantOK: true},
@@ -52,6 +53,7 @@ func TestRank(t *testing.T) {
 		{name: "empty keeps order", query: "", want: items},
 		{name: "prefix before subsequence", query: "st", want: []string{"status", "settings"}},
 		{name: "ties keep order", query: "re", want: []string{"resume", "redo"}},
+		{name: "exact before prefix", query: "redo", want: []string{"redo"}},
 		{name: "typo", query: "stauts", want: []string{"status"}},
 		{name: "no match", query: "xyz", want: nil},
 	}

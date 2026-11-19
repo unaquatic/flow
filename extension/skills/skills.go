@@ -13,7 +13,8 @@
 //     to do", as Block writes it, so that the model reads
 //     the instructions whatever it would choose. It adds no content of its
 //     own.
-//   - Terminal UI: package ui offers a /skill:name command for each skill.
+//   - Terminal UI: package ui offers a /name command for each skill whose
+//     name no other command takes, and /skills, which lists them.
 //
 // It finds skills in the user's ~/.agents/skills, and in the .agents/skills
 // of each folder of the project, from the working directory up to the root
@@ -58,7 +59,8 @@ const CommandPrefix = "/skill:"
 
 // MaxNameLength and MaxDescriptionLength are the longest name and
 // description the Agent Skills standard allows. A skill that exceeds either
-// is still found, with a warning.
+// is still found, with a warning; one whose name breaks the pattern
+// ValidName checks is not.
 const (
 	MaxNameLength        = 64
 	MaxDescriptionLength = 1024
@@ -116,10 +118,11 @@ func Roots(home, workingDir string) []string {
 // not exist holds no skills.
 //
 // A skill whose name an earlier skill has is left out, as is one whose File
-// cannot be read or holds no description. Each is reported in the error,
-// joined as errors.Join joins them, with a warning for a name or description
-// that the standard does not allow, whose skill is found all the same. The
-// skills are found whatever the error.
+// cannot be read or holds no description, and one whose name ValidName does
+// not allow. Each is reported in the error, joined as errors.Join joins
+// them, with a warning for a name or description too long for the standard,
+// whose skill is found all the same. The skills are found whatever the
+// error.
 func Find(roots ...string) ([]Skill, error) {
 	var (
 		skills []Skill
@@ -183,10 +186,10 @@ func Find(roots ...string) ([]Skill, error) {
 }
 
 // Read reads the skill whose SKILL.md is at path. It fails when the file
-// cannot be read, or its frontmatter, and when the description is missing;
-// then the Skill holds no Description, and is no skill. A name or a
-// description that the standard does not allow, as Validate tells, is an
-// error too, but then the Skill is whole.
+// cannot be read, or its frontmatter, when the description is missing, and
+// when the name breaks the pattern ValidName checks; then the Skill holds no
+// Description, and is no skill. A name or a description too long for the
+// standard, as Validate tells, is an error too, but then the Skill is whole.
 func Read(path string) (Skill, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
@@ -209,6 +212,9 @@ func Read(path string) (Skill, error) {
 	if s.Description == "" {
 		return Skill{}, fmt.Errorf("skill %s: %s: no description", s.Name, path)
 	}
+	if err := ValidName(s.Name); err != nil {
+		return Skill{}, fmt.Errorf("skill %s: %s: left out: %w", s.Name, path, err)
+	}
 	if err := s.Validate(); err != nil {
 		return s, fmt.Errorf("skill %s: %s: %w", s.Name, path, err)
 	}
@@ -220,19 +226,28 @@ func Read(path string) (Skill, error) {
 // characters other than lowercase letters, digits and single hyphens
 // between them, and a description longer than MaxDescriptionLength.
 func (s Skill) Validate() error {
-	var errs []error
+	errs := []error{ValidName(s.Name)}
 	if n := len(s.Name); n > MaxNameLength {
 		errs = append(errs, fmt.Errorf("name is %d characters, more than %d", n, MaxNameLength))
 	}
-	valid := func(r rune) bool { return r == '-' || 'a' <= r && r <= 'z' || '0' <= r && r <= '9' }
-	if strings.IndexFunc(s.Name, func(r rune) bool { return !valid(r) }) >= 0 {
-		errs = append(errs, errors.New("name holds characters other than a-z, 0-9 and -"))
-	}
-	if strings.HasPrefix(s.Name, "-") || strings.HasSuffix(s.Name, "-") || strings.Contains(s.Name, "--") {
-		errs = append(errs, errors.New("name starts or ends with a hyphen, or holds two in a row"))
-	}
 	if n := len(s.Description); n > MaxDescriptionLength {
 		errs = append(errs, fmt.Errorf("description is %d characters, more than %d", n, MaxDescriptionLength))
+	}
+	return errors.Join(errs...)
+}
+
+// ValidName reports whether name follows the pattern the Agent Skills
+// standard sets for names, as in "pdf-tools": lowercase letters and digits,
+// in words joined by single hyphens, with none at either end. Find leaves
+// out a skill whose name breaks it.
+func ValidName(name string) error {
+	var errs []error
+	valid := func(r rune) bool { return r == '-' || 'a' <= r && r <= 'z' || '0' <= r && r <= '9' }
+	if strings.IndexFunc(name, func(r rune) bool { return !valid(r) }) >= 0 {
+		errs = append(errs, errors.New("name holds characters other than a-z, 0-9 and -"))
+	}
+	if strings.HasPrefix(name, "-") || strings.HasSuffix(name, "-") || strings.Contains(name, "--") {
+		errs = append(errs, errors.New("name starts or ends with a hyphen, or holds two in a row"))
 	}
 	return errors.Join(errs...)
 }
@@ -249,7 +264,9 @@ func Lookup(skills []Skill, name string) (Skill, bool) {
 
 // ParseCommand returns the name of the skill that text invokes, as in
 // "/skill:pdf-tools extract report.pdf", and what follows it, without the
-// spaces around it, and reports whether text invokes one.
+// spaces around it, and reports whether text invokes one. The terminal UI's
+// "/pdf-tools ..." reaches it as "/skill:pdf-tools ...", rewritten by the UI
+// only for a skill whose name no other command takes.
 func ParseCommand(text string) (name, args string, ok bool) {
 	rest, ok := strings.CutPrefix(strings.TrimSpace(text), CommandPrefix)
 	if !ok {

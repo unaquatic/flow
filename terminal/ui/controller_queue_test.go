@@ -55,12 +55,26 @@ func (q *queueTest) startDemo() {
 	q.until(app.TypeAgentStarted)
 }
 
-// wantQueue checks the queued prompts.
+// wantQueue checks the text of the queued prompts.
 func (q *queueTest) wantQueue(want ...string) {
 	q.t.Helper()
-	if !slices.Equal(q.s.state.Queue, want) {
-		q.t.Errorf("queue = %q, want %q", q.s.state.Queue, want)
+	var got []string
+	for _, p := range q.s.state.Queue {
+		got = append(got, p.Text)
 	}
+	if !slices.Equal(got, want) {
+		q.t.Errorf("queue = %q, want %q", got, want)
+	}
+}
+
+// queuedPrompts returns a queued prompt of each of texts, shown as it is
+// sent.
+func queuedPrompts(texts ...string) []QueuedPrompt {
+	out := make([]QueuedPrompt, len(texts))
+	for i, text := range texts {
+		out[i] = QueuedPrompt{Text: text}
+	}
+	return out
 }
 
 // TestQueue_SendsWhenTheRunEnds checks that a prompt submitted during a run
@@ -199,11 +213,45 @@ func TestQueue_UndoTakesBackTheLastQueued(t *testing.T) {
 	q.until(app.TypeAgentEnded)
 }
 
+// TestQueue_UndoPutsBackTheCommandTyped checks that /undo puts a prompt a
+// slash command queued back in the input as the command was typed, not as
+// the prompt it sends.
+func TestQueue_UndoPutsBackTheCommandTyped(t *testing.T) {
+	q := newQueueTest(t)
+	q.startDemo()
+	q.s.Enqueue(QueuedPrompt{Text: "/skill:review main.go", Command: "review", Hint: "[skill]", Args: "main.go"})
+
+	out := q.s.HandleSubmit("/undo")
+	q.wantQueue()
+	if want := "/review main.go"; !slices.Contains(out, UIEvent(EventInputSet{Text: want})) {
+		t.Errorf("/undo = %v, want %q back in the input", out, want)
+	}
+	q.s.Stop()
+	q.until(app.TypeAgentEnded)
+}
+
+// TestQueuedPromptTyped checks that a queued prompt reads as it was typed:
+// its command and what followed it, or its text when no command queued it.
+func TestQueuedPromptTyped(t *testing.T) {
+	for _, tt := range []struct {
+		p    QueuedPrompt
+		want string
+	}{
+		{QueuedPrompt{Text: "fix the tests"}, "fix the tests"},
+		{QueuedPrompt{Text: "/skill:review", Command: "review", Hint: "[skill]"}, "/review"},
+		{QueuedPrompt{Text: "/skill:review main.go", Command: "review", Hint: "[skill]", Args: "main.go"}, "/review main.go"},
+	} {
+		if got := tt.p.Typed(); got != tt.want {
+			t.Errorf("%+v.Typed() = %q, want %q", tt.p, got, tt.want)
+		}
+	}
+}
+
 // TestQueue_SendNowResumesAPausedQueue checks that Alt+Enter sends its prompt
 // at once from a paused queue, and resumes the prompts behind it.
 func TestQueue_SendNowResumesAPausedQueue(t *testing.T) {
 	q := newQueueTest(t)
-	q.s.state.Queue, q.s.state.QueuePaused = []string{"waiting"}, true
+	q.s.state.Queue, q.s.state.QueuePaused = queuedPrompts("waiting"), true
 
 	q.s.HandleSendNow("now")
 	q.wantQueue("waiting")
