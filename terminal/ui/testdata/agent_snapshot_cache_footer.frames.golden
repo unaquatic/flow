@@ -7,9 +7,9 @@
 |                                        |
 |■ Snapshot [c1d2e3f4]                   |
 |                                        |
-|■ Cache read 0K write 0K                |
+|■ Cache 0K Write 0K                     |
 |                                        |
-|■ Worked [3s]                           |
+|■ Worked 3s                             |
 |                                        |
 |                                        |
 === fg ===
@@ -21,9 +21,9 @@
 |                                        |
 |B BBBBBBBB BBBBBBBBBB                   |
 |                                        |
-|B BBBBB BBBB BB BBBBB BB                |
+|B BBBBB AA BBBBB AA                     |
 |                                        |
-|B BBBBBB BBBB                           |
+|B BBBBBB BB                             |
 |                                        |
 |                                        |
 === legend ===

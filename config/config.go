@@ -179,7 +179,7 @@ type Terminal struct {
 	ExpandReasoning bool `json:"expand_reasoning,omitempty"`
 	// ShowSteps shows each collapsed step of a reply, such as reasoning or a
 	// tool call, as a row of its own, rather than grouping the steps that
-	// stack into one row, "Worked [32s]" once they are done, which is the
+	// stack into one row, "Worked 32s" once they are done, which is the
 	// default.
 	ShowSteps bool `json:"show_steps,omitempty"`
 }

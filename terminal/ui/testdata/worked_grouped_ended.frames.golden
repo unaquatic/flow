@@ -1,7 +1,7 @@
 === text ===
 |■ Run the tests                                                                 |
 |                                                                                |
-|■ Worked [32s] [ctrl+o expand]                                                  |
+|■ Worked 32s [ctrl+o expand]                                                    |
 |                                                                                |
 |                                                                                |
 |                                                                                |
@@ -10,7 +10,7 @@
 === fg ===
 |A AAA AAA AAAAA                                                                 |
 |                                                                                |
-|B BBBBBB BBBBB BBBBBBB BBBBBBB                                                  |
+|B BBBBBB BBB BBBBBBB BBBBBBB                                                    |
 |                                                                                |
 |                                                                                |
 |                                                                                |

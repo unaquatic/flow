@@ -571,7 +571,7 @@ const (
 //     footer stands for it, followed by ExpandHint;
 //   - any other run, even of one row, is done, and its last row shows
 //     instead what the run sums up to, as WorkedSummary gives it, such as
-//     "Worked [32s]", until a click on it opens the run, as OpenRuns
+//     "Worked 32s", until a click on it opens the run, as OpenRuns
 //     records it.
 //
 // Only the parts of a message group: a view, such as a turn's changes, the
@@ -698,7 +698,7 @@ func (cm *ChatMessageBox) OpenRun(first *PartBox) {
 
 // WorkedSummary returns what run, rows that stack, sums up to: "Worked" and
 // the time from the earliest start to the latest end of their work, as
-// FormatDuration gives it in brackets, such as "Worked [32s]", or "Worked"
+// FormatDuration gives it, such as "Worked 32s", or "Worked"
 // alone when no row
 // knows both, as for a session stored before flow recorded them.
 func WorkedSummary(run []*PartBox) string {
@@ -719,7 +719,7 @@ func WorkedSummary(run []*PartBox) string {
 	if first.IsZero() || last.IsZero() || last.Before(first) {
 		return "Worked"
 	}
-	return "Worked [" + FormatDuration(last.Sub(first)) + "]"
+	return "Worked " + FormatDuration(last.Sub(first))
 }
 
 // GroupableBox returns the PartBox of r when r is one, shows as a row that

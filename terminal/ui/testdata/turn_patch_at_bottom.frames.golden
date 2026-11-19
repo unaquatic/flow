@@ -6,7 +6,7 @@
 |■ Changed 1 file  +2 -0                 |
 |  calc.go  +2 -0                        |
 |                                        |
-|■ Worked [3s]                           |
+|■ Worked 3s                             |
 === fg ===
 |A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
@@ -15,7 +15,7 @@
 |B BBBBBBB B BBBB  CC DD                 |
 |  BBBBBBB  CC DD                        |
 |                                        |
-|E EEEEEE EEEE                           |
+|E EEEEEE EE                             |
 === legend ===
 A #eb7513
 B #e6e6e6

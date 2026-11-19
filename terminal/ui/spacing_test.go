@@ -151,11 +151,11 @@ func checkBubbleSpacing(t *testing.T, mode CacheMode, worked bool, usage message
 		msg := agentParts(id, parts...)
 		msg.Usage = usage
 		if mode == CachePerMessage {
-			want = append(want, spacedRow{Marker: "Cache read"})
+			want = append(want, spacedRow{Marker: "Cache "})
 		}
 		if last && worked {
 			msg.Worked = 3 * time.Second
-			want = append(want, spacedRow{Marker: "Worked ["})
+			want = append(want, spacedRow{Marker: "Worked "})
 		}
 		return msg
 	}

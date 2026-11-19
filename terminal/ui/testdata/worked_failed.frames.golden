@@ -1,13 +1,13 @@
 === text ===
 |■ Running the tests.                                                            |
 |                                                                                |
-|■ Error [42s]                                                                   |
+|■ Error 42s                                                                     |
 |                                                                                |
 |                                                                                |
 === fg ===
 |A BBBBBBB BBB BBBBBB                                                            |
 |                                                                                |
-|C CCCCC CCCCC                                                                   |
+|C CCCCC CCC                                                                     |
 |                                                                                |
 |                                                                                |
 === legend ===

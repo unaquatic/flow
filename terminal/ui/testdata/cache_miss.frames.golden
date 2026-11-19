@@ -1,12 +1,12 @@
 === text ===
 |■ Done.                                 |
 |                                        |
-|■ Cache read 0K write 0K                |
+|■ Cache 0K Write 0K                     |
 |                                        |
 === fg ===
 |A BBBBB                                 |
 |                                        |
-|C CCCCC CCCC CC CCCCC CC                |
+|C CCCCC BB CCCCC BB                     |
 |                                        |
 === legend ===
 A #eb7513

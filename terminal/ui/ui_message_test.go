@@ -465,7 +465,7 @@ func TestCacheRowUnderReply(t *testing.T) {
 	ui := newInlineTestUI(t)
 	ui.Apply(ui.service.SetCacheMode(CachePerMessage))
 	usage := message.Usage{InputTokens: 20_000, CachedInputTokens: 18_000, CacheCreationInputTokens: 1_500}
-	const row = "Cache read 18K write 1.5K"
+	const row = "Cache 18K Write 1.5K"
 	text := message.TextPart{ID: "a1-text", Text: "Running the tests."}
 	ui.AddMessage(agentParts("a1", text))
 	seg := ui.messageWidgets["a1"].SegmentFor("a1")
@@ -529,16 +529,16 @@ func TestCacheModeSet(t *testing.T) {
 	trailer := seg("a2").Parts["a2-text"].(*widget.StreamMarkdown).Trailer
 	footer := seg("a2").Footer.Text
 
-	const row = "Cache read 18K write 0K"
+	const row = "Cache 18K Write 0K"
 	tests := []struct {
 		mode   CacheMode
 		rows   bool
 		footer string
 	}{
-		{mode: CacheOff, footer: "Worked [39s]"},
-		{mode: CachePerTurn, footer: "Worked [39s] [cache 18K write 0K]"},
-		{mode: CachePerMessage, rows: true, footer: "Worked [39s]"},
-		{mode: CacheOff, footer: "Worked [39s]"},
+		{mode: CacheOff, footer: "Worked 39s"},
+		{mode: CachePerTurn, footer: "Worked 39s Cache 18K Write 0K"},
+		{mode: CachePerMessage, rows: true, footer: "Worked 39s"},
+		{mode: CacheOff, footer: "Worked 39s"},
 	}
 	for _, tt := range tests {
 		ui.Apply(ui.service.SetCacheMode(tt.mode))

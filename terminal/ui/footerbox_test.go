@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"github.com/unaquatic/fluid/style"
+	"strings"
 	"testing"
 	"time"
 )
@@ -11,18 +13,18 @@ func TestFormatWorked(t *testing.T) {
 		outcome TurnOutcome
 		want    string
 	}{
-		{0, TurnDone, "Worked [0s]"},
-		{-time.Second, TurnDone, "Worked [0s]"},
-		{400 * time.Millisecond, TurnDone, "Worked [0s]"},
-		{500 * time.Millisecond, TurnDone, "Worked [1s]"},
-		{42 * time.Second, TurnDone, "Worked [42s]"},
-		{59*time.Second + 600*time.Millisecond, TurnDone, "Worked [1m 00s]"},
-		{65 * time.Second, TurnDone, "Worked [1m 05s]"},
-		{59*time.Minute + 59*time.Second, TurnDone, "Worked [59m 59s]"},
-		{time.Hour + 2*time.Minute + 5*time.Second, TurnDone, "Worked [1h 02m 05s]"},
-		{26 * time.Hour, TurnDone, "Worked [26h 00m 00s]"},
-		{42 * time.Second, TurnFailed, "Error [42s]"},
-		{65 * time.Second, TurnInterrupted, "Interrupted [1m 05s]"},
+		{0, TurnDone, "Worked 0s"},
+		{-time.Second, TurnDone, "Worked 0s"},
+		{400 * time.Millisecond, TurnDone, "Worked 0s"},
+		{500 * time.Millisecond, TurnDone, "Worked 1s"},
+		{42 * time.Second, TurnDone, "Worked 42s"},
+		{59*time.Second + 600*time.Millisecond, TurnDone, "Worked 1m 00s"},
+		{65 * time.Second, TurnDone, "Worked 1m 05s"},
+		{59*time.Minute + 59*time.Second, TurnDone, "Worked 59m 59s"},
+		{time.Hour + 2*time.Minute + 5*time.Second, TurnDone, "Worked 1h 02m 05s"},
+		{26 * time.Hour, TurnDone, "Worked 26h 00m 00s"},
+		{42 * time.Second, TurnFailed, "Error 42s"},
+		{65 * time.Second, TurnInterrupted, "Interrupted 1m 05s"},
 	}
 	for _, tt := range tests {
 		if got := FormatWorked(tt.d, tt.outcome); got != tt.want {
@@ -32,7 +34,8 @@ func TestFormatWorked(t *testing.T) {
 }
 
 // TestFooterText checks that a reply's footer shows the time its turn took,
-// and then any cache use it is given, all in the row's color, and that a
+// and then any cache use it is given, its counts in textFg and all else in
+// the row's color, and that a
 // reply whose time rounds to zero, as one that does not end a turn, has none.
 func TestFooterText(t *testing.T) {
 	tests := []struct {
@@ -43,13 +46,13 @@ func TestFooterText(t *testing.T) {
 		cache   string
 		want    string
 	}{
-		{name: "seconds", worked: 42 * time.Second, want: "Worked [42s]"},
-		{name: "minutes", worked: 107 * time.Second, want: "Worked [1m 47s]"},
-		{name: "cache use", worked: 39 * time.Second, cache: "[cache 22K write 0K]", want: "Worked [39s] [cache 22K write 0K]"},
-		{name: "failed", worked: 42 * time.Second, outcome: TurnFailed, want: "Error [42s]"},
-		{name: "interrupted", worked: 42 * time.Second, outcome: TurnInterrupted, cache: "[cache 1K write 0K]", want: "Interrupted [42s] [cache 1K write 0K]"},
-		{name: "hint", worked: 17 * time.Second, hint: ExpandHint, cache: "[cache 1K write 0K]", want: "Worked [17s] [ctrl+o expand] [cache 1K write 0K]"},
-		{name: "not the turn's end", cache: "[cache 22K write 0K]"},
+		{name: "seconds", worked: 42 * time.Second, want: "Worked 42s"},
+		{name: "minutes", worked: 107 * time.Second, want: "Worked 1m 47s"},
+		{name: "cache use", worked: 39 * time.Second, cache: "Cache 22K Write 0K", want: "Worked 39s Cache 22K Write 0K"},
+		{name: "failed", worked: 42 * time.Second, outcome: TurnFailed, want: "Error 42s"},
+		{name: "interrupted", worked: 42 * time.Second, outcome: TurnInterrupted, cache: "Cache 1K Write 0K", want: "Interrupted 42s Cache 1K Write 0K"},
+		{name: "hint", worked: 17 * time.Second, hint: ExpandHint, cache: "Cache 1K Write 0K", want: "Worked 17s [ctrl+o expand] Cache 1K Write 0K"},
+		{name: "not the turn's end", cache: "Cache 22K Write 0K"},
 		{name: "under half a second", worked: 400 * time.Millisecond},
 	}
 	for _, tt := range tests {
@@ -58,9 +61,15 @@ func TestFooterText(t *testing.T) {
 			if got := text.PlainText(); got != tt.want {
 				t.Errorf("FooterText(%v, %v, %q) = %q, want %q", tt.worked, tt.outcome, tt.cache, got, tt.want)
 			}
+			// The cache's counts stand out in textFg; all else is in the
+			// row's color.
 			for _, c := range text.Chunks {
-				if !c.Fg.IsTransparent() {
+				count := strings.ContainsAny(c.Text, "0123456789") && strings.HasSuffix(c.Text, "K")
+				if want := style.ColorTransparent; !count && c.Fg != want {
 					t.Errorf("chunk %q has its own color %v, want the row's", c.Text, c.Fg)
+				}
+				if count && c.Fg != textFg {
+					t.Errorf("count %q in %v, want textFg %v", c.Text, c.Fg, textFg)
 				}
 			}
 		})
@@ -73,13 +82,13 @@ func TestFooterText(t *testing.T) {
 func TestFooterBoxShowsOnceTurnEnds(t *testing.T) {
 	textFg := mutedFg
 	b := NewFooterBox(0, TurnDone, textFg)
-	b.SetCache("[cache 1.0K write 0K]")
+	b.SetCache("Cache 1.0K Write 0K")
 	if b.Visible() {
 		t.Errorf("footer %q shown before the turn ended", b.Text.PlainText())
 	}
 	b.SetCache("")
 	b.SetTurnEnd(42*time.Second, TurnDone)
-	if got, want := b.Text.PlainText(), "Worked [42s]"; !b.Visible() || got != want {
+	if got, want := b.Text.PlainText(), "Worked 42s"; !b.Visible() || got != want {
 		t.Errorf("footer = %q, shown %v; want %q shown", got, b.Visible(), want)
 	}
 	if got := b.Text.Fg(); got != textFg {

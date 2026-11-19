@@ -3,19 +3,19 @@
 |                                                                                |
 |■ Worked [ctrl+o expand]                                                        |
 |                                                                                |
-|■ Cache read 0K write 0K                                                        |
+|■ Cache 0K Write 0K                                                             |
 |                                                                                |
 |■ All tests pass.                                                               |
 |                                                                                |
-|■ Cache read 1.0K write 0.2K                                                    |
+|■ Cache 1.0K Write 0.2K                                                         |
 |                                                                                |
-|■ Worked [42s]                                                                  |
+|■ Worked 42s                                                                    |
 |                                                                                |
 |■ commit it                                                                     |
 |                                                                                |
 |■ Committed.                                                                    |
 |                                                                                |
-|■ Worked [7s]                                                                   |
+|■ Worked 7s                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |
@@ -24,19 +24,19 @@
 |                                                                                |
 |B BBBBBB BBBBBBB BBBBBBB                                                        |
 |                                                                                |
-|B BBBBB BBBB BB BBBBB BB                                                        |
+|B BBBBB AA BBBBB AA                                                             |
 |                                                                                |
 |C AAA AAAAA AAAAA                                                               |
 |                                                                                |
-|B BBBBB BBBB BBBB BBBBB BBBB                                                    |
+|B BBBBB AAAA BBBBB AAAA                                                         |
 |                                                                                |
-|B BBBBBB BBBBB                                                                  |
+|B BBBBBB BBB                                                                    |
 |                                                                                |
 |A AAAAAA AA                                                                     |
 |                                                                                |
 |C AAAAAAAAAA                                                                    |
 |                                                                                |
-|B BBBBBB BBBB                                                                   |
+|B BBBBBB BB                                                                     |
 |                                                                                |
 |                                                                                |
 |                                                                                |

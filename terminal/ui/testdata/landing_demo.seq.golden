@@ -67,7 +67,7 @@
 |  │ calculator/divide_test.go │ Success and error tests   │   |
 |  └───────────────────────────┴───────────────────────────┘   |
 |                                                              |
-|■ Worked [36s]                                                |
+|■ Worked 36s                                                  |
 === fg ===
 |A AAA A AAAAAA AAAAAA AAAA AAAAAAA A AAAA AAAAAAA             |
 |                                                              |
@@ -136,7 +136,7 @@
 |  E DDDDDDDDDDDDDDDDDDDDDDDDD E AAAAAAA AAA AAAAA AAAAA   E   |
 |  EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE   |
 |                                                              |
-|C CCCCCC CCCCC                                                |
+|C CCCCCC CCC                                                  |
 === bg ===
 |                                                              |
 |                                                              |

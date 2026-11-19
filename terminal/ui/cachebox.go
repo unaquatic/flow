@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/style"
 )
@@ -11,8 +9,8 @@ import (
 const CacheLabel = "Cache"
 
 // CacheBox is the PartBox of the cache use of a reply's request, which the
-// CachePerMessage mode shows: a row like a collapsed tool call's, "Cache read
-// 7.7K write 0K", under the reply's parts and views. It starts with ToolMarker
+// CachePerMessage mode shows: a row like a collapsed tool call's, "Cache 7.7K
+// Write 0K", under the reply's parts and views. It starts with ToolMarker
 // as tool calls do, has nothing to expand, and is gone until shown.
 type CacheBox struct {
 	*PartBox
@@ -55,19 +53,19 @@ func (b *CacheBox) SetShown(show bool) {
 	}
 }
 
-// ShowHeader writes CacheLabel in NameFg, not bold, then the counts of Usage in
-// the color of Status, as CacheCounts gives them.
+// ShowHeader writes the cache use of Usage as the turn's footer shows it,
+// CacheText of it: CacheLabel in NameFg, not bold, as a tool's name, the
+// counts in textFg, as CacheChunks colors them, and the other labels in the
+// color of Status.
 func (b *CacheBox) ShowHeader() {
-	b.Header.SetStyledContent(style.NewStyledText(
-		ToolNameChunk(CacheLabel, b.NameFg),
-		style.Plain(" "),
-		style.TextChunk{Text: CacheCounts(b.Usage), Fg: b.Status.Fg()},
-	))
-}
-
-// CacheCounts returns the cache use of a request that reported u as a cache
-// row shows it after CacheLabel: the prompt tokens it read from a prompt
-// cache and those it wrote to one, such as "read 7.7K write 0K".
-func CacheCounts(u message.Usage) string {
-	return fmt.Sprintf("read %s write %s", FormatTokens(u.CachedInputTokens), FormatTokens(u.CacheCreationInputTokens))
+	chunks := CacheChunks(CacheText(b.Usage))
+	for i := range chunks {
+		switch {
+		case i == 0:
+			chunks[i] = ToolNameChunk(chunks[i].Text, b.NameFg)
+		case chunks[i].Fg.IsTransparent():
+			chunks[i].Fg = b.Status.Fg()
+		}
+	}
+	b.Header.SetStyledContent(style.NewStyledText(chunks...))
 }

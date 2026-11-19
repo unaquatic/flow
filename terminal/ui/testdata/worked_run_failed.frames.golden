@@ -12,7 +12,7 @@
 |    }                                                                           |
 |  }                                                                             |
 |                                                                                |
-|■ Error [1m 52s]                                                                |
+|■ Error 1m 52s                                                                  |
 === fg ===
 |A AAA AAA AAAAA                                                                 |
 |                                                                                |
@@ -27,7 +27,7 @@
 |    A                                                                           |
 |  A                                                                             |
 |                                                                                |
-|D DDDDD DDD DDDD                                                                |
+|D DDDDD DD DDD                                                                  |
 === legend ===
 A #e6e6e6
 B #eb7513

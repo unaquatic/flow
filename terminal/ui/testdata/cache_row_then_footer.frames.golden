@@ -1,20 +1,21 @@
 === text ===
 |■ Worked [ctrl+o expand]                |
 |                                        |
-|■ Cache read 0K write 0K                |
+|■ Cache 0K Write 0K                     |
 |                                        |
-|■ Worked [3s]                           |
+|■ Worked 3s                             |
 |                                        |
 |                                        |
 |                                        |
 === fg ===
 |A AAAAAA AAAAAAA AAAAAAA                |
 |                                        |
-|A AAAAA AAAA AA AAAAA AA                |
+|A AAAAA BB AAAAA BB                     |
 |                                        |
-|A AAAAAA AAAA                           |
+|A AAAAAA AA                             |
 |                                        |
 |                                        |
 |                                        |
 === legend ===
 A #8a8a8a
+B #e6e6e6

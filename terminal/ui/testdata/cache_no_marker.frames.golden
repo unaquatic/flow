@@ -5,13 +5,13 @@
 |                                                            |
 |  Worked [ctrl+o expand]                                    |
 |                                                            |
-|  Cache read 18K write 4.0K                                 |
+|  Cache 18K Write 4.0K                                      |
 |                                                            |
 |  Fixed the divide-by-zero check.                           |
 |                                                            |
-|  Cache read 22K write 0K                                   |
+|  Cache 22K Write 0K                                        |
 |                                                            |
-|  Worked [39s]                                              |
+|  Worked 39s                                                |
 |                                                            |
 |                                                            |
 === fg ===
@@ -21,13 +21,13 @@
 |                                                            |
 |  BBBBBB BBBBBBB BBBBBBB                                    |
 |                                                            |
-|  BBBBB BBBB BBB BBBBB BBBB                                 |
+|  BBBBB AAA BBBBB AAAA                                      |
 |                                                            |
 |  AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |
-|  BBBBB BBBB BBB BBBBB BB                                   |
+|  BBBBB AAA BBBBB AA                                        |
 |                                                            |
-|  BBBBBB BBBBB                                              |
+|  BBBBBB BBB                                                |
 |                                                            |
 |                                                            |
 === legend ===

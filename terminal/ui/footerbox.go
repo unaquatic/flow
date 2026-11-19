@@ -11,8 +11,8 @@ import (
 
 // FooterBox displays the footer of the reply that ends a turn as a single
 // row, cut short with an ellipsis when it does not fit: how long the turn
-// took and how it ended, such as "Worked [42s]", "Error [42s]" or
-// "Interrupted [42s]", and then, in the CachePerTurn mode, the
+// took and how it ended, such as "Worked 42s", "Error 42s" or
+// "Interrupted 42s", and then, in the CachePerTurn mode, the
 // cache use of its last request. It is hidden under the other replies, and
 // until the turn has ended. While SetMarker shows it, ToolMarker starts the
 // row, in the box's left padding, as it starts a tool call's.
@@ -127,7 +127,7 @@ func (b *FooterBox) Sync() {
 // FooterText returns the footer of a reply that ends a turn that took worked
 // and ended as outcome says: FormatWorked of both, then, when hint is not
 // empty, a space and hint, and then, when cache is not empty, a space and
-// cache, all in the row's color. A time that rounds to zero seconds, as that
+// cache, as CacheChunks colors it, all else in the row's color. A time that rounds to zero seconds, as that
 // of a reply that does not end a turn or of a run that failed at once, has no
 // footer.
 func FooterText(worked time.Duration, outcome TurnOutcome, hint, cache string) style.StyledText {
@@ -139,7 +139,7 @@ func FooterText(worked time.Duration, outcome TurnOutcome, hint, cache string) s
 		text.Chunks = append(text.Chunks, style.Plain(" "+hint))
 	}
 	if cache != "" {
-		text.Chunks = append(text.Chunks, style.Plain(" "+cache))
+		text.Chunks = append(append(text.Chunks, style.Plain(" ")), CacheChunks(cache)...)
 	}
 	return text
 }
@@ -172,10 +172,10 @@ func (o TurnOutcome) String() string {
 }
 
 // FormatWorked returns the footer text for a turn that took d and ended as
-// outcome says, with d as FormatDuration gives it: "Worked [42s]",
-// "Error [1m 05s]", or "Interrupted [1h 02m 05s]".
+// outcome says, with d as FormatDuration gives it: "Worked 42s",
+// "Error 1m 05s", or "Interrupted 1h 02m 05s".
 func FormatWorked(d time.Duration, outcome TurnOutcome) string {
-	return outcome.String() + " [" + FormatDuration(d) + "]"
+	return outcome.String() + " " + FormatDuration(d)
 }
 
 // FormatWorking returns the indicator text for a turn in progress that has
