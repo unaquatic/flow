@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -253,7 +254,7 @@ func TestUndo_RewindsLastTurnFiles(t *testing.T) {
 	if sess == nil || !sess.Head.MovedBack() {
 		t.Fatal("expected the head to be parked behind a branch it can return to")
 	}
-	branch, err := w.app.sessions.Branch(t.Context(), w.id)
+	branch, err := w.app.sessions.Path(t.Context(), w.id, sess.Head.Forward)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,6 +299,69 @@ func TestUndoRedo_RoundTrip(t *testing.T) {
 	if msgs := branchOf(t, w.app.sessions, w.id); len(msgs) != 4 {
 		t.Fatalf("redo left %d messages on the branch, want 4", len(msgs))
 	}
+}
+
+// TestUndo_KeepsChangesMadeBetweenTurns checks that undo restores the
+// workspace as the undone prompt was sent, so that files changed outside the
+// session after the turn before it ended, such as by another session in the
+// same worktree, stay as they were, and only the undone turn's own edits are
+// reverted. Redo then changes back only what undo changed.
+func TestUndo_KeepsChangesMadeBetweenTurns(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		edits     map[string]string
+		wantA     string
+		wantFiles []string
+	}{
+		{name: "turn that edits nothing", wantA: "v1"},
+		{name: "turn that edits", edits: map[string]string{"a.txt": "v2"}, wantA: "v1", wantFiles: []string{"a.txt"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			w, worktree := newTestSession(t, "ses_drift")
+
+			seedTurn(t, w, worktree, "first", map[string]string{"a.txt": "v1"})
+			if err := os.WriteFile(filepath.Join(worktree, "other.txt"), []byte("outside"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			seedTurn(t, w, worktree, "second", tt.edits)
+
+			moved, err := w.undo()
+			if err != nil {
+				t.Fatalf("undo: %v", err)
+			}
+			if got := changedFiles(moved); !slices.Equal(got, tt.wantFiles) {
+				t.Errorf("undo changed %q, want %q", got, tt.wantFiles)
+			}
+			if got := readFile(t, worktree, "other.txt"); got != "outside" {
+				t.Errorf("after undo: other.txt = %q, want the change made between turns kept", got)
+			}
+			if got := readFile(t, worktree, "a.txt"); got != tt.wantA {
+				t.Errorf("after undo: a.txt = %q, want %q", got, tt.wantA)
+			}
+
+			moved, err = w.redo()
+			if err != nil {
+				t.Fatalf("redo: %v", err)
+			}
+			if got := changedFiles(moved); !slices.Equal(got, tt.wantFiles) {
+				t.Errorf("redo changed %q, want %q", got, tt.wantFiles)
+			}
+			if got := readFile(t, worktree, "other.txt"); got != "outside" {
+				t.Errorf("after redo: other.txt = %q, want outside", got)
+			}
+		})
+	}
+}
+
+// changedFiles returns the base names of the files a move changed, sorted,
+// or nil when it changed none.
+func changedFiles(moved MoveResult) []string {
+	var names []string
+	for _, f := range moved.Files {
+		names = append(names, filepath.Base(f.File))
+	}
+	slices.Sort(names)
+	return names
 }
 
 // TestUndo_StepsBackOneTurnAtATime pins the per-turn granularity that the old

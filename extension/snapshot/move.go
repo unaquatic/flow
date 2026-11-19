@@ -40,9 +40,12 @@ func (e *Extension) OnMove(ctx context.Context, m extension.Move) (extension.Mov
 	return extension.MoveResult{Files: e.fileDiffs(ctx, before, after), Checkout: tree.String()}, nil
 }
 
-// TreeAt returns the workspace tree recorded for head, a message of branch.
-// An empty head resolves to the tree the branch started from. It refuses
-// with ErrNoSnapshot when no tree was recorded.
+// TreeAt returns the workspace tree recorded for head, a message of branch,
+// as TreeAfter finds it once head has run. An empty head resolves to the
+// tree the branch started from. branch runs past head to a leaf, as
+// extension.Move holds it, so that a move back to the message before a
+// prompt restores the tree that prompt was sent with. It refuses with
+// ErrNoSnapshot when no tree was recorded.
 func TreeAt(branch []message.Content, head message.ID) (Hash, error) {
 	visible := 0
 	if head != "" {
@@ -60,18 +63,22 @@ func TreeAt(branch []message.Content, head message.ID) (Hash, error) {
 }
 
 // TreeAfter returns the workspace as it stood once the first n messages of a
-// branch had run: the newest tree they ended with. When none of them recorded
-// one, as before the first message, it is the tree of the next message if
-// that is a prompt, which changes no files, so that its tree is the workspace
-// before it. It returns the zero Hash when there is no such tree.
+// branch had run. When the next message is a prompt that recorded a tree, it
+// is that tree: a prompt changes no files, so its tree is the workspace just
+// before it, including what changed after the messages before it ended,
+// such as edits made outside the session between turns. Otherwise it is the
+// newest tree the first n messages ended with. It returns the zero Hash when
+// there is no such tree.
 func TreeAfter(branch []message.Content, n int) Hash {
+	if n < len(branch) && branch[n].Role == message.RoleUser {
+		if tree := TreeIn(branch[n].Parts); !tree.IsZero() {
+			return tree
+		}
+	}
 	for _, m := range slices.Backward(branch[:n]) {
 		if tree := TreeIn(m.Parts); !tree.IsZero() {
 			return tree
 		}
-	}
-	if n < len(branch) && branch[n].Role == message.RoleUser {
-		return TreeIn(branch[n].Parts)
 	}
 	return Hash{}
 }
