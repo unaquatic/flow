@@ -1,0 +1,30 @@
+=== text ===
+|  Bash [queued]                                             |
+|                                                            |
+|  $ cd calc && sudo -E go test ./... | tee "$(mktemp)"      |
+|  for f in *.go; do gofmt -l "$f"; done                     |
+|  bash -c 'go vet ./... && git diff --stat'                 |
+|                                                            |
+|                                                            |
+=== fg ===
+|  AAAA AAAAAAAA                                             |
+|                                                            |
+|  B CC BBBB BB CCCC BB CC CCCC BBBBB B CCC DEECCCCCCED      |
+|  EEE B EE BBBBB EE CCCCC BB DBBDB EEEE                     |
+|  CCCC BB DCC CCC DDDDD DD CCC CCCC DDDDDDD                 |
+|                                                            |
+|                                                            |
+=== attrs ===
+|                                                            |
+|                                                            |
+|                                                            |
+|  BBB   BB       BB                BBBB                     |
+|                                                            |
+|                                                            |
+|                                                            |
+=== legend ===
+A #8a8a8a
+B #e6e6e6
+C #ffb642
+D #91b557
+E #eb7513

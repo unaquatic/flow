@@ -3,12 +3,12 @@
 |  Read calculator/calc_test.go                              |
 |  Edit calculator/calc.go                                   |
 |  Write calculator/divide_test.go                           |
-|  Bash go test ./calculator/... -v                          |
+|  Bash go test                                              |
 === fg ===
 |  AAAA AAAAAAAAAAAAAAA                                      |
 |  AAAA AAAAAAAAAAAAAAAAAAAAAAA                              |
 |  AAAA AAAAAAAAAAAAAAAAAA                                   |
 |  AAAAA AAAAAAAAAAAAAAAAAAAAAAAAA                           |
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AA                          |
+|  AAAA AA AAAA                                              |
 === legend ===
 A #8a8a8a

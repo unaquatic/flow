@@ -407,7 +407,7 @@ func TestClickKeepsHeaderInPlace(t *testing.T) {
 				return -1
 			}
 
-			header := rowOf("Bash go test ./...")
+			header := rowOf("Bash go test")
 			if header < 0 || ui.messageBox.UserScrolled() || !ui.messageBox.IsAtBottom() {
 				t.Fatalf("setup: header on row %d, scrolled %v; want it shown with the transcript at its bottom",
 					header, ui.messageBox.UserScrolled())
@@ -417,7 +417,7 @@ func TestClickKeepsHeaderInPlace(t *testing.T) {
 			if got, want := rowOf("Bash"), header+tt.shift; got != want {
 				t.Errorf("expanded: header on row %d, want row %d, %d below where it was clicked", got, want, tt.shift)
 			}
-			if got := rowOf("Bash go test ./..."); got >= 0 {
+			if got := rowOf("Bash go test"); got >= 0 {
 				t.Errorf("expanded: header on row %d still holds the command", got)
 			}
 			// The details open downward from the header, past the bottom of
@@ -430,7 +430,7 @@ func TestClickKeepsHeaderInPlace(t *testing.T) {
 			}
 
 			clickTool(ui, "a1", 0)
-			if got := rowOf("Bash go test ./..."); got != header {
+			if got := rowOf("Bash go test"); got != header {
 				t.Errorf("collapsed: header on row %d, want row %d", got, header)
 			}
 			if ui.messageBox.UserScrolled() || !ui.messageBox.IsAtBottom() {

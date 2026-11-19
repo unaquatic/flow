@@ -1,8 +1,8 @@
 === text ===
-|  Bash go test ./calculator/... -run 'TestDivide… [queued]  |
+|  Bash go test [queued]                                     |
 |                                                            |
 === fg ===
-|  AAAA AA AAAA AAAAAAAAAAAAAAAA AAAA AAAAAAAAAAAA AAAAAAAA  |
+|  AAAA AA AAAA AAAAAAAA                                     |
 |                                                            |
 === legend ===
 A #8a8a8a

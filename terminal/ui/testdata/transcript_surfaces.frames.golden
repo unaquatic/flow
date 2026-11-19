@@ -5,7 +5,7 @@
 |                                        |
 |■ x := 1                                |
 |                                        |
-|■ Bash go test ./...                    |
+|■ Bash go test                          |
 |                                        |
 |                                        |
 |                                        |
@@ -26,7 +26,7 @@
 |                                        |
 |B A AA A                                |
 |                                        |
-|C CCCC CC CCCC CCCCC                    |
+|C CCCC CC CCCC                          |
 |                                        |
 |                                        |
 |                                        |

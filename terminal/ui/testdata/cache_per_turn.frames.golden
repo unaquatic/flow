@@ -3,7 +3,7 @@
 |                                                            |
 |■ Running the tests.                                        |
 |                                                            |
-|■ Bash go test ./... [exit 1]                               |
+|■ Bash go test [exit 1]                                     |
 |                                                            |
 |■ Fixed the divide-by-zero check.                           |
 |                                                            |
@@ -17,7 +17,7 @@
 |                                                            |
 |B AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|C CCCC CC CCCC CCCCC CCCCC CC                               |
+|C CCCC CC CCCC CCCCC CC                                     |
 |                                                            |
 |B AAAAA AAA AAAAAAAAAAAAAA AAAAAA                           |
 |                                                            |

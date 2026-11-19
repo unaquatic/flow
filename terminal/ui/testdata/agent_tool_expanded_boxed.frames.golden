@@ -29,7 +29,7 @@
 |                                        |
 |  CCCC CCCCC CC                         |
 |                                        |
-|  B BB BBBB BBBBB                       |
+|  B DD DDDD BBBBB                       |
 |                                        |
 |  BBBB                                  |
 |                                        |
@@ -102,4 +102,5 @@
 A #eb7513
 B #e6e6e6
 C #8a8a8a
+D #ffb642
 ░ #1f1f1f SurfaceRaised/SuccessSurface

@@ -116,6 +116,9 @@ type ToolFormatter interface {
 type ToolView struct {
 	// Label names the tool in the header, or is "" for ToolLabel's name.
 	Label string
+	// Summary, when set, sums up the input in the header in place of
+	// ToolInputSummary's first line, such as the outline of a command.
+	Summary string
 	// HeaderNote follows the summary of the input in the header, such as
 	// the lines a read reads.
 	HeaderNote string
@@ -125,7 +128,8 @@ type ToolView struct {
 	// Param is what the details show of ParamKey, when ParamKey is set.
 	Param string
 	// Shell shows Param as a command line, "$ command", highlighted as
-	// bash.
+	// bash, with the words that name the commands it runs in the color of
+	// functions, as ToolBox.HighlightCommand gives it.
 	Shell bool
 	// ParamInHeader keeps the summary of the input, such as a path, after
 	// the tool's name in the header while the call is expanded, rather than

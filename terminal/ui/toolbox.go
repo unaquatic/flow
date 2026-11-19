@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/unaquatic/flow/agent/message"
+	"github.com/unaquatic/flow/internal/shell"
 	"github.com/unaquatic/fluid/style"
+	"github.com/unaquatic/fluid/syntax"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
 )
@@ -31,7 +33,7 @@ type ToolBox struct {
 	// and the lines a read call reads after its path.
 	MutedFg style.Color
 	// Highlighter colors a command line as Body colors code.
-	Highlighter widget.SyntaxHighlighter
+	Highlighter *widget.Highlighter
 	// Params displays a call's input as ParamsText gives it, such as a
 	// command line or an edit call's path, wrapped to the box width.
 	Params *widget.Text
@@ -195,15 +197,16 @@ func (b *ToolBox) ShowHeader() {
 }
 
 // ParamsText returns the params of a call: param, the main one, and then
-// each of notes in MutedFg, a space apart. A shell param is a command, shown
-// as a prompt line, "$ command", with the command highlighted as bash. It
-// returns empty text when there is neither param nor a note.
-func (b *ToolBox) ParamsText(param string, shell bool, notes []string) style.StyledText {
+// each of notes in MutedFg, a space apart. When command is set, param is a
+// command, shown as a prompt line, "$ command", with the command highlighted
+// as HighlightCommand does. It returns empty text when there is neither
+// param nor a note.
+func (b *ToolBox) ParamsText(param string, command bool, notes []string) style.StyledText {
 	fg, bg := b.Params.Fg(), b.Params.Bg()
 	var chunks []style.TextChunk
 	switch {
 	case param == "":
-	case shell:
+	case command:
 		chunks = append(chunks, style.TextChunk{Text: "$ ", Fg: fg, Bg: bg})
 		for i, line := range b.HighlightCommand(param, fg, bg) {
 			if i > 0 {
@@ -242,20 +245,60 @@ func (b *ToolBox) LinesText(lines []ToolLine) style.StyledText {
 	return style.NewStyledText(chunks...)
 }
 
-// HighlightCommand returns the lines of command highlighted as bash, at least
-// one, with fg and bg for the text the highlighter leaves uncolored. A command
-// the highlighter fails on is returned in fg on bg.
+// HighlightCommand returns the lines of command highlighted as bash, one per
+// line, with fg and bg for the text the highlighter leaves uncolored. The
+// words that name the commands it runs, as shell.CommandWords finds them,
+// such as go and test in "sudo go test" and make in "bash -c 'make'", show
+// as functions do wherever they stand, as CommandTokens gives them.
 func (b *ToolBox) HighlightCommand(command string, fg, bg style.Color) []textbuf.Line {
-	lines, err := b.Highlighter.Highlight(command, "bash", fg, bg)
-	if err == nil && len(lines) > 0 {
+	lang := syntax.Lookup("bash")
+	if lang == nil {
+		lines, _ := b.Highlighter.Highlight(command, "bash", fg, bg)
 		return lines
 	}
-	// Show the command unstyled rather than not at all.
-	lines = nil
+	words, _ := shell.CommandWords(command)
+	lines := make([]textbuf.Line, 0, strings.Count(command, "\n")+1)
+	var (
+		st   syntax.State
+		toks []syntax.Token
+	)
+	at := 0
 	for text := range strings.SplitSeq(command, "\n") {
-		lines = append(lines, textbuf.Line{Spans: []textbuf.Span{{Text: text, Fg: fg, Bg: bg}}})
+		toks, st = lang.AppendLine(toks[:0], text, st)
+		lines = append(lines, b.Highlighter.Line(text, CommandTokens(toks, at, words), fg, bg))
+		at += len(text) + 1
 	}
 	return lines
+}
+
+// CommandTokens returns toks, the tokens the bash lexer gives a line that
+// starts at offset at of its source, with the parts of them within words,
+// words of that source ordered by offset, as functions, in a new slice. The
+// tokens the lexer already shows as builtins or keywords, as cd and exit,
+// keep their kind.
+func CommandTokens(toks []syntax.Token, at int, words []shell.Word) []syntax.Token {
+	out := make([]syntax.Token, 0, len(toks))
+	for _, t := range toks {
+		for text := t.Text; text != ""; {
+			for len(words) > 0 && words[0].Offset+len(words[0].Raw) <= at {
+				words = words[1:]
+			}
+			n, kind := len(text), t.Kind
+			switch {
+			case len(words) == 0:
+			case words[0].Offset > at:
+				n = min(n, words[0].Offset-at)
+			default:
+				n = min(n, words[0].Offset+len(words[0].Raw)-at)
+				if kind != syntax.BuiltinFunction && kind != syntax.Keyword {
+					kind = syntax.Function
+				}
+			}
+			out = append(out, syntax.Token{Kind: kind, Text: text[:n]})
+			text, at = text[n:], at+n
+		}
+	}
+	return out
 }
 
 // AppendSpans appends the spans of line to chunks, each as a chunk in its

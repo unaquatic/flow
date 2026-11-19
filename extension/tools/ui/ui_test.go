@@ -122,7 +122,9 @@ func TestToolBox_ReadShowsContentOnCompletion(t *testing.T) {
 }
 
 // TestToolBox_BashHeaderAndCommand checks that a bash call's header reads its
-// tool name, not bold, and the first line of its command, never its description,
+// tool name, not bold, and the names of the commands it runs with the
+// operators between them, or the first line of a command bash would not run,
+// never its description,
 // with the status apart from it in the color the key hints give what a key
 // does, and that its command line shows the timeout, in the muted text color,
 // only when it is not the default, and notes its other params but for its
@@ -166,8 +168,33 @@ func TestToolBox_BashHeaderAndCommand(t *testing.T) {
 		},
 		"multi-line command": {
 			input:       `{"command":"cd calc\ngo test","timeout_ms":120000}`,
-			wantHeader:  "Bash cd calc…",
+			wantHeader:  "Bash cd; go test",
 			wantCommand: "$ cd calc\ngo test [timeout 120s]",
+		},
+		"command names and operators": {
+			input:       `{"command":"FOO=1 go test ./... -v 2>&1 | grep -v ok && echo \"$(date)\""}`,
+			wantHeader:  "Bash go test | grep && echo",
+			wantCommand: `$ FOO=1 go test ./... -v 2>&1 | grep -v ok && echo "$(date)"`,
+		},
+		"compound command": {
+			input:       `{"command":"for f in *.go; do gofmt -l \"$f\"; done"}`,
+			wantHeader:  "Bash for f in …; do gofmt; done",
+			wantCommand: `$ for f in *.go; do gofmt -l "$f"; done`,
+		},
+		"subcommands": {
+			input:       `{"command":"cd repo && git add a.go && git -c commit.gpgsign=false commit -q -F - <<'EOF'\nfix: a\nEOF\ngit log -1 --stat"}`,
+			wantHeader:  "Bash cd && git add && git commit; git log",
+			wantCommand: "$ cd repo && git add a.go && git -c commit.gpgsign=false commit -q -F - <<'EOF'\nfix: a\nEOF\ngit log -1 --stat",
+		},
+		"wrapper": {
+			input:       `{"command":"sudo -u root rm -rf /tmp/x && bash -c 'cd app && make'"}`,
+			wantHeader:  "Bash sudo rm && bash -c 'cd && make'",
+			wantCommand: "$ sudo -u root rm -rf /tmp/x && bash -c 'cd app && make'",
+		},
+		"syntax error shows first line": {
+			input:       `{"command":"echo 'x\nls"}`,
+			wantHeader:  "Bash echo 'x…",
+			wantCommand: "$ echo 'x\nls",
 		},
 		"trailing newline": {
 			input:       `{"command":"ls\n"}`,

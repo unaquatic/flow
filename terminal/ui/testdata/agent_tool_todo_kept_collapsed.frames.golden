@@ -9,7 +9,7 @@
 |  [–] Add Divide                        |
 |  [ ] Run the tests                     |
 |                                        |
-|■ Bash go test ./...                    |
+|■ Bash go test                          |
 |                                        |
 |                                        |
 |                                        |
@@ -24,7 +24,7 @@
 |  BBB BBB BBBBBB                        |
 |  C C CCC CCC CCCCC                     |
 |                                        |
-|C CCCC CC CCCC CCCCC                    |
+|C CCCC CC CCCC                          |
 |                                        |
 |                                        |
 |                                        |

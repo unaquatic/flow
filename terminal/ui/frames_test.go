@@ -645,6 +645,12 @@ func TestToolBoxFrames(t *testing.T) {
 		{name: "toolbox_bash_multiline", h: 7, tool: message.ToolPart{Name: "bash",
 			State: message.ToolStateRunning{Input: json.RawMessage(
 				`{"command":"cd calculator\ngo test ./...","description":"Run the tests"}`)}}},
+		// The words that name the commands a command runs show as functions
+		// do, wherever they stand: after a wrapper, as a subcommand, in a
+		// substitution and in a script, among keywords.
+		{name: "toolbox_bash_commands", h: 7, tool: message.ToolPart{Name: "bash",
+			State: message.ToolStatePending{Input: json.RawMessage(
+				`{"command":"cd calc && sudo -E go test ./... | tee \"$(mktemp)\"\nfor f in *.go; do gofmt -l \"$f\"; done\nbash -c 'go vet ./... && git diff --stat'"}`)}}},
 		// A failed run's marker is its status, and its output is shown under
 		// the command.
 		{name: "toolbox_bash_error", h: 9, tool: message.ToolPart{Name: "bash",

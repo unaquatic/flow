@@ -3,7 +3,7 @@
 |                                                            |
 |  Running the tests.                                        |
 |                                                            |
-|  Bash go test ./... [exit 1]                               |
+|  Bash go test [exit 1]                                     |
 |                                                            |
 |  Cache read 18K write 4.0K                                 |
 |                                                            |
@@ -19,7 +19,7 @@
 |                                                            |
 |  AAAAAAA AAA AAAAAA                                        |
 |                                                            |
-|  BBBB BB BBBB BBBBB BBBBB BB                               |
+|  BBBB BB BBBB BBBBB BB                                     |
 |                                                            |
 |  BBBBB BBBB BBB BBBBB BBBB                                 |
 |                                                            |

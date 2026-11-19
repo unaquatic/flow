@@ -126,7 +126,8 @@ func ToolNameChunk(label string, fg style.Color) style.TextChunk {
 // shows the call. The header is the tool's name as view.NameLabel gives it,
 // in nameFg and not bold, such as "Edit", and then, in inputFg, a one-line
 // summary of the input, such as its path, a search's pattern, or a command,
-// in every state of the call, and then view.HeaderNote. A transparent color
+// in every state of the call, as view.Summary gives it or else the first
+// line of ToolInputSummary's, and then view.HeaderNote. A transparent color
 // leaves its part in the header's color. The status is view.Status when it is
 // set, and otherwise "[queued]" or "[executing]" before the call ends, the
 // reason a failed call failed as ErrorStatus gives it, and "" for a completed
@@ -147,7 +148,11 @@ func ToolHeaderOutput(tool message.ToolPart, view ToolView, nameFg, inputFg styl
 		status = view.Status
 	}
 	header = style.NewStyledText(ToolNameChunk(view.NameLabel(tool.Name), nameFg))
-	input := slices.DeleteFunc([]string{FirstLine(ToolInputSummary(string(tool.Input()))), view.HeaderNote},
+	summary := view.Summary
+	if summary == "" {
+		summary = FirstLine(ToolInputSummary(string(tool.Input())))
+	}
+	input := slices.DeleteFunc([]string{summary, view.HeaderNote},
 		func(s string) bool { return s == "" })
 	if len(input) > 0 {
 		header.Chunks = append(header.Chunks, style.Plain(" "), style.TextChunk{Text: strings.Join(input, " "), Fg: inputFg})

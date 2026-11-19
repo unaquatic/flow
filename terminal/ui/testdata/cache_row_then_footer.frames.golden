@@ -1,5 +1,5 @@
 === text ===
-|■ Bash go test ./...                    |
+|■ Bash go test                          |
 |                                        |
 |■ Cache read 0K write 0K                |
 |                                        |
@@ -8,7 +8,7 @@
 |                                        |
 |                                        |
 === fg ===
-|A AAAA AA AAAA AAAAA                    |
+|A AAAA AA AAAA                          |
 |                                        |
 |A AAAAA AAAA AA AAAAA AA                |
 |                                        |
