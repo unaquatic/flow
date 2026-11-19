@@ -24,13 +24,13 @@ import (
 	"github.com/unaquatic/fluid/widget"
 )
 
-// StatusNotice returns the notice that shows lines as the session info does:
-// on the system surface, titled StatusTitle.
+// StatusNotice returns the notice that shows lines as the session info does,
+// titled StatusTitle.
 func StatusNotice(lines []style.StyledText) Notice {
-	return Notice{Lines: lines, Surface: NoticeSystem, Title: StatusTitle}
+	return Notice{Lines: lines, Title: StatusTitle}
 }
 
-// StatusTitle heads the session info while prompts show in PromptBar.
+// StatusTitle heads the session info.
 const StatusTitle = "Status"
 
 // StatusInfo holds the facts the session info shows, as StatusLines lays
@@ -192,10 +192,9 @@ func StartTitle(version string) string {
 }
 
 // StartNotice returns the notice that heads the transcript at startup:
-// lines, as StartLines lays them out, on the system surface, as the session
-// info is, titled StartTitle of version.
+// lines, as StartLines lays them out, titled StartTitle of version.
 func StartNotice(version string, lines []style.StyledText) Notice {
-	return Notice{Lines: lines, Surface: NoticeSystem, Title: StartTitle(version)}
+	return Notice{Lines: lines, Title: StartTitle(version)}
 }
 
 // StartLines returns the rows of the notice that heads the transcript at

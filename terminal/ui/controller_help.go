@@ -6,7 +6,7 @@ import (
 	"github.com/unaquatic/fluid/style"
 )
 
-// UsageTitle heads the notice /usage shows while prompts show in PromptBar.
+// UsageTitle heads the notice /usage shows.
 const UsageTitle = "Usage"
 
 // usageLabelWidth is the width of the label column of the notice /usage
@@ -50,10 +50,10 @@ func UsageLines(info UsageInfo, th *style.Theme) []style.StyledText {
 // in a notice titled UsageTitle, as UsageLines lays them out.
 func (s *Service) ShowUsage() []UIEvent {
 	info := UsageInfo{Model: s.state.Model, Usage: s.SessionUsage(), Worked: s.SessionWorked()}
-	return s.AddNotice(Notice{Lines: UsageLines(info, nil), Surface: NoticeSystem, Title: UsageTitle})
+	return s.AddNotice(Notice{Lines: UsageLines(info, nil), Title: UsageTitle})
 }
 
-// HelpTitle heads the notice /help shows while prompts show in PromptBar.
+// HelpTitle heads the notice /help shows.
 const HelpTitle = "Help"
 
 // KeyHelp is a key the terminal takes outside its menus, and what it does,
@@ -116,5 +116,5 @@ func HelpLines(cmds []SlashCommand) []style.StyledText {
 // gives them, and the keys in a notice titled HelpTitle, as HelpLines lays
 // them out.
 func (s *Service) ShowHelp() []UIEvent {
-	return s.AddNotice(Notice{Lines: HelpLines(s.ShownCommands()), Surface: NoticeSystem, Title: HelpTitle})
+	return s.AddNotice(Notice{Lines: HelpLines(s.ShownCommands()), Title: HelpTitle})
 }

@@ -94,9 +94,9 @@ type Notice struct {
 	Lines []style.StyledText
 	// Surface is what the notice shows on.
 	Surface NoticeSurface
-	// Title, when set, heads the notice while prompts show in PromptBar,
-	// as UI.NewNoticeBarRow shows it, such as "Status" over the session
-	// info. Without one, the notice's first line heads it.
+	// Title, when set, heads the notice, as UI.NewNoticeBarRow shows it,
+	// such as "Status" over the session info. Without one, the notice's
+	// first line heads it.
 	Title string
 }
 
@@ -104,12 +104,9 @@ type Notice struct {
 type NoticeSurface int
 
 const (
-	// NoticeRaised shows a notice in a box on the raised surface. It is the
-	// default.
-	NoticeRaised NoticeSurface = iota
-	// NoticeSystem shows a notice in a box on the system surface, as the
-	// session info is.
-	NoticeSystem
+	// NoticeBar shows a notice on the canvas, headed by a marker, as
+	// UI.NewNoticeBarRow shows it. It is the default.
+	NoticeBar NoticeSurface = iota
 	// NoticeCanvas shows a notice's rows on the canvas, from the transcript's
 	// left edge, with no box around them, as the logo is.
 	NoticeCanvas
@@ -469,7 +466,9 @@ func (p CountPlace) String() string {
 	return "Below"
 }
 
-// PromptStyle is how the transcript marks a prompt, which /config sets.
+// PromptStyle is how the transcript marks a prompt, which /config sets. It
+// styles the user's messages alone; notices show as UI.NewNoticeRow makes
+// them, whatever the style.
 type PromptStyle int
 
 const (

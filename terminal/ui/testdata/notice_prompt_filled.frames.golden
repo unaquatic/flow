@@ -1,0 +1,57 @@
+=== text ===
+|                                        |
+|  Run the tests                         |
+|                                        |
+|                                        |
+|■ Chat cleared                          |
+|                                        |
+|■ Checkout 2 files  +3 -1               |
+|  /work/calc/calc.go  +1 -0             |
+|  /work/calc/calc_test.go  +2 -1        |
+|                                        |
+|■ Status                                |
+|  Session   Fix the login [4229c726c31  |
+|  Context   20K / 400K 5%               |
+|  Model     Model A Fast High [provide  |
+|  Directory /work/project [main]        |
+|                                        |
+=== fg ===
+|                                        |
+|  AAA AAA AAAAA                         |
+|                                        |
+|                                        |
+|A AAAA AAAAAAA                          |
+|                                        |
+|A AAAAAAAA A AAAAA  BB CC               |
+|  AAAAAAAAAAAAAAAAAA  BB CC             |
+|  AAAAAAAAAAAAAAAAAAAAAAA  BB CC        |
+|                                        |
+|A AAAAAA                                |
+|  DDDDDDD   AAA AAA AAAAA DDDDDDDDDDDD  |
+|  DDDDDDD   AAA A AAAA AA               |
+|  DDDDD     AAAAA A AAAA AAAA DDDDDDDD  |
+|  DDDDDDDDD AAAAAAAAAAAAA DDDDDD        |
+|                                        |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+=== legend ===
+A #e6e6e6
+B #5fc882
+C #dc646e
+D #8a8a8a
+░ #232323 BoxBg

@@ -91,9 +91,8 @@ type UI struct {
 	// inputFills set the fills of the input box and its panels that were
 	// BoxBg, as SetInputStyle finds them the first time it runs.
 	inputFills []func(style.Color)
-	// noticeMarkers head the notices of the transcript that show as
-	// PromptBar shows a prompt, as NewNoticeBarRow makes them, so that
-	// /config restyles them.
+	// noticeMarkers head the notices of the transcript that NewNoticeBarRow
+	// makes, so that /config restyles them.
 	noticeMarkers []*widget.Text
 	// indicatorRow lays out indicatorMarker and indicatorLabel on a row
 	// inside indicatorBox.
@@ -419,10 +418,6 @@ func (ui *UI) BorderFg() style.Color { return ui.theme.BorderStrong }
 // BoxBg returns the solid fill of the input box, menus, and non-agent
 // messages.
 func (ui *UI) BoxBg() style.Color { return boxBg }
-
-// SystemBg returns the fill of system notices, such as a mode switch and
-// /status: the grey of other notices.
-func (ui *UI) SystemBg() style.Color { return ui.theme.SurfaceRaised }
 
 // BuildUI constructs the widget tree.
 func (ui *UI) BuildUI() {

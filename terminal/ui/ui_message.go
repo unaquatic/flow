@@ -319,10 +319,8 @@ func (ui *UI) AddNotice(notices ...Notice) {
 
 // NewNoticeRow returns the row that shows n, followed by a blank row, or nil
 // for a notice that shows nothing. Its rows are on the canvas, from its left
-// edge, or else in a box filled with its surface, padded by a row above and
-// below and by PaddingX at the sides, in textFg where they have no color of
-// their own. While prompts show in PromptBar, a notice that would show in a
-// box shows as a prompt does instead, as NewNoticeBarRow makes it.
+// edge, or else headed by a marker, as NewNoticeBarRow makes them, whatever
+// the PromptStyle, which styles prompts alone.
 func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 	lines := n.Lines
 	if len(lines) == 0 && n.Text != "" {
@@ -340,25 +338,7 @@ func (ui *UI) NewNoticeRow(n Notice) *widget.Box {
 			widget.Children(widget.NewStyledText(content, widget.TextWithID(id+"-text"))),
 		)
 	}
-	if ui.service.state.PromptStyle == PromptBar {
-		return ui.NewNoticeBarRow(id, n, lines)
-	}
-	bg := ui.theme.SurfaceRaised
-	if n.Surface == NoticeSystem {
-		bg = ui.SystemBg()
-	}
-	return widget.NewBox(
-		widget.BoxWithID(id),
-		widget.BoxWithLayout(
-			layout.WithFlexShrink(0),
-			layout.WithPadding(layout.Points(1)),
-			layout.WithPaddingLeft(layout.Points(PaddingX)),
-			layout.WithPaddingRight(layout.Points(PaddingX)),
-			layout.WithMarginBottom(layout.Points(1)),
-		),
-		widget.BoxWithBg(bg),
-		widget.Children(widget.NewStyledText(content, widget.TextWithID(id+"-text"), widget.TextWithFg(textFg))),
-	)
+	return ui.NewNoticeBarRow(id, n, lines)
 }
 
 // NewNoticeBarRow returns the row, with id, that shows lines, those of n, as
