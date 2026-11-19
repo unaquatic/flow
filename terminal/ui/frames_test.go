@@ -1816,6 +1816,56 @@ func TestFullscreenFrames(t *testing.T) {
 	}
 }
 
+// TestPinnedPromptFrames draws the transcript at a prompt of more than
+// PromptRows rows, which shows only its first PromptRows rows, then
+// TruncatedNote, then the padding and the blank row that end it: in
+// fullscreen mode, whether it is pinned or in its place, and inline.
+func TestPinnedPromptFrames(t *testing.T) {
+	const steps = 8
+	tests := []struct {
+		name   string
+		scroll int
+		filled bool
+		inline bool
+		steps  int
+	}{
+		// In its place, the prompt is cut short as it is pinned.
+		{name: "fullscreen_long_prompt_unpinned", scroll: 3},
+		{name: "fullscreen_long_prompt_bar_pinned", scroll: 14},
+		{name: "fullscreen_long_prompt_filled_pinned", scroll: 14, filled: true},
+		// A prompt a row longer than PromptRows shows whole, in the row the
+		// note would take.
+		{name: "fullscreen_prompt_one_row_over", scroll: 6, filled: true, steps: PromptRows + 1},
+		{name: "inline_long_prompt", inline: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ui := newInputTestUI(t)
+			if tt.inline {
+				ui = newInlineTestUI(t)
+				ui.inline = true
+			}
+			if tt.filled {
+				ui.Apply(ui.service.SetPromptStyle(PromptFilled))
+			}
+			ui.AddMessage(userText("u1", "Hi"))
+			ui.AddMessage(agentText("a1", "Hello"))
+			n := cmp.Or(tt.steps, steps)
+			var items []string
+			for i := range n {
+				items = append(items, fmt.Sprintf("- step %d", i+1))
+			}
+			ui.AddMessage(userText("u2", strings.Join(items, "\n")))
+			ui.AddMessage(agentText("a2", "one\n\ntwo\n\nthree\n\nfour\n\nfive\n\nsix\n\nseven\n\neight\n\nnine\n\nten"))
+			if tt.inline {
+				AssertTranscriptFrames(t, ui, tt.name, 40, 16)
+				return
+			}
+			AssertFullscreenFrames(t, ui, tt.name, 40, 14, tt.scroll)
+		})
+	}
+}
+
 func TestMenuFrames(t *testing.T) {
 	sessions := threeSessionRows()
 	tests := []struct {

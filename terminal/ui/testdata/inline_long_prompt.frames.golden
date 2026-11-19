@@ -1,0 +1,38 @@
+=== text ===
+|■ Hi                                    |
+|                                        |
+|■ Hello                                 |
+|                                        |
+|■ - step 1                              |
+|  - step 2                              |
+|  - step 3                              |
+|  [truncated]                           |
+|                                        |
+|■ one                                   |
+|                                        |
+|  two                                   |
+|                                        |
+|  three                                 |
+|                                        |
+|  four                                  |
+=== fg ===
+|A AA                                    |
+|                                        |
+|B AAAAA                                 |
+|                                        |
+|A B AAAA A                              |
+|  B AAAA A                              |
+|  B AAAA A                              |
+|  CCCCCCCCCCC                           |
+|                                        |
+|B AAA                                   |
+|                                        |
+|  AAA                                   |
+|                                        |
+|  AAAAA                                 |
+|                                        |
+|  AAAA                                  |
+=== legend ===
+A #e6e6e6
+B #eb7513
+C #8a8a8a
