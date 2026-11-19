@@ -91,8 +91,8 @@ func (ui *UI) KeepInputBoxInView() {
 // on a terminal too short to fit one otherwise.
 const MinToolRows = 6
 
-// ToolRowLimit returns the most rows an expanded call takes inline on a
-// terminal of height rows, so that the call's header still shows once it has
+// ToolRowLimit returns the most rows an expanded call takes on a terminal of
+// height rows, so that the call's header still shows once it has
 // finished, right above the input box: what the spare row FitInputBox keeps,
 // the indicator, and the input box at rest leave, as RestInputRows gives it.
 // It counts the indicator whether or not it shows, since a call that ends
@@ -126,15 +126,13 @@ func (ui *UI) RestInputRows(height int) int {
 	return ui.restInputRows
 }
 
-// FitToolBoxes fits each expanded call of the inline transcript to
-// ToolRowLimit rows, as FitToolBox does, cutting its tallest block short and
-// ending it with TruncatedNote. A call taller than the screen would push its
-// header into the scrollback, where it cannot be redrawn or seen with its
-// output. It does nothing outside inline mode.
+// FitToolBoxes fits each expanded call of the transcript, inline or
+// fullscreen, to ToolRowLimit rows, as FitToolBox does, cutting its tallest
+// block short and ending it with TruncatedNote. Inline, a call taller than
+// the screen would push its header into the scrollback, where it cannot be
+// redrawn or seen with its output; fullscreen, it would take more than the
+// transcript shows at once.
 func (ui *UI) FitToolBoxes(height int) {
-	if !ui.inline {
-		return
-	}
 	limit := ui.ToolRowLimit(height)
 	root := ui.renderer.Root()
 	for cm := range ui.Bubbles() {
