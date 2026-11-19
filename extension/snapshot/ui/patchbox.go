@@ -17,7 +17,8 @@ import (
 // shown under the reply, as a tool call is: a row on the canvas, marked as /config marks
 // tool calls, whose header sums them up, as PatchHeader gives it, and which
 // Ctrl+O and a click on the header expand and collapse as they do a tool
-// call. Expanded, it shows under the same header the files it changed, each
+// call. Collapsed, it lists the files it changed under the header, each by
+// its path and counts. Expanded, it shows under the same header the files, each
 // by its path and counts and then its diff, side by side; a click on a
 // file's row hides its diff, or shows it again. Its rows are not cut to the
 // screen as a tool call's are. Its header reads the same expanded or not, and the
@@ -40,6 +41,10 @@ type PatchBox struct {
 	Patch string
 	// Files holds a FileView for each file Patch changes, in its order.
 	Files *widget.Box
+	// Paths lists the files Patch changes, each by its path and counts,
+	// right under the header while the box is collapsed, as Files shows
+	// them with their diffs once it is expanded.
+	Paths *widget.Text
 	// Diffs holds the side by side diff of each file that has hunks, which
 	// shows under its row while ShowDiff toggles it on.
 	Diffs []*widget.Box
@@ -70,6 +75,10 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 			layout.WithFlexDirection(layout.DirectionColumn),
 			layout.WithAlignItems(layout.AlignStretch),
 		)),
+		// The list sits right under the header, closing the gap the box
+		// leaves between its header and what follows it.
+		Paths: widget.NewText("", widget.TextWithFg(fg), widget.TextWithBg(style.ColorTransparent),
+			widget.TextWithLayout(layout.WithMarginTop(layout.Points(-1)))),
 		Theme: theme,
 		Fg:    fg,
 	}
@@ -78,6 +87,7 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 	b.SetMarkerShape(b.MarkerShape)
 	b.Content = b
 	b.Details.Add(b.Files)
+	b.Add(b.Paths)
 	b.SetGone(true)
 	// Collapsed, the row is parted from the rows around it by a blank row,
 	// as a block is, rather than stacked with the steps above and below it.
@@ -137,6 +147,7 @@ func (b *PatchBox) Pending() bool {
 func (b *PatchBox) SetPatch(patch string) {
 	b.Patch = patch
 	files := SplitPatch(patch)
+	b.Paths.SetStyledContent(ui.JoinStyledLines(DiffNotice(files)[1:]))
 	b.ShowHeader()
 	for _, child := range b.Files.Children() {
 		b.Files.Remove(child.ID())
@@ -186,11 +197,15 @@ func (b *PatchBox) FileView(f FilePatch) *widget.Box {
 }
 
 // ShowHeader writes PatchHeader of Patch once it is set, the same whether
-// the box is open or not.
+// the box is open or not, and shows Paths under it while the box is
+// collapsed.
 func (b *PatchBox) ShowHeader() {
 	if b.Patch != "" {
 		b.Header.SetStyledContent(PatchHeader(ParseDiffStat(b.Patch)))
 	}
+	// Collapsed, the box lists its files under the header; expanded, Files
+	// shows them with their diffs instead.
+	b.Paths.SetGone(b.Patch == "" || b.Open())
 }
 
 // DiffStat counts the changes in a unified diff.

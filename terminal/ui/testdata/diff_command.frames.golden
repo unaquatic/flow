@@ -4,22 +4,22 @@
 |■ Done.                                 |
 |                                        |
 |■ Changed 2 files  +2 -1                |
-|                                        |
-|■ Changed 2 files  +2 -1                |
 |  calc.go  +2 -0                        |
 |  old.go  +0 -1                         |
 |                                        |
+|■ Changed 2 files  +2 -1                |
+|  calc.go  +2 -0                        |
 === fg ===
 |A AAA AAA AAAAA                         |
 |                                        |
 |B AAAAA                                 |
 |                                        |
 |A AAAAAAA A AAAAA  CC DD                |
-|                                        |
-|A AAAAAAA A AAAAA  CC DD                |
 |  AAAAAAA  CC DD                        |
 |  AAAAAA  CC DD                         |
 |                                        |
+|A AAAAAAA A AAAAA  CC DD                |
+|  AAAAAAA  CC DD                        |
 === legend ===
 A #e6e6e6
 B #eb7513

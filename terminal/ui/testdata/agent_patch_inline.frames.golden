@@ -2,7 +2,7 @@
 |■ Updated the calculator.               |
 |                                        |
 |■ Changed 1 file  +2 -0                 |
-|                                        |
+|  calc.go  +2 -0                        |
 |                                        |
 |                                        |
 |                                        |
@@ -18,7 +18,7 @@
 |A BBBBBBB BBB BBBBBBBBBBB               |
 |                                        |
 |B BBBBBBB B BBBB  CC DD                 |
-|                                        |
+|  BBBBBBB  CC DD                        |
 |                                        |
 |                                        |
 |                                        |

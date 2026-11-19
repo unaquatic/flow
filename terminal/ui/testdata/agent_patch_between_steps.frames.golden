@@ -2,18 +2,18 @@
 |■ Worked [ctrl+o expand]                |
 |                                        |
 |■ Changed 1 file  +2 -0                 |
+|  calc.go  +2 -0                        |
 |                                        |
 |■ Worked [ctrl+o expand]                |
-|                                        |
 |                                        |
 |                                        |
 === fg ===
 |A AAAAAA AAAAAAA AAAAAAA                |
 |                                        |
 |B BBBBBBB B BBBB  CC DD                 |
+|  BBBBBBB  CC DD                        |
 |                                        |
 |A AAAAAA AAAAAAA AAAAAAA                |
-|                                        |
 |                                        |
 |                                        |
 === legend ===
