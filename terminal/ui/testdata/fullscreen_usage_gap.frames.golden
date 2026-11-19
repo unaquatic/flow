@@ -1,0 +1,70 @@
+=== text ===
+|                                                            |
+|  Run the tests                                             |
+|                                                            |
+|  - package 24 passed                                       |
+|  - package 25 passed                                       |
+|  - package 26 passed                                       |
+|  - package 27 passed                                       |
+|  - package 28 passed                                       |
+|  - package 29 passed                                       |
+|                                                            |
+|■ Usage Unknown [model] Context 0K ↓ 0K ↑ 0K… [ctrl+u pin]  |
+|                                                            |
+|                                                            |
+|  Commands [↑/↓ move] [esc cancel]                          |
+|                                                            |
+|  /status                   Show the version and session i  |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== fg ===
+|                                                            |
+|  AAA AAA AAAAA                                             |
+|                                                            |
+|  B AAAAAAA AA AAAAAA                                       |
+|  B AAAAAAA AA AAAAAA                                       |
+|  B AAAAAAA AA AAAAAA                                       |
+|  B AAAAAAA AA AAAAAA                                       |
+|  B AAAAAAA AA AAAAAA                                       |
+|  B AAAAAAA AA AAAAAA                                       |
+|                                                            |
+|C CCCCC AAAAAAA CCCCCCC CCCCCCC AA C AA C AAA CCCCCCC CCCC  |
+|                                                            |
+|                                                            |
+|  AAAAAAAA CCCC CCCCC CCCC CCCCCCC                          |
+|                                                            |
+|  DDDDDDD                   DDDD DDD DDDDDDD DDD DDDDDDD D  |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+=== bg ===
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|                                                            |
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|
+|                                                            |
+=== legend ===
+A #e6e6e6
+B #eb7513
+C #8a8a8a
+D #232323 BoxBg
+░ #232323 BoxBg
+▒ #ff5f00

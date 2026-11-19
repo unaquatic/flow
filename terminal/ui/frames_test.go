@@ -1716,6 +1716,56 @@ func TestFullscreenSessionPromptsFrames(t *testing.T) {
 	testutil.AssertGoldenFrames(t, "session_menu_prompts_fullscreen", buf, surfaceNames(ui))
 }
 
+// TestFullscreenStickyGapFrames draws the whole fullscreen screen in the
+// filled styles, the defaults, with the transcript scrolled up from its
+// bottom, so that it is cut off right above what stays over the input box: a
+// blank row parts it from the indicator, or from the Usage box at the top of
+// the input box. With both shown, the indicator's own blank row parts it
+// from the Usage box, and no row more.
+func TestFullscreenStickyGapFrames(t *testing.T) {
+	working := func(ui *UI) { ui.ShowIndicator(WorkingIndicator(12*time.Second, false)) }
+	slash := func(ui *UI) { ui.ShowSlashMenu(ui.service.SlashMenuItems("/st")) }
+	tests := []struct {
+		name string
+		h    int
+		open []func(*UI)
+	}{
+		{name: "fullscreen_indicator_gap", h: 12, open: []func(*UI){working}},
+		{name: "fullscreen_usage_gap", h: 20, open: []func(*UI){slash}},
+		{name: "fullscreen_indicator_usage_gap", h: 22, open: []func(*UI){working, slash}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ui := newInputTestUI(t)
+			ui.Apply(ui.service.SetPromptStyle(PromptFilled))
+			ui.Apply(ui.service.SetInputStyle(InputFilled))
+			root := ui.renderer.Root()
+			root.Add(ui.inputWrapper)
+			root.Resize(60, tt.h)
+			// The reply, a list with no blank row between its items, takes
+			// more rows than the screen shows, so that the transcript can
+			// scroll and is cut off at an item.
+			var items []string
+			for i := range 30 {
+				items = append(items, fmt.Sprintf("- package %d passed", i+1))
+			}
+			ui.AddMessage(userText("u1", "Run the tests"))
+			ui.AddMessage(agentText("a1", strings.Join(items, "\n")))
+			ui.SetTurnEnd("a1", 11*time.Second, TurnDone)
+			for _, open := range tt.open {
+				open(ui)
+			}
+			root.Render(buffer.New(60, tt.h), 0)
+			ui.messageBox.SetScrollY(ui.messageBox.ScrollY() - 3)
+			// The gaps follow what the frame before laid out above them.
+			root.Render(buffer.New(60, tt.h), 0)
+			buf := buffer.New(60, tt.h)
+			root.Render(buf, 0)
+			testutil.AssertGoldenFrames(t, tt.name, buf, surfaceNames(ui))
+		})
+	}
+}
+
 // TestShortTerminalFrames draws the input box fitted to a terminal of the
 // frame's height: it ends a row short of the bottom, and a list shows the
 // rows that fit, counted in its title.
