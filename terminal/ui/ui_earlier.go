@@ -1,5 +1,11 @@
 package ui
 
+import (
+	"slices"
+
+	"github.com/unaquatic/flow/agent/message"
+)
+
 // BuiltScreens is how many screens of rows, at least, the fullscreen
 // transcript holds once built from a session's messages, as BuildTranscript
 // builds it: those of its last messages, or every row when they add up to
@@ -23,11 +29,35 @@ const earlierBatch = 8
 // builds in.
 func (ui *UI) ScreenRows() int { return max(ui.renderer.Root().Height(), 1) }
 
+// TurnStart returns where in msgs a transcript of their last messages from i
+// on starts: where BubbleStart starts it, unless the bubble there is a reply
+// that follows its prompt, past the notices between them, at the bubble of
+// that prompt. The fullscreen transcript so never holds a reply without its
+// prompt, which pins to the top while the reply scrolls under it.
+func TurnStart(msgs []ChatMessage, i int) int {
+	start := BubbleStart(msgs, i)
+	first := slices.IndexFunc(msgs[start:], func(m ChatMessage) bool { return m.Notice == nil })
+	if first < 0 || msgs[start+first].Role != message.RoleAgent {
+		return start
+	}
+	for k, m := range slices.Backward(msgs[:start]) {
+		if m.Notice != nil {
+			continue
+		}
+		if m.Role == message.RoleUser {
+			return BubbleStart(msgs, k)
+		}
+		break
+	}
+	return start
+}
+
 // BuildEarlier builds the rows of the last of the earlier messages, those
 // whose rows the fullscreen transcript does not hold yet, above its first
 // row: earlierBatch messages at a time, as few as take rows rows at least, or
-// all of them. Each batch starts with a message that starts a bubble, as
-// BubbleStart picks it, so that a bubble shows all its messages. It returns
+// all of them. Each batch starts with a message that starts a turn, as
+// TurnStart picks it, so that a bubble shows all its messages, and a reply
+// shows under its prompt. It returns
 // the rows the transcript gained, as TranscriptHeight measures it, and
 // records that the transcript lacks the rows of its first messages, as
 // trimmed does, while any are left.
@@ -43,7 +73,7 @@ func (ui *UI) BuildEarlier(rows int) int {
 	before := ui.TranscriptHeight()
 	height := before
 	for len(ui.earlier) > 0 && height-before < rows {
-		start := BubbleStart(ui.earlier, len(ui.earlier)-earlierBatch)
+		start := TurnStart(ui.earlier, len(ui.earlier)-earlierBatch)
 		ui.PrependMessages(ui.earlier[start:])
 		ui.earlier = ui.earlier[:start]
 		height = ui.TranscriptHeight()

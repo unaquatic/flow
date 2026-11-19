@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/unaquatic/flow/agent/message"
 	"github.com/unaquatic/fluid/buffer"
 	"github.com/unaquatic/fluid/testutil"
 )
@@ -84,6 +86,59 @@ func TestBuildTranscript_FullscreenBuildsTheLastScreens(t *testing.T) {
 	}
 	if !ui.messageBox.IsAtBottom() {
 		t.Error("the transcript does not show its bottom")
+	}
+}
+
+// TestTurnStart checks where a transcript of the last messages from an index
+// on starts: where BubbleStart starts it, or at the prompt of the reply that
+// starts there, past the notices between them.
+func TestTurnStart(t *testing.T) {
+	notice := func(id message.ID) ChatMessage { return ChatMessage{ID: id, Notice: &Notice{Text: "a notice"}} }
+	msgs := []ChatMessage{systemText("s1", "rules"), agentText("a0", "v"), userText("u1", "p"), notice("n1"),
+		agentText("a1", "x"), agentText("a2", "y"), notice("n2"), agentText("a3", "z"), userText("u2", "q"), agentText("a4", "w")}
+	AssignParents(msgs)
+	// The notice keeps the reply together, as the service records it.
+	msgs[7].ParentID = "a1"
+	for _, tt := range []struct {
+		i, want int
+	}{
+		{i: -1, want: 0},
+		// A reply after a system message has no prompt to take.
+		{i: 1, want: 1},
+		{i: 2, want: 2},
+		// The notice between a prompt and its reply goes with them.
+		{i: 3, want: 2},
+		{i: 4, want: 2},
+		{i: 5, want: 2},
+		{i: 6, want: 2},
+		{i: 7, want: 2},
+		{i: 8, want: 8},
+		{i: 9, want: 8},
+		{i: 10, want: 10},
+	} {
+		if got := TurnStart(msgs, tt.i); got != tt.want {
+			t.Errorf("TurnStart(%d) = %d, want %d", tt.i, got, tt.want)
+		}
+	}
+}
+
+// TestBuildTranscript_PinsTheLastPrompt checks that a session whose last
+// reply alone takes more than BuiltScreens screens, loaded in fullscreen
+// mode, builds that reply's prompt too, which pins to the top over it.
+func TestBuildTranscript_PinsTheLastPrompt(t *testing.T) {
+	msgs := longSession(5, 200)
+	ui := loadFullscreen(t, msgs)
+	buf := drawScreen(ui)
+
+	prompt, ok := ui.messageWidgets["u4"]
+	if !ok {
+		t.Fatal("the transcript does not show the last reply's prompt")
+	}
+	if prompt.Box.StickyOffsetY() <= 0 {
+		t.Error("the last reply's prompt does not pin to the top")
+	}
+	if top := testutil.RowText(buf, 0) + testutil.RowText(buf, 1); !strings.Contains(top, "prompt 4") {
+		t.Errorf("the top rows read %q, want the pinned prompt 4", top)
 	}
 }
 
