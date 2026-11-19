@@ -259,18 +259,18 @@ func TestSettingsMenuMarkerShape(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuPromptStyle checks that /config shows prompts by a bar by
-// default, after the selection, and that choosing the setting fills them and
-// shows them by a bar again, keeping the menu open on the setting.
+// TestSettingsMenuPromptStyle checks that /config shows prompts filled by
+// default, after the selection, and that choosing the setting shows them by
+// a bar and fills them again, keeping the menu open on the setting.
 func TestSettingsMenuPromptStyle(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
 	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, promptSetting)
-	if row < 0 || row != slices.Index(names, selectionSetting)+1 || settings.Items[row].Description != PromptBar.String() {
-		t.Fatalf("settings = %+v, want the prompt style a bar after the selection", settings.Items)
+	if row < 0 || row != slices.Index(names, selectionSetting)+1 || settings.Items[row].Description != PromptFilled.String() {
+		t.Fatalf("settings = %+v, want the prompt style filled after the selection", settings.Items)
 	}
-	for _, want := range []PromptStyle{PromptFilled, PromptBar} {
+	for _, want := range []PromptStyle{PromptBar, PromptFilled} {
 		out := choose(promptSetting)(s)
 		if !slices.Contains(out, UIEvent(EventPromptStyleSet{Style: want})) || s.state.PromptStyle != want {
 			t.Errorf("events %v with style %s, want %s", out, s.state.PromptStyle, want)
@@ -282,18 +282,18 @@ func TestSettingsMenuPromptStyle(t *testing.T) {
 	}
 }
 
-// TestSettingsMenuInputStyle checks that /config shows the input by a bar
-// by default, after the prompt style, and that choosing the setting fills it
-// and shows it by a bar again, keeping the menu open on the setting.
+// TestSettingsMenuInputStyle checks that /config shows the input filled by
+// default, after the prompt style, and that choosing the setting shows it by
+// a bar and fills it again, keeping the menu open on the setting.
 func TestSettingsMenuInputStyle(t *testing.T) {
 	s := &Service{state: &UIState{Debug: true}}
 	settings := bannerShown(t, s.HandleSubmit("/config"))
 	names := bannerNames(settings)
 	row := slices.Index(names, inputSetting)
-	if row < 0 || row != slices.Index(names, promptSetting)+1 || settings.Items[row].Description != InputBar.String() {
-		t.Fatalf("settings = %+v, want the input style a bar after the prompt style", settings.Items)
+	if row < 0 || row != slices.Index(names, promptSetting)+1 || settings.Items[row].Description != InputFilled.String() {
+		t.Fatalf("settings = %+v, want the input style filled after the prompt style", settings.Items)
 	}
-	for _, want := range []InputStyle{InputFilled, InputBar} {
+	for _, want := range []InputStyle{InputBar, InputFilled} {
 		out := choose(inputSetting)(s)
 		if !slices.Contains(out, UIEvent(EventInputStyleSet{Style: want})) || s.state.InputStyle != want {
 			t.Errorf("events %v with style %s, want %s", out, s.state.InputStyle, want)

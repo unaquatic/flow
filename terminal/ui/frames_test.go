@@ -143,6 +143,11 @@ func collapseTools(ui *UI) {
 	ui.SetToolsExpanded(false)
 }
 
+// barStyles shows prompts and the input box in their Bar styles, which the
+// tests that draw them were written for, rather than the Filled default,
+// which the /config settings tests and the frames that set it check.
+func barStyles(st *UIState) { st.PromptStyle, st.InputStyle = PromptBar, InputBar }
+
 // showSteps shows each step of the replies of ui as a row of its own, as
 // /config's Group steps does when off, for the frames that draw the rows.
 func showSteps(ui *UI) { ui.Apply(ui.service.SetGroupSteps(false)) }
@@ -901,6 +906,7 @@ func newInputTestUI(t *testing.T, loads ...extension.Load) *UI {
 		extensions:     builtinExtensions(t),
 		messageWidgets: make(map[message.ID]*ChatMessageBox),
 	}
+	barStyles(s.state)
 	ui.BuildUI()
 	ui.SetModelLabel("provider/model")
 	r.Root().Remove(ui.inputWrapper.ID())
