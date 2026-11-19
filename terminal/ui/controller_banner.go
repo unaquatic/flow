@@ -276,16 +276,17 @@ const (
 // ShowSettingsMenu lists the settings with their values, searched from the
 // input. Choosing one moves it to its next value, after the last back to the
 // first, and ←/→ move it back and forth; the menu stays open with the same
-// search, on the setting. Fullscreen is on or off, snapshots, the row before
-// debug, on or off, and debug, the last row, on or off; each is saved, as
-// PersistTerminal and PersistDebug save it, so that the terminal starts with
-// it next time. While debug is on, the style settings show between
-// fullscreen and snapshots, for this terminal alone: cache usage one of
+// search, on the setting. Fullscreen is on or off, and debug, the last row,
+// on or off; each is saved, as PersistTerminal and PersistDebug save it, so
+// that the terminal starts with it next time. While debug is on, the style
+// settings show between them, for this terminal alone: cache usage one of
 // CacheModes, expanded tools one of ExpandedStyles, the tool marker on or
 // off, the marker shape one of MarkerShapes, the tool name color one of
 // ToolNameColors, key hints one of KeyHintsModes, list count one of
 // CountPlaces, selection one of SelectionStyles, the prompt style one of
-// PromptStyles, and the input style one of InputStyles, in their order.
+// PromptStyles, the input style one of InputStyles, the diff color one of
+// DiffColors, the diff layout one of DiffLayouts, and collapse reasoning,
+// group steps, and snapshots, each on or off, in their order.
 func (s *Service) ShowSettingsMenu() []UIEvent {
 	menu := &SearchMenu{Title: "Settings", NameWidth: settingValueColumn}
 	setting := func(name, value string, change func(step int) []UIEvent) MenuItem {
@@ -300,14 +301,14 @@ func (s *Service) ShowSettingsMenu() []UIEvent {
 		snapshots := setting(snapshotsSetting, onOff(s.state.ShowSnapshots), func(int) []UIEvent {
 			return s.SetSnapshots(!s.state.ShowSnapshots)
 		})
-		reasoning := setting(reasoningSetting, onOff(!s.state.ExpandReasoning), func(int) []UIEvent {
-			return s.SetReasoningExpanded(!s.state.ExpandReasoning)
+		reasoning := setting(reasoningSetting, onOff(s.state.CollapseReasoning), func(int) []UIEvent {
+			return s.SetReasoningExpanded(s.state.CollapseReasoning)
 		})
 		steps := setting(stepsSetting, onOff(!s.state.ShowSteps), func(int) []UIEvent {
 			return s.SetGroupSteps(s.state.ShowSteps)
 		})
 		if !s.state.Debug {
-			return []MenuItem{fullscreen, reasoning, steps, snapshots, debug}
+			return []MenuItem{fullscreen, debug}
 		}
 		return []MenuItem{
 			fullscreen,
@@ -447,28 +448,26 @@ func (s *Service) SetSelectionStyle(style SelectionStyle) []UIEvent {
 
 // SetSnapshots keeps the snapshot each prompt and reply of the transcript
 // ends with, and of those added later, once taken, by its hash, or shows it
-// only while it is being taken, as show says, and saves the setting, as
-// PersistTerminal does.
+// only while it is being taken, as show says.
 func (s *Service) SetSnapshots(show bool) []UIEvent {
 	s.state.ShowSnapshots = show
-	return append([]UIEvent{EventSnapshotsSet{Show: show}}, s.PersistTerminal()...)
+	return []UIEvent{EventSnapshotsSet{Show: show}}
 }
 
 // SetReasoningExpanded keeps the reasoning of every reply of the transcript,
 // and of those added later, expanded whatever Ctrl+O says, or collapses it
-// as tool calls are, as expanded says, and saves the setting, as
-// PersistTerminal does.
+// as tool calls are, as expanded says.
 func (s *Service) SetReasoningExpanded(expanded bool) []UIEvent {
-	s.state.ExpandReasoning = expanded
-	return append([]UIEvent{EventReasoningExpandedSet{Expanded: expanded}}, s.PersistTerminal()...)
+	s.state.CollapseReasoning = !expanded
+	return []UIEvent{EventReasoningExpandedSet{Expanded: expanded}}
 }
 
 // SetGroupSteps groups the steps that stack in every reply of the
 // transcript, and in those added later, into one row, or shows each as a row
-// of its own, as group says, and saves the setting, as PersistTerminal does.
+// of its own, as group says.
 func (s *Service) SetGroupSteps(group bool) []UIEvent {
 	s.state.ShowSteps = !group
-	return append([]UIEvent{EventGroupStepsSet{Group: group}}, s.PersistTerminal()...)
+	return []UIEvent{EventGroupStepsSet{Group: group}}
 }
 
 // SetDebug shows what helps debug flow, such as the style settings of

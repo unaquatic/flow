@@ -152,6 +152,10 @@ func barStyles(st *UIState) { st.PromptStyle, st.InputStyle = PromptBar, InputBa
 // /config's Group steps does when off, for the frames that draw the rows.
 func showSteps(ui *UI) { ui.Apply(ui.service.SetGroupSteps(false)) }
 
+// collapseReasoning collapses reasoning to its label and time, as /config
+// does while debug is on.
+func collapseReasoning(ui *UI) { ui.Apply(ui.service.SetReasoningExpanded(false)) }
+
 // todoTurn adds a reply, a1, that reads a file, writes its todo list, and
 // runs the tests.
 func todoTurn(ui *UI) {
@@ -345,10 +349,11 @@ func TestTranscriptFrames(t *testing.T) {
 		{name: "agent_markdown", h: 8, add: func(ui *UI) {
 			ui.AddMessage(agentText("a1", "## Plan\n\n1. Read `calc.go`.\n2. Add **Divide** with a zero check.\n\n- Keep `Add` as it is.\n- Run the tests."))
 		}},
-		// Reasoning shows collapsed to its label and how long it took, as a
-		// tool call shows collapsed.
+		// With collapse reasoning on, reasoning shows collapsed to its label
+		// and how long it took, as a tool call shows collapsed.
 		{name: "agent_reasoning", h: 6, add: func(ui *UI) {
 			showSteps(ui)
+			collapseReasoning(ui)
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard.",
 					StartedAt: turnT0, EndedAt: turnT0.Add(12 * time.Second)},
@@ -359,15 +364,15 @@ func TestTranscriptFrames(t *testing.T) {
 		// alone.
 		{name: "agent_reasoning_untimed", h: 6, add: func(ui *UI) {
 			showSteps(ui)
+			collapseReasoning(ui)
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard."},
 				message.TextPart{ID: "a1-text", Text: "I'll add the guard."},
 			))
 		}},
-		// With collapse reasoning off, reasoning shows expanded, its text
-		// alone, though tool calls are collapsed.
+		// With collapse reasoning off, the default, reasoning shows expanded,
+		// its text alone, though tool calls are collapsed.
 		{name: "agent_reasoning_kept", h: 8, add: func(ui *UI) {
-			ui.Apply(ui.service.SetReasoningExpanded(true))
 			ui.AddMessage(agentParts("a1",
 				message.ReasoningPart{ID: "a1-think", Text: "The divisor can be zero, so Divide needs a guard.",
 					StartedAt: turnT0, EndedAt: turnT0.Add(12 * time.Second)},
@@ -1408,8 +1413,10 @@ func TestWorkedFrames(t *testing.T) {
 }
 
 // groupedTurn runs a turn whose reply reasons, runs one command, and starts
-// another, and ends the run when end is set.
+// another, and ends the run when end is set. The reasoning collapses, so
+// that it groups with the commands.
 func groupedTurn(ui *UI, end bool) {
+	collapseReasoning(ui)
 	cmd := func(id, desc string, state func(json.RawMessage) message.ToolState) message.ToolPart {
 		input := json.RawMessage(`{"command":"go test ./...","description":"` + desc + `"}`)
 		return message.ToolPart{ID: message.PartID(id), CallID: id, Name: "bash", State: state(input)}

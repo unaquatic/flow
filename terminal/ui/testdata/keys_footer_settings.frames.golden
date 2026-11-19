@@ -2,19 +2,19 @@
 |■ Settings                                                              |
 |                                                                        |
 |  Fullscreen              On                                            |
-|  Collapse reasoning      On                                            |
-|  Group steps             On                                            |
-|  Snapshots               Off                                           |
 |  Debug                   Off                                           |
+|                                                                        |
+|■                                                                       |
+|  esc cancel  ↑/↓ move  ←/→ change  type search                         |
 |                                                                        |
 === fg ===
 |A AAAAAAAA                                                              |
 |                                                                        |
 |  BBBBBBBBBB              BB                                            |
-|  AAAAAAAA AAAAAAAAA      CC                                            |
-|  AAAAA AAAAA             CC                                            |
-|  AAAAAAAAA               CCC                                           |
 |  AAAAA                   CCC                                           |
+|                                                                        |
+|A                                                                       |
+|  CCC CCCCCC  CCC CCCC  CCC CCCCCC  CCCC CCCCCC                         |
 |                                                                        |
 === bg ===
 |                                                                        |
