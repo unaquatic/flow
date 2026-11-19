@@ -169,3 +169,27 @@ func TestWorkingStepStaysHidden(t *testing.T) {
 		}
 	}
 }
+
+// TestHiddenStepHoldsNoRows checks that a step at work, hidden under the
+// indicator, counts as no live row, so that the input box keeps its rows,
+// whatever position the step was last laid out at.
+func TestHiddenStepHoldsNoRows(t *testing.T) {
+	ui := newInputTestUI(t)
+	ui.inline = true
+	msg := agentParts("a1", message.ToolPart{ID: "c1", CallID: "c1", Name: "bash", State: message.ToolStateRunning{
+		Input: json.RawMessage(`{"command":"sleep 60","description":"Wait"}`)}})
+	msg.Live = []message.PartID{"c1"}
+	ui.AddMessage(msg)
+	cm := ui.messageWidgets["a1"]
+	cm.SetHolds(true)
+	cm.SetWorking(true)
+	b := partBoxes(cm)[0]
+	if !b.Grouped || cm.LivePart == nil {
+		t.Fatalf("grouped %v, live part %v; want the step hidden and live", b.Grouped, cm.LivePart)
+	}
+	// The position a hidden box keeps is stale, here as far up as it goes.
+	b.LayoutNode().Computed.Y = 0
+	if row, ok := cm.LiveRow(); ok {
+		t.Errorf("live row %d, want none for a hidden step", row)
+	}
+}

@@ -994,6 +994,12 @@ func (cm *ChatMessageBox) SyncHeld() {
 // LivePart, or for text, the row where the block it holds back will show,
 // as PendingTop finds it, since the blocks above it are whole.
 func (cm *ChatMessageBox) LiveRow() (int, bool) {
+	// A step hidden under the indicator, as GroupRows hides the one at work,
+	// takes no rows, and is not laid out, so its last position is stale: it
+	// would hold the input box's rows for the whole run.
+	if f, ok := cm.LivePart.(Framed); ok && f.Frame().Grouped {
+		return 0, false
+	}
 	switch w := cm.LivePart.(type) {
 	case nil:
 		return 0, false
