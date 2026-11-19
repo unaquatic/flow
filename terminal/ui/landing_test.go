@@ -23,6 +23,10 @@ func NewLandingUI(t *testing.T) *UI {
 	t.Helper()
 	ui := newInputTestUI(t)
 	ui.service.state.ApplyConfig(config.Terminal{}, false)
+	// The test UI draws prompts and the input box by a bar, as barStyles
+	// sets them; the page shows them as a new terminal does.
+	var defaults UIState
+	ui.service.state.PromptStyle, ui.service.state.InputStyle = defaults.PromptStyle, defaults.InputStyle
 	ui.SetInputStyle(ui.service.state.InputStyle)
 	ui.ShowStatusMarker()
 	return ui
