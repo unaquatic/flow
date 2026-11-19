@@ -9,6 +9,7 @@ import (
 	"github.com/unaquatic/fluid/buffer"
 	"github.com/unaquatic/fluid/layout"
 	"github.com/unaquatic/fluid/style"
+	"github.com/unaquatic/fluid/syntax"
 	"github.com/unaquatic/fluid/textbuf"
 	"github.com/unaquatic/fluid/widget"
 )
@@ -34,6 +35,9 @@ type DiffLine struct {
 	Text string
 	// Kind is whether the line is kept, deleted, or added.
 	Kind LineKind
+	// Code is Text highlighted as code of its file's language, as Highlight
+	// colors it, or nil when the language is not known.
+	Code []style.TextChunk
 }
 
 // DiffRow is a row of a side by side diff: the old file's line on the left
@@ -126,6 +130,37 @@ func HunkStarts(header string) (old, new int) {
 		}
 	}
 	return old, new
+}
+
+// Highlight colors the text of each side of rows as code of lang, a language
+// as syntax.Lookup finds it, such as a file's path, with h, setting each
+// line's Code: the old side's lines in order, and the new side's apart, each
+// a file of its own as far as its hunk goes, so that a string or comment
+// that spans lines keeps its color. A hunk's Note starts both sides afresh.
+// Text the highlighter leaves uncolored takes fg. An unknown lang leaves
+// rows as they are.
+func Highlight(rows []DiffRow, lang string, h *widget.Highlighter, fg style.Color) {
+	l := syntax.Lookup(lang)
+	if l == nil || h == nil {
+		return
+	}
+	var oldSt, newSt syntax.State
+	var toks []syntax.Token
+	color := func(line *DiffLine, st *syntax.State) {
+		if line.Number == 0 {
+			return
+		}
+		toks, *st = l.AppendLine(toks[:0], line.Text, *st)
+		line.Code = ui.AppendSpans(nil, h.Line(line.Text, toks, fg, style.ColorTransparent))
+	}
+	for i := range rows {
+		if rows[i].Note != "" {
+			oldSt, newSt = "", ""
+			continue
+		}
+		color(&rows[i].Old, &oldSt)
+		color(&rows[i].New, &newSt)
+	}
 }
 
 // NumberWidth returns the columns the widest line number of rows takes.
@@ -242,10 +277,16 @@ func (b *PatchBox) DiffSpace(line DiffLine) *widget.Text {
 }
 
 // DiffText returns line's text, half its row wide and wrapping there, in the
-// colors DiffColors gives it, its tint filling its half of the row.
+// colors DiffColors gives it, its tint filling its half of the row. A line
+// with Code shows it highlighted instead, but for a changed line in
+// ui.DiffColorText, whose color marks the change.
 func (b *PatchBox) DiffText(line DiffLine) *widget.Text {
 	fg, bg := b.DiffColors(line)
-	text := widget.NewText(line.Text,
+	content := style.NewStyledText(style.Plain(line.Text))
+	if line.Code != nil && (line.Kind == LineContext || b.DiffColor == ui.DiffColorBackground) {
+		content = style.NewStyledText(line.Code...)
+	}
+	text := widget.NewStyledText(content,
 		widget.TextWithFg(fg), widget.TextWithBg(bg),
 		widget.TextWithWrapMode(textbuf.WrapWord),
 		widget.TextWithLayout(layout.WithWidth(layout.Percent(50)), layout.WithFlexShrink(1)))

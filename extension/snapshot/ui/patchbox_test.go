@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"github.com/unaquatic/flow/terminal/ui"
+	"github.com/unaquatic/fluid/widget"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -58,16 +61,43 @@ func TestSideBySide(t *testing.T) {
 	got := SideBySide(hunks)
 	want := []DiffRow{
 		{Note: "@@ -3,4 +3,5 @@"},
-		{Old: DiffLine{3, "keep", LineContext}, New: DiffLine{3, "keep", LineContext}},
-		{Old: DiffLine{4, "old a", LineDeleted}, New: DiffLine{4, "new a", LineAdded}},
-		{Old: DiffLine{5, "old b", LineDeleted}, New: DiffLine{5, "new b", LineAdded}},
-		{New: DiffLine{6, "new c", LineAdded}},
-		{Old: DiffLine{6, "tail", LineContext}, New: DiffLine{7, "tail", LineContext}},
+		{Old: DiffLine{Number: 3, Text: "keep", Kind: LineContext}, New: DiffLine{Number: 3, Text: "keep", Kind: LineContext}},
+		{Old: DiffLine{Number: 4, Text: "old a", Kind: LineDeleted}, New: DiffLine{Number: 4, Text: "new a", Kind: LineAdded}},
+		{Old: DiffLine{Number: 5, Text: "old b", Kind: LineDeleted}, New: DiffLine{Number: 5, Text: "new b", Kind: LineAdded}},
+		{New: DiffLine{Number: 6, Text: "new c", Kind: LineAdded}},
+		{Old: DiffLine{Number: 6, Text: "tail", Kind: LineContext}, New: DiffLine{Number: 7, Text: "tail", Kind: LineContext}},
 	}
-	if !slices.Equal(got, want) {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("SideBySide =\n%+v\nwant\n%+v", got, want)
 	}
 	if old, new := HunkStarts("@@ -0,0 +1,2 @@"); old != 1 || new != 1 {
 		t.Errorf("HunkStarts of a new file = %d, %d; want 1, 1", old, new)
+	}
+}
+
+// TestHighlight checks that each side of a diff is colored as code of its
+// file's language, a string that spans lines keeping its color on its side
+// alone, and that a file of a language not known stays plain.
+func TestHighlight(t *testing.T) {
+	rows := SideBySide("@@ -1,2 +1,2 @@\n-x := `a\n-b`\n+y := 1\n+z := 2")
+	h := widget.NewHighlighter(ui.DefaultTheme())
+	fg := ui.DefaultTheme().TextBase
+	Highlight(rows, "calc.go", h, fg)
+	if rows[1].Old.Code == nil || rows[1].New.Code == nil {
+		t.Fatalf("rows = %+v, want both sides highlighted", rows)
+	}
+	// The raw string the old side opens on its first line colors its second
+	// whole; the new side's second line is not in it.
+	second := rows[2].Old.Code
+	if len(second) != 1 || second[0].Fg == fg {
+		t.Errorf("old second line = %+v, want it all in the string's color", second)
+	}
+	if n := rows[2].New.Code; len(n) == 0 || n[0].Fg == second[0].Fg {
+		t.Errorf("new second line = %+v, want it out of the old side's string", n)
+	}
+	plain := SideBySide("@@ -1 +1 @@\n-a\n+b")
+	Highlight(plain, "notes.unknownext", h, fg)
+	if plain[1].Old.Code != nil {
+		t.Errorf("unknown language highlighted: %+v", plain[1].Old.Code)
 	}
 }

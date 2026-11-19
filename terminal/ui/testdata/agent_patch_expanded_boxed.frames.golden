@@ -24,9 +24,9 @@
 |                                        |
 |  BBBBBBB  CC DD                        |
 |  EE EEEE EEEE EE                       |
-|  E BBBBBBB BBBB     E BBBBBBB BBBB     |
+|  E AAAAAAA BBBB     E AAAAAAA BBBB     |
 |                     E                  |
-|                     E BBBBBB BBBBBBBB  |
+|                     E AAAAAA FFFFFFFF  |
 |                                        |
 |                                        |
 |                                        |
@@ -52,12 +52,31 @@
 |                                        |
 |                                        |
 |                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|    BBBBBBB            BBBBBBB          |
+|                                        |
+|                       BBBBBB           |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
 === legend ===
 A #eb7513
 B #e6e6e6
 C #5fc882
 D #dc646e
 E #8a8a8a
+F #91b557
 ░ #1f1f1f SurfaceRaised/SuccessSurface
 ▒ #133420
 ▓ #1e3e2a

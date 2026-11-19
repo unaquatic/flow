@@ -20,13 +20,13 @@
 |                                        |
 |  BBBBBBB  CC DD                        |
 |  EE EEEE EEEE EE                       |
-|   E BBBB BBBBBBBBB   E BBBB BBBBBBBBB  |
-|      B BBBB BBB B       B BBBB BBB B   |
-|   E     BBBBBB B B   E     BB B BB B   |
-|      B                 B BBBBBB B B B  |
-|                        B B BBBB        |
-|                        BBBBBBB         |
-|                        BBBBBBB BBBB    |
+|   E AAAA FFFFFFBBB   E AAAA FFFFFFBBB  |
+|      B AAAB AAA B       B AAAB AAA B   |
+|   E     AAAAAA B B   E     AA B BB B   |
+|      B                 B AAAAAA B B E  |
+|                        E E EEEE        |
+|                        EEEEEEE         |
+|                        EEEEEEE EEEE    |
 |  EE B               EE B               |
 === bg ===
 |                                        |
@@ -43,12 +43,28 @@
 |  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
 |  ░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▓▓███████████████  |
 |                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|     BBBB               BBBB            |
+|        BBB  BBB           BBB  BBB     |
+|         BBBBBB             BB          |
+|                          BBBBBB        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
 === legend ===
 A #eb7513
 B #e6e6e6
 C #5fc882
 D #dc646e
 E #8a8a8a
+F #ffb642
 ░ #3d181c
 ▒ #482226
 ▓ #133420

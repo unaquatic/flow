@@ -20,11 +20,26 @@
 |                                        |
 |  BBBBBBB  CC DD                        |
 |  EE EEEE EEEE EE                       |
-|   E BBBB BBBBBBBBB   E BBBB BBBBBBBBB  |
-|      B BBBB BBB B       B BBBB BBB B   |
+|   E AAAA FFFFFFBBB   E AAAA FFFFFFBBB  |
+|      B AAAB AAA B       B AAAB AAA B   |
 |   E     DDDDDD D D   E     CC C CC C   |
 |      D                 C CCCCCC C C    |
 |  EE B               EE B               |
+|                                        |
+|                                        |
+|                                        |
+=== attrs ===
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|     BBBB               BBBB            |
+|        BBB  BBB           BBB  BBB     |
+|                                        |
+|                                        |
+|                                        |
 |                                        |
 |                                        |
 |                                        |
@@ -34,3 +49,4 @@ B #e6e6e6
 C #5fc882
 D #dc646e
 E #8a8a8a
+F #ffb642

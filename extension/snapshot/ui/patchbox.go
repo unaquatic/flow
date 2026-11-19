@@ -51,6 +51,8 @@ type PatchBox struct {
 	// Theme and Fg are the palette FileView draws with.
 	Theme *style.Theme
 	Fg    style.Color
+	// Highlighter colors the code of the diffs, as Highlight does.
+	Highlighter *widget.Highlighter
 	// DiffColor is how the diffs mark changed lines, as SetViewStyle sets it.
 	DiffColor ui.DiffColor
 }
@@ -79,8 +81,9 @@ func NewPatchBox(theme *style.Theme, fg style.Color) *PatchBox {
 		// leaves between its header and what follows it.
 		Paths: widget.NewText("", widget.TextWithFg(fg), widget.TextWithBg(style.ColorTransparent),
 			widget.TextWithLayout(layout.WithMarginTop(layout.Points(-1)))),
-		Theme: theme,
-		Fg:    fg,
+		Theme:       theme,
+		Fg:          fg,
+		Highlighter: widget.NewHighlighter(theme),
 	}
 	// The marker takes the color of the title it heads, as a panel's does.
 	b.MarkerFg = ui.TitleChunk(PatchTitle).Fg
@@ -182,7 +185,9 @@ func (b *PatchBox) FileView(f FilePatch) *widget.Box {
 		// The hunks fill no background of their own, so that the box's
 		// shows through them: its surface when boxed, and the canvas when
 		// plain.
-		diff := b.SideBySideView(SideBySide(f.Hunks))
+		rows := SideBySide(f.Hunks)
+		Highlight(rows, f.Path, b.Highlighter, b.Fg)
+		diff := b.SideBySideView(rows)
 		diff.LayoutNode().MarginBottom = layout.Points(1)
 		b.Diffs = append(b.Diffs, diff)
 		heading.OnMouseDownHandler = func(e *input.MouseEvent) {
